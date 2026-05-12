@@ -8,6 +8,7 @@ import Send from "./pages/Send";
 import Blockchain from "./pages/Blockchain";
 import Mine from "./pages/Mine";
 import Whitepaper from "./pages/Whitepaper";
+import Network from "./pages/Network";
 import Footer from "./components/Footer";
 import logo from "./logo.svg";
 
@@ -41,6 +42,9 @@ function App() {
               <NavLink className="nav-link" to="/whitepaper">
                 Whitepaper
               </NavLink>
+              <NavLink className="nav-link" to="/network">
+                Network
+              </NavLink>
             </div>
           </div>
         </nav>
@@ -52,6 +56,7 @@ function App() {
           <Route path="/blockchain" element={<Blockchain />} />
           <Route path="/mine" element={<Mine />} />
           <Route path="/whitepaper" element={<Whitepaper />} />
+          <Route path="/network" element={<Network />} />
         </Routes>
 
         <Footer />

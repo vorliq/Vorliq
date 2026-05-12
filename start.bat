@@ -16,5 +16,9 @@ timeout /t 3 /nobreak >nul
 echo Starting Vorliq React frontend on port 3000...
 start "Vorliq Frontend" cmd /k "cd /d ""%ROOT%frontend"" && npm start"
 
-echo Vorliq is starting. Open http://localhost:3000 in your browser.
+timeout /t 3 /nobreak >nul
+
+echo.
+echo Vorliq is running. Open http://localhost:3000 in your browser.
+echo To connect to another node ask them for their IP address and port 5001 and add it in the Network page.
 endlocal

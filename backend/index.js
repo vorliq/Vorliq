@@ -6,6 +6,7 @@ const chainRoutes = require("./routes/chain");
 const walletRoutes = require("./routes/wallet");
 const transactionRoutes = require("./routes/transaction");
 const miningRoutes = require("./routes/mining");
+const networkRoutes = require("./routes/network");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -24,6 +25,7 @@ app.use(chainRoutes);
 app.use(walletRoutes);
 app.use(transactionRoutes);
 app.use(miningRoutes);
+app.use(networkRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

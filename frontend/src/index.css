@@ -409,6 +409,36 @@ p {
   padding: 11px 14px;
 }
 
+.peer-section {
+  margin-top: 18px;
+}
+
+.peer-list {
+  display: grid;
+  gap: 12px;
+}
+
+.peer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 14px;
+}
+
+.peer-item span {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.small-button {
+  min-height: 38px;
+  padding: 8px 12px;
+}
+
 .site-footer {
   border-top: 1px solid var(--border);
   background: rgba(10, 10, 18, 0.62);
@@ -479,6 +509,11 @@ p {
 
   .footer-links {
     justify-content: flex-start;
+  }
+
+  .peer-item {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 
