@@ -9,6 +9,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
 # React builds
 build/
@@ -18,6 +19,7 @@ dist/
 .env
 .env.*
 !.env.example
+!backend/.env
 
 # OS and editor files
 .DS_Store

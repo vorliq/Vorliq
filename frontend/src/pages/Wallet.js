@@ -1,0 +1,119 @@
+import { useState } from "react";
+import { toast } from "react-toastify";
+
+import api from "../helpers/api";
+
+function Wallet() {
+  const [wallet, setWallet] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const [balanceAddress, setBalanceAddress] = useState("");
+  const [balance, setBalance] = useState(null);
+  const [checking, setChecking] = useState(false);
+
+  async function createWallet() {
+    setCreating(true);
+    try {
+      const response = await api.post("/wallet/create");
+      setWallet(response.data);
+      toast.success("New VLQ wallet created.");
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Unable to create wallet.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function checkBalance(event) {
+    event.preventDefault();
+    if (!balanceAddress.trim()) {
+      toast.error("Enter a wallet address first.");
+      return;
+    }
+
+    setChecking(true);
+    try {
+      const response = await api.get("/wallet/balance", {
+        params: { address: balanceAddress.trim() },
+      });
+      setBalance(response.data);
+      toast.success("Balance loaded.");
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Unable to check balance.");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  return (
+    <main className="page">
+      <section className="hero">
+        <span className="eyebrow">Wallets</span>
+        <h1>Create and inspect VLQ wallets</h1>
+        <p className="subtitle">
+          Generate a new Vorliq wallet, then check the VLQ balance for any address on the chain.
+        </p>
+      </section>
+
+      <div className="grid two-column">
+        <section className="card card-pad stack">
+          <div className="section-title">
+            <h2>New Wallet</h2>
+            <button className="button" onClick={createWallet} disabled={creating}>
+              {creating ? "Creating..." : "Create New Wallet"}
+            </button>
+          </div>
+
+          {wallet ? (
+            <div className="stack">
+              <div className="field">
+                <label>Wallet Address</label>
+                <div className="value-box">{wallet.address}</div>
+              </div>
+              <div className="field">
+                <label>Public Key</label>
+                <div className="value-box">{wallet.public_key}</div>
+              </div>
+              <div className="field">
+                <label>Private Key</label>
+                <div className="value-box">{wallet.private_key}</div>
+                <p className="warning">save your private key now it cannot be recovered</p>
+              </div>
+            </div>
+          ) : (
+            <div className="empty-state">Create a wallet to display its address and keys.</div>
+          )}
+        </section>
+
+        <section className="card card-pad stack">
+          <h2>Check Balance</h2>
+          <form className="form" onSubmit={checkBalance}>
+            <div className="field">
+              <label htmlFor="balance-address">Wallet Address</label>
+              <input
+                id="balance-address"
+                className="input"
+                value={balanceAddress}
+                onChange={(event) => setBalanceAddress(event.target.value)}
+                type="text"
+                autoComplete="off"
+              />
+            </div>
+            <button className="button secondary" type="submit" disabled={checking}>
+              {checking ? "Checking..." : "Check VLQ Balance"}
+            </button>
+          </form>
+
+          {balance && (
+            <div className="value-box">
+              {balance.address}
+              {"\n"}
+              Balance: {balance.balance} {balance.coin}
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}
+
+export default Wallet;
