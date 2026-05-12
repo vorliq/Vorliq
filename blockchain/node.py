@@ -31,3 +31,6 @@ class Node:
             "coin": "VLQ",
             "balance": self.blockchain.get_balance(address),
         }
+
+    def get_token_economics(self) -> dict[str, Any]:
+        return self.blockchain.get_token_economics()

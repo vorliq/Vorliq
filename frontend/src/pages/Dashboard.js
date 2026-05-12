@@ -5,6 +5,7 @@ import api from "../helpers/api";
 
 function Dashboard() {
   const [chainData, setChainData] = useState(null);
+  const [economics, setEconomics] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -12,9 +13,13 @@ function Dashboard() {
 
     async function loadDashboard() {
       try {
-        const response = await api.get("/chain");
+        const [chainResponse, economicsResponse] = await Promise.all([
+          api.get("/chain"),
+          api.get("/economics"),
+        ]);
         if (mounted) {
-          setChainData(response.data);
+          setChainData(chainResponse.data);
+          setEconomics(economicsResponse.data);
         }
       } catch (error) {
         toast.error(error.response?.data?.error || "Unable to load blockchain dashboard.");
@@ -39,10 +44,12 @@ function Dashboard() {
     return {
       blocks: chain.length,
       transactions,
-      reward: chainData?.mining_reward ?? 50,
+      reward: economics?.current_mining_reward ?? chainData?.mining_reward ?? 50,
+      blockHeight: economics?.current_block_height ?? Math.max(chain.length - 1, 0),
+      totalIssued: economics?.total_issued ?? 0,
       valid: Boolean(chainData?.is_valid),
     };
-  }, [chainData]);
+  }, [chainData, economics]);
 
   return (
     <main className="page">
@@ -73,6 +80,14 @@ function Dashboard() {
           <span className={`stat-value ${stats.valid ? "green" : "red"}`}>
             {loading ? "..." : stats.valid ? "Chain Valid" : "Chain Invalid"}
           </span>
+        </div>
+        <div className="card card-pad stat-card">
+          <span className="stat-label">Current Block Height</span>
+          <span className="stat-value">{loading ? "..." : stats.blockHeight}</span>
+        </div>
+        <div className="card card-pad stat-card">
+          <span className="stat-label">Total VLQ Issued</span>
+          <span className="stat-value">{loading ? "..." : `${stats.totalIssued} VLQ`}</span>
         </div>
       </section>
 

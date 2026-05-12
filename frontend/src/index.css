@@ -172,7 +172,7 @@ p {
 }
 
 .stats-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .about-card {
@@ -378,6 +378,35 @@ p {
 
 .toast {
   font-family: "Inter", sans-serif;
+}
+
+.whitepaper {
+  display: grid;
+  gap: 28px;
+}
+
+.whitepaper section {
+  display: grid;
+  gap: 12px;
+}
+
+.whitepaper p {
+  color: var(--muted);
+}
+
+.whitepaper-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.whitepaper-links a {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--primary-soft);
+  color: var(--text);
+  font-weight: 800;
+  padding: 11px 14px;
 }
 
 .site-footer {

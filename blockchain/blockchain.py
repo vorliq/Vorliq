@@ -8,7 +8,9 @@ from transaction import SYSTEM_ADDRESS, Transaction
 
 class Blockchain:
     difficulty = 4
-    mining_reward = 50.0
+    maximum_supply = 21_000_000.0
+    initial_mining_reward = 50.0
+    halving_interval = 210_000
 
     def __init__(self) -> None:
         self.chain: list[Block] = [self.create_genesis_block()]
@@ -96,12 +98,13 @@ class Blockchain:
         if not self.add_block(block):
             raise RuntimeError("mined block failed validation")
 
+        mining_reward = self.get_current_mining_reward()
         reward_transaction = Transaction(
             sender_address=SYSTEM_ADDRESS,
             receiver_address=miner_address,
-            amount=self.mining_reward,
+            amount=mining_reward,
         )
-        self.pending_transactions = [reward_transaction]
+        self.pending_transactions = [reward_transaction] if mining_reward > 0 else []
 
         return block
 
@@ -110,6 +113,37 @@ class Blockchain:
 
     def get_chain_data(self) -> list[dict[str, Any]]:
         return [block.to_dict() for block in self.chain]
+
+    def get_block_height(self) -> int:
+        return len(self.chain) - 1
+
+    def get_current_mining_reward(self) -> float:
+        halvings = len(self.chain) // self.halving_interval
+        scheduled_reward = self.initial_mining_reward / (2**halvings)
+        remaining_supply = max(self.maximum_supply - self.get_total_issued(), 0.0)
+        return min(scheduled_reward, remaining_supply)
+
+    def get_total_issued(self) -> float:
+        total = 0.0
+
+        for block in self.chain:
+            for transaction in block.transactions:
+                if isinstance(transaction, dict):
+                    transaction = Transaction.from_dict(transaction)
+
+                if transaction.sender_address == SYSTEM_ADDRESS:
+                    total += transaction.amount
+
+        return total
+
+    def get_token_economics(self) -> dict[str, float | int]:
+        return {
+            "maximum_supply": self.maximum_supply,
+            "current_mining_reward": self.get_current_mining_reward(),
+            "current_block_height": self.get_block_height(),
+            "halving_interval": self.halving_interval,
+            "total_issued": self.get_total_issued(),
+        }
 
     def get_balance(self, address: str) -> float:
         if not address:
@@ -139,7 +173,9 @@ class Blockchain:
         return {
             "coin": "VLQ",
             "difficulty": self.difficulty,
-            "mining_reward": self.mining_reward,
+            "mining_reward": self.get_current_mining_reward(),
+            "maximum_supply": self.maximum_supply,
+            "halving_interval": self.halving_interval,
             "is_valid": self.is_chain_valid(),
             "pending_transactions": self.get_pending_transactions(),
             "chain": self.get_chain_data(),

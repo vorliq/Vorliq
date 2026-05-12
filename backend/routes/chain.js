@@ -13,4 +13,13 @@ router.get("/api/chain", async (req, res, next) => {
   }
 });
 
+router.get("/api/economics", async (req, res, next) => {
+  try {
+    const response = await axios.get(`${flaskUrl}/economics`);
+    res.json(response.data);
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

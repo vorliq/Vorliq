@@ -70,5 +70,10 @@ def get_balance():
         return jsonify({"error": str(exc)}), 400
 
 
+@app.get("/economics")
+def get_economics():
+    return jsonify(node.get_token_economics())
+
+
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5001, debug=False)
