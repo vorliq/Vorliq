@@ -99,6 +99,13 @@ a {
   flex-wrap: wrap;
 }
 
+.auth-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 4px;
+}
+
 .nav-link {
   color: var(--muted);
   padding: 10px 12px;
@@ -112,6 +119,21 @@ a {
 .nav-link.active {
   color: var(--text);
   background: var(--primary-soft);
+}
+
+.nav-button {
+  min-height: 40px;
+  padding: 9px 13px;
+}
+
+.wallet-chip {
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.88rem;
+  font-weight: 800;
+  padding: 10px 12px;
 }
 
 .page {
@@ -515,6 +537,54 @@ p {
   font-weight: 700;
 }
 
+.auth-page {
+  display: grid;
+  justify-items: center;
+}
+
+.auth-page .hero,
+.auth-card {
+  width: min(620px, 100%);
+}
+
+.account-wallet-grid {
+  grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.65fr);
+}
+
+.account-section {
+  margin-top: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.history-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 140px 110px;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 13px 14px;
+}
+
+.direction {
+  font-weight: 900;
+}
+
+.direction.sent {
+  color: var(--red);
+}
+
+.direction.received {
+  color: var(--green);
+}
+
 .site-footer {
   border-top: 1px solid var(--border);
   background: rgba(10, 10, 18, 0.62);
@@ -575,7 +645,9 @@ p {
   .stats-grid,
   .two-column,
   .block-meta,
-  .loan-grid {
+  .loan-grid,
+  .account-wallet-grid,
+  .history-row {
     grid-template-columns: 1fr;
   }
 
@@ -591,6 +663,10 @@ p {
   .peer-item {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .auth-actions {
+    margin-left: 0;
   }
 }
 
