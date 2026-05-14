@@ -56,7 +56,11 @@ app.use((error, req, res, next) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Vorliq backend API running on port ${port}`);
-  logInfo(`Vorliq backend API running on port ${port}`);
-});
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Vorliq backend API running on port ${port}`);
+    logInfo(`Vorliq backend API running on port ${port}`);
+  });
+}
+
+module.exports = app;

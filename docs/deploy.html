@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Deploy a public Vorliq node on an Ubuntu server." />
+    <title>Vorliq Production Deployment Guide</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+      :root {
+        --bg: #0f0f1a;
+        --card: #1a1a2e;
+        --accent: #6c63ff;
+        --text: #ffffff;
+        --muted: #c7c7d4;
+        --border: rgba(255, 255, 255, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at top left, rgba(108, 99, 255, 0.2), transparent 34rem),
+          var(--bg);
+        color: var(--muted);
+        font-family: "Inter", Arial, sans-serif;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .wrap {
+        width: min(960px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      header,
+      footer {
+        padding: 26px 0;
+      }
+
+      .brand {
+        color: var(--text);
+        font-size: 1.1rem;
+        font-weight: 900;
+      }
+
+      .hero {
+        padding: 42px 0 24px;
+      }
+
+      .eyebrow {
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2 {
+        color: var(--text);
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(2.5rem, 8vw, 5.4rem);
+        line-height: 0.98;
+        margin: 12px 0 18px;
+      }
+
+      h2 {
+        font-size: clamp(1.5rem, 4vw, 2.2rem);
+        margin-bottom: 12px;
+      }
+
+      p {
+        line-height: 1.78;
+        margin: 0;
+      }
+
+      article {
+        display: grid;
+        gap: 28px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent), var(--card);
+        padding: clamp(20px, 5vw, 38px);
+        margin: 22px 0 64px;
+      }
+
+      article section {
+        display: grid;
+        gap: 12px;
+      }
+
+      pre {
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #101020;
+        color: var(--text);
+        font-family: Consolas, Monaco, monospace;
+        font-size: 0.95rem;
+        line-height: 1.55;
+        padding: 16px;
+        white-space: pre;
+      }
+
+      footer {
+        border-top: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="wrap">
+      <a class="brand" href="index.html">Vorliq</a>
+    </header>
+
+    <main class="wrap">
+      <section class="hero">
+        <span class="eyebrow">Production Node Guide</span>
+        <h1>Run a Public Vorliq Node</h1>
+        <p>
+          This guide explains how to deploy a public Vorliq node on Ubuntu so other community
+          members can connect to your blockchain API and discover your node through the registry.
+        </p>
+      </section>
+
+      <article>
+        <section>
+          <h2>What You Need for Production</h2>
+          <p>
+            To run a public Vorliq node, the operator needs a Linux server running Ubuntu 22.04
+            or later with a public IP address, at least 1 gigabyte of RAM, and at least 10
+            gigabytes of disk space. A cheap virtual private server from any provider works well
+            for this and usually costs around five dollars per month.
+          </p>
+        </section>
+
+        <section>
+          <h2>Install Dependencies on the Server</h2>
+          <p>
+            Connect to the Ubuntu server over SSH and run these commands to install Git, nginx,
+            Python 3.12, and Node.js 20. These commands update the server, install system
+            packages, and add the official NodeSource package repository for Node.js 20.
+          </p>
+          <pre style="margin: 0;">sudo apt update
+sudo apt upgrade -y
+sudo apt install -y software-properties-common curl ca-certificates git nginx
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+sudo apt update
+sudo apt install -y python3.12 python3.12-venv python3.12-dev
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs</pre>
+        </section>
+
+        <section>
+          <h2>Clone and Configure Vorliq</h2>
+          <p>
+            Clone the repository into the server, install the Python, backend, and frontend
+            dependencies, and build the React frontend. For a public node, edit blockchain/app.py
+            and change the Flask host from 127.0.0.1 to 0.0.0.0 so other nodes can reach the
+            blockchain API on port 5001.
+          </p>
+          <pre style="margin: 0;">cd /opt
+sudo git clone https://github.com/vorliq/Vorliq.git
+sudo chown -R $USER:$USER /opt/Vorliq
+cd /opt/Vorliq/blockchain
+python3.12 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -r requirements.txt
+cd /opt/Vorliq/backend
+npm install
+cd /opt/Vorliq/frontend
+npm install
+npm run build
+nano /opt/Vorliq/blockchain/app.py</pre>
+        </section>
+
+        <section>
+          <h2>Run Vorliq as a Service</h2>
+          <p>
+            Production nodes should run Vorliq through systemd so the Flask API and Node.js
+            backend start automatically when the server boots and restart automatically if they
+            crash. Create the Flask service first, then create the backend service.
+          </p>
+          <pre style="margin: 0;">sudo nano /etc/systemd/system/vorliq-blockchain.service</pre>
+          <pre style="margin: 0;">[Unit]
+Description=Vorliq Blockchain API
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/Vorliq/blockchain
+ExecStart=/opt/Vorliq/blockchain/.venv/bin/python app.py
+Restart=always
+RestartSec=5
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target</pre>
+          <pre style="margin: 0;">sudo nano /etc/systemd/system/vorliq-backend.service</pre>
+          <pre style="margin: 0;">[Unit]
+Description=Vorliq Backend API
+After=network.target vorliq-blockchain.service
+
+[Service]
+WorkingDirectory=/opt/Vorliq/backend
+Environment=FLASK_URL=http://127.0.0.1:5001
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=5
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target</pre>
+          <pre style="margin: 0;">sudo systemctl daemon-reload
+sudo systemctl enable vorliq-blockchain vorliq-backend
+sudo systemctl start vorliq-blockchain vorliq-backend
+sudo systemctl status vorliq-blockchain
+sudo systemctl status vorliq-backend</pre>
+        </section>
+
+        <section>
+          <h2>Configure nginx</h2>
+          <p>
+            nginx can serve the React frontend on port 80 and proxy API requests to the Node.js
+            backend. Replace example.com with your domain name if you have one, or use an
+            underscore as the server name when serving directly from an IP address.
+          </p>
+          <pre style="margin: 0;">sudo nano /etc/nginx/sites-available/vorliq</pre>
+          <pre style="margin: 0;">server {
+    listen 80;
+    server_name _;
+
+    root /opt/Vorliq/frontend/build;
+    index index.html;
+
+    location / {
+        try_files $uri /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:5000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</pre>
+          <pre style="margin: 0;">sudo ln -s /etc/nginx/sites-available/vorliq /etc/nginx/sites-enabled/vorliq
+sudo nginx -t
+sudo systemctl reload nginx
+sudo ufw allow 80/tcp
+sudo ufw allow 5001/tcp</pre>
+        </section>
+
+        <section>
+          <h2>Open Your Node to the Network</h2>
+          <p>
+            After the server is running, open the Registry page in the Vorliq app and register
+            your node using your server's public IP address and port 5001, such as
+            http://YOUR_PUBLIC_IP:5001. Then share your node URL in the Vorliq Discord and
+            Telegram so community members can connect to it from their Network page.
+          </p>
+        </section>
+      </article>
+    </main>
+
+    <footer>
+      <div class="wrap">2025 Vorliq. All rights reserved.</div>
+    </footer>
+  </body>
+</html>
