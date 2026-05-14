@@ -7,6 +7,7 @@ function Dashboard() {
   const [chainData, setChainData] = useState(null);
   const [economics, setEconomics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -20,6 +21,7 @@ function Dashboard() {
         if (mounted) {
           setChainData(chainResponse.data);
           setEconomics(economicsResponse.data);
+          setLastUpdated(new Date());
         }
       } catch (error) {
         toast.error(error.response?.data?.error || "Unable to load blockchain dashboard.");
@@ -90,6 +92,10 @@ function Dashboard() {
           <span className="stat-value">{loading ? "..." : `${stats.totalIssued} VLQ`}</span>
         </div>
       </section>
+
+      {lastUpdated && (
+        <p className="last-updated">Last updated {lastUpdated.toLocaleString()}</p>
+      )}
 
       <section className="card card-pad about-card">
         <span className="eyebrow">About Vorliq</span>

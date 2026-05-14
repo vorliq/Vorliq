@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
 import api from "../helpers/api";
@@ -6,6 +6,7 @@ import api from "../helpers/api";
 function Blockchain() {
   const [chain, setChain] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -32,6 +33,26 @@ function Blockchain() {
     };
   }, []);
 
+  const filteredChain = useMemo(() => {
+    const term = search.trim();
+    if (!term) {
+      return chain;
+    }
+
+    if (/^\d+$/.test(term)) {
+      return chain.filter((block) => Number(block.index) === Number(term));
+    }
+
+    const normalizedTerm = term.toLowerCase();
+    return chain.filter((block) =>
+      (block.transactions || []).some(
+        (transaction) =>
+          transaction.sender_address?.toLowerCase().includes(normalizedTerm) ||
+          transaction.receiver_address?.toLowerCase().includes(normalizedTerm)
+      )
+    );
+  }, [chain, search]);
+
   return (
     <main className="page">
       <section className="hero">
@@ -42,12 +63,26 @@ function Blockchain() {
         </p>
       </section>
 
+      <section className="card card-pad explorer-search">
+        <div className="field">
+          <label htmlFor="chain-search">Search by Block Index or Wallet Address</label>
+          <input
+            id="chain-search"
+            className="input"
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Example: 4 or a wallet address"
+          />
+        </div>
+      </section>
+
       <section className="stack">
         {loading && <div className="empty-state">Loading blockchain data...</div>}
 
-        {!loading && chain.length === 0 && <div className="empty-state">No blocks found.</div>}
+        {!loading && filteredChain.length === 0 && <div className="empty-state">No blocks found.</div>}
 
-        {chain.map((block) => (
+        {filteredChain.map((block) => (
           <article className="card card-pad block-card" key={block.hash}>
             <div className="section-title">
               <h2>Block #{block.index}</h2>

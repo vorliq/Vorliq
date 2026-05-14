@@ -60,6 +60,7 @@ function Account() {
             direction: sent ? "Sent" : "Received",
             otherParty,
             amount: transaction.amount,
+            timestamp: block.timestamp,
           };
         })
     );
@@ -97,6 +98,34 @@ function Account() {
     }
   }
 
+  function exportTransactionsAsCsv() {
+    if (myTransactions.length === 0) {
+      toast.info("No transactions to export.");
+      return;
+    }
+
+    const header = ["Direction", "Other Party Address", "Amount VLQ", "Block Number", "Timestamp"];
+    const rows = myTransactions.map((transaction) => [
+      transaction.direction,
+      transaction.otherParty,
+      transaction.amount,
+      transaction.blockIndex,
+      new Date(transaction.timestamp * 1000).toISOString(),
+    ]);
+    const csv = [header, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "vorliq-transactions.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <main className="page">
       <section className="hero">
@@ -127,7 +156,16 @@ function Account() {
       </section>
 
       <section className="card card-pad account-section">
-        <h2>My Transaction History</h2>
+        <div className="section-title">
+          <h2>My Transaction History</h2>
+          <button
+            className="button secondary small-button"
+            type="button"
+            onClick={exportTransactionsAsCsv}
+          >
+            Export as CSV
+          </button>
+        </div>
         {loading && <div className="empty-state">Loading transactions...</div>}
 
         {!loading && myTransactions.length === 0 && (

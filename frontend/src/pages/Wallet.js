@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { toast } from "react-toastify";
 
 import api from "../helpers/api";
@@ -68,6 +69,17 @@ function Wallet() {
               <div className="field">
                 <label>Wallet Address</label>
                 <div className="value-box">{wallet.address}</div>
+              </div>
+              <div className="qr-panel">
+                <QRCodeSVG
+                  value={wallet.address}
+                  size={180}
+                  bgColor="#ffffff"
+                  fgColor="#0f0f1a"
+                  level="M"
+                  includeMargin
+                />
+                <span>scan to receive VLQ</span>
               </div>
               <div className="field">
                 <label>Public Key</label>

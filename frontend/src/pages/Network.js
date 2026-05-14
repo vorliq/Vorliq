@@ -9,6 +9,7 @@ function Network() {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [peerStatuses, setPeerStatuses] = useState({});
 
   async function loadPeers({ quiet = false } = {}) {
     try {
@@ -59,6 +60,7 @@ function Network() {
     setSyncing(true);
     try {
       const response = await api.post("/peers/sync");
+      setPeerStatuses(response.data.peer_statuses || {});
       if (response.data.updated) {
         toast.success("Chain updated to a longer network chain.");
       } else {
@@ -127,7 +129,13 @@ function Network() {
         <div className="peer-list">
           {peers.map((peer) => (
             <div className="peer-item" key={peer}>
-              <span>{peer}</span>
+              <span className="peer-url">
+                <span
+                  className={`status-dot ${peerStatuses[peer] ? "online" : "unknown"}`}
+                  aria-label={peerStatuses[peer] ? "peer reached" : "peer not reached"}
+                />
+                {peer}
+              </span>
               <button
                 className="button secondary small-button"
                 type="button"

@@ -130,6 +130,7 @@ def receive_block():
 @app.get("/peers/sync")
 def sync_peers():
     updated = network.sync_chain(node.blockchain)
+    peer_statuses = network.check_peer_statuses()
     return jsonify(
         {
             "success": True,
@@ -138,6 +139,7 @@ def sync_peers():
             if updated
             else "Your chain is already the longest",
             "chain_height": node.blockchain.get_block_height(),
+            "peer_statuses": peer_statuses,
         }
     )
 

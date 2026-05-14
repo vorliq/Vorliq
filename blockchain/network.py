@@ -66,6 +66,18 @@ class Network:
 
         return False
 
+    def check_peer_statuses(self) -> dict[str, bool]:
+        statuses = {}
+
+        for peer in self.get_peers():
+            try:
+                response = requests.get(f"{peer}/health", timeout=4)
+                statuses[peer] = response.ok
+            except requests.RequestException:
+                statuses[peer] = False
+
+        return statuses
+
     def discover_peers(self, current_peers: list[str] | None = None) -> list[str]:
         if current_peers:
             for peer in current_peers:

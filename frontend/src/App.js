@@ -12,6 +12,7 @@ import Mine from "./pages/Mine";
 import Whitepaper from "./pages/Whitepaper";
 import Network from "./pages/Network";
 import Lending from "./pages/Lending";
+import Stats from "./pages/Stats";
 import Login from "./pages/Login";
 import Account from "./pages/Account";
 import Footer from "./components/Footer";
@@ -64,6 +65,9 @@ function AppShell() {
             <NavLink className="nav-link" to="/lending">
               Lending
             </NavLink>
+            <NavLink className="nav-link" to="/stats">
+              Stats
+            </NavLink>
 
             <div className="auth-actions">
               {isLoggedIn ? (
@@ -94,6 +98,7 @@ function AppShell() {
         <Route path="/whitepaper" element={<Whitepaper />} />
         <Route path="/network" element={<Network />} />
         <Route path="/lending" element={<Lending />} />
+        <Route path="/stats" element={<Stats />} />
         <Route path="/login" element={<Login />} />
         <Route
           path="/account"

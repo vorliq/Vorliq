@@ -7,6 +7,7 @@ function Mine() {
   const [minerAddress, setMinerAddress] = useState("");
   const [mining, setMining] = useState(false);
   const [minedBlock, setMinedBlock] = useState(null);
+  const [sessionMinedBlocks, setSessionMinedBlocks] = useState(0);
 
   async function mineBlock(event) {
     event.preventDefault();
@@ -23,6 +24,7 @@ function Mine() {
         miner_address: minerAddress.trim(),
       });
       setMinedBlock(response.data.block);
+      setSessionMinedBlocks((current) => current + 1);
       toast.success("Block mined successfully.");
     } catch (error) {
       toast.error(error.response?.data?.error || "Unable to mine block.");
@@ -59,6 +61,7 @@ function Mine() {
             <button className="button" type="submit" disabled={mining}>
               {mining ? "Mining Block..." : "Mine Block"}
             </button>
+            <div className="value-box">Blocks mined this session: {sessionMinedBlocks}</div>
           </form>
         </section>
 
