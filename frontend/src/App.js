@@ -23,7 +23,7 @@ import Account from "./pages/Account";
 import Health from "./pages/Health";
 import Footer from "./components/Footer";
 import api from "./helpers/api";
-import logo from "./logo.svg";
+import logo from "./assets/logo.png";
 
 function App() {
   return (

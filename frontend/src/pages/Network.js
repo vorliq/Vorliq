@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
@@ -134,7 +135,7 @@ function Network() {
           <span className="eyebrow">Auto refreshes every 10 seconds</span>
         </div>
 
-        {loading && <div className="empty-state">Loading peers...</div>}
+        {loading && <Spinner label="Loading peers..." />}
 
         {!loading && peers.length === 0 && (
           <div className="empty-state">No peers registered yet.</div>

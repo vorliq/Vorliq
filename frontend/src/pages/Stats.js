@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import ErrorMessage from "../components/ErrorMessage";
+import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
@@ -98,7 +99,7 @@ function Stats() {
   if (loading) {
     return (
       <main className="page">
-        <div className="empty-state">Loading community statistics...</div>
+        <Spinner label="Loading community statistics..." />
       </main>
     );
   }

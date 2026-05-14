@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
+import logo from "../assets/logo.png";
 
 function Dashboard() {
   const [chainData, setChainData] = useState(null);
@@ -72,40 +74,45 @@ function Dashboard() {
 
       <ErrorMessage message={errorMessage} />
 
-      <section className="grid stats-grid">
-        <div className="card card-pad stat-card">
-          <span className="stat-label">Total Blocks</span>
-          <span className="stat-value">{loading ? "..." : stats.blocks}</span>
-        </div>
-        <div className="card card-pad stat-card">
-          <span className="stat-label">Total Transactions</span>
-          <span className="stat-value">{loading ? "..." : stats.transactions}</span>
-        </div>
-        <div className="card card-pad stat-card">
-          <span className="stat-label">Mining Reward</span>
-          <span className="stat-value">{loading ? "..." : `${stats.reward} VLQ`}</span>
-        </div>
-        <div className="card card-pad stat-card">
-          <span className="stat-label">Chain Status</span>
-          <span className={`stat-value ${stats.valid ? "green" : "red"}`}>
-            {loading ? "..." : stats.valid ? "Chain Valid" : "Chain Invalid"}
-          </span>
-        </div>
-        <div className="card card-pad stat-card">
-          <span className="stat-label">Current Block Height</span>
-          <span className="stat-value">{loading ? "..." : stats.blockHeight}</span>
-        </div>
-        <div className="card card-pad stat-card">
-          <span className="stat-label">Total VLQ Issued</span>
-          <span className="stat-value">{loading ? "..." : `${stats.totalIssued} VLQ`}</span>
-        </div>
-      </section>
+      {loading ? (
+        <Spinner label="Loading dashboard data..." />
+      ) : (
+        <section className="grid stats-grid">
+          <div className="card card-pad stat-card">
+            <span className="stat-label">Total Blocks</span>
+            <span className="stat-value">{stats.blocks}</span>
+          </div>
+          <div className="card card-pad stat-card">
+            <span className="stat-label">Total Transactions</span>
+            <span className="stat-value">{stats.transactions}</span>
+          </div>
+          <div className="card card-pad stat-card">
+            <span className="stat-label">Mining Reward</span>
+            <span className="stat-value">{stats.reward} VLQ</span>
+          </div>
+          <div className="card card-pad stat-card">
+            <span className="stat-label">Chain Status</span>
+            <span className={`stat-value ${stats.valid ? "green" : "red"}`}>
+              {stats.valid ? "Chain Valid" : "Chain Invalid"}
+            </span>
+          </div>
+          <div className="card card-pad stat-card">
+            <span className="stat-label">Current Block Height</span>
+            <span className="stat-value">{stats.blockHeight}</span>
+          </div>
+          <div className="card card-pad stat-card">
+            <span className="stat-label">Total VLQ Issued</span>
+            <span className="stat-value">{stats.totalIssued} VLQ</span>
+          </div>
+        </section>
+      )}
 
       {lastUpdated && (
         <p className="last-updated">Last updated {lastUpdated.toLocaleString()}</p>
       )}
 
       <section className="card card-pad about-card">
+        <img className="section-logo" src={logo} alt="Vorliq logo" />
         <span className="eyebrow">About Vorliq</span>
         <h2>About Vorliq</h2>
         <p>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import Spinner from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import api from "../helpers/api";
@@ -289,7 +290,7 @@ function Lending() {
           </button>
         </div>
 
-        {loadingLoans && <div className="empty-state">Loading loan requests...</div>}
+        {loadingLoans && <Spinner label="Loading loan requests..." />}
 
         {!loadingLoans && loans.length === 0 && (
           <div className="empty-state">No loan requests have been created yet.</div>

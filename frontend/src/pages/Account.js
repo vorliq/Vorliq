@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import Spinner from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import api from "../helpers/api";
@@ -192,7 +193,7 @@ function Account() {
           </div>
           <div className="field">
             <label>Current VLQ Balance</label>
-            <div className="value-box">{loading ? "Loading..." : `${balance ?? 0} VLQ`}</div>
+            <div className="value-box">{loading ? "Loading balance..." : `${balance ?? 0} VLQ`}</div>
           </div>
         </div>
       </section>
@@ -208,7 +209,7 @@ function Account() {
             Export as CSV
           </button>
         </div>
-        {loading && <div className="empty-state">Loading transactions...</div>}
+        {loading && <Spinner label="Loading transactions..." />}
 
         {!loading && myTransactions.length === 0 && (
           <div className="empty-state">no transactions yet</div>
@@ -230,7 +231,7 @@ function Account() {
 
       <section className="card card-pad account-section">
         <h2>My Active Loans</h2>
-        {loading && <div className="empty-state">Loading loans...</div>}
+        {loading && <Spinner label="Loading loans..." />}
 
         {!loading && myLoans.length === 0 && <div className="empty-state">No loans yet.</div>}
 

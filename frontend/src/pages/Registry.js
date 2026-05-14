@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
@@ -136,7 +137,7 @@ function Registry() {
           <span className="eyebrow">{nodes.length} online</span>
         </div>
 
-        {loading && <div className="empty-state">Loading active nodes...</div>}
+        {loading && <Spinner label="Loading active nodes..." />}
 
         {!loading && nodes.length === 0 && (
           <div className="empty-state">No active public nodes are registered right now.</div>

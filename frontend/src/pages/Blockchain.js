@@ -3,6 +3,7 @@ import { ec as EC } from "elliptic";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 import { createPythonSigningPayload } from "../helpers/signer";
@@ -251,7 +252,7 @@ function Blockchain() {
         </section>
 
         <section className="stack">
-          {loading && <div className="empty-state">Loading blockchain data...</div>}
+          {loading && <Spinner label="Loading blockchain data..." />}
 
           {!loading && filteredChain.length === 0 && <div className="empty-state">No blocks found.</div>}
 

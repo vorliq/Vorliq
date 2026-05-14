@@ -3,6 +3,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
@@ -75,7 +76,9 @@ function Wallet() {
             </button>
           </div>
 
-          {wallet ? (
+          {creating ? (
+            <Spinner label="Creating wallet..." />
+          ) : wallet ? (
             <div className="stack">
               <div className="field">
                 <label>Wallet Address</label>
@@ -126,7 +129,9 @@ function Wallet() {
             </button>
           </form>
 
-          {balance && (
+          {checking && <Spinner label="Checking balance..." />}
+
+          {!checking && balance && (
             <div className="value-box">
               {balance.address}
               {"\n"}

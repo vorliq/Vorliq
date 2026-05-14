@@ -141,6 +141,11 @@ function Send() {
           <button className="button" type="submit" disabled={sending}>
             {sending ? "Sending..." : "Send VLQ"}
           </button>
+          <p className="help-text">
+            You can find your sender public key and private key on the Wallet page when a
+            wallet is created. Your saved wallet is also available from the Account page after
+            you unlock it.
+          </p>
         </form>
       </section>
     </main>

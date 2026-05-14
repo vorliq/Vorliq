@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import ErrorMessage from "../components/ErrorMessage";
+import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
@@ -134,7 +135,7 @@ function Health() {
       <section className="card card-pad health-section">
         <h2>Local Node Health</h2>
         {loading ? (
-          <div className="empty-state">Checking local services...</div>
+          <Spinner label="Checking local services..." />
         ) : (
           <div className="health-list">
             <HealthRow label="Express Backend" health={backendHealth} />
@@ -149,7 +150,7 @@ function Health() {
           <h2>Network Node Health</h2>
           <span className="eyebrow">{registryNodes.length} registered</span>
         </div>
-        {loading && <div className="empty-state">Checking registry nodes...</div>}
+        {loading && <Spinner label="Checking registry nodes..." />}
         {!loading && networkHealth.length === 0 && (
           <div className="empty-state">No active registry nodes are available right now.</div>
         )}
@@ -157,7 +158,7 @@ function Health() {
           {networkHealth.map((node) => (
             <div className="health-row" key={node.node_url}>
               <span className={`health-icon ${node.online ? "online" : "offline"}`}>
-                {node.online ? "✓" : "×"}
+                {node.online ? "\u2713" : "\u00d7"}
               </span>
               <div>
                 <strong>{node.display_name}</strong>
@@ -201,7 +202,7 @@ function HealthRow({ label, health }) {
   return (
     <div className="health-row">
       <span className={`health-icon ${online ? "online" : "offline"}`}>
-        {online ? "✓" : "×"}
+        {online ? "\u2713" : "\u00d7"}
       </span>
       <strong>{label}</strong>
       <span>{online ? `${health.responseTime} ms` : "offline"}</span>

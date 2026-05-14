@@ -10,12 +10,8 @@
     {
       "src": "logo.png",
       "type": "image/png",
-      "sizes": "1254x1254"
-    },
-    {
-      "src": "logo.png",
-      "type": "image/png",
-      "sizes": "1254x1254"
+      "sizes": "1254x1254",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",

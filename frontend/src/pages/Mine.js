@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import Spinner from "../components/Spinner";
 import { useNotifications } from "../context/NotificationContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
@@ -82,7 +83,7 @@ function Mine() {
 
         <section className="card card-pad stack">
           <h2>Mining Result</h2>
-          {mining && <div className="empty-state">Proof of work is running. This can take a few seconds.</div>}
+          {mining && <Spinner label="Proof of work is running. This can take a few seconds." />}
 
           {!mining && minedBlock ? (
             <div className="stack">
@@ -95,6 +96,10 @@ function Mine() {
                 <div className="value-box">{minedBlock.hash}</div>
               </div>
               <p className="green">You will receive 50 VLQ as a reward in the next block.</p>
+              <p>
+                The 50 VLQ reward will appear in your balance after the next block is mined
+                because the reward is added as a pending transaction first.
+              </p>
             </div>
           ) : (
             !mining && <div className="empty-state">Mine a block to see the result here.</div>

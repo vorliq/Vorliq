@@ -149,6 +149,14 @@ a {
   object-fit: contain;
 }
 
+.section-logo {
+  display: block;
+  width: 82px;
+  height: auto;
+  justify-self: center;
+  margin-bottom: 4px;
+}
+
 .connection-dot {
   width: 11px;
   height: 11px;
@@ -553,6 +561,38 @@ p {
   border-radius: 8px;
   padding: 18px;
   text-align: center;
+}
+
+.spinner-wrap {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  min-height: 150px;
+  place-content: center;
+  color: var(--muted);
+  font-weight: 800;
+  text-align: center;
+}
+
+.spinner {
+  width: 46px;
+  height: 46px;
+  border: 4px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 999px;
+  animation: vorliq-spin 840ms linear infinite;
+}
+
+.help-text {
+  color: var(--muted-2);
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+@keyframes vorliq-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .error-message {

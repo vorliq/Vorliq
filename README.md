@@ -1,6 +1,14 @@
 Vorliq
 =======
 
+![Vorliq Logo](https://raw.githubusercontent.com/vorliq/Vorliq/main/frontend/public/logo.png)
+
+[![Vorliq CI](https://github.com/vorliq/Vorliq/actions/workflows/ci.yml/badge.svg)](https://github.com/vorliq/Vorliq/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+![Coin: VLQ](https://img.shields.io/badge/coin-VLQ-6c63ff.svg)
+
+Live website: https://vorliq.github.io/Vorliq
+
 What is Vorliq
 --------------
 
