@@ -3,8 +3,11 @@ import { BrowserRouter, NavLink, Route, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+import NotificationPanel from "./components/NotificationPanel";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { NotificationProvider, useNotifications } from "./context/NotificationContext";
+import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import Dashboard from "./pages/Dashboard";
 import Wallet from "./pages/Wallet";
 import Send from "./pages/Send";
@@ -24,17 +27,47 @@ import logo from "./logo.svg";
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppShell />
-      </BrowserRouter>
-    </AuthProvider>
+    <ThemeProvider>
+      <NotificationProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppShell />
+          </BrowserRouter>
+        </AuthProvider>
+      </NotificationProvider>
+    </ThemeProvider>
   );
 }
 
 function AppShell() {
   const { isLoggedIn, logout, wallet } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const { unreadCount } = useNotifications();
   const [backendOnline, setBackendOnline] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  useEffect(() => {
+    const hamburger = document.querySelector(".hamburger");
+    const navMenu = document.querySelector(".nav-links");
+
+    function toggleMenu() {
+      navMenu?.classList.toggle("nav-open");
+    }
+
+    function closeMenu(event) {
+      if (event.target.closest("a") || event.target.closest(".nav-button")) {
+        navMenu?.classList.remove("nav-open");
+      }
+    }
+
+    hamburger?.addEventListener("click", toggleMenu);
+    navMenu?.addEventListener("click", closeMenu);
+
+    return () => {
+      hamburger?.removeEventListener("click", toggleMenu);
+      navMenu?.removeEventListener("click", closeMenu);
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -74,6 +107,12 @@ function AppShell() {
             <span>Vorliq</span>
           </NavLink>
 
+          <button className="hamburger" type="button" aria-label="Open navigation menu">
+            <span />
+            <span />
+            <span />
+          </button>
+
           <div className="nav-links">
             <NavLink className="nav-link" to="/" end>
               Dashboard
@@ -108,6 +147,28 @@ function AppShell() {
             <NavLink className="nav-link" to="/health">
               Health
             </NavLink>
+
+            <div className="nav-tools">
+              <button
+                className="icon-button"
+                type="button"
+                onClick={toggleTheme}
+                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+              </button>
+              <button
+                className="icon-button notification-bell"
+                type="button"
+                onClick={() => setNotificationsOpen((open) => !open)}
+                aria-label="Open notifications"
+                title="Notifications"
+              >
+                <BellIcon />
+                {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+              </button>
+            </div>
 
             <div className="auth-actions">
               {isLoggedIn ? (
@@ -153,16 +214,50 @@ function AppShell() {
       </Routes>
 
       <Footer />
+      <NotificationPanel open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
 
       <ToastContainer
         className="toast"
         position="top-right"
-        theme="dark"
+        theme={theme}
         autoClose={3600}
         closeOnClick
         pauseOnHover
       />
     </div>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="M4.93 4.93l1.41 1.41" />
+      <path d="M17.66 17.66l1.41 1.41" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="M4.93 19.07l1.41-1.41" />
+      <path d="M17.66 6.34l1.41-1.41" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 6.6 6.6 0 0 0 21 12.8Z" />
+    </svg>
+  );
+}
+
+function BellIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
   );
 }
 

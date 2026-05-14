@@ -2,10 +2,12 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import { useNotifications } from "../context/NotificationContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
 function Mine() {
+  const { addNotification } = useNotifications();
   const [minerAddress, setMinerAddress] = useState("");
   const [mining, setMining] = useState(false);
   const [minedBlock, setMinedBlock] = useState(null);
@@ -29,6 +31,11 @@ function Mine() {
       setMinedBlock(response.data.block);
       setSessionMinedBlocks((current) => current + 1);
       setErrorMessage("");
+      addNotification(
+        "info",
+        "Block Mined",
+        `Block #${response.data.block.index} mined with hash ${response.data.block.hash}.`
+      );
       toast.success("Block mined successfully.");
     } catch (error) {
       const message = apiErrorMessage(error, "Unable to mine block.");

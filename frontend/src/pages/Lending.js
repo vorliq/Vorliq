@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import { useAuth } from "../context/AuthContext";
+import { useNotifications } from "../context/NotificationContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
@@ -23,6 +25,9 @@ const initialRepay = {
 };
 
 function Lending() {
+  const { isLoggedIn, wallet } = useAuth();
+  const { addNotification } = useNotifications();
+  const previousLoanStatusesRef = useRef(null);
   const [requestForm, setRequestForm] = useState(initialRequest);
   const [voteForm, setVoteForm] = useState(initialVote);
   const [repayForm, setRepayForm] = useState(initialRepay);
@@ -52,6 +57,33 @@ function Lending() {
   useEffect(() => {
     loadLoans();
   }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !wallet?.address || loadingLoans) {
+      return;
+    }
+
+    const myLoans = loans.filter((loan) => loan.requester_address === wallet.address);
+    const currentStatuses = new Map(myLoans.map((loan) => [loan.loan_id, loan.status]));
+
+    if (previousLoanStatusesRef.current === null) {
+      previousLoanStatusesRef.current = currentStatuses;
+      return;
+    }
+
+    myLoans.forEach((loan) => {
+      const previousStatus = previousLoanStatusesRef.current.get(loan.loan_id);
+      if (previousStatus === "pending" && loan.status === "approved") {
+        addNotification(
+          "success",
+          "Loan Approved",
+          `Loan ${loan.loan_id.slice(0, 12)} for ${loan.amount} VLQ was approved.`
+        );
+      }
+    });
+
+    previousLoanStatusesRef.current = currentStatuses;
+  }, [addNotification, isLoggedIn, loadingLoans, loans, wallet]);
 
   function updateRequest(field, value) {
     setRequestForm((current) => ({ ...current, [field]: value }));

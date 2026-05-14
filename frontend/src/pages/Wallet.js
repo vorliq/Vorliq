@@ -85,8 +85,8 @@ function Wallet() {
                 <QRCodeSVG
                   value={wallet.address}
                   size={180}
-                  bgColor="#ffffff"
-                  fgColor="#0f0f1a"
+                  bgColor="var(--qr-bg)"
+                  fgColor="var(--qr-fg)"
                   level="M"
                   includeMargin
                 />

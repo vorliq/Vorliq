@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
 import { useAuth } from "../context/AuthContext";
+import { useNotifications } from "../context/NotificationContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
 function Account() {
   const { wallet } = useAuth();
+  const { addNotification } = useNotifications();
+  const previousIncomingCountRef = useRef(null);
   const [balance, setBalance] = useState(null);
   const [chain, setChain] = useState([]);
   const [loans, setLoans] = useState([]);
@@ -76,6 +79,34 @@ function Account() {
     () => loans.filter((loan) => loan.requester_address === wallet.address),
     [loans, wallet.address]
   );
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    const incomingTransactions = myTransactions.filter(
+      (transaction) => transaction.direction === "Received"
+    );
+
+    if (previousIncomingCountRef.current === null) {
+      previousIncomingCountRef.current = incomingTransactions.length;
+      return;
+    }
+
+    if (incomingTransactions.length > previousIncomingCountRef.current) {
+      const newTransactions = incomingTransactions.slice(previousIncomingCountRef.current);
+      newTransactions.forEach((transaction) => {
+        addNotification(
+          "success",
+          "You received VLQ",
+          `${transaction.amount} VLQ received from ${transaction.otherParty}.`
+        );
+      });
+    }
+
+    previousIncomingCountRef.current = incomingTransactions.length;
+  }, [addNotification, loading, myTransactions]);
 
   async function copyAddress() {
     try {
