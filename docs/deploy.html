@@ -34,6 +34,20 @@
       </div>
 
       <section>
+        <h2>Quick Setup</h2>
+        <p>The fastest way to deploy a Vorliq public node is to run the automated setup scripts on a fresh Ubuntu 22.04 server. The first command downloads and runs the installer. The second command runs the server configuration script from the cloned Vorliq repository.</p>
+        <pre>curl -fsSL https://raw.githubusercontent.com/vorliq/Vorliq/main/deployment/setup_server.sh -o setup_server.sh
+sudo bash setup_server.sh</pre>
+        <pre>sudo bash /home/vorliq/app/deployment/configure_server.sh</pre>
+        <p>After the scripts finish, the React web app is served through nginx, the backend API runs through systemd, the blockchain API listens on port 5001, and the node is ready to register with the Vorliq community.</p>
+      </section>
+
+      <section>
+        <h2>Advanced Manual Setup</h2>
+        <p>The manual setup notes below explain what the automated scripts do and are useful for operators who want to customize the server, domain, SSL certificate, or systemd services by hand.</p>
+      </section>
+
+      <section>
         <h2>What You Need for Production</h2>
         <p>To run a public Vorliq node, use a Linux server running Ubuntu 22.04 or later with a public IP address, at least 1 gigabyte of RAM, and at least 10 gigabytes of disk space. A small virtual private server from a common provider is enough for early community nodes and usually costs around five dollars per month.</p>
       </section>

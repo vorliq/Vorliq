@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${EUID}" -ne 0 ]]; then
+  echo "Please run this script as root with sudo."
+  exit 1
+fi
+
+SERVER_IP="$(hostname -I | awk '{print $1}')"
+
+cat >/etc/systemd/system/vorliq-blockchain.service <<'SERVICE'
+[Unit]
+Description=Vorliq Blockchain API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=vorliq
+Group=vorliq
+WorkingDirectory=/home/vorliq/app/blockchain
+Environment=VORLIQ_HOST=0.0.0.0
+Environment=VORLIQ_PORT=5001
+Environment=VORLIQ_DATA_DIR=/home/vorliq/app/blockchain/data
+ExecStart=/home/vorliq/app/blockchain/.venv/bin/python app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+cat >/etc/systemd/system/vorliq-backend.service <<'SERVICE'
+[Unit]
+Description=Vorliq Backend API
+After=network-online.target vorliq-blockchain.service
+Wants=network-online.target
+Requires=vorliq-blockchain.service
+
+[Service]
+Type=simple
+User=vorliq
+Group=vorliq
+WorkingDirectory=/home/vorliq/app/backend
+Environment=NODE_ENV=production
+Environment=PORT=5000
+Environment=FLASK_URL=http://127.0.0.1:5001
+ExecStart=/usr/bin/node index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+cat >/etc/systemd/system/vorliq-heartbeat.service <<SERVICE
+[Unit]
+Description=Vorliq Public Registry Heartbeat
+After=network-online.target vorliq-blockchain.service
+Wants=network-online.target
+Requires=vorliq-blockchain.service
+
+[Service]
+Type=simple
+User=vorliq
+Group=vorliq
+WorkingDirectory=/home/vorliq/app/backend
+Environment=NODE_ENV=production
+Environment=FLASK_URL=http://127.0.0.1:5001
+Environment=LOCAL_NODE_URL=http://${SERVER_IP}:5001
+Environment=NODE_DISPLAY_NAME=Vorliq Public Node
+ExecStart=/usr/bin/node heartbeat.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+systemctl daemon-reload
+systemctl enable vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat.service
+systemctl restart vorliq-blockchain.service
+systemctl restart vorliq-backend.service
+systemctl restart vorliq-heartbeat.service
+
+for service in vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat.service; do
+  if systemctl is-active --quiet "${service}"; then
+    echo "${service} is running."
+  else
+    echo "${service} failed to start."
+    systemctl status "${service}" --no-pager || true
+  fi
+done
+
+cat >/etc/nginx/sites-available/vorliq <<'NGINX'
+server {
+  listen 80;
+  server_name _;
+
+  root /home/vorliq/app/frontend/build;
+  index index.html;
+
+  gzip on;
+  gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+  gzip_min_length 1024;
+
+  location / {
+    try_files $uri /index.html;
+  }
+
+  location /static/ {
+    expires 7d;
+    add_header Cache-Control "public, max-age=604800";
+    try_files $uri =404;
+  }
+
+  location /api/ {
+    proxy_pass http://127.0.0.1:5000/api/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /blockchain/ {
+    proxy_pass http://127.0.0.1:5001/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+NGINX
+
+ln -sfn /etc/nginx/sites-available/vorliq /etc/nginx/sites-enabled/vorliq
+rm -f /etc/nginx/sites-enabled/default
+nginx -t
+systemctl restart nginx
+
+echo "Configuration complete. Your Vorliq node is running."
+echo "Server IP address:"
+hostname -I

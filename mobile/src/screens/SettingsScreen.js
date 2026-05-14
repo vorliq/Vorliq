@@ -15,7 +15,7 @@ import {
   loadNotificationsEnabled,
   saveNotificationsEnabled,
 } from "../notifications";
-import { clearWallet, loadNodeUrl, saveNodeUrl } from "../storage";
+import { clearWallet, DEFAULT_NODE_URL, loadNodeUrl, saveNodeUrl } from "../storage";
 import theme from "../theme";
 import sharedStyles from "./sharedStyles";
 
@@ -56,6 +56,13 @@ export default function SettingsScreen() {
     }
   };
 
+  const resetToCommunityNode = async () => {
+    setError("");
+    setNodeUrl(DEFAULT_NODE_URL);
+    await saveNodeUrl(DEFAULT_NODE_URL);
+    setMessage("Node URL reset to the official Vorliq community node.");
+  };
+
   const confirmDeleteWallet = () => {
     Alert.alert("Delete Wallet", "This removes the saved wallet from this phone.", [
       { text: "Cancel", style: "cancel" },
@@ -89,13 +96,16 @@ export default function SettingsScreen() {
         <TextInput
           autoCapitalize="none"
           style={sharedStyles.input}
-          placeholder="http://192.168.1.1:5000"
+          placeholder={DEFAULT_NODE_URL}
           placeholderTextColor={theme.textSecondary}
           value={nodeUrl}
           onChangeText={setNodeUrl}
         />
         <Pressable style={sharedStyles.button} onPress={handleSave}>
           <Text style={sharedStyles.buttonText}>Save</Text>
+        </Pressable>
+        <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton, styles.marginTop]} onPress={resetToCommunityNode}>
+          <Text style={sharedStyles.buttonText}>Reset to Community Node</Text>
         </Pressable>
       </View>
 

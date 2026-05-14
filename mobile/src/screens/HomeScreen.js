@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
   Image,
@@ -15,6 +16,7 @@ import theme from "../theme";
 import sharedStyles from "./sharedStyles";
 
 const logo = require("../../assets/logo.png");
+const COMMUNITY_BANNER_KEY = "vorliq_community_node_banner_dismissed";
 
 export default function HomeScreen() {
   const [diagnostics, setDiagnostics] = useState(null);
@@ -22,6 +24,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [online, setOnline] = useState(false);
+  const [showCommunityBanner, setShowCommunityBanner] = useState(false);
   const previousBlockHeightRef = useRef(null);
 
   const loadDashboard = useCallback(async () => {
@@ -56,6 +59,15 @@ export default function HomeScreen() {
   }, [loadDashboard]);
 
   useEffect(() => {
+    async function loadBannerState() {
+      const dismissed = await AsyncStorage.getItem(COMMUNITY_BANNER_KEY);
+      setShowCommunityBanner(dismissed !== "true");
+    }
+
+    loadBannerState();
+  }, []);
+
+  useEffect(() => {
     if (loading) {
       return undefined;
     }
@@ -67,6 +79,11 @@ export default function HomeScreen() {
   const handleRefresh = () => {
     setRefreshing(true);
     loadDashboard();
+  };
+
+  const dismissCommunityBanner = async () => {
+    await AsyncStorage.setItem(COMMUNITY_BANNER_KEY, "true");
+    setShowCommunityBanner(false);
   };
 
   const chainStatus =
@@ -85,6 +102,17 @@ export default function HomeScreen() {
       contentContainerStyle={sharedStyles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.accent} />}
     >
+      {showCommunityBanner ? (
+        <View style={styles.communityBanner}>
+          <Text style={styles.communityBannerText}>
+            Welcome to Vorliq. You are connected to the community node. You can change your node in Settings.
+          </Text>
+          <Pressable style={styles.dismissButton} onPress={dismissCommunityBanner}>
+            <Text style={styles.dismissButtonText}>Dismiss</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <View style={sharedStyles.headerRow}>
         <View>
           <Text style={sharedStyles.title}>Vorliq</Text>
@@ -136,6 +164,33 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     height: 18,
     width: 18,
+  },
+  communityBanner: {
+    backgroundColor: theme.card,
+    borderColor: theme.accent,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: theme.spacing.md,
+    padding: theme.spacing.md,
+  },
+  communityBannerText: {
+    color: theme.text,
+    fontSize: theme.fonts.body,
+    lineHeight: 24,
+  },
+  dismissButton: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: theme.accent,
+    borderRadius: 10,
+    marginTop: theme.spacing.md,
+    minHeight: 44,
+    justifyContent: "center",
+    paddingHorizontal: theme.spacing.md,
+  },
+  dismissButtonText: {
+    color: theme.text,
+    fontWeight: "800",
   },
   logoWrap: {
     alignItems: "center",

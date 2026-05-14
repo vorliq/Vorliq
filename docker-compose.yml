@@ -1,0 +1,48 @@
+services:
+  blockchain:
+    build:
+      context: ./blockchain
+    container_name: vorliq-blockchain
+    environment:
+      VORLIQ_HOST: 0.0.0.0
+      VORLIQ_PORT: 5001
+      VORLIQ_DATA_DIR: /app/data
+    ports:
+      - "5001:5001"
+    volumes:
+      - vorliq-data:/app/data
+    networks:
+      - vorliq-network
+
+  backend:
+    build:
+      context: ./backend
+    container_name: vorliq-backend
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      FLASK_URL: http://blockchain:5001
+    depends_on:
+      - blockchain
+    ports:
+      - "5000:5000"
+    networks:
+      - vorliq-network
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: vorliq-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - vorliq-network
+
+networks:
+  vorliq-network:
+    driver: bridge
+
+volumes:
+  vorliq-data:
