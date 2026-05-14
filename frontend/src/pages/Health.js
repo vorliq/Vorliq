@@ -5,30 +5,16 @@ import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
-async function checkNetworkNode(nodeUrl) {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 5000);
-  const start = performance.now();
-
-  try {
-    const response = await fetch(`${nodeUrl.replace(/\/$/, "")}/chain`, {
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      throw new Error("Node returned an error.");
-    }
-    return {
-      online: true,
-      responseTime: Math.round(performance.now() - start),
-    };
-  } catch (error) {
-    return {
-      online: false,
-      responseTime: null,
-    };
-  } finally {
-    window.clearTimeout(timeout);
+function getPublicNodeDisplayUrl(nodeUrl) {
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname !== "localhost" &&
+    /\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(nodeUrl)
+  ) {
+    return window.location.origin;
   }
+
+  return nodeUrl;
 }
 
 function Health() {
@@ -46,17 +32,35 @@ function Health() {
       setErrorMessage("");
 
       try {
+        const diagnosticsStart = performance.now();
+        const diagnosticsRequest = api.get("/diagnostics");
+        const registryRequest = api.get("/registry/nodes");
         const [diagnosticsResponse, registryResponse] = await Promise.all([
-          api.get("/diagnostics"),
-          api.get("/registry/nodes"),
+          diagnosticsRequest,
+          registryRequest,
         ]);
-        const nodes = registryResponse.data.nodes || [];
-        const nodeChecks = await Promise.all(
-          nodes.map(async (node) => ({
+        const diagnosticsResponseTime = Math.round(performance.now() - diagnosticsStart);
+        const registeredNodes = registryResponse.data.nodes || [];
+        const fallbackNodes = diagnosticsResponse.data?.node_url
+          ? [
+              {
+                display_name: "Vorliq Public Node",
+                node_url: diagnosticsResponse.data.node_url,
+              },
+            ]
+          : [];
+        const nodes = registeredNodes.length > 0 ? registeredNodes : fallbackNodes;
+        const backendNodeIsOnline = Boolean(diagnosticsResponse.data?.success);
+        const nodeChecks = nodes.map((node) => {
+          const displayUrl = getPublicNodeDisplayUrl(node.node_url);
+
+          return {
             ...node,
-            ...(await checkNetworkNode(node.node_url)),
-          }))
-        );
+            node_url: displayUrl,
+            online: backendNodeIsOnline,
+            responseTime: backendNodeIsOnline ? diagnosticsResponseTime : null,
+          };
+        });
 
         if (mounted) {
           setDiagnostics(diagnosticsResponse.data);

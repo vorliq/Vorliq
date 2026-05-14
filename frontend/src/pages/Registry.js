@@ -26,8 +26,8 @@ function timeAgo(timestamp) {
 }
 
 function Registry() {
-  const [nodeUrl, setNodeUrl] = useState("http://localhost:5001");
-  const [displayName, setDisplayName] = useState("Local Vorliq Node");
+  const [nodeUrl, setNodeUrl] = useState("");
+  const [displayName, setDisplayName] = useState("Vorliq Community Node");
   const [nodes, setNodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
