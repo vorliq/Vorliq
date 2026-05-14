@@ -19,6 +19,7 @@ function getPublicNodeDisplayUrl(nodeUrl) {
 
 function Health() {
   const [diagnostics, setDiagnostics] = useState(null);
+  const [deployment, setDeployment] = useState(null);
   const [registryNodes, setRegistryNodes] = useState([]);
   const [networkHealth, setNetworkHealth] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,9 +36,11 @@ function Health() {
         const diagnosticsStart = performance.now();
         const diagnosticsRequest = api.get("/diagnostics");
         const registryRequest = api.get("/registry/nodes");
-        const [diagnosticsResponse, registryResponse] = await Promise.all([
+        const deploymentRequest = api.get("/deployment");
+        const [diagnosticsResponse, registryResponse, deploymentResponse] = await Promise.all([
           diagnosticsRequest,
           registryRequest,
+          deploymentRequest,
         ]);
         const diagnosticsResponseTime = Math.round(performance.now() - diagnosticsStart);
         const registeredNodes = registryResponse.data.nodes || [];
@@ -64,6 +67,7 @@ function Health() {
 
         if (mounted) {
           setDiagnostics(diagnosticsResponse.data);
+          setDeployment(deploymentResponse.data);
           setRegistryNodes(nodes);
           setNetworkHealth(nodeChecks);
         }
@@ -174,6 +178,34 @@ function Health() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="card card-pad health-section">
+        <h2>Deployment Information</h2>
+        {loading ? (
+          <Spinner label="Loading deployment information..." />
+        ) : deployment?.success ? (
+          <div className="table-wrap">
+            <table className="stats-table">
+              <tbody>
+                <tr>
+                  <th>Current Commit</th>
+                  <td>{deployment.commit_hash}</td>
+                </tr>
+                <tr>
+                  <th>Commit Timestamp</th>
+                  <td>
+                    {deployment.commit_timestamp
+                      ? new Date(deployment.commit_timestamp).toLocaleString()
+                      : "Unavailable"}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">Deployment information is unavailable right now.</div>
+        )}
       </section>
     </main>
   );

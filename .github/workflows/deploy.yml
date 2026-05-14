@@ -1,0 +1,52 @@
+name: Vorliq Deploy
+
+on:
+  workflow_run:
+    workflows:
+      - Vorliq CI
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/vorliq_deploy_key
+          chmod 600 ~/.ssh/vorliq_deploy_key
+          ssh-keyscan -H 159.65.24.177 >> ~/.ssh/known_hosts
+
+      - name: Deploy to production server
+        run: |
+          ssh -i ~/.ssh/vorliq_deploy_key root@159.65.24.177 <<'EOF'
+            set -euo pipefail
+            sudo -u vorliq -H git -C /home/vorliq/app fetch origin
+            sudo -u vorliq -H git -C /home/vorliq/app reset --hard origin/main
+            sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm install'
+            sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm run build'
+            chmod -R 755 /home/vorliq/app/frontend/build
+            systemctl restart vorliq-blockchain vorliq-backend vorliq-heartbeat nginx
+            for attempt in 1 2 3 4 5; do
+              HEALTH_RESPONSE="$(curl -s http://localhost:5000/api/health || true)"
+              if echo "${HEALTH_RESPONSE}" | grep -q '"success":true'; then
+                break
+              fi
+              sleep 3
+            done
+            echo "${HEALTH_RESPONSE}"
+            echo "${HEALTH_RESPONSE}" | grep -q '"success":true'
+          EOF
+
+      - name: Print deployment success
+        run: echo "Deployment successful for commit ${{ github.event.workflow_run.head_sha }}"

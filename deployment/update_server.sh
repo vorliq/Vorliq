@@ -19,7 +19,8 @@ if [[ -f backend/package.json ]]; then
   OLD_BACKEND_HASH="$(sha256sum backend/package.json | awk '{print $1}')"
 fi
 
-sudo -u vorliq -H git pull origin main
+sudo -u vorliq -H git fetch origin
+sudo -u vorliq -H git reset --hard origin/main
 
 NEW_REQUIREMENTS_HASH="$(sha256sum blockchain/requirements.txt | awk '{print $1}')"
 NEW_BACKEND_HASH="$(sha256sum backend/package.json | awk '{print $1}')"
