@@ -32,6 +32,7 @@ html:not([data-theme]) {
   --on-status: #101020;
   --yellow: #ffd166;
   --blue: #52a7ff;
+  --orange: #ffab4a;
   --qr-bg: #ffffff;
   --qr-fg: #0f0f1a;
   color-scheme: dark;
@@ -68,6 +69,7 @@ html[data-theme="light"] {
   --on-status: #111111;
   --yellow: #b77900;
   --blue: #1973c7;
+  --orange: #c46a16;
   --qr-bg: #ffffff;
   --qr-fg: #111111;
   color-scheme: light;
@@ -757,6 +759,12 @@ p {
   gap: 16px;
 }
 
+.exchange-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .loan-card {
   display: grid;
   gap: 14px;
@@ -764,6 +772,32 @@ p {
   border-radius: 8px;
   background: var(--soft-surface);
   padding: 16px;
+}
+
+.exchange-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--soft-surface);
+  padding: 16px;
+}
+
+.exchange-badge {
+  border-radius: 999px;
+  color: var(--on-status);
+  font-size: 0.76rem;
+  font-weight: 900;
+  padding: 6px 10px;
+  text-transform: uppercase;
+}
+
+.exchange-badge.buy {
+  background: var(--green);
+}
+
+.exchange-badge.sell {
+  background: var(--orange);
 }
 
 .status-badge {
@@ -777,6 +811,23 @@ p {
 
 .status-badge.pending {
   background: var(--yellow);
+}
+
+.status-badge.open {
+  background: var(--green);
+}
+
+.status-badge.accepted {
+  background: var(--yellow);
+}
+
+.status-badge.completed {
+  background: var(--blue);
+}
+
+.status-badge.cancelled {
+  background: var(--red);
+  color: var(--text);
 }
 
 .status-badge.approved {
@@ -821,6 +872,31 @@ p {
   color: var(--muted-2);
   font-size: 0.86rem;
   font-weight: 700;
+}
+
+.inline-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.table-sort-button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  padding: 0;
+  text-align: left;
+  text-transform: inherit;
 }
 
 .auth-page {
@@ -1130,6 +1206,7 @@ p {
   .two-column,
   .block-meta,
   .loan-grid,
+  .exchange-grid,
   .account-wallet-grid,
   .history-row,
   .explorer-result,
@@ -1223,6 +1300,7 @@ p {
   .two-column,
   .block-meta,
   .loan-grid,
+  .exchange-grid,
   .account-wallet-grid,
   .history-row,
   .explorer-result,
@@ -1237,6 +1315,10 @@ p {
 
   .tab-button {
     width: 100%;
+  }
+
+  .inline-form {
+    grid-template-columns: 1fr;
   }
 
   .section-title,

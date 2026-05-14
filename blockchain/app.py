@@ -5,6 +5,7 @@ from flask import Flask, jsonify, request
 
 from block import Block
 from blockchain import Blockchain
+from exchange import Exchange
 from lending import LendingPool
 from logger import vorliq_logger
 from network import Network
@@ -43,9 +44,11 @@ vorliq_logger.info("Flask startup restored %s peers", len(network.peers))
 lending_pool = storage.load_lending_pool()
 lending_pool.blockchain = node.blockchain
 vorliq_logger.info("Flask startup restored %s lending records", len(lending_pool.loan_requests))
+exchange = storage.load_exchange()
+vorliq_logger.info("Flask startup restored %s exchange offers", len(exchange.offers))
 node_registry = storage.load_registry()
 vorliq_logger.info("Flask startup restored %s registry records", len(node_registry.registered_nodes))
-_imports_ready = (Block, Blockchain, Transaction)
+_imports_ready = (Block, Blockchain, Transaction, Exchange)
 
 if network.peers:
     network.announce_to_peers(LOCAL_NODE_URL, network.get_peers())
@@ -358,6 +361,89 @@ def repay_lending_loan():
         )
     except Exception as exc:
         vorliq_logger.error("Lending repay endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/exchange/offer")
+def create_exchange_offer():
+    try:
+        data = request.get_json(force=True)
+        offer_id = exchange.create_offer(
+            creator_address=data.get("creator_address") or data.get("creatorAddress"),
+            offer_type=data.get("offer_type") or data.get("offerType"),
+            amount=float(data["amount"]),
+            price_description=data.get("price") or data.get("price_description") or data.get("priceDescription"),
+            detail_description=data.get("description") or data.get("detail_description") or data.get("detailDescription"),
+        )
+        storage.save_exchange(exchange)
+        return jsonify({"success": True, "offer_id": offer_id, "offer": exchange.get_offer(offer_id)}), 201
+    except Exception as exc:
+        vorliq_logger.error("Exchange offer endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/exchange/offers")
+def get_exchange_open_offers():
+    return jsonify({"success": True, "offers": exchange.get_open_offers()})
+
+
+@app.get("/exchange/all")
+def get_exchange_all_offers():
+    return jsonify({"success": True, "offers": exchange.get_all_offers()})
+
+
+@app.get("/exchange/my")
+def get_exchange_my_offers():
+    try:
+        address = request.args.get("address", "")
+        return jsonify({"success": True, "offers": exchange.get_offers_by_address(address)})
+    except Exception as exc:
+        vorliq_logger.error("Exchange my offers endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/exchange/accept")
+def accept_exchange_offer():
+    try:
+        data = request.get_json(force=True)
+        offer = exchange.accept_offer(
+            offer_id=data.get("offer_id") or data.get("offerId"),
+            acceptor_address=data.get("acceptor_address") or data.get("acceptorAddress"),
+        )
+        storage.save_exchange(exchange)
+        return jsonify({"success": True, "offer": offer})
+    except Exception as exc:
+        vorliq_logger.error("Exchange accept endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/exchange/complete")
+def complete_exchange_offer():
+    try:
+        data = request.get_json(force=True)
+        offer = exchange.complete_offer(
+            offer_id=data.get("offer_id") or data.get("offerId"),
+            caller_address=data.get("caller_address") or data.get("callerAddress"),
+        )
+        storage.save_exchange(exchange)
+        return jsonify({"success": True, "offer": offer})
+    except Exception as exc:
+        vorliq_logger.error("Exchange complete endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/exchange/cancel")
+def cancel_exchange_offer():
+    try:
+        data = request.get_json(force=True)
+        offer = exchange.cancel_offer(
+            offer_id=data.get("offer_id") or data.get("offerId"),
+            caller_address=data.get("caller_address") or data.get("callerAddress"),
+        )
+        storage.save_exchange(exchange)
+        return jsonify({"success": True, "offer": offer})
+    except Exception as exc:
+        vorliq_logger.error("Exchange cancel endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 

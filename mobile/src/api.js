@@ -74,3 +74,37 @@ export async function repayLoan(repayData) {
 export async function getDiagnostics() {
   return request("get", "/api/diagnostics");
 }
+
+export async function getExchangeOffers() {
+  return request("get", "/api/exchange/offers");
+}
+
+export async function getMyExchangeOffers(address) {
+  return request("get", "/api/exchange/my", {
+    params: { address },
+  });
+}
+
+export async function createExchangeOffer(offerData) {
+  return request("post", "/api/exchange/offer", {
+    data: offerData,
+  });
+}
+
+export async function acceptExchangeOffer(offerData) {
+  return request("post", "/api/exchange/accept", {
+    data: offerData,
+  });
+}
+
+export async function completeExchangeOffer(offerData) {
+  return request("post", "/api/exchange/complete", {
+    data: offerData,
+  });
+}
+
+export async function cancelExchangeOffer(offerData) {
+  return request("post", "/api/exchange/cancel", {
+    data: offerData,
+  });
+}

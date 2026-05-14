@@ -10,6 +10,7 @@ import SendScreen from "./src/screens/SendScreen";
 import LendingScreen from "./src/screens/LendingScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 import NotificationsScreen from "./src/screens/NotificationsScreen";
+import ExchangeScreen from "./src/screens/ExchangeScreen";
 import { NotificationProvider, useNotifications } from "./src/context/NotificationContext";
 import {
   addNotificationResponseListener,
@@ -66,6 +67,17 @@ function TabIcon({ name, color }) {
         <Path {...common} d="M6 9h12" />
         <Path {...common} d="M8 5h8" />
         <Path {...common} d="M12 5v14" />
+      </Svg>
+    );
+  }
+
+  if (name === "Exchange") {
+    return (
+      <Svg width={24} height={24} viewBox="0 0 24 24">
+        <Path {...common} d="M7 7h12" />
+        <Path {...common} d="m16 4 3 3-3 3" />
+        <Path {...common} d="M17 17H5" />
+        <Path {...common} d="m8 14-3 3 3 3" />
       </Svg>
     );
   }
@@ -143,6 +155,7 @@ function VorliqTabs() {
         <Tab.Screen name="Wallet" component={WalletScreen} />
         <Tab.Screen name="Send" component={SendScreen} />
         <Tab.Screen name="Lending" component={LendingScreen} />
+        <Tab.Screen name="Exchange" component={ExchangeScreen} />
         <Tab.Screen
           name="Notifications"
           component={NotificationsScreen}

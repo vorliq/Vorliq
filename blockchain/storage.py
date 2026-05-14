@@ -6,6 +6,7 @@ from typing import Any
 
 from block import Block
 from blockchain import Blockchain
+from exchange import Exchange
 from lending import LendingPool
 from logger import vorliq_logger
 from registry import NodeRegistry
@@ -19,6 +20,7 @@ class Storage:
         self.chain_file = self.data_dir / "chain.json"
         self.pending_file = self.data_dir / "pending.json"
         self.lending_file = self.data_dir / "lending.json"
+        self.exchange_file = self.data_dir / "exchange.json"
         self.peers_file = self.data_dir / "peers.json"
         self.registry_file = self.data_dir / "registry.json"
 
@@ -94,6 +96,27 @@ class Storage:
         lending_pool.loan_requests = loan_requests
         vorliq_logger.info("Loaded lending pool with %s loan records", len(loan_requests))
         return lending_pool
+
+    def save_exchange(self, exchange: Exchange) -> None:
+        self._write_json(self.exchange_file, {"offers": exchange.offers})
+        vorliq_logger.info("Saved exchange with %s offer records", len(exchange.offers))
+
+    def load_exchange(self) -> Exchange:
+        exchange = Exchange()
+
+        if not self.exchange_file.exists():
+            vorliq_logger.info("No saved exchange found on disk")
+            return exchange
+
+        data = self._read_json(self.exchange_file)
+        offers = data.get("offers", {})
+
+        if not isinstance(offers, dict):
+            raise ValueError("exchange data must contain an offers object")
+
+        exchange.offers = offers
+        vorliq_logger.info("Loaded exchange with %s offer records", len(offers))
+        return exchange
 
     def save_peers(self, peer_urls: set[str]) -> None:
         self._write_json(self.peers_file, sorted(peer_urls))

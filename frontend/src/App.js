@@ -21,6 +21,7 @@ import Registry from "./pages/Registry";
 import Login from "./pages/Login";
 import Account from "./pages/Account";
 import Health from "./pages/Health";
+import Exchange from "./pages/Exchange";
 import Footer from "./components/Footer";
 import api from "./helpers/api";
 import logo from "./assets/logo.png";
@@ -138,6 +139,9 @@ function AppShell() {
             <NavLink className="nav-link" to="/lending">
               Lending
             </NavLink>
+            <NavLink className="nav-link" to="/exchange">
+              Exchange
+            </NavLink>
             <NavLink className="nav-link" to="/stats">
               Stats
             </NavLink>
@@ -199,6 +203,7 @@ function AppShell() {
         <Route path="/whitepaper" element={<Whitepaper />} />
         <Route path="/network" element={<Network />} />
         <Route path="/lending" element={<Lending />} />
+        <Route path="/exchange" element={<Exchange />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/registry" element={<Registry />} />
         <Route path="/health" element={<Health />} />
