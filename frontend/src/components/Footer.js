@@ -5,6 +5,7 @@ function Footer() {
     { label: "Reddit", href: "https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS" },
     { label: "GitHub", href: "https://github.com/vorliq/Vorliq" },
     { label: "X", href: "https://x.com/vorliq" },
+    { label: "Network Status", href: "https://status.vorliq.org" },
   ];
 
   return (

@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Network Status</title>
+    <meta
+      name="description"
+      content="Live public status page for the Vorliq blockchain, backend API, frontend, and SSL services."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0f0f1a;
+        --card: #1a1a2e;
+        --card-strong: #20203a;
+        --accent: #6c63ff;
+        --text: #ffffff;
+        --muted: #c7c7d4;
+        --muted-2: #9292a6;
+        --border: rgba(255, 255, 255, 0.12);
+        --green: #35d07f;
+        --red: #ff5d6c;
+        --yellow: #ffd166;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        font-family: Inter, Arial, sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(108, 99, 255, 0.2), transparent 34rem),
+          var(--bg);
+        color: var(--text);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .wrap {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      header {
+        border-bottom: 1px solid var(--border);
+        padding: 24px 0;
+      }
+
+      nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 900;
+        text-decoration: none;
+      }
+
+      .brand img {
+        width: 42px;
+        height: 42px;
+        object-fit: contain;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--muted);
+        font-weight: 800;
+        padding: 11px 14px;
+        text-decoration: none;
+      }
+
+      .button.primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      main {
+        padding: 54px 0;
+      }
+
+      .hero {
+        display: grid;
+        gap: 14px;
+        margin-bottom: 28px;
+      }
+
+      .eyebrow {
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(2.4rem, 7vw, 4.8rem);
+        line-height: 1;
+      }
+
+      h2 {
+        font-size: clamp(1.45rem, 4vw, 2.15rem);
+      }
+
+      p {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .subtitle {
+        max-width: 760px;
+        font-size: 1.08rem;
+      }
+
+      .section {
+        margin-top: 20px;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent), var(--card);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+        padding: 22px;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 54px;
+        width: fit-content;
+        border-radius: 999px;
+        color: #101020;
+        font-size: clamp(1rem, 4vw, 1.35rem);
+        font-weight: 900;
+        padding: 12px 20px;
+      }
+
+      .status-badge.ok {
+        background: var(--green);
+      }
+
+      .status-badge.bad {
+        background: var(--red);
+        color: #fff;
+      }
+
+      .service-grid,
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .service-row,
+      .stat,
+      .block-row {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.035);
+        padding: 15px;
+      }
+
+      .service-row {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr);
+        align-items: center;
+        gap: 12px;
+      }
+
+      .service-icon {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        color: #101020;
+        font-weight: 900;
+      }
+
+      .service-icon.ok {
+        background: var(--green);
+      }
+
+      .service-icon.bad {
+        background: var(--red);
+        color: #fff;
+      }
+
+      .stat {
+        display: grid;
+        gap: 6px;
+      }
+
+      .stat span,
+      .block-row span {
+        color: var(--muted-2);
+        font-size: 0.82rem;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .stat strong,
+      .block-row strong {
+        overflow-wrap: anywhere;
+        color: var(--text);
+        font-size: 1.2rem;
+      }
+
+      .activity-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .block-row {
+        display: grid;
+        grid-template-columns: 100px minmax(0, 1fr) 210px;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .message {
+        color: var(--yellow);
+        font-weight: 800;
+      }
+
+      .last-checked {
+        margin-top: 22px;
+        color: var(--muted-2);
+        font-size: 0.94rem;
+        font-weight: 700;
+      }
+
+      footer {
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        padding: 28px 0;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 34px 0;
+        }
+
+        .service-grid,
+        .stats-grid,
+        .block-row {
+          grid-template-columns: 1fr;
+        }
+
+        .button {
+          width: 100%;
+        }
+
+        .nav-links {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a class="brand" href="index.html"><img src="logo.png" alt="Vorliq logo" />Vorliq Status</a>
+        <div class="nav-links">
+          <a class="button" href="index.html">Home</a>
+          <a class="button" href="https://vorliq.org">Open App</a>
+          <a class="button primary" href="https://github.com/vorliq/Vorliq">GitHub</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <section class="hero">
+        <span class="eyebrow">Live Network Status</span>
+        <h1>Vorliq Status</h1>
+        <p class="subtitle">
+          This page checks the public Vorliq node, backend API, frontend, SSL access, and
+          blockchain diagnostics every sixty seconds.
+        </p>
+      </section>
+
+      <section class="section card">
+        <h2>Network Status</h2>
+        <div id="network-status" class="status-badge bad">Checking Services</div>
+        <p id="network-message" class="message">Loading live status from the production API.</p>
+      </section>
+
+      <section class="section card">
+        <h2>Services</h2>
+        <div class="service-grid" id="services"></div>
+      </section>
+
+      <section class="section card">
+        <h2>Current Statistics</h2>
+        <div class="stats-grid" id="stats"></div>
+      </section>
+
+      <section class="section card">
+        <h2>Recent Activity</h2>
+        <div class="activity-list" id="activity"></div>
+      </section>
+
+      <p class="last-checked" id="last-checked">Last checked: never</p>
+    </main>
+
+    <footer><div class="wrap">2025 Vorliq. All rights reserved.</div></footer>
+
+    <script>
+      const API_BASE = "https://vorliq.org/api";
+      const servicesElement = document.getElementById("services");
+      const statsElement = document.getElementById("stats");
+      const activityElement = document.getElementById("activity");
+      const statusBadge = document.getElementById("network-status");
+      const statusMessage = document.getElementById("network-message");
+      const lastCheckedElement = document.getElementById("last-checked");
+
+      function shortHash(hash) {
+        return hash ? `${hash.slice(0, 16)}...` : "Unavailable";
+      }
+
+      function serviceRow(name, ok) {
+        return `
+          <div class="service-row">
+            <span class="service-icon ${ok ? "ok" : "bad"}">${ok ? "✓" : "×"}</span>
+            <strong>${name}</strong>
+          </div>
+        `;
+      }
+
+      function statCard(label, value) {
+        return `
+          <div class="stat">
+            <span>${label}</span>
+            <strong>${value}</strong>
+          </div>
+        `;
+      }
+
+      async function fetchJson(url) {
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`${url} returned ${response.status}`);
+        }
+        return response.json();
+      }
+
+      async function refreshStatus() {
+        const checkedAt = new Date();
+        let health = null;
+        let diagnostics = null;
+        let chain = null;
+        let backendOk = false;
+        let blockchainOk = false;
+        const frontendOk = true;
+        let sslOk = false;
+
+        try {
+          health = await fetchJson(`${API_BASE}/health`);
+          backendOk = Boolean(health.success);
+          sslOk = true;
+        } catch (error) {
+          backendOk = false;
+        }
+
+        try {
+          chain = await fetchJson(`${API_BASE}/chain`);
+          blockchainOk = Array.isArray(chain.chain);
+          sslOk = true;
+        } catch (error) {
+          blockchainOk = false;
+        }
+
+        try {
+          diagnostics = await fetchJson(`${API_BASE}/diagnostics`);
+          sslOk = true;
+        } catch (error) {
+          diagnostics = null;
+        }
+
+        const allOk = backendOk && blockchainOk && frontendOk && sslOk && diagnostics?.success;
+        statusBadge.className = `status-badge ${allOk ? "ok" : "bad"}`;
+        statusBadge.textContent = allOk ? "All Systems Operational" : "Service Disruption";
+        statusMessage.textContent = allOk
+          ? "The public Vorliq services are responding normally."
+          : "One or more Vorliq services did not respond correctly during the last check.";
+
+        servicesElement.innerHTML = [
+          serviceRow("Blockchain API", blockchainOk),
+          serviceRow("Backend API", backendOk),
+          serviceRow("Frontend", frontendOk),
+          serviceRow("SSL Certificate", sslOk),
+        ].join("");
+
+        statsElement.innerHTML = diagnostics?.success
+          ? [
+              statCard("Current Block Height", diagnostics.block_height),
+              statCard("Chain Validity", diagnostics.chain_valid ? "Valid" : "Invalid"),
+              statCard("Total VLQ in Circulation", `${diagnostics.total_vlq_in_circulation} VLQ`),
+              statCard("Current Mining Reward", `${diagnostics.current_mining_reward} VLQ`),
+              statCard("Node Uptime", `${diagnostics.uptime_seconds} seconds`),
+            ].join("")
+          : '<p class="message">Diagnostics are unavailable right now.</p>';
+
+        const blocks = Array.isArray(chain?.chain) ? chain.chain.slice(-5).reverse() : [];
+        activityElement.innerHTML = blocks.length
+          ? blocks
+              .map(
+                (block) => `
+                  <div class="block-row">
+                    <div><span>Block</span><strong>${block.index}</strong></div>
+                    <div><span>Hash</span><strong>${shortHash(block.hash)}</strong></div>
+                    <div><span>Timestamp</span><strong>${new Date(block.timestamp * 1000).toLocaleString()}</strong></div>
+                  </div>
+                `
+              )
+              .join("")
+          : '<p class="message">No block activity is available right now.</p>';
+
+        lastCheckedElement.textContent = `Last checked: ${checkedAt.toLocaleString()}`;
+      }
+
+      refreshStatus();
+      window.setInterval(refreshStatus, 60000);
+    </script>
+  </body>
+</html>
