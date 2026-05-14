@@ -14,6 +14,8 @@ class Blockchain:
     halving_interval = 210_000
 
     def __init__(self) -> None:
+        self.mining_reward = self.initial_mining_reward
+        self.proof_target = "0" * self.difficulty
         self.chain: list[Block] = [self.create_genesis_block()]
         self.pending_transactions: list[Transaction] = []
 
@@ -41,7 +43,7 @@ class Blockchain:
             vorliq_logger.warning("Rejected block %s because previous hash did not match", block.index)
             return False
 
-        if not block.has_valid_proof(self.difficulty):
+        if not block.has_valid_proof(getattr(block, "difficulty", self.difficulty)):
             vorliq_logger.warning("Rejected block %s because proof of work was invalid", block.index)
             return False
 
@@ -61,7 +63,7 @@ class Blockchain:
         if genesis_block.hash != genesis_block.calculate_hash():
             vorliq_logger.warning("Chain validation failed because the genesis hash changed")
             return False
-        if not genesis_block.hash.startswith("0" * self.difficulty):
+        if not genesis_block.hash.startswith("0" * getattr(genesis_block, "difficulty", self.difficulty)):
             vorliq_logger.warning("Chain validation failed because genesis proof of work is invalid")
             return False
 
@@ -73,7 +75,8 @@ class Blockchain:
                 vorliq_logger.warning("Chain validation failed at block %s: hash mismatch", current_block.index)
                 return False
 
-            if not current_block.hash.startswith("0" * self.difficulty):
+            block_difficulty = getattr(current_block, "difficulty", self.difficulty)
+            if not current_block.hash.startswith("0" * block_difficulty):
                 vorliq_logger.warning("Chain validation failed at block %s: proof of work invalid", current_block.index)
                 return False
 
@@ -148,7 +151,7 @@ class Blockchain:
 
     def get_current_mining_reward(self) -> float:
         halvings = len(self.chain) // self.halving_interval
-        scheduled_reward = self.initial_mining_reward / (2**halvings)
+        scheduled_reward = self.mining_reward / (2**halvings)
         remaining_supply = max(self.maximum_supply - self.get_total_issued(), 0.0)
         return min(scheduled_reward, remaining_supply)
 

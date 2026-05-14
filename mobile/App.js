@@ -11,6 +11,7 @@ import LendingScreen from "./src/screens/LendingScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 import NotificationsScreen from "./src/screens/NotificationsScreen";
 import ExchangeScreen from "./src/screens/ExchangeScreen";
+import GovernanceScreen from "./src/screens/GovernanceScreen";
 import { NotificationProvider, useNotifications } from "./src/context/NotificationContext";
 import {
   addNotificationResponseListener,
@@ -91,6 +92,18 @@ function TabIcon({ name, color }) {
     );
   }
 
+  if (name === "Governance") {
+    return (
+      <Svg width={24} height={24} viewBox="0 0 24 24">
+        <Path {...common} d="M5 11h14" />
+        <Path {...common} d="M7 11v8" />
+        <Path {...common} d="M17 11v8" />
+        <Path {...common} d="M4 19h16" />
+        <Path {...common} d="M12 4 5 8h14l-7-4Z" />
+      </Svg>
+    );
+  }
+
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24">
       <Circle {...common} cx={12} cy={12} r={3} />
@@ -156,6 +169,7 @@ function VorliqTabs() {
         <Tab.Screen name="Send" component={SendScreen} />
         <Tab.Screen name="Lending" component={LendingScreen} />
         <Tab.Screen name="Exchange" component={ExchangeScreen} />
+        <Tab.Screen name="Governance" component={GovernanceScreen} />
         <Tab.Screen
           name="Notifications"
           component={NotificationsScreen}

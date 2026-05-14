@@ -6,6 +6,7 @@ from flask import Flask, jsonify, request
 from block import Block
 from blockchain import Blockchain
 from exchange import Exchange
+from governance import Governance
 from lending import LendingPool
 from logger import vorliq_logger
 from network import Network
@@ -46,9 +47,17 @@ lending_pool.blockchain = node.blockchain
 vorliq_logger.info("Flask startup restored %s lending records", len(lending_pool.loan_requests))
 exchange = storage.load_exchange()
 vorliq_logger.info("Flask startup restored %s exchange offers", len(exchange.offers))
+governance = storage.load_governance()
+if governance.governance_settings["mining_reward"]["changed"]:
+    node.blockchain.mining_reward = float(governance.governance_settings["mining_reward"]["current"])
+    node.blockchain.initial_mining_reward = float(governance.governance_settings["mining_reward"]["current"])
+if governance.governance_settings["difficulty"]["changed"]:
+    node.blockchain.difficulty = int(governance.governance_settings["difficulty"]["current"])
+    node.blockchain.proof_target = "0" * node.blockchain.difficulty
+vorliq_logger.info("Flask startup restored %s governance proposals", len(governance.proposals))
 node_registry = storage.load_registry()
 vorliq_logger.info("Flask startup restored %s registry records", len(node_registry.registered_nodes))
-_imports_ready = (Block, Blockchain, Transaction, Exchange)
+_imports_ready = (Block, Blockchain, Transaction, Exchange, Governance)
 
 if network.peers:
     network.announce_to_peers(LOCAL_NODE_URL, network.get_peers())
@@ -135,6 +144,27 @@ def get_balance():
 @app.get("/economics")
 def get_economics():
     return jsonify(node.get_token_economics())
+
+
+def _expire_governance_if_needed():
+    if governance.expire_proposals(time.time()):
+        storage.save_governance(governance)
+
+
+def _current_governance_settings():
+    governance.governance_settings["mining_reward"]["current"] = float(
+        getattr(node.blockchain, "mining_reward", node.blockchain.initial_mining_reward)
+    )
+    governance.governance_settings["mining_reward"]["changed"] = (
+        governance.governance_settings["mining_reward"]["current"]
+        != governance.governance_settings["mining_reward"]["default"]
+    )
+    governance.governance_settings["difficulty"]["current"] = int(node.blockchain.difficulty)
+    governance.governance_settings["difficulty"]["changed"] = (
+        governance.governance_settings["difficulty"]["current"]
+        != governance.governance_settings["difficulty"]["default"]
+    )
+    return governance.get_governance_settings()
 
 
 @app.get("/diagnostics")
@@ -445,6 +475,81 @@ def cancel_exchange_offer():
     except Exception as exc:
         vorliq_logger.error("Exchange cancel endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/governance/propose")
+def create_governance_proposal():
+    try:
+        data = request.get_json(force=True)
+        proposal_id = governance.create_proposal(
+            proposer_address=data.get("proposer_address") or data.get("proposerAddress"),
+            title=data["title"],
+            description=data["description"],
+            category=data["category"],
+            parameter_value=data.get("parameter"),
+            current_blockchain=node.blockchain,
+        )
+        storage.save_governance(governance)
+        return jsonify({"success": True, "proposal_id": proposal_id, "proposal": governance.get_proposal(proposal_id)}), 201
+    except Exception as exc:
+        vorliq_logger.error("Governance propose endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/governance/proposals")
+def get_active_governance_proposals():
+    _expire_governance_if_needed()
+    return jsonify({"success": True, "proposals": governance.get_active_proposals()})
+
+
+@app.get("/governance/all")
+def get_all_governance_proposals():
+    _expire_governance_if_needed()
+    return jsonify({"success": True, "proposals": governance.get_all_proposals()})
+
+
+@app.get("/governance/proposal")
+def get_governance_proposal():
+    _expire_governance_if_needed()
+    proposal_id = request.args.get("proposal_id", "")
+    proposal = governance.get_proposal(proposal_id)
+    if not proposal:
+        return jsonify({"success": False, "error": "proposal does not exist"}), 404
+    return jsonify({"success": True, "proposal": proposal})
+
+
+@app.post("/governance/vote")
+def vote_on_governance_proposal():
+    try:
+        data = request.get_json(force=True)
+        proposal_id = data.get("proposal_id") or data.get("proposalId")
+        voter_address = data.get("voter_address") or data.get("voterAddress")
+        voter_wallet_address = (
+            data.get("voter_wallet_address") or data.get("voterWalletAddress") or voter_address
+        )
+        voter_balance = (
+            float(data["voter_balance"])
+            if data.get("voter_balance") is not None
+            else node.blockchain.get_balance(voter_wallet_address)
+        )
+        proposal = governance.vote_on_proposal(
+            proposal_id=proposal_id,
+            voter_address=voter_address,
+            vote=data["vote"],
+            voter_vlq_balance=voter_balance,
+            current_blockchain=node.blockchain,
+        )
+        storage.save_governance(governance)
+        storage.save_chain(node.blockchain)
+        return jsonify({"success": True, "proposal": proposal})
+    except Exception as exc:
+        vorliq_logger.error("Governance vote endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/governance/settings")
+def get_governance_settings():
+    return jsonify({"success": True, "settings": _current_governance_settings()})
 
 
 if __name__ == "__main__":

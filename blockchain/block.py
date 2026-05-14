@@ -19,12 +19,14 @@ class Block:
         timestamp: float | None = None,
         nonce: int = 0,
         block_hash: str | None = None,
+        difficulty: int | None = None,
     ) -> None:
         self.index = index
         self.timestamp = time.time() if timestamp is None else timestamp
         self.transactions = transactions
         self.previous_hash = previous_hash
         self.nonce = nonce
+        self.difficulty = self.__class__.difficulty if difficulty is None else int(difficulty)
         self.hash = block_hash or self.calculate_hash()
         vorliq_logger.debug("Block object initialized at index %s", self.index)
 
@@ -51,7 +53,9 @@ class Block:
         return hashlib.sha256(encoded_block).hexdigest()
 
     def proof_of_work(self, difficulty: int | None = None) -> str:
-        target = "0" * (self.difficulty if difficulty is None else difficulty)
+        if difficulty is not None:
+            self.difficulty = int(difficulty)
+        target = "0" * self.difficulty
         self.hash = self.calculate_hash()
         while not self.hash.startswith(target):
             self.nonce += 1
@@ -69,6 +73,7 @@ class Block:
             "transactions": self._normalized_transactions(),
             "previous_hash": self.previous_hash,
             "nonce": self.nonce,
+            "difficulty": self.difficulty,
             "hash": self.hash,
         }
 
@@ -81,4 +86,5 @@ class Block:
             previous_hash=str(data["previous_hash"]),
             nonce=int(data["nonce"]),
             block_hash=str(data["hash"]),
+            difficulty=int(data.get("difficulty", cls.difficulty)),
         )

@@ -7,6 +7,7 @@ from typing import Any
 from block import Block
 from blockchain import Blockchain
 from exchange import Exchange
+from governance import Governance
 from lending import LendingPool
 from logger import vorliq_logger
 from registry import NodeRegistry
@@ -21,6 +22,7 @@ class Storage:
         self.pending_file = self.data_dir / "pending.json"
         self.lending_file = self.data_dir / "lending.json"
         self.exchange_file = self.data_dir / "exchange.json"
+        self.governance_file = self.data_dir / "governance.json"
         self.peers_file = self.data_dir / "peers.json"
         self.registry_file = self.data_dir / "registry.json"
 
@@ -28,6 +30,8 @@ class Storage:
         chain_data = {
             "coin": "VLQ",
             "difficulty": blockchain.difficulty,
+            "mining_reward": getattr(blockchain, "mining_reward", blockchain.initial_mining_reward),
+            "initial_mining_reward": blockchain.initial_mining_reward,
             "maximum_supply": blockchain.maximum_supply,
             "halving_interval": blockchain.halving_interval,
             "chain": [block.to_dict() for block in blockchain.chain],
@@ -48,6 +52,13 @@ class Storage:
 
         blockchain = Blockchain()
         blockchain.chain = blocks
+        blockchain.difficulty = int(data.get("difficulty", blockchain.difficulty))
+        blockchain.proof_target = "0" * blockchain.difficulty
+        saved_reward = float(
+            data.get("mining_reward", data.get("initial_mining_reward", blockchain.initial_mining_reward))
+        )
+        blockchain.mining_reward = saved_reward
+        blockchain.initial_mining_reward = saved_reward
 
         if not blockchain.is_chain_valid():
             raise ValueError("saved blockchain data is not valid")
@@ -117,6 +128,37 @@ class Storage:
         exchange.offers = offers
         vorliq_logger.info("Loaded exchange with %s offer records", len(offers))
         return exchange
+
+    def save_governance(self, governance: Governance) -> None:
+        self._write_json(
+            self.governance_file,
+            {
+                "proposals": governance.proposals,
+                "governance_settings": governance.governance_settings,
+            },
+        )
+        vorliq_logger.info("Saved governance with %s proposal records", len(governance.proposals))
+
+    def load_governance(self) -> Governance:
+        governance = Governance()
+
+        if not self.governance_file.exists():
+            vorliq_logger.info("No saved governance found on disk")
+            return governance
+
+        data = self._read_json(self.governance_file)
+        proposals = data.get("proposals", {})
+        settings = data.get("governance_settings", {})
+
+        if not isinstance(proposals, dict):
+            raise ValueError("governance data must contain a proposals object")
+        if settings and not isinstance(settings, dict):
+            raise ValueError("governance settings data must be an object")
+
+        governance.proposals = proposals
+        governance.governance_settings.update(settings)
+        vorliq_logger.info("Loaded governance with %s proposal records", len(proposals))
+        return governance
 
     def save_peers(self, peer_urls: set[str]) -> None:
         self._write_json(self.peers_file, sorted(peer_urls))

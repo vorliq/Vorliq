@@ -10,6 +10,7 @@ const networkRoutes = require("./routes/network");
 const lendingRoutes = require("./routes/lending");
 const registryRoutes = require("./routes/registry");
 const exchangeRoutes = require("./routes/exchange");
+const governanceRoutes = require("./routes/governance");
 const { logError, logInfo } = require("./logger");
 
 const app = express();
@@ -37,6 +38,7 @@ app.use(networkRoutes);
 app.use(lendingRoutes);
 app.use(registryRoutes);
 app.use(exchangeRoutes);
+app.use(governanceRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

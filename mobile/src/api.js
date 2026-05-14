@@ -108,3 +108,17 @@ export async function cancelExchangeOffer(offerData) {
     data: offerData,
   });
 }
+
+export async function getGovernanceProposals() {
+  return request("get", "/api/governance/proposals");
+}
+
+export async function getGovernanceSettings() {
+  return request("get", "/api/governance/settings");
+}
+
+export async function voteGovernanceProposal(voteData) {
+  return request("post", "/api/governance/vote", {
+    data: voteData,
+  });
+}

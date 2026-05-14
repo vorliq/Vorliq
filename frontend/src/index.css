@@ -765,6 +765,12 @@ p {
   gap: 16px;
 }
 
+.governance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .loan-card {
   display: grid;
   gap: 14px;
@@ -775,6 +781,15 @@ p {
 }
 
 .exchange-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--soft-surface);
+  padding: 16px;
+}
+
+.governance-card {
   display: grid;
   gap: 14px;
   border: 1px solid var(--border);
@@ -800,6 +815,16 @@ p {
   background: var(--orange);
 }
 
+.governance-badge {
+  border-radius: 999px;
+  color: var(--on-status);
+  font-size: 0.76rem;
+  font-weight: 900;
+  padding: 6px 10px;
+  text-transform: uppercase;
+  background: var(--primary);
+}
+
 .status-badge {
   border-radius: 999px;
   color: var(--on-status);
@@ -815,6 +840,18 @@ p {
 
 .status-badge.open {
   background: var(--green);
+}
+
+.status-badge.active {
+  background: var(--yellow);
+}
+
+.status-badge.passed {
+  background: var(--green);
+}
+
+.status-badge.expired {
+  background: var(--muted-2);
 }
 
 .status-badge.accepted {
@@ -897,6 +934,33 @@ p {
   padding: 0;
   text-align: left;
   text-transform: inherit;
+}
+
+.text-button {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+  font-weight: 900;
+  padding: 0;
+  text-align: left;
+}
+
+.governance-timeline {
+  display: grid;
+  gap: 14px;
+}
+
+.timeline-entry {
+  border-left: 3px solid var(--primary);
+  background: var(--soft-surface);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.changed-row td {
+  color: var(--primary);
+  font-weight: 800;
 }
 
 .auth-page {
@@ -1207,6 +1271,7 @@ p {
   .block-meta,
   .loan-grid,
   .exchange-grid,
+  .governance-grid,
   .account-wallet-grid,
   .history-row,
   .explorer-result,
@@ -1301,6 +1366,7 @@ p {
   .block-meta,
   .loan-grid,
   .exchange-grid,
+  .governance-grid,
   .account-wallet-grid,
   .history-row,
   .explorer-result,
