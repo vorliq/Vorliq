@@ -121,6 +121,7 @@ function Dashboard() {
           the native coin used inside the Vorliq network. Every VLQ transaction is signed with
           cryptographic keys and recorded by the chain after it is mined into a block.
         </p>
+        <p>Deployed automatically via GitHub Actions.</p>
       </section>
     </main>
   );
