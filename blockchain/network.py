@@ -103,6 +103,28 @@ class Network:
 
         return self.get_peers()
 
+    def announce_to_peers(self, local_node_url: str, current_peers: list[str] | set[str]) -> None:
+        normalized_local_url = self._normalize_peer_url(local_node_url)
+
+        for peer in current_peers:
+            try:
+                normalized_peer = self._normalize_peer_url(peer)
+            except ValueError as exc:
+                print(f"Warning: skipped invalid announcement peer {peer}: {exc}")
+                continue
+
+            if normalized_peer == normalized_local_url:
+                continue
+
+            try:
+                requests.post(
+                    f"{normalized_peer}/peers/register",
+                    json={"peer": normalized_local_url, "_announced": True},
+                    timeout=5,
+                )
+            except requests.RequestException as exc:
+                print(f"Warning: failed to announce local node to {normalized_peer}: {exc}")
+
     def _normalize_peer_url(self, peer_url: str) -> str:
         if not isinstance(peer_url, str) or not peer_url.strip():
             raise ValueError("peer must be a non-empty URL string")

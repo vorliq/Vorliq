@@ -5,14 +5,31 @@ from blockchain import Blockchain
 from lending import LendingPool
 from network import Network
 from node import Node
+from storage import Storage
 from transaction import Transaction
 from wallet import Wallet
 
 app = Flask(__name__)
+storage = Storage()
 node = Node()
+saved_blockchain = storage.load_chain()
+if saved_blockchain:
+    node.blockchain = saved_blockchain
+
+node.blockchain.pending_transactions = [
+    Transaction.from_dict(transaction) for transaction in storage.load_pending()
+]
+
 network = Network()
-lending_pool = LendingPool(node.blockchain)
+network.peers = storage.load_peers()
+
+lending_pool = storage.load_lending_pool()
+lending_pool.blockchain = node.blockchain
 _imports_ready = (Block, Blockchain, Transaction)
+LOCAL_NODE_URL = "http://localhost:5001"
+
+if network.peers:
+    network.announce_to_peers(LOCAL_NODE_URL, network.get_peers())
 
 
 @app.get("/health")
@@ -36,6 +53,7 @@ def create_transaction():
         data = request.get_json(force=True)
         transaction = Transaction.from_dict(data)
         node.submit_transaction(transaction)
+        storage.save_pending(node.blockchain.pending_transactions)
         if not data.get("_broadcasted"):
             network.broadcast_transaction({**transaction.to_dict(), "_broadcasted": True})
         return jsonify({"success": True, "message": "Transaction added to pending pool"}), 201
@@ -49,6 +67,9 @@ def mine_block():
         data = request.get_json(force=True)
         miner_address = data.get("miner_address") or data.get("minerAddress")
         block = node.mine_new_block(miner_address)
+        storage.save_chain(node.blockchain)
+        storage.save_pending(node.blockchain.pending_transactions)
+        storage.save_lending_pool(lending_pool)
         network.broadcast_block(block)
         return jsonify({"success": True, "block": block}), 201
     except Exception as exc:
@@ -86,8 +107,12 @@ def get_economics():
 def register_peer():
     try:
         data = request.get_json(force=True)
-        network.register_peer(data["peer"])
+        peer = data["peer"]
+        network.register_peer(peer)
         network.discover_peers(network.get_peers())
+        storage.save_peers(network.peers)
+        if not data.get("_announced"):
+            network.announce_to_peers(LOCAL_NODE_URL, [peer])
         return jsonify({"success": True, "peers": network.get_peers()}), 201
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 400
@@ -96,6 +121,18 @@ def register_peer():
 @app.get("/peers")
 def get_peers():
     return jsonify({"peers": network.get_peers()})
+
+
+@app.post("/peers/announce")
+def announce_peer():
+    try:
+        data = request.get_json(force=True)
+        node_url = data["node_url"]
+        network.register_peer(node_url)
+        storage.save_peers(network.peers)
+        return jsonify({"success": True, "message": "Peer announced", "peers": network.get_peers()}), 201
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
 
 
 @app.post("/receive_block")
@@ -112,9 +149,12 @@ def receive_block():
         valid_proof = received_block.hash.startswith("0" * node.blockchain.difficulty)
 
         if valid_previous_hash and valid_proof and node.blockchain.add_block(received_block):
+            storage.save_chain(node.blockchain)
             return jsonify({"success": True, "message": "Block accepted"}), 201
 
         updated = network.sync_chain(node.blockchain)
+        if updated:
+            storage.save_chain(node.blockchain)
         return jsonify(
             {
                 "success": False,
@@ -124,12 +164,16 @@ def receive_block():
         ), 409
     except Exception as exc:
         updated = network.sync_chain(node.blockchain)
+        if updated:
+            storage.save_chain(node.blockchain)
         return jsonify({"success": False, "error": str(exc), "chain_updated": updated}), 400
 
 
 @app.get("/peers/sync")
 def sync_peers():
     updated = network.sync_chain(node.blockchain)
+    if updated:
+        storage.save_chain(node.blockchain)
     peer_statuses = network.check_peer_statuses()
     return jsonify(
         {
@@ -154,6 +198,7 @@ def create_lending_request():
             amount=float(data["amount"]),
             reason=data["reason"],
         )
+        storage.save_lending_pool(lending_pool)
         return jsonify({"success": True, "loan_id": loan_id, "loan": lending_pool.get_loan(loan_id)}), 201
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 400
@@ -194,6 +239,8 @@ def vote_on_lending_loan():
             vote=data["vote"],
             voter_vlq_balance=voter_balance,
         )
+        storage.save_lending_pool(lending_pool)
+        storage.save_pending(node.blockchain.pending_transactions)
         return jsonify({"success": True, "loan": loan})
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 400
@@ -206,6 +253,8 @@ def repay_lending_loan():
         loan_id = data.get("loan_id") or data.get("loanId")
         repayer_address = data.get("repayer_address") or data.get("repayerAddress")
         loan = lending_pool.repay_loan(loan_id, repayer_address, node.blockchain)
+        storage.save_lending_pool(lending_pool)
+        storage.save_pending(node.blockchain.pending_transactions)
         return jsonify(
             {
                 "success": True,

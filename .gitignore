@@ -20,6 +20,8 @@ dist/
 .env.*
 !.env.example
 !backend/.env
+data/
+blockchain/data/
 
 # OS and editor files
 .DS_Store

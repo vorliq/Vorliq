@@ -33,4 +33,15 @@ router.post("/api/peers/sync", async (req, res, next) => {
   }
 });
 
+router.post("/api/peers/announce", async (req, res, next) => {
+  try {
+    const response = await axios.post(`${flaskUrl}/peers/announce`, {
+      node_url: req.body.node_url || req.body.nodeUrl,
+    });
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
