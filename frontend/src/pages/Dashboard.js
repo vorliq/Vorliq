@@ -15,6 +15,7 @@ const quickLinks = [
   { to: "/lending", label: "Lending", detail: "Request or vote on community loans" },
   { to: "/exchange", label: "Exchange", detail: "Post buy and sell offers" },
   { to: "/governance", label: "Governance", detail: "Vote on network changes" },
+  { to: "/forum", label: "Forum", detail: "Post messages and reply to members" },
   { to: "/registry", label: "Registry", detail: "Find and connect to public nodes" },
   { to: "/health", label: "Health", detail: "Check node status and deployment" },
 ];

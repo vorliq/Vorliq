@@ -7,6 +7,7 @@ from typing import Any
 from block import Block
 from blockchain import Blockchain
 from exchange import Exchange
+from forum import Forum
 from governance import Governance
 from lending import LendingPool
 from logger import vorliq_logger
@@ -22,6 +23,7 @@ class Storage:
         self.pending_file = self.data_dir / "pending.json"
         self.lending_file = self.data_dir / "lending.json"
         self.exchange_file = self.data_dir / "exchange.json"
+        self.forum_file = self.data_dir / "forum.json"
         self.governance_file = self.data_dir / "governance.json"
         self.peers_file = self.data_dir / "peers.json"
         self.registry_file = self.data_dir / "registry.json"
@@ -128,6 +130,27 @@ class Storage:
         exchange.offers = offers
         vorliq_logger.info("Loaded exchange with %s offer records", len(offers))
         return exchange
+
+    def save_forum(self, forum: Forum) -> None:
+        self._write_json(self.forum_file, {"posts": forum.posts})
+        vorliq_logger.info("Saved forum with %s post records", len(forum.posts))
+
+    def load_forum(self) -> Forum:
+        forum = Forum()
+
+        if not self.forum_file.exists():
+            vorliq_logger.info("No saved forum found on disk")
+            return forum
+
+        data = self._read_json(self.forum_file)
+        posts = data.get("posts", {})
+
+        if not isinstance(posts, dict):
+            raise ValueError("forum data must contain a posts object")
+
+        forum.posts = posts
+        vorliq_logger.info("Loaded forum with %s post records", len(posts))
+        return forum
 
     def save_governance(self, governance: Governance) -> None:
         self._write_json(

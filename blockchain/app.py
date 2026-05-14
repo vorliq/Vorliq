@@ -6,6 +6,7 @@ from flask import Flask, jsonify, request
 from block import Block
 from blockchain import Blockchain
 from exchange import Exchange
+from forum import Forum
 from governance import Governance
 from lending import LendingPool
 from logger import vorliq_logger
@@ -47,6 +48,8 @@ lending_pool.blockchain = node.blockchain
 vorliq_logger.info("Flask startup restored %s lending records", len(lending_pool.loan_requests))
 exchange = storage.load_exchange()
 vorliq_logger.info("Flask startup restored %s exchange offers", len(exchange.offers))
+forum = storage.load_forum()
+vorliq_logger.info("Flask startup restored %s forum posts", len(forum.posts))
 governance = storage.load_governance()
 if governance.governance_settings["mining_reward"]["changed"]:
     node.blockchain.mining_reward = float(governance.governance_settings["mining_reward"]["current"])
@@ -57,7 +60,7 @@ if governance.governance_settings["difficulty"]["changed"]:
 vorliq_logger.info("Flask startup restored %s governance proposals", len(governance.proposals))
 node_registry = storage.load_registry()
 vorliq_logger.info("Flask startup restored %s registry records", len(node_registry.registered_nodes))
-_imports_ready = (Block, Blockchain, Transaction, Exchange, Governance)
+_imports_ready = (Block, Blockchain, Transaction, Exchange, Forum, Governance)
 
 if network.peers:
     network.announce_to_peers(LOCAL_NODE_URL, network.get_peers())
@@ -474,6 +477,67 @@ def cancel_exchange_offer():
         return jsonify({"success": True, "offer": offer})
     except Exception as exc:
         vorliq_logger.error("Exchange cancel endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/forum/post")
+def create_forum_post():
+    try:
+        data = request.get_json(force=True)
+        post_id = forum.create_post(
+            author_address=data.get("author_address") or data.get("authorAddress"),
+            title=data["title"],
+            body=data["body"],
+        )
+        storage.save_forum(forum)
+        return jsonify({"success": True, "post_id": post_id, "post": forum.get_post(post_id)}), 201
+    except Exception as exc:
+        vorliq_logger.error("Forum post endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/forum/posts")
+def get_forum_posts():
+    return jsonify({"success": True, "posts": forum.get_all_posts()})
+
+
+@app.get("/forum/post")
+def get_forum_post():
+    post_id = request.args.get("post_id", "")
+    post = forum.get_post(post_id)
+    if not post:
+        return jsonify({"success": False, "error": "post does not exist"}), 404
+    return jsonify({"success": True, "post": post})
+
+
+@app.post("/forum/reply")
+def reply_to_forum_post():
+    try:
+        data = request.get_json(force=True)
+        reply = forum.add_reply(
+            post_id=data.get("post_id") or data.get("postId"),
+            author_address=data.get("author_address") or data.get("authorAddress"),
+            body=data["body"],
+        )
+        storage.save_forum(forum)
+        return jsonify({"success": True, "reply": reply}), 201
+    except Exception as exc:
+        vorliq_logger.error("Forum reply endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/forum/upvote")
+def upvote_forum_post():
+    try:
+        data = request.get_json(force=True)
+        post = forum.upvote_post(
+            post_id=data.get("post_id") or data.get("postId"),
+            address=data["address"],
+        )
+        storage.save_forum(forum)
+        return jsonify({"success": True, "post": post})
+    except Exception as exc:
+        vorliq_logger.error("Forum upvote endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 

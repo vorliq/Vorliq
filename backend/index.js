@@ -10,6 +10,7 @@ const networkRoutes = require("./routes/network");
 const lendingRoutes = require("./routes/lending");
 const registryRoutes = require("./routes/registry");
 const exchangeRoutes = require("./routes/exchange");
+const forumRoutes = require("./routes/forum");
 const governanceRoutes = require("./routes/governance");
 const deploymentRoutes = require("./routes/deployment");
 const { logError, logInfo } = require("./logger");
@@ -39,6 +40,7 @@ app.use(networkRoutes);
 app.use(lendingRoutes);
 app.use(registryRoutes);
 app.use(exchangeRoutes);
+app.use(forumRoutes);
 app.use(governanceRoutes);
 app.use(deploymentRoutes);
 

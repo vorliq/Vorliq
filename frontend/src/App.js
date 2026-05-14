@@ -4,6 +4,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import NotificationPanel from "./components/NotificationPanel";
+import Onboarding from "./components/Onboarding";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { NotificationProvider, useNotifications } from "./context/NotificationContext";
@@ -23,6 +24,7 @@ import Account from "./pages/Account";
 import Health from "./pages/Health";
 import Exchange from "./pages/Exchange";
 import Governance from "./pages/Governance";
+import Forum from "./pages/Forum";
 import Footer from "./components/Footer";
 import api from "./helpers/api";
 import logo from "./assets/logo.png";
@@ -43,6 +45,7 @@ const navSections = [
       { to: "/lending", label: "Lending" },
       { to: "/exchange", label: "Exchange" },
       { to: "/governance", label: "Governance" },
+      { to: "/forum", label: "Forum" },
       { to: "/registry", label: "Registry" },
     ],
   },
@@ -248,6 +251,7 @@ function AppShell() {
         <Route path="/lending" element={<Lending />} />
         <Route path="/exchange" element={<Exchange />} />
         <Route path="/governance" element={<Governance />} />
+        <Route path="/forum" element={<Forum />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/registry" element={<Registry />} />
         <Route path="/health" element={<Health />} />
@@ -263,6 +267,7 @@ function AppShell() {
       </Routes>
 
       <Footer />
+      <Onboarding />
       <NotificationPanel open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
 
       <ToastContainer

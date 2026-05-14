@@ -38,8 +38,16 @@
       .stat { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px; }
       .stat strong { display:block; color:var(--accent); font-size:2rem; margin-bottom:8px; }
       .community { display:flex; gap:12px; flex-wrap:wrap; }
+      .newsletter { background:linear-gradient(180deg,rgba(108,99,255,.15),rgba(255,255,255,.025)); border:1px solid var(--border); border-radius:16px; padding:28px; text-align:center; }
+      .newsletter p { max-width:740px; margin:0 auto 20px; }
+      .newsletter-form { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin-top:20px; }
+      .newsletter-form input { width:min(420px,100%); min-height:50px; border:1px solid var(--border); border-radius:10px; background:#0f0f1a; color:#fff; font:inherit; padding:0 14px; outline:none; }
+      .newsletter-form input:focus { border-color:var(--accent); box-shadow:0 0 0 4px rgba(108,99,255,.18); }
+      .newsletter-form button { min-height:50px; cursor:pointer; }
+      .newsletter-success { display:none; margin:18px auto 0; max-width:680px; border:1px solid rgba(53,208,127,.42); border-radius:12px; background:rgba(53,208,127,.12); color:#bff7d7; padding:14px 16px; font-weight:800; }
+      .newsletter-success.visible { display:block; }
       footer { padding:28px 0; border-top:1px solid var(--border); color:var(--muted); }
-      @media (max-width:800px) { .grid,.coin { grid-template-columns:1fr; } .hero { min-height:auto; } }
+      @media (max-width:800px) { .grid,.coin { grid-template-columns:1fr; } .hero { min-height:auto; } .newsletter { padding:22px 16px; } .newsletter-form button { width:100%; } }
     </style>
   </head>
   <body>
@@ -111,8 +119,35 @@
           </div>
         </div>
       </section>
+
+      <section>
+        <div class="wrap">
+          <div class="newsletter">
+            <h2>Stay Updated</h2>
+            <p>Join the Vorliq community and be the first to hear about new features, network updates, and VLQ news.</p>
+            <form class="newsletter-form" action="https://formspree.io/f/mzdoladl" method="POST">
+              <input type="email" name="email" aria-label="Email address" placeholder="Enter your email address" required />
+              <button class="button primary" type="submit">Subscribe</button>
+            </form>
+            <div id="newsletterThanks" class="newsletter-success" role="status" aria-live="polite">
+              Thank you for subscribing. We will keep you updated on Vorliq news.
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer><div class="wrap">2025 Vorliq. All rights reserved.</div></footer>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        if (params.has("thanks")) {
+          var message = document.getElementById("newsletterThanks");
+          if (message) {
+            message.classList.add("visible");
+          }
+        }
+      })();
+    </script>
   </body>
 </html>

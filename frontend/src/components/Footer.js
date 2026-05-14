@@ -1,4 +1,9 @@
 function Footer() {
+  function reopenHelp() {
+    window.localStorage.removeItem("vorliq_onboarding_complete");
+    window.location.reload();
+  }
+
   const links = [
     { label: "Discord", href: "https://discord.gg/qpX5sHD4pC" },
     { label: "Telegram", href: "https://t.me/Vorliq" },
@@ -22,6 +27,9 @@ function Footer() {
               {link.label}
             </a>
           ))}
+          <button className="footer-help-link" type="button" onClick={reopenHelp}>
+            Help
+          </button>
         </div>
       </div>
     </footer>
