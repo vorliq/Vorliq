@@ -25,11 +25,14 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/vorliq_deploy_key
           chmod 600 ~/.ssh/vorliq_deploy_key
+          test -s ~/.ssh/vorliq_deploy_key
+          ssh-keygen -y -f ~/.ssh/vorliq_deploy_key > ~/.ssh/vorliq_deploy_key.pub
+          ssh-keygen -lf ~/.ssh/vorliq_deploy_key.pub
           ssh-keyscan -H 159.65.24.177 >> ~/.ssh/known_hosts
 
       - name: Deploy to production server
         run: |
-          ssh -i ~/.ssh/vorliq_deploy_key root@159.65.24.177 <<'EOF'
+          ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes root@159.65.24.177 <<'EOF'
             set -euo pipefail
             sudo -u vorliq -H git -C /home/vorliq/app fetch origin
             sudo -u vorliq -H git -C /home/vorliq/app reset --hard origin/main
