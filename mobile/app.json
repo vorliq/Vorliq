@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Vorliq",
+    "slug": "vorliq",
+    "version": "1.0.0",
+    "description": "Your community savings bank on the blockchain",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "dark",
+    "primaryColor": "#6c63ff",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f0f1a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vorliq.app"
+    },
+    "android": {
+      "package": "com.vorliq.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#0f0f1a"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/logo.png"
+    }
+  }
+}
