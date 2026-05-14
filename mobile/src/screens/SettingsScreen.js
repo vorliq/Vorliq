@@ -5,10 +5,16 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
 } from "react-native";
+import {
+  loadNotificationToken,
+  loadNotificationsEnabled,
+  saveNotificationsEnabled,
+} from "../notifications";
 import { clearWallet, loadNodeUrl, saveNodeUrl } from "../storage";
 import theme from "../theme";
 import sharedStyles from "./sharedStyles";
@@ -25,10 +31,14 @@ export default function SettingsScreen() {
   const [nodeUrl, setNodeUrl] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [pushToken, setPushToken] = useState(null);
 
   useEffect(() => {
     async function load() {
       setNodeUrl(await loadNodeUrl());
+      setNotificationsEnabled(await loadNotificationsEnabled());
+      setPushToken(await loadNotificationToken());
     }
 
     load();
@@ -60,6 +70,12 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const handleNotificationToggle = async (enabled) => {
+    setNotificationsEnabled(enabled);
+    await saveNotificationsEnabled(enabled);
+    setMessage(enabled ? "Notifications enabled." : "Notifications disabled.");
+  };
+
   return (
     <ScrollView style={sharedStyles.screen} contentContainerStyle={sharedStyles.content}>
       <Text style={sharedStyles.title}>Settings</Text>
@@ -86,6 +102,24 @@ export default function SettingsScreen() {
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.label}>App Version</Text>
         <Text style={sharedStyles.value}>1.0.0</Text>
+      </View>
+
+      <View style={sharedStyles.card}>
+        <View style={styles.switchRow}>
+          <View style={styles.switchText}>
+            <Text style={sharedStyles.label}>Notifications</Text>
+            <Text style={sharedStyles.value}>Enable phone alerts for received VLQ, approved loans, and new network blocks.</Text>
+          </View>
+          <Switch
+            trackColor={{ false: theme.border, true: theme.accent }}
+            thumbColor={notificationsEnabled ? theme.text : theme.textSecondary}
+            value={notificationsEnabled}
+            onValueChange={handleNotificationToggle}
+          />
+        </View>
+        <Text style={[sharedStyles.mutedText, styles.marginTop]}>
+          {pushToken ? "Push token saved on this device." : "Push token will be saved after permission is granted on a physical device."}
+        </Text>
       </View>
 
       <View style={sharedStyles.card}>
@@ -128,6 +162,15 @@ const styles = StyleSheet.create({
     color: theme.textSecondary,
     fontSize: theme.fonts.small,
     marginTop: theme.spacing.xs,
+  },
+  switchRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  switchText: {
+    flex: 1,
+    paddingRight: theme.spacing.md,
   },
   aboutTitle: {
     color: theme.text,

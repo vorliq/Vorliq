@@ -9,6 +9,9 @@
     "userInterfaceStyle": "dark",
     "primaryColor": "#6c63ff",
     "newArchEnabled": true,
+    "plugins": [
+      "expo-notifications"
+    ],
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",
@@ -20,6 +23,8 @@
     },
     "android": {
       "package": "com.vorliq.app",
+      "googleServicesFile": "./google-services.json",
+      "useNextNotificationsApi": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#0f0f1a"

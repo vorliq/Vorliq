@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { getBalance, getLoans, submitLoan, voteLoan } from "../api";
+import { scheduleLocalNotification } from "../notifications";
 import { loadWallet } from "../storage";
 import theme from "../theme";
 import sharedStyles from "./sharedStyles";
@@ -43,6 +44,7 @@ export default function LendingScreen() {
   const [vote, setVote] = useState("yes");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const previousLoanStatusesRef = useRef({});
 
   const loadData = useCallback(async () => {
     setError("");
@@ -51,7 +53,28 @@ export default function LendingScreen() {
     const result = await getLoans();
 
     if (result.success) {
-      setLoans(normalizeLoans(result.data));
+      const nextLoans = normalizeLoans(result.data);
+      const nextStatuses = { ...previousLoanStatusesRef.current };
+
+      if (savedWallet?.address) {
+        nextLoans
+          .filter((loan) => loan.requester_address === savedWallet.address)
+          .forEach((loan) => {
+            const previousStatus = previousLoanStatusesRef.current[loan.loan_id];
+
+            if (previousStatus === "pending" && loan.status === "approved") {
+              scheduleLocalNotification(
+                "Loan Approved",
+                `Your loan request for ${loan.amount} VLQ has been approved.`
+              );
+            }
+
+            nextStatuses[loan.loan_id] = loan.status;
+          });
+      }
+
+      previousLoanStatusesRef.current = nextStatuses;
+      setLoans(nextLoans);
     } else {
       setError(result.error);
     }
@@ -62,6 +85,15 @@ export default function LendingScreen() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (loading) {
+      return undefined;
+    }
+
+    const interval = setInterval(loadData, 60000);
+    return () => clearInterval(interval);
+  }, [loading, loadData]);
 
   const handleRequestLoan = async () => {
     setError("");

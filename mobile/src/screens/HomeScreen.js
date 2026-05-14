@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { getDiagnostics } from "../api";
+import { scheduleLocalNotification } from "../notifications";
 import theme from "../theme";
 import sharedStyles from "./sharedStyles";
 
@@ -21,12 +22,23 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [online, setOnline] = useState(false);
+  const previousBlockHeightRef = useRef(null);
 
   const loadDashboard = useCallback(async () => {
     setError("");
     const result = await getDiagnostics();
 
     if (result.success) {
+      const currentHeight = Number(result.data.current_block_height ?? result.data.block_height ?? 0);
+
+      if (previousBlockHeightRef.current !== null && currentHeight > previousBlockHeightRef.current) {
+        await scheduleLocalNotification(
+          "New Block Mined",
+          `Block number ${currentHeight} has been added to the Vorliq network.`
+        );
+      }
+
+      previousBlockHeightRef.current = currentHeight;
       setDiagnostics(result.data);
       setOnline(true);
     } else {
@@ -42,6 +54,15 @@ export default function HomeScreen() {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  useEffect(() => {
+    if (loading) {
+      return undefined;
+    }
+
+    const interval = setInterval(loadDashboard, 60000);
+    return () => clearInterval(interval);
+  }, [loading, loadDashboard]);
 
   const handleRefresh = () => {
     setRefreshing(true);

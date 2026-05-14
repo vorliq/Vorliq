@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -9,6 +9,14 @@ import WalletScreen from "./src/screens/WalletScreen";
 import SendScreen from "./src/screens/SendScreen";
 import LendingScreen from "./src/screens/LendingScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
+import NotificationsScreen from "./src/screens/NotificationsScreen";
+import { NotificationProvider, useNotifications } from "./src/context/NotificationContext";
+import {
+  addNotificationResponseListener,
+  registerForPushNotifications,
+  saveNotificationToken,
+  setNotificationHandler,
+} from "./src/notifications";
 import theme from "./src/theme";
 
 const Tab = createBottomTabNavigator();
@@ -62,6 +70,15 @@ function TabIcon({ name, color }) {
     );
   }
 
+  if (name === "Notifications") {
+    return (
+      <Svg width={24} height={24} viewBox="0 0 24 24">
+        <Path {...common} d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+        <Path {...common} d="M10 21h4" />
+      </Svg>
+    );
+  }
+
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24">
       <Circle {...common} cx={12} cy={12} r={3} />
@@ -70,37 +87,86 @@ function TabIcon({ name, color }) {
   );
 }
 
+function VorliqTabs() {
+  const { unreadCount } = useNotifications();
+
+  useEffect(() => {
+    setNotificationHandler();
+
+    let responseSubscription = null;
+
+    async function register() {
+      const token = await registerForPushNotifications();
+
+      if (token) {
+        await saveNotificationToken(token);
+      }
+
+      responseSubscription = addNotificationResponseListener((response) => {
+        const title = response.notification.request.content.title;
+        console.log(`Vorliq notification tapped: ${title || "Untitled notification"}`);
+      });
+    }
+
+    register();
+
+    return () => {
+      if (responseSubscription?.remove) {
+        responseSubscription.remove();
+      }
+    };
+  }, []);
+
+  return (
+    <NavigationContainer>
+      <StatusBar style="light" />
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          headerShown: false,
+          tabBarIcon: ({ color }) => <TabIcon name={route.name} color={color} />,
+          tabBarActiveTintColor: theme.accent,
+          tabBarInactiveTintColor: theme.textSecondary,
+          tabBarStyle: {
+            backgroundColor: theme.card,
+            borderTopColor: theme.border,
+            minHeight: 66,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+          tabBarLabelStyle: {
+            fontSize: theme.fonts.small,
+            fontWeight: "700",
+          },
+        })}
+      >
+        <Tab.Screen name="Home" component={HomeScreen} />
+        <Tab.Screen name="Wallet" component={WalletScreen} />
+        <Tab.Screen name="Send" component={SendScreen} />
+        <Tab.Screen name="Lending" component={LendingScreen} />
+        <Tab.Screen
+          name="Notifications"
+          component={NotificationsScreen}
+          options={{
+            tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+            tabBarBadgeStyle: {
+              backgroundColor: theme.error,
+              color: theme.text,
+              fontWeight: "800",
+            },
+          }}
+        />
+        <Tab.Screen name="Settings" component={SettingsScreen} />
+      </Tab.Navigator>
+    </NavigationContainer>
+  );
+}
+
 export default function App() {
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <StatusBar style="light" />
-        <Tab.Navigator
-          screenOptions={({ route }) => ({
-            headerShown: false,
-            tabBarIcon: ({ color }) => <TabIcon name={route.name} color={color} />,
-            tabBarActiveTintColor: theme.accent,
-            tabBarInactiveTintColor: theme.textSecondary,
-            tabBarStyle: {
-              backgroundColor: theme.card,
-              borderTopColor: theme.border,
-              minHeight: 64,
-              paddingBottom: 8,
-              paddingTop: 8,
-            },
-            tabBarLabelStyle: {
-              fontSize: theme.fonts.small,
-              fontWeight: "700",
-            },
-          })}
-        >
-          <Tab.Screen name="Home" component={HomeScreen} />
-          <Tab.Screen name="Wallet" component={WalletScreen} />
-          <Tab.Screen name="Send" component={SendScreen} />
-          <Tab.Screen name="Lending" component={LendingScreen} />
-          <Tab.Screen name="Settings" component={SettingsScreen} />
-        </Tab.Navigator>
-      </NavigationContainer>
+      <NotificationProvider>
+        <VorliqTabs />
+      </NotificationProvider>
     </SafeAreaProvider>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,6 +12,7 @@ import * as Clipboard from "expo-clipboard";
 import * as LocalAuthentication from "expo-local-authentication";
 import QRCode from "react-native-qrcode-svg";
 import { createWallet, getBalance } from "../api";
+import { scheduleLocalNotification } from "../notifications";
 import { clearWallet, loadWallet, saveWallet } from "../storage";
 import theme from "../theme";
 import sharedStyles from "./sharedStyles";
@@ -24,6 +25,7 @@ export default function WalletScreen() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [privateKeyUnlocked, setPrivateKeyUnlocked] = useState(false);
+  const previousBalanceRef = useRef(null);
 
   const loadSavedWallet = useCallback(async () => {
     setLoading(true);
@@ -36,7 +38,17 @@ export default function WalletScreen() {
     if (!address) return;
     const result = await getBalance(address);
     if (result.success) {
-      setBalance(String(result.data.balance ?? result.data.data?.balance ?? 0));
+      const nextBalance = Number(result.data.balance ?? result.data.data?.balance ?? 0);
+
+      if (previousBalanceRef.current !== null && nextBalance > previousBalanceRef.current) {
+        await scheduleLocalNotification(
+          "You received VLQ",
+          `Your new balance is ${nextBalance} VLQ.`
+        );
+      }
+
+      previousBalanceRef.current = nextBalance;
+      setBalance(String(nextBalance));
     }
   }, []);
 
@@ -47,7 +59,11 @@ export default function WalletScreen() {
   useEffect(() => {
     if (wallet?.address) {
       loadBalance(wallet.address);
+      const interval = setInterval(() => loadBalance(wallet.address), 30000);
+      return () => clearInterval(interval);
     }
+
+    return undefined;
   }, [wallet, loadBalance]);
 
   const handleCreateWallet = async () => {
