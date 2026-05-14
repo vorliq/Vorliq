@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
+import ErrorMessage from "../components/ErrorMessage";
 import api from "../helpers/api";
+import { apiErrorMessage } from "../helpers/errors";
 
 function Network() {
   const [peerUrl, setPeerUrl] = useState("");
@@ -10,14 +12,18 @@ function Network() {
   const [adding, setAdding] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [peerStatuses, setPeerStatuses] = useState({});
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function loadPeers({ quiet = false } = {}) {
     try {
       const response = await api.get("/peers");
       setPeers(response.data.peers || []);
+      setErrorMessage("");
     } catch (error) {
       if (!quiet) {
-        toast.error(error.response?.data?.error || "Unable to load peers.");
+        const message = apiErrorMessage(error, "Unable to load peers.");
+        setErrorMessage(message);
+        toast.error(message);
       }
     } finally {
       setLoading(false);
@@ -48,9 +54,12 @@ function Network() {
       });
       setPeers(response.data.peers || []);
       setPeerUrl("");
+      setErrorMessage("");
       toast.success("Peer added to your Vorliq node.");
     } catch (error) {
-      toast.error(error.response?.data?.error || "Unable to add peer.");
+      const message = apiErrorMessage(error, "Unable to add peer.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setAdding(false);
     }
@@ -66,8 +75,11 @@ function Network() {
       } else {
         toast.info("Your chain is already the longest.");
       }
+      setErrorMessage("");
     } catch (error) {
-      toast.error(error.response?.data?.error || "Unable to sync chain.");
+      const message = apiErrorMessage(error, "Unable to sync chain.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setSyncing(false);
     }
@@ -80,6 +92,8 @@ function Network() {
         <h1>Network</h1>
         <p className="subtitle">Connect your Vorliq node to other nodes in the community.</p>
       </section>
+
+      <ErrorMessage message={errorMessage} />
 
       <div className="grid two-column">
         <section className="card card-pad stack">

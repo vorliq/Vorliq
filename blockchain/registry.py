@@ -4,6 +4,8 @@ import time
 from typing import Any
 from urllib.parse import urlparse
 
+from logger import vorliq_logger
+
 
 class NodeRegistry:
     active_window_seconds = 30 * 60
@@ -24,6 +26,7 @@ class NodeRegistry:
             "last_seen": now,
         }
 
+        vorliq_logger.info("Registry node registered: %s as %s", normalized_url, display_name)
         return self.registered_nodes[normalized_url]
 
     def get_active_nodes(self) -> list[dict[str, Any]]:
@@ -52,6 +55,7 @@ class NodeRegistry:
         else:
             self.registered_nodes[normalized_url]["last_seen"] = now
 
+        vorliq_logger.info("Registry heartbeat received from %s", normalized_url)
         return self.registered_nodes[normalized_url]
 
     def get_all_nodes(self) -> list[dict[str, Any]]:

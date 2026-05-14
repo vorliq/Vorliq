@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
+import ErrorMessage from "../components/ErrorMessage";
 import { useAuth } from "../context/AuthContext";
+import { apiErrorMessage } from "../helpers/errors";
 import { hasWallet } from "../helpers/storage";
 
 function Login() {
@@ -11,6 +13,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const walletExists = useMemo(() => hasWallet(), []);
 
   async function createWallet(event) {
@@ -29,10 +32,13 @@ function Login() {
     setLoading(true);
     try {
       await createAndSaveWallet(password);
+      setErrorMessage("");
       toast.success("Wallet created and saved securely.");
       navigate("/account");
     } catch (error) {
-      toast.error(error.response?.data?.error || error.message || "Unable to create wallet.");
+      const message = apiErrorMessage(error, "Unable to create wallet.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -49,9 +55,11 @@ function Login() {
     setLoading(true);
     try {
       await login(password);
+      setErrorMessage("");
       toast.success("Wallet unlocked.");
       navigate("/account");
     } catch (error) {
+      setErrorMessage("incorrect password");
       toast.error("incorrect password");
     } finally {
       setLoading(false);
@@ -72,6 +80,8 @@ function Login() {
           the password or private key for you.
         </p>
       </section>
+
+      <ErrorMessage message={errorMessage} />
 
       <section className="card card-pad auth-card">
         {walletExists ? (

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
+import ErrorMessage from "../components/ErrorMessage";
 import api from "../helpers/api";
+import { apiErrorMessage } from "../helpers/errors";
 
 function Stats() {
   const [chainData, setChainData] = useState(null);
@@ -27,7 +29,7 @@ function Stats() {
         }
       } catch (requestError) {
         if (mounted) {
-          setError(requestError.response?.data?.error || "Unable to load community statistics.");
+          setError(apiErrorMessage(requestError, "Unable to load community statistics."));
         }
       } finally {
         if (mounted) {
@@ -104,7 +106,7 @@ function Stats() {
   if (error) {
     return (
       <main className="page">
-        <div className="empty-state">{error}</div>
+        <ErrorMessage message={error} />
       </main>
     );
   }

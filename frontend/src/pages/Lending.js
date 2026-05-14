@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
+import ErrorMessage from "../components/ErrorMessage";
 import api from "../helpers/api";
+import { apiErrorMessage } from "../helpers/errors";
 
 const initialRequest = {
   requesterAddress: "",
@@ -29,14 +31,18 @@ function Lending() {
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [castingVote, setCastingVote] = useState(false);
   const [repaying, setRepaying] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function loadLoans({ quiet = false } = {}) {
     try {
       const response = await api.get("/lending/loans");
       setLoans(response.data.loans || []);
+      setErrorMessage("");
     } catch (error) {
       if (!quiet) {
-        toast.error(error.response?.data?.error || "Unable to load loan requests.");
+        const message = apiErrorMessage(error, "Unable to load loan requests.");
+        setErrorMessage(message);
+        toast.error(message);
       }
     } finally {
       setLoadingLoans(false);
@@ -75,10 +81,13 @@ function Lending() {
         reason: requestForm.reason.trim(),
       });
       toast.success(`Loan request submitted: ${response.data.loan_id}`);
+      setErrorMessage("");
       setRequestForm(initialRequest);
       await loadLoans({ quiet: true });
     } catch (error) {
-      toast.error(error.response?.data?.error || "Unable to submit loan request.");
+      const message = apiErrorMessage(error, "Unable to submit loan request.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setSubmittingRequest(false);
     }
@@ -101,10 +110,13 @@ function Lending() {
         vote: voteForm.vote,
       });
       toast.success("Vote cast successfully.");
+      setErrorMessage("");
       setVoteForm(initialVote);
       await loadLoans({ quiet: true });
     } catch (error) {
-      toast.error(error.response?.data?.error || "Unable to cast vote.");
+      const message = apiErrorMessage(error, "Unable to cast vote.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setCastingVote(false);
     }
@@ -125,10 +137,13 @@ function Lending() {
         repayer_address: repayForm.repayerAddress.trim(),
       });
       toast.success(`Loan repaid. Repayment amount: ${response.data.repayment_amount} VLQ.`);
+      setErrorMessage("");
       setRepayForm(initialRepay);
       await loadLoans({ quiet: true });
     } catch (error) {
-      toast.error(error.response?.data?.error || "Unable to repay loan.");
+      const message = apiErrorMessage(error, "Unable to repay loan.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setRepaying(false);
     }
@@ -144,6 +159,8 @@ function Lending() {
           decide which loans should be issued.
         </p>
       </section>
+
+      <ErrorMessage message={errorMessage} />
 
       <div className="grid two-column">
         <section className="card card-pad stack">

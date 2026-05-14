@@ -4,6 +4,7 @@ import json
 import time
 from typing import Any
 
+from logger import vorliq_logger
 from wallet import address_from_public_key_pem, verify_signature
 
 
@@ -35,6 +36,12 @@ class Transaction:
         self.timestamp = time.time() if timestamp is None else timestamp
         self.signature = signature
         self.sender_public_key = sender_public_key
+        vorliq_logger.info(
+            "Transaction object created from %s to %s for %s VLQ",
+            self.sender_address,
+            self.receiver_address,
+            self.amount,
+        )
 
     def data_to_sign(self) -> str:
         data = {

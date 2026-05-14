@@ -91,6 +91,21 @@ a {
   object-fit: contain;
 }
 
+.connection-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06);
+}
+
+.connection-dot.online {
+  background: var(--green);
+}
+
+.connection-dot.offline {
+  background: var(--red);
+}
+
 .nav-links {
   display: flex;
   align-items: center;
@@ -403,6 +418,16 @@ p {
   border-radius: 8px;
   padding: 18px;
   text-align: center;
+}
+
+.error-message {
+  border: 1px solid rgba(255, 93, 108, 0.38);
+  border-radius: 8px;
+  background: rgba(255, 93, 108, 0.12);
+  color: #ffd9de;
+  font-weight: 800;
+  margin-bottom: 18px;
+  padding: 14px 16px;
 }
 
 .toast {
@@ -720,6 +745,60 @@ p {
   gap: 12px;
 }
 
+.health-section {
+  margin-top: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.health-list {
+  display: grid;
+  gap: 10px;
+}
+
+.health-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 110px;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 13px 14px;
+}
+
+.health-row div {
+  display: grid;
+  gap: 4px;
+}
+
+.health-row strong {
+  color: var(--text);
+}
+
+.health-row span {
+  overflow-wrap: anywhere;
+}
+
+.health-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: var(--text);
+  font-weight: 900;
+}
+
+.health-icon.online {
+  background: var(--green);
+  color: #101020;
+}
+
+.health-icon.offline {
+  background: var(--red);
+}
+
 .site-footer {
   border-top: 1px solid var(--border);
   background: rgba(10, 10, 18, 0.62);
@@ -784,7 +863,8 @@ p {
   .account-wallet-grid,
   .history-row,
   .explorer-result,
-  .registry-grid {
+  .registry-grid,
+  .health-row {
     grid-template-columns: 1fr;
   }
 

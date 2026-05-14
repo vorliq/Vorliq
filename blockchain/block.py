@@ -5,6 +5,8 @@ import json
 import time
 from typing import Any
 
+from logger import vorliq_logger
+
 
 class Block:
     difficulty = 4
@@ -24,6 +26,7 @@ class Block:
         self.previous_hash = previous_hash
         self.nonce = nonce
         self.hash = block_hash or self.calculate_hash()
+        vorliq_logger.debug("Block object initialized at index %s", self.index)
 
     def _normalized_transactions(self) -> list[dict[str, Any]]:
         normalized = []

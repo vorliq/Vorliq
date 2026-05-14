@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 
 from blockchain import Blockchain
+from logger import vorliq_logger
 from transaction import Transaction
 from wallet import Wallet
 
 
 def main() -> None:
+    vorliq_logger.info("Starting blockchain core test")
     print("Creating wallet one...")
     wallet_one = Wallet()
     print(f"Wallet one address: {wallet_one.address}")
@@ -46,6 +48,7 @@ def main() -> None:
 
     print("Full chain:")
     print(json.dumps(blockchain.to_dict(), indent=2))
+    vorliq_logger.info("Blockchain core test completed")
 
 
 if __name__ == "__main__":

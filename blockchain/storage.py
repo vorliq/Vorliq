@@ -7,6 +7,7 @@ from typing import Any
 from block import Block
 from blockchain import Blockchain
 from lending import LendingPool
+from logger import vorliq_logger
 from registry import NodeRegistry
 from transaction import Transaction
 
@@ -30,9 +31,11 @@ class Storage:
             "chain": [block.to_dict() for block in blockchain.chain],
         }
         self._write_json(self.chain_file, chain_data)
+        vorliq_logger.info("Saved blockchain to disk with %s blocks", len(blockchain.chain))
 
     def load_chain(self) -> Blockchain | None:
         if not self.chain_file.exists():
+            vorliq_logger.info("No saved blockchain found on disk")
             return None
 
         data = self._read_json(self.chain_file)
@@ -47,32 +50,39 @@ class Storage:
         if not blockchain.is_chain_valid():
             raise ValueError("saved blockchain data is not valid")
 
+        vorliq_logger.info("Loaded blockchain from disk with %s blocks", len(blockchain.chain))
         return blockchain
 
     def save_pending(self, pending_transactions: list[Any]) -> None:
         pending_data = [self._transaction_to_dict(transaction) for transaction in pending_transactions]
         self._write_json(self.pending_file, pending_data)
+        vorliq_logger.info("Saved %s pending transactions to disk", len(pending_data))
 
     def load_pending(self) -> list[dict[str, Any]]:
         if not self.pending_file.exists():
+            vorliq_logger.info("No saved pending transactions found on disk")
             return []
 
         data = self._read_json(self.pending_file)
         if not isinstance(data, list):
             raise ValueError("pending transaction data must be a list")
 
-        return [self._transaction_to_dict(transaction) for transaction in data]
+        pending = [self._transaction_to_dict(transaction) for transaction in data]
+        vorliq_logger.info("Loaded %s pending transactions from disk", len(pending))
+        return pending
 
     def save_lending_pool(self, lending_pool: LendingPool) -> None:
         lending_data = {
             "loan_requests": lending_pool.loan_requests,
         }
         self._write_json(self.lending_file, lending_data)
+        vorliq_logger.info("Saved lending pool with %s loan records", len(lending_pool.loan_requests))
 
     def load_lending_pool(self) -> LendingPool:
         lending_pool = LendingPool()
 
         if not self.lending_file.exists():
+            vorliq_logger.info("No saved lending pool found on disk")
             return lending_pool
 
         data = self._read_json(self.lending_file)
@@ -82,28 +92,35 @@ class Storage:
             raise ValueError("lending pool data must contain a loan_requests object")
 
         lending_pool.loan_requests = loan_requests
+        vorliq_logger.info("Loaded lending pool with %s loan records", len(loan_requests))
         return lending_pool
 
     def save_peers(self, peer_urls: set[str]) -> None:
         self._write_json(self.peers_file, sorted(peer_urls))
+        vorliq_logger.info("Saved %s peer records to disk", len(peer_urls))
 
     def load_peers(self) -> set[str]:
         if not self.peers_file.exists():
+            vorliq_logger.info("No saved peer list found on disk")
             return set()
 
         data = self._read_json(self.peers_file)
         if not isinstance(data, list):
             raise ValueError("peer data must be a list")
 
-        return {str(peer) for peer in data}
+        peers = {str(peer) for peer in data}
+        vorliq_logger.info("Loaded %s peer records from disk", len(peers))
+        return peers
 
     def save_registry(self, registry: NodeRegistry) -> None:
         self._write_json(self.registry_file, {"registered_nodes": registry.registered_nodes})
+        vorliq_logger.info("Saved node registry with %s records", len(registry.registered_nodes))
 
     def load_registry(self) -> NodeRegistry:
         registry = NodeRegistry()
 
         if not self.registry_file.exists():
+            vorliq_logger.info("No saved node registry found on disk")
             return registry
 
         data = self._read_json(self.registry_file)
@@ -113,6 +130,7 @@ class Storage:
             raise ValueError("registry data must contain a registered_nodes object")
 
         registry.registered_nodes = registered_nodes
+        vorliq_logger.info("Loaded node registry with %s records", len(registered_nodes))
         return registry
 
     def _write_json(self, path: Path, data: Any) -> None:

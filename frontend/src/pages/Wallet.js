@@ -2,7 +2,9 @@ import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "react-toastify";
 
+import ErrorMessage from "../components/ErrorMessage";
 import api from "../helpers/api";
+import { apiErrorMessage } from "../helpers/errors";
 
 function Wallet() {
   const [wallet, setWallet] = useState(null);
@@ -10,15 +12,19 @@ function Wallet() {
   const [balanceAddress, setBalanceAddress] = useState("");
   const [balance, setBalance] = useState(null);
   const [checking, setChecking] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function createWallet() {
     setCreating(true);
     try {
       const response = await api.post("/wallet/create");
       setWallet(response.data);
+      setErrorMessage("");
       toast.success("New VLQ wallet created.");
     } catch (error) {
-      toast.error(error.response?.data?.error || "Unable to create wallet.");
+      const message = apiErrorMessage(error, "Unable to create wallet.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setCreating(false);
     }
@@ -37,9 +43,12 @@ function Wallet() {
         params: { address: balanceAddress.trim() },
       });
       setBalance(response.data);
+      setErrorMessage("");
       toast.success("Balance loaded.");
     } catch (error) {
-      toast.error(error.response?.data?.error || "Unable to check balance.");
+      const message = apiErrorMessage(error, "Unable to check balance.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setChecking(false);
     }
@@ -54,6 +63,8 @@ function Wallet() {
           Generate a new Vorliq wallet, then check the VLQ balance for any address on the chain.
         </p>
       </section>
+
+      <ErrorMessage message={errorMessage} />
 
       <div className="grid two-column">
         <section className="card card-pad stack">

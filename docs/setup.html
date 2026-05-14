@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="How to install, run, and join the Vorliq community network." />
+    <title>Vorliq Setup Guide</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+      :root {
+        --bg: #0f0f1a;
+        --card: #1a1a2e;
+        --accent: #6c63ff;
+        --text: #ffffff;
+        --muted: #c7c7d4;
+        --border: rgba(255, 255, 255, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at top left, rgba(108, 99, 255, 0.2), transparent 34rem),
+          var(--bg);
+        color: var(--muted);
+        font-family: "Inter", Arial, sans-serif;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .wrap {
+        width: min(920px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      header,
+      footer {
+        padding: 26px 0;
+      }
+
+      .brand {
+        color: var(--text);
+        font-size: 1.1rem;
+        font-weight: 900;
+      }
+
+      .hero {
+        padding: 42px 0 24px;
+      }
+
+      .eyebrow {
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2 {
+        color: var(--text);
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(2.5rem, 8vw, 5.4rem);
+        line-height: 0.98;
+        margin: 12px 0 18px;
+      }
+
+      h2 {
+        font-size: clamp(1.5rem, 4vw, 2.2rem);
+        margin-bottom: 12px;
+      }
+
+      p {
+        line-height: 1.78;
+        margin: 0;
+      }
+
+      code {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 2px 6px;
+      }
+
+      article {
+        display: grid;
+        gap: 26px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent), var(--card);
+        padding: clamp(20px, 5vw, 38px);
+        margin: 22px 0 64px;
+      }
+
+      article section {
+        display: grid;
+        gap: 12px;
+      }
+
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .links a {
+        border-radius: 10px;
+        background: var(--accent);
+        color: var(--text);
+        display: inline-flex;
+        font-weight: 900;
+        min-height: 46px;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 16px;
+      }
+
+      footer {
+        border-top: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="wrap">
+      <a class="brand" href="index.html">Vorliq</a>
+    </header>
+
+    <main class="wrap">
+      <section class="hero">
+        <span class="eyebrow">Community Setup</span>
+        <h1>Run Your Vorliq Node</h1>
+        <p>
+          This guide explains how to install Vorliq, start your local node, and connect with
+          the community network.
+        </p>
+      </section>
+
+      <article>
+        <section>
+          <h2>What You Need</h2>
+          <p>
+            To run a Vorliq node, you need a Windows 10 or later computer, Node.js LTS from
+            nodejs.org, Python 3.12 from python.org, and Git from git-scm.com. When installing
+            Python, make sure the Add to PATH checkbox is selected during setup so the terminal
+            can run Python commands correctly.
+          </p>
+        </section>
+
+        <section>
+          <h2>Download Vorliq</h2>
+          <p>
+            Open a terminal and navigate to the folder where you want to install Vorliq. Run
+            <code>git clone https://github.com/vorliq/Vorliq.git</code> to download the project,
+            then run <code>cd Vorliq</code> to move into the project folder. If your clone creates
+            another nested Vorliq folder, open that folder before continuing.
+          </p>
+        </section>
+
+        <section>
+          <h2>Install Dependencies</h2>
+          <p>
+            Inside the Vorliq folder, open a terminal and go into the blockchain folder. Create
+            the Python virtual environment by running <code>python -m venv .venv</code>, activate
+            it by running <code>.venv\Scripts\activate</code>, and then install the Python packages
+            with <code>pip install -r requirements.txt</code>. After that, go into the backend
+            folder and run <code>npm install</code>. Finally, go into the frontend folder and run
+            <code>npm install</code>.
+          </p>
+        </section>
+
+        <section>
+          <h2>Start Vorliq</h2>
+          <p>
+            To start the full application, double click <code>start.bat</code> in the root folder.
+            Wait for the terminal windows to open and for the services to finish starting, then
+            open your browser to <code>http://localhost:3000</code>. The browser app is where you
+            create a wallet, mine blocks, send VLQ, view the chain, and join the network.
+          </p>
+        </section>
+
+        <section>
+          <h2>Join the Network</h2>
+          <p>
+            To connect to other Vorliq nodes, open the Registry page in the app, find active
+            nodes listed there, and click Add to My Network next to any node you want to connect
+            to. You should also register your own node in the Registry so other community members
+            can find you and connect to your node.
+          </p>
+        </section>
+
+        <section>
+          <h2>Get Help</h2>
+          <p>
+            Vorliq is a community project, so the best way to keep moving is to join the public
+            channels, ask questions, and share what you are building with VLQ.
+          </p>
+          <div class="links">
+            <a href="https://discord.gg/qpX5sHD4pC" target="_blank" rel="noreferrer">Discord</a>
+            <a href="https://t.me/Vorliq" target="_blank" rel="noreferrer">Telegram</a>
+            <a href="https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS" target="_blank" rel="noreferrer">Reddit</a>
+            <a href="https://github.com/vorliq/Vorliq" target="_blank" rel="noreferrer">GitHub</a>
+            <a href="https://x.com/vorliq" target="_blank" rel="noreferrer">X</a>
+          </div>
+        </section>
+      </article>
+    </main>
+
+    <footer>
+      <div class="wrap">2025 Vorliq. All rights reserved.</div>
+    </footer>
+  </body>
+</html>

@@ -9,12 +9,17 @@ const miningRoutes = require("./routes/mining");
 const networkRoutes = require("./routes/network");
 const lendingRoutes = require("./routes/lending");
 const registryRoutes = require("./routes/registry");
+const { logError, logInfo } = require("./logger");
 
 const app = express();
 const port = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+  logInfo(`${req.method} ${req.path}`);
+  next();
+});
 
 app.get("/api/health", (req, res) => {
   res.json({
@@ -39,14 +44,19 @@ app.use((req, res) => {
 });
 
 app.use((error, req, res, next) => {
+  logError(`${req.method} ${req.path} failed: ${error.message}`);
   const status = error.response?.status || 500;
-  const payload = error.response?.data || { error: error.message };
+  const message =
+    error.code === "ECONNREFUSED" || error.code === "ECONNABORTED" || !error.response
+      ? "Blockchain service is currently unavailable. Please make sure the Vorliq blockchain API is running."
+      : error.response?.data?.message || error.response?.data?.error || "The backend could not complete this request.";
   res.status(status).json({
     success: false,
-    ...payload,
+    message,
   });
 });
 
 app.listen(port, () => {
   console.log(`Vorliq backend API running on port ${port}`);
+  logInfo(`Vorliq backend API running on port ${port}`);
 });

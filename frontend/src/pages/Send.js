@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 
+import ErrorMessage from "../components/ErrorMessage";
 import api from "../helpers/api";
+import { apiErrorMessage } from "../helpers/errors";
 import { signTransaction } from "../helpers/signer";
 
 const initialForm = {
@@ -15,6 +17,7 @@ const initialForm = {
 function Send() {
   const [form, setForm] = useState(initialForm);
   const [sending, setSending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -50,9 +53,12 @@ function Send() {
       }
 
       toast.success("Transaction signed and sent to the pending pool.");
+      setErrorMessage("");
       setForm(initialForm);
     } catch (error) {
-      toast.error(error.response?.data?.error || error.message || "Unable to send VLQ.");
+      const message = apiErrorMessage(error, "Unable to send VLQ.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setSending(false);
     }
@@ -68,6 +74,8 @@ function Send() {
           Vorliq blockchain API.
         </p>
       </section>
+
+      <ErrorMessage message={errorMessage} />
 
       <section className="card card-pad">
         <form className="form" onSubmit={sendVlq}>

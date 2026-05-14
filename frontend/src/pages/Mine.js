@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 
+import ErrorMessage from "../components/ErrorMessage";
 import api from "../helpers/api";
+import { apiErrorMessage } from "../helpers/errors";
 
 function Mine() {
   const [minerAddress, setMinerAddress] = useState("");
   const [mining, setMining] = useState(false);
   const [minedBlock, setMinedBlock] = useState(null);
   const [sessionMinedBlocks, setSessionMinedBlocks] = useState(0);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function mineBlock(event) {
     event.preventDefault();
@@ -25,9 +28,12 @@ function Mine() {
       });
       setMinedBlock(response.data.block);
       setSessionMinedBlocks((current) => current + 1);
+      setErrorMessage("");
       toast.success("Block mined successfully.");
     } catch (error) {
-      toast.error(error.response?.data?.error || "Unable to mine block.");
+      const message = apiErrorMessage(error, "Unable to mine block.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setMining(false);
     }
@@ -43,6 +49,8 @@ function Mine() {
           for the miner in the next block.
         </p>
       </section>
+
+      <ErrorMessage message={errorMessage} />
 
       <div className="grid two-column">
         <section className="card card-pad">

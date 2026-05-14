@@ -5,6 +5,7 @@ import time
 from typing import Any
 
 from blockchain import Blockchain
+from logger import vorliq_logger
 from transaction import LENDING_POOL_ADDRESS, Transaction
 
 
@@ -51,6 +52,12 @@ class LendingPool:
             "due_block": current_height + self.repayment_blocks,
         }
 
+        vorliq_logger.info(
+            "Loan request created by %s for %s VLQ with loan ID %s",
+            requester_address,
+            amount,
+            loan_id,
+        )
         return loan_id
 
     def vote_on_loan(
@@ -78,6 +85,13 @@ class LendingPool:
             raise ValueError("only VLQ holders with a positive balance can vote")
 
         loan["votes"][voter_address] = vote
+        vorliq_logger.info(
+            "Loan vote cast on %s by %s: %s with weight %s",
+            loan_id,
+            voter_address,
+            vote,
+            voter_vlq_balance,
+        )
 
         if vote == "yes":
             loan["yes_vote_weight"] += voter_vlq_balance
@@ -107,6 +121,7 @@ class LendingPool:
 
         if no_weight > yes_weight:
             loan["status"] = "rejected"
+            vorliq_logger.info("Loan %s rejected with yes weight %s and no weight %s", loan_id, yes_weight, no_weight)
 
         return loan
 
@@ -117,6 +132,7 @@ class LendingPool:
             return loan
 
         loan["status"] = "approved"
+        vorliq_logger.info("Loan %s approved for %s VLQ", loan_id, loan["amount"])
         issuance_transaction = Transaction(
             sender_address=LENDING_POOL_ADDRESS,
             receiver_address=loan["requester_address"],
@@ -147,6 +163,7 @@ class LendingPool:
         )
         current_blockchain.add_pending_transaction(repayment_transaction)
         loan["status"] = "repaid"
+        vorliq_logger.info("Loan %s repaid by %s for %s VLQ", loan_id, repayer_address, loan["repayment_amount"])
         return loan
 
     def get_all_loans(self) -> list[dict[str, Any]]:

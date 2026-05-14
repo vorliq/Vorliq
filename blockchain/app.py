@@ -3,6 +3,7 @@ from flask import Flask, jsonify, request
 from block import Block
 from blockchain import Blockchain
 from lending import LendingPool
+from logger import vorliq_logger
 from network import Network
 from node import Node
 from registry import NodeRegistry
@@ -16,22 +17,37 @@ node = Node()
 saved_blockchain = storage.load_chain()
 if saved_blockchain:
     node.blockchain = saved_blockchain
+    vorliq_logger.info("Flask startup restored saved blockchain with height %s", node.blockchain.get_block_height())
+else:
+    vorliq_logger.info("Flask startup created fresh blockchain with height %s", node.blockchain.get_block_height())
 
 node.blockchain.pending_transactions = [
     Transaction.from_dict(transaction) for transaction in storage.load_pending()
 ]
+vorliq_logger.info("Flask startup restored %s pending transactions", len(node.blockchain.pending_transactions))
 
 network = Network()
 network.peers = storage.load_peers()
+vorliq_logger.info("Flask startup restored %s peers", len(network.peers))
 
 lending_pool = storage.load_lending_pool()
 lending_pool.blockchain = node.blockchain
+vorliq_logger.info("Flask startup restored %s lending records", len(lending_pool.loan_requests))
 node_registry = storage.load_registry()
+vorliq_logger.info("Flask startup restored %s registry records", len(node_registry.registered_nodes))
 _imports_ready = (Block, Blockchain, Transaction)
 LOCAL_NODE_URL = "http://localhost:5001"
 
 if network.peers:
     network.announce_to_peers(LOCAL_NODE_URL, network.get_peers())
+
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
 
 
 @app.get("/health")
@@ -60,6 +76,7 @@ def create_transaction():
             network.broadcast_transaction({**transaction.to_dict(), "_broadcasted": True})
         return jsonify({"success": True, "message": "Transaction added to pending pool"}), 201
     except Exception as exc:
+        vorliq_logger.error("Transaction endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
@@ -75,12 +92,14 @@ def mine_block():
         network.broadcast_block(block)
         return jsonify({"success": True, "block": block}), 201
     except Exception as exc:
+        vorliq_logger.error("Mine endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
 @app.post("/wallet")
 def create_wallet():
     wallet = Wallet()
+    vorliq_logger.info("Wallet created through Flask API for address %s", wallet.address)
     return jsonify(
         {
             "address": wallet.address,
@@ -97,6 +116,7 @@ def get_balance():
     try:
         return jsonify(node.get_balance(address))
     except Exception as exc:
+        vorliq_logger.error("Balance endpoint failed: %s", exc)
         return jsonify({"error": str(exc)}), 400
 
 
@@ -117,6 +137,7 @@ def register_peer():
             network.announce_to_peers(LOCAL_NODE_URL, [peer])
         return jsonify({"success": True, "peers": network.get_peers()}), 201
     except Exception as exc:
+        vorliq_logger.error("Peer register endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
@@ -134,6 +155,7 @@ def announce_peer():
         storage.save_peers(network.peers)
         return jsonify({"success": True, "message": "Peer announced", "peers": network.get_peers()}), 201
     except Exception as exc:
+        vorliq_logger.error("Peer announce endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
@@ -168,6 +190,7 @@ def receive_block():
         updated = network.sync_chain(node.blockchain)
         if updated:
             storage.save_chain(node.blockchain)
+        vorliq_logger.error("Receive block endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc), "chain_updated": updated}), 400
 
 
@@ -201,6 +224,7 @@ def register_public_node():
         storage.save_registry(node_registry)
         return jsonify({"success": True, "nodes": node_registry.get_active_nodes()}), 201
     except Exception as exc:
+        vorliq_logger.error("Registry register endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
@@ -217,6 +241,7 @@ def registry_heartbeat():
         storage.save_registry(node_registry)
         return jsonify({"success": True, "node": node})
     except Exception as exc:
+        vorliq_logger.error("Registry heartbeat endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
@@ -233,6 +258,7 @@ def create_lending_request():
         storage.save_lending_pool(lending_pool)
         return jsonify({"success": True, "loan_id": loan_id, "loan": lending_pool.get_loan(loan_id)}), 201
     except Exception as exc:
+        vorliq_logger.error("Lending request endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
@@ -275,6 +301,7 @@ def vote_on_lending_loan():
         storage.save_pending(node.blockchain.pending_transactions)
         return jsonify({"success": True, "loan": loan})
     except Exception as exc:
+        vorliq_logger.error("Lending vote endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
@@ -295,8 +322,10 @@ def repay_lending_loan():
             }
         )
     except Exception as exc:
+        vorliq_logger.error("Lending repay endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
 if __name__ == "__main__":
+    vorliq_logger.info("Starting Vorliq Flask blockchain API on 127.0.0.1:5001")
     app.run(host="127.0.0.1", port=5001, debug=False)

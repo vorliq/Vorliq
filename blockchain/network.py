@@ -7,6 +7,7 @@ import requests
 
 from block import Block
 from blockchain import Blockchain
+from logger import vorliq_logger
 
 
 class Network:
@@ -16,15 +17,19 @@ class Network:
     def register_peer(self, peer_url: str) -> bool:
         normalized_peer = self._normalize_peer_url(peer_url)
         if normalized_peer in self.peers:
+            vorliq_logger.info("Peer already registered: %s", normalized_peer)
             return False
         self.peers.add(normalized_peer)
+        vorliq_logger.info("Peer registered: %s", normalized_peer)
         return True
 
     def remove_peer(self, peer_url: str) -> bool:
         normalized_peer = self._normalize_peer_url(peer_url)
         if normalized_peer in self.peers:
             self.peers.remove(normalized_peer)
+            vorliq_logger.info("Peer removed: %s", normalized_peer)
             return True
+        vorliq_logger.info("Peer removal skipped because peer was not known: %s", normalized_peer)
         return False
 
     def get_peers(self) -> list[str]:
@@ -33,16 +38,20 @@ class Network:
     def broadcast_transaction(self, transaction: dict[str, Any]) -> None:
         for peer in self.get_peers():
             try:
-                requests.post(f"{peer}/transaction", json=transaction, timeout=5)
+                response = requests.post(f"{peer}/transaction", json=transaction, timeout=5)
+                response.raise_for_status()
+                vorliq_logger.info("Transaction broadcast succeeded to %s", peer)
             except requests.RequestException as exc:
-                print(f"Warning: failed to broadcast transaction to {peer}: {exc}")
+                vorliq_logger.warning("Transaction broadcast failed to %s: %s", peer, exc)
 
     def broadcast_block(self, block: dict[str, Any]) -> None:
         for peer in self.get_peers():
             try:
-                requests.post(f"{peer}/receive_block", json=block, timeout=5)
+                response = requests.post(f"{peer}/receive_block", json=block, timeout=5)
+                response.raise_for_status()
+                vorliq_logger.info("Block broadcast succeeded to %s", peer)
             except requests.RequestException as exc:
-                print(f"Warning: failed to broadcast block to {peer}: {exc}")
+                vorliq_logger.warning("Block broadcast failed to %s: %s", peer, exc)
 
     def sync_chain(self, local_blockchain: Blockchain) -> bool:
         best_chain = local_blockchain.chain
@@ -54,16 +63,19 @@ class Network:
                 peer_chain_data = response.json().get("chain", [])
                 peer_chain = [Block.from_dict(block_data) for block_data in peer_chain_data]
             except (requests.RequestException, ValueError, KeyError, TypeError) as exc:
-                print(f"Warning: failed to sync chain from {peer}: {exc}")
+                vorliq_logger.warning("Failed to sync chain from %s: %s", peer, exc)
                 continue
 
             if len(peer_chain) > len(best_chain) and self._is_valid_chain(peer_chain, local_blockchain):
                 best_chain = peer_chain
+                vorliq_logger.info("Longer valid chain found from %s with %s blocks", peer, len(peer_chain))
 
         if len(best_chain) > len(local_blockchain.chain):
             local_blockchain.chain = best_chain
+            vorliq_logger.info("Local chain updated to longer network chain with %s blocks", len(best_chain))
             return True
 
+        vorliq_logger.info("Chain sync complete; local chain is already longest")
         return False
 
     def check_peer_statuses(self) -> dict[str, bool]:
@@ -75,6 +87,7 @@ class Network:
                 statuses[peer] = response.ok
             except requests.RequestException:
                 statuses[peer] = False
+                vorliq_logger.warning("Peer health check failed for %s", peer)
 
         return statuses
 
@@ -84,7 +97,7 @@ class Network:
                 try:
                     self.register_peer(peer)
                 except ValueError as exc:
-                    print(f"Warning: skipped invalid peer {peer}: {exc}")
+                    vorliq_logger.warning("Skipped invalid peer %s: %s", peer, exc)
 
         for peer in list(self.peers):
             try:
@@ -92,14 +105,14 @@ class Network:
                 response.raise_for_status()
                 discovered_peers = response.json().get("peers", [])
             except (requests.RequestException, ValueError, TypeError) as exc:
-                print(f"Warning: failed to discover peers from {peer}: {exc}")
+                vorliq_logger.warning("Failed to discover peers from %s: %s", peer, exc)
                 continue
 
             for discovered_peer in discovered_peers:
                 try:
                     self.register_peer(discovered_peer)
                 except ValueError as exc:
-                    print(f"Warning: skipped invalid discovered peer {discovered_peer}: {exc}")
+                    vorliq_logger.warning("Skipped invalid discovered peer %s: %s", discovered_peer, exc)
 
         return self.get_peers()
 
@@ -110,7 +123,7 @@ class Network:
             try:
                 normalized_peer = self._normalize_peer_url(peer)
             except ValueError as exc:
-                print(f"Warning: skipped invalid announcement peer {peer}: {exc}")
+                vorliq_logger.warning("Skipped invalid announcement peer %s: %s", peer, exc)
                 continue
 
             if normalized_peer == normalized_local_url:
@@ -122,8 +135,9 @@ class Network:
                     json={"peer": normalized_local_url, "_announced": True},
                     timeout=5,
                 )
+                vorliq_logger.info("Announced local node %s to peer %s", normalized_local_url, normalized_peer)
             except requests.RequestException as exc:
-                print(f"Warning: failed to announce local node to {normalized_peer}: {exc}")
+                vorliq_logger.warning("Failed to announce local node to %s: %s", normalized_peer, exc)
 
     def _normalize_peer_url(self, peer_url: str) -> str:
         if not isinstance(peer_url, str) or not peer_url.strip():

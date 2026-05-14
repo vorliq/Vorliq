@@ -6,6 +6,8 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
+from logger import vorliq_logger
+
 
 BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
@@ -39,6 +41,7 @@ class Wallet:
         self.private_key = private_key or ec.generate_private_key(ec.SECP256K1())
         self.public_key = self.private_key.public_key()
         self.address = self.generate_address()
+        vorliq_logger.info("Wallet object created for address %s", self.address)
 
     def public_key_bytes(self) -> bytes:
         return self.public_key.public_bytes(

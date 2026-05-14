@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { BrowserRouter, NavLink, Route, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -16,7 +17,9 @@ import Stats from "./pages/Stats";
 import Registry from "./pages/Registry";
 import Login from "./pages/Login";
 import Account from "./pages/Account";
+import Health from "./pages/Health";
 import Footer from "./components/Footer";
+import api from "./helpers/api";
 import logo from "./logo.svg";
 
 function App() {
@@ -31,6 +34,31 @@ function App() {
 
 function AppShell() {
   const { isLoggedIn, logout, wallet } = useAuth();
+  const [backendOnline, setBackendOnline] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function checkHealth() {
+      try {
+        const response = await api.get("/health", { timeout: 5000 });
+        if (mounted) {
+          setBackendOnline(Boolean(response.data?.success));
+        }
+      } catch (error) {
+        if (mounted) {
+          setBackendOnline(false);
+        }
+      }
+    }
+
+    checkHealth();
+    const interval = window.setInterval(checkHealth, 15000);
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   return (
     <div className="app-shell">
@@ -38,6 +66,11 @@ function AppShell() {
         <div className="navbar-inner">
           <NavLink className="brand" to="/">
             <img className="brand-logo" src={logo} alt="Vorliq logo" />
+            <span
+              className={`connection-dot ${backendOnline ? "online" : "offline"}`}
+              title={backendOnline ? "all systems running" : "backend offline"}
+              aria-label={backendOnline ? "all systems running" : "backend offline"}
+            />
             <span>Vorliq</span>
           </NavLink>
 
@@ -72,6 +105,9 @@ function AppShell() {
             <NavLink className="nav-link" to="/registry">
               Registry
             </NavLink>
+            <NavLink className="nav-link" to="/health">
+              Health
+            </NavLink>
 
             <div className="auth-actions">
               {isLoggedIn ? (
@@ -104,6 +140,7 @@ function AppShell() {
         <Route path="/lending" element={<Lending />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/registry" element={<Registry />} />
+        <Route path="/health" element={<Health />} />
         <Route path="/login" element={<Login />} />
         <Route
           path="/account"

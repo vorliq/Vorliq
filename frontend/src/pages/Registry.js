@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
+import ErrorMessage from "../components/ErrorMessage";
 import api from "../helpers/api";
+import { apiErrorMessage } from "../helpers/errors";
 
 function timeAgo(timestamp) {
   if (!timestamp) {
@@ -28,13 +30,17 @@ function Registry() {
   const [nodes, setNodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function loadNodes() {
     try {
       const response = await api.get("/registry/nodes");
       setNodes(response.data.nodes || []);
+      setErrorMessage("");
     } catch (error) {
-      toast.error(error.response?.data?.error || "Unable to load active nodes.");
+      const message = apiErrorMessage(error, "Unable to load active nodes.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -56,9 +62,12 @@ function Registry() {
         display_name: displayName,
       });
       setNodes(response.data.nodes || []);
+      setErrorMessage("");
       toast.success("Node registered in the public registry.");
     } catch (error) {
-      toast.error(error.response?.data?.error || "Unable to register node.");
+      const message = apiErrorMessage(error, "Unable to register node.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -67,9 +76,12 @@ function Registry() {
   async function addToNetwork(url) {
     try {
       await api.post("/peers/add", { peer: url });
+      setErrorMessage("");
       toast.success("Node added to your peer network.");
     } catch (error) {
-      toast.error(error.response?.data?.error || "Unable to add node to your network.");
+      const message = apiErrorMessage(error, "Unable to add node to your network.");
+      setErrorMessage(message);
+      toast.error(message);
     }
   }
 
@@ -82,6 +94,8 @@ function Registry() {
           Register your Vorliq node, find active community nodes, and connect your local network to other operators.
         </p>
       </section>
+
+      <ErrorMessage message={errorMessage} />
 
       <section className="card card-pad">
         <div className="section-title">

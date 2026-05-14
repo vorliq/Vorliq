@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { ec as EC } from "elliptic";
 import { toast } from "react-toastify";
 
+import ErrorMessage from "../components/ErrorMessage";
 import api from "../helpers/api";
+import { apiErrorMessage } from "../helpers/errors";
 import { createPythonSigningPayload } from "../helpers/signer";
 
 const secp256k1 = new EC("secp256k1");
@@ -85,6 +87,7 @@ function Blockchain() {
   const [lookupInput, setLookupInput] = useState("");
   const [lookupSearch, setLookupSearch] = useState("");
   const [signatureStatuses, setSignatureStatuses] = useState({});
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -94,9 +97,12 @@ function Blockchain() {
         const response = await api.get("/chain");
         if (mounted) {
           setChain([...(response.data.chain || [])].sort((a, b) => b.index - a.index));
+          setErrorMessage("");
         }
       } catch (error) {
-        toast.error(error.response?.data?.error || "Unable to load blockchain.");
+        const message = apiErrorMessage(error, "Unable to load blockchain.");
+        setErrorMessage(message);
+        toast.error(message);
       } finally {
         if (mounted) {
           setLoading(false);
@@ -442,6 +448,8 @@ function Blockchain() {
           Inspect blocks, search wallet activity, and verify transaction signatures recorded by the local VLQ chain.
         </p>
       </section>
+
+      <ErrorMessage message={errorMessage} />
 
       {renderTabs()}
 

@@ -3,12 +3,14 @@ from __future__ import annotations
 from typing import Any
 
 from blockchain import Blockchain
+from logger import vorliq_logger
 from transaction import Transaction
 
 
 class Node:
     def __init__(self) -> None:
         self.blockchain = Blockchain()
+        vorliq_logger.info("Node initialized with blockchain height %s", self.blockchain.get_block_height())
 
     def get_full_chain(self) -> dict[str, Any]:
         return self.blockchain.to_dict()

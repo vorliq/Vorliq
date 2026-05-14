@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
+import ErrorMessage from "../components/ErrorMessage";
 import { useAuth } from "../context/AuthContext";
 import api from "../helpers/api";
+import { apiErrorMessage } from "../helpers/errors";
 
 function Account() {
   const { wallet } = useAuth();
@@ -11,6 +13,7 @@ function Account() {
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [repayingLoanId, setRepayingLoanId] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -27,9 +30,12 @@ function Account() {
           setBalance(balanceResponse.data.balance);
           setChain(chainResponse.data.chain || []);
           setLoans(loansResponse.data.loans || []);
+          setErrorMessage("");
         }
       } catch (error) {
-        toast.error(error.response?.data?.error || "Unable to load account dashboard.");
+        const message = apiErrorMessage(error, "Unable to load account dashboard.");
+        setErrorMessage(message);
+        toast.error(message);
       } finally {
         if (mounted) {
           setLoading(false);
@@ -90,9 +96,12 @@ function Account() {
       setLoans((current) =>
         current.map((loan) => (loan.loan_id === loanId ? response.data.loan : loan))
       );
+      setErrorMessage("");
       toast.success(`Loan repaid. Amount: ${response.data.repayment_amount} VLQ.`);
     } catch (error) {
-      toast.error(error.response?.data?.error || "Unable to repay loan.");
+      const message = apiErrorMessage(error, "Unable to repay loan.");
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setRepayingLoanId(null);
     }
@@ -135,6 +144,8 @@ function Account() {
           View your saved wallet, balance, transaction history, and active community loans.
         </p>
       </section>
+
+      <ErrorMessage message={errorMessage} />
 
       <section className="card card-pad stack">
         <div className="section-title">

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from blockchain import Blockchain
 from lending import LendingPool
+from logger import vorliq_logger
 from network import Network
 from storage import Storage
 from transaction import SYSTEM_ADDRESS, Transaction
@@ -16,6 +17,7 @@ def print_result(name: str, passed: bool) -> None:
 
 
 def main() -> None:
+    vorliq_logger.info("Starting persistence test")
     storage = Storage()
 
     for json_file in Path(storage.data_dir).glob("*.json"):
@@ -84,6 +86,7 @@ def main() -> None:
     print()
     print("Restored chain JSON:")
     print(json.dumps(restored_blockchain.to_dict(), indent=2, sort_keys=True))
+    vorliq_logger.info("Persistence test completed")
 
 
 if __name__ == "__main__":

@@ -22,6 +22,7 @@ dist/
 !backend/.env
 data/
 blockchain/data/
+backend/data/
 
 # OS and editor files
 .DS_Store

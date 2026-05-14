@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from block import Block
+from logger import vorliq_logger
 from transaction import SYSTEM_ADDRESS, Transaction
 
 
@@ -23,6 +24,7 @@ class Blockchain:
             previous_hash="0",
         )
         genesis_block.proof_of_work(self.difficulty)
+        vorliq_logger.info("Genesis block created with hash %s", genesis_block.hash)
         return genesis_block
 
     def get_latest_block(self) -> Block:
@@ -32,15 +34,19 @@ class Blockchain:
         latest_block = self.get_latest_block()
 
         if block.index != latest_block.index + 1:
+            vorliq_logger.warning("Rejected block with invalid index %s", block.index)
             return False
 
         if block.previous_hash != latest_block.hash:
+            vorliq_logger.warning("Rejected block %s because previous hash did not match", block.index)
             return False
 
         if not block.has_valid_proof(self.difficulty):
+            vorliq_logger.warning("Rejected block %s because proof of work was invalid", block.index)
             return False
 
         if not self._all_transactions_are_valid(block.transactions):
+            vorliq_logger.warning("Rejected block %s because a transaction was invalid", block.index)
             return False
 
         self.chain.append(block)
@@ -48,12 +54,15 @@ class Blockchain:
 
     def is_chain_valid(self) -> bool:
         if not self.chain:
+            vorliq_logger.warning("Chain validation failed because the chain is empty")
             return False
 
         genesis_block = self.chain[0]
         if genesis_block.hash != genesis_block.calculate_hash():
+            vorliq_logger.warning("Chain validation failed because the genesis hash changed")
             return False
         if not genesis_block.hash.startswith("0" * self.difficulty):
+            vorliq_logger.warning("Chain validation failed because genesis proof of work is invalid")
             return False
 
         for index in range(1, len(self.chain)):
@@ -61,17 +70,22 @@ class Blockchain:
             previous_block = self.chain[index - 1]
 
             if current_block.hash != current_block.calculate_hash():
+                vorliq_logger.warning("Chain validation failed at block %s: hash mismatch", current_block.index)
                 return False
 
             if not current_block.hash.startswith("0" * self.difficulty):
+                vorliq_logger.warning("Chain validation failed at block %s: proof of work invalid", current_block.index)
                 return False
 
             if current_block.previous_hash != previous_block.hash:
+                vorliq_logger.warning("Chain validation failed at block %s: previous hash mismatch", current_block.index)
                 return False
 
             if not self._all_transactions_are_valid(current_block.transactions):
+                vorliq_logger.warning("Chain validation failed at block %s: invalid transaction", current_block.index)
                 return False
 
+        vorliq_logger.info("Chain validation passed for %s blocks", len(self.chain))
         return True
 
     def add_pending_transaction(self, transaction: Transaction) -> bool:
@@ -82,6 +96,12 @@ class Blockchain:
             raise ValueError("transaction signature is invalid")
 
         self.pending_transactions.append(transaction)
+        vorliq_logger.info(
+            "Transaction added to pending pool from %s to %s for %s VLQ",
+            transaction.sender_address,
+            transaction.receiver_address,
+            transaction.amount,
+        )
         return True
 
     def mine_pending_transactions(self, miner_address: str) -> Block:
@@ -105,6 +125,7 @@ class Blockchain:
             amount=mining_reward,
         )
         self.pending_transactions = [reward_transaction] if mining_reward > 0 else []
+        vorliq_logger.info("Mined block %s with hash %s", block.index, block.hash)
 
         return block
 

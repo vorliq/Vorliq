@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
+import ErrorMessage from "../components/ErrorMessage";
 import api from "../helpers/api";
+import { apiErrorMessage } from "../helpers/errors";
 
 function Dashboard() {
   const [chainData, setChainData] = useState(null);
   const [economics, setEconomics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -19,12 +22,15 @@ function Dashboard() {
           api.get("/economics"),
         ]);
         if (mounted) {
+          setErrorMessage("");
           setChainData(chainResponse.data);
           setEconomics(economicsResponse.data);
           setLastUpdated(new Date());
         }
       } catch (error) {
-        toast.error(error.response?.data?.error || "Unable to load blockchain dashboard.");
+        const message = apiErrorMessage(error, "Unable to load blockchain dashboard.");
+        setErrorMessage(message);
+        toast.error(message);
       } finally {
         if (mounted) {
           setLoading(false);
@@ -63,6 +69,8 @@ function Dashboard() {
           who want to save, lend, and keep shared records together.
         </p>
       </section>
+
+      <ErrorMessage message={errorMessage} />
 
       <section className="grid stats-grid">
         <div className="card card-pad stat-card">
