@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
@@ -6,6 +7,17 @@ import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 import logo from "../assets/logo.png";
+
+const quickLinks = [
+  { to: "/wallet", label: "Wallet", detail: "Create and check your VLQ wallet" },
+  { to: "/send", label: "Send", detail: "Move VLQ to another member" },
+  { to: "/mine", label: "Mine", detail: "Mine blocks and support the chain" },
+  { to: "/lending", label: "Lending", detail: "Request or vote on community loans" },
+  { to: "/exchange", label: "Exchange", detail: "Post buy and sell offers" },
+  { to: "/governance", label: "Governance", detail: "Vote on network changes" },
+  { to: "/registry", label: "Registry", detail: "Find and connect to public nodes" },
+  { to: "/health", label: "Health", detail: "Check node status and deployment" },
+];
 
 function Dashboard() {
   const [chainData, setChainData] = useState(null);
@@ -110,6 +122,23 @@ function Dashboard() {
       {lastUpdated && (
         <p className="last-updated">Last updated {lastUpdated.toLocaleString()}</p>
       )}
+
+      <section className="card card-pad quick-links-card">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">Quick Access</span>
+            <h2>Important Links</h2>
+          </div>
+        </div>
+        <div className="quick-link-grid">
+          {quickLinks.map((link) => (
+            <Link className="quick-link" to={link.to} key={link.to}>
+              <strong>{link.label}</strong>
+              <span>{link.detail}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <section className="card card-pad about-card">
         <img className="section-logo" src={logo} alt="Vorliq logo" />

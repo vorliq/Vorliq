@@ -27,6 +27,37 @@ import Footer from "./components/Footer";
 import api from "./helpers/api";
 import logo from "./assets/logo.png";
 
+const navSections = [
+  {
+    title: "Core",
+    links: [
+      { to: "/", label: "Dashboard", end: true },
+      { to: "/wallet", label: "Wallet" },
+      { to: "/send", label: "Send" },
+      { to: "/mine", label: "Mine" },
+    ],
+  },
+  {
+    title: "Community",
+    links: [
+      { to: "/lending", label: "Lending" },
+      { to: "/exchange", label: "Exchange" },
+      { to: "/governance", label: "Governance" },
+      { to: "/registry", label: "Registry" },
+    ],
+  },
+  {
+    title: "Network",
+    links: [
+      { to: "/blockchain", label: "Blockchain" },
+      { to: "/network", label: "Network" },
+      { to: "/stats", label: "Stats" },
+      { to: "/health", label: "Health" },
+      { to: "/whitepaper", label: "Whitepaper" },
+    ],
+  },
+];
+
 function App() {
   return (
     <ThemeProvider>
@@ -54,20 +85,52 @@ function AppShell() {
 
     function toggleMenu() {
       navMenu?.classList.toggle("nav-open");
+      hamburger?.classList.toggle("is-open");
+      const isOpen = navMenu?.classList.contains("nav-open") || false;
+      hamburger?.setAttribute("aria-expanded", String(isOpen));
+      document.body.classList.toggle("mobile-nav-open", isOpen);
+    }
+
+    function closeMobileMenu() {
+      navMenu?.classList.remove("nav-open");
+      hamburger?.classList.remove("is-open");
+      hamburger?.setAttribute("aria-expanded", "false");
+      document.body.classList.remove("mobile-nav-open");
     }
 
     function closeMenu(event) {
       if (event.target.closest("a") || event.target.closest(".nav-button")) {
-        navMenu?.classList.remove("nav-open");
+        closeMobileMenu();
+      }
+    }
+
+    function closeOnOutsideClick(event) {
+      if (!navMenu?.classList.contains("nav-open")) {
+        return;
+      }
+
+      if (!event.target.closest(".navbar-inner")) {
+        closeMobileMenu();
+      }
+    }
+
+    function closeOnEscape(event) {
+      if (event.key === "Escape") {
+        closeMobileMenu();
       }
     }
 
     hamburger?.addEventListener("click", toggleMenu);
     navMenu?.addEventListener("click", closeMenu);
+    document.addEventListener("click", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
 
     return () => {
       hamburger?.removeEventListener("click", toggleMenu);
       navMenu?.removeEventListener("click", closeMenu);
+      document.removeEventListener("click", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+      document.body.classList.remove("mobile-nav-open");
     };
   }, []);
 
@@ -109,52 +172,28 @@ function AppShell() {
             <span>Vorliq</span>
           </NavLink>
 
-          <button className="hamburger" type="button" aria-label="Open navigation menu">
+          <button
+            className="hamburger"
+            type="button"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+          >
             <span />
             <span />
             <span />
           </button>
 
           <div className="nav-links">
-            <NavLink className="nav-link" to="/" end>
-              Dashboard
-            </NavLink>
-            <NavLink className="nav-link" to="/wallet">
-              Wallet
-            </NavLink>
-            <NavLink className="nav-link" to="/send">
-              Send
-            </NavLink>
-            <NavLink className="nav-link" to="/blockchain">
-              Blockchain
-            </NavLink>
-            <NavLink className="nav-link" to="/mine">
-              Mine
-            </NavLink>
-            <NavLink className="nav-link" to="/whitepaper">
-              Whitepaper
-            </NavLink>
-            <NavLink className="nav-link" to="/network">
-              Network
-            </NavLink>
-            <NavLink className="nav-link" to="/lending">
-              Lending
-            </NavLink>
-            <NavLink className="nav-link" to="/exchange">
-              Exchange
-            </NavLink>
-            <NavLink className="nav-link" to="/governance">
-              Governance
-            </NavLink>
-            <NavLink className="nav-link" to="/stats">
-              Stats
-            </NavLink>
-            <NavLink className="nav-link" to="/registry">
-              Registry
-            </NavLink>
-            <NavLink className="nav-link" to="/health">
-              Health
-            </NavLink>
+            {navSections.map((section) => (
+              <div className="nav-section" key={section.title}>
+                <span className="nav-section-title">{section.title}</span>
+                {section.links.map((link) => (
+                  <NavLink className="nav-link" to={link.to} end={link.end} key={link.to}>
+                    {link.label}
+                  </NavLink>
+                ))}
+              </div>
+            ))}
 
             <div className="nav-tools">
               <button
@@ -237,6 +276,8 @@ function AppShell() {
     </div>
   );
 }
+
+export { navSections };
 
 function SunIcon() {
   return (
