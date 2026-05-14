@@ -8,6 +8,8 @@ from wallet import address_from_public_key_pem, verify_signature
 
 
 SYSTEM_ADDRESS = "SYSTEM"
+LENDING_POOL_ADDRESS = "LENDING_POOL"
+SYSTEM_ADDRESSES = {SYSTEM_ADDRESS, LENDING_POOL_ADDRESS}
 
 
 class Transaction:
@@ -55,7 +57,10 @@ class Transaction:
         return self.signature
 
     def verify_transaction(self, sender_public_key: str | None = None) -> bool:
-        if self.sender_address == SYSTEM_ADDRESS:
+        if self.sender_address in SYSTEM_ADDRESSES:
+            return self.signature is None
+
+        if self.receiver_address == LENDING_POOL_ADDRESS and self.signature is None:
             return self.signature is None
 
         public_key = sender_public_key or self.sender_public_key

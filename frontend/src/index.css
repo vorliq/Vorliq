@@ -439,6 +439,82 @@ p {
   padding: 8px 12px;
 }
 
+.lending-section {
+  margin-top: 18px;
+}
+
+.loan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.loan-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px;
+}
+
+.status-badge {
+  border-radius: 999px;
+  color: #101020;
+  font-size: 0.76rem;
+  font-weight: 900;
+  padding: 6px 10px;
+  text-transform: uppercase;
+}
+
+.status-badge.pending {
+  background: #ffd166;
+}
+
+.status-badge.approved {
+  background: var(--green);
+}
+
+.status-badge.rejected {
+  background: var(--red);
+  color: var(--text);
+}
+
+.status-badge.repaid {
+  background: #52a7ff;
+}
+
+.vote-bar-wrap {
+  display: grid;
+  gap: 8px;
+}
+
+.vote-bar {
+  display: flex;
+  overflow: hidden;
+  height: 12px;
+  border-radius: 999px;
+  background: #101020;
+  border: 1px solid var(--border);
+}
+
+.vote-yes {
+  background: var(--green);
+}
+
+.vote-no {
+  background: var(--red);
+}
+
+.vote-weights {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted-2);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
 .site-footer {
   border-top: 1px solid var(--border);
   background: rgba(10, 10, 18, 0.62);
@@ -498,7 +574,8 @@ p {
 
   .stats-grid,
   .two-column,
-  .block-meta {
+  .block-meta,
+  .loan-grid {
     grid-template-columns: 1fr;
   }
 
