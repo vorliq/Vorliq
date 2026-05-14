@@ -5,15 +5,6 @@ import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
-async function measureRequest(requestFn) {
-  const start = performance.now();
-  const response = await requestFn();
-  return {
-    data: response.data,
-    responseTime: Math.round(performance.now() - start),
-  };
-}
-
 async function checkNetworkNode(nodeUrl) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 5000);
@@ -41,9 +32,7 @@ async function checkNetworkNode(nodeUrl) {
 }
 
 function Health() {
-  const [backendHealth, setBackendHealth] = useState(null);
-  const [blockchainHealth, setBlockchainHealth] = useState(null);
-  const [chainData, setChainData] = useState(null);
+  const [diagnostics, setDiagnostics] = useState(null);
   const [registryNodes, setRegistryNodes] = useState([]);
   const [networkHealth, setNetworkHealth] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,48 +45,38 @@ function Health() {
       setLoading(true);
       setErrorMessage("");
 
-      const backendResult = await measureRequest(() => api.get("/health")).catch((error) => ({
-        error,
-      }));
-      const chainResult = await measureRequest(() => api.get("/chain")).catch((error) => ({
-        error,
-      }));
-      const registryResult = await api.get("/registry/nodes").catch((error) => ({ error }));
-
-      const nodes = registryResult.error ? [] : registryResult.data.nodes || [];
-      const nodeChecks = await Promise.all(
-        nodes.map(async (node) => ({
-          ...node,
-          ...(await checkNetworkNode(node.node_url)),
-        }))
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      setBackendHealth({
-        online: !backendResult.error,
-        responseTime: backendResult.responseTime || null,
-      });
-      setBlockchainHealth({
-        online: !chainResult.error,
-        responseTime: chainResult.responseTime || null,
-      });
-      setChainData(chainResult.error ? null : chainResult.data);
-      setRegistryNodes(nodes);
-      setNetworkHealth(nodeChecks);
-
-      if (backendResult.error || chainResult.error || registryResult.error) {
-        setErrorMessage(
-          apiErrorMessage(
-            backendResult.error || chainResult.error || registryResult.error,
-            "Some Vorliq services could not be reached. Check that start.bat is running."
-          )
+      try {
+        const [diagnosticsResponse, registryResponse] = await Promise.all([
+          api.get("/diagnostics"),
+          api.get("/registry/nodes"),
+        ]);
+        const nodes = registryResponse.data.nodes || [];
+        const nodeChecks = await Promise.all(
+          nodes.map(async (node) => ({
+            ...node,
+            ...(await checkNetworkNode(node.node_url)),
+          }))
         );
-      }
 
-      setLoading(false);
+        if (mounted) {
+          setDiagnostics(diagnosticsResponse.data);
+          setRegistryNodes(nodes);
+          setNetworkHealth(nodeChecks);
+        }
+      } catch (error) {
+        if (mounted) {
+          setErrorMessage(
+            apiErrorMessage(
+              error,
+              "Some Vorliq services could not be reached. Check that start.bat is running."
+            )
+          );
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     }
 
     loadHealth();
@@ -107,18 +86,30 @@ function Health() {
     };
   }, []);
 
-  const chainHealth = useMemo(() => {
-    const chain = chainData?.chain || [];
-    const latestBlock = chain[chain.length - 1];
-    return {
-      height: Math.max(chain.length - 1, 0),
-      valid: Boolean(chainData?.is_valid),
-      lastHash: latestBlock?.hash || "Unavailable",
-      lastTimestamp: latestBlock?.timestamp
-        ? new Date(latestBlock.timestamp * 1000).toLocaleString()
-        : "Unavailable",
-    };
-  }, [chainData]);
+  const diagnosticRows = useMemo(() => {
+    if (!diagnostics) {
+      return [];
+    }
+
+    return [
+      ["Node URL", diagnostics.node_url],
+      ["Current Block Height", diagnostics.block_height],
+      ["Chain Valid", diagnostics.chain_valid ? "Valid" : "Invalid"],
+      ["Pending Transactions", diagnostics.pending_transactions],
+      ["Known Peers", diagnostics.known_peers],
+      ["Active Registry Nodes", diagnostics.active_registry_nodes],
+      ["Uptime", `${diagnostics.uptime_seconds} seconds`],
+      ["Total VLQ in Circulation", `${diagnostics.total_vlq_in_circulation} VLQ`],
+      ["Current Mining Reward", `${diagnostics.current_mining_reward} VLQ`],
+      ["Last Block Hash", diagnostics.last_block_hash],
+      [
+        "Last Block Timestamp",
+        diagnostics.last_block_timestamp
+          ? new Date(diagnostics.last_block_timestamp * 1000).toLocaleString()
+          : "Unavailable",
+      ],
+    ];
+  }, [diagnostics]);
 
   return (
     <main className="page">
@@ -126,22 +117,33 @@ function Health() {
         <span className="eyebrow">Node Operations</span>
         <h1>Health</h1>
         <p className="subtitle">
-          Monitor local Vorliq services, public registry nodes, and the current health of the chain.
+          Monitor local node diagnostics, public registry nodes, and live network response times.
         </p>
       </section>
 
       <ErrorMessage message={errorMessage} />
 
       <section className="card card-pad health-section">
-        <h2>Local Node Health</h2>
+        <h2>Local Node Diagnostics</h2>
         {loading ? (
-          <Spinner label="Checking local services..." />
-        ) : (
-          <div className="health-list">
-            <HealthRow label="Express Backend" health={backendHealth} />
-            <HealthRow label="Flask Blockchain API" health={blockchainHealth} />
-            <HealthRow label="React Frontend" health={{ online: true, responseTime: 0 }} />
+          <Spinner label="Loading node diagnostics..." />
+        ) : diagnostics ? (
+          <div className="table-wrap">
+            <table className="stats-table">
+              <tbody>
+                {diagnosticRows.map(([label, value]) => (
+                  <tr key={label}>
+                    <th>{label}</th>
+                    <td className={label === "Chain Valid" && value === "Valid" ? "green" : ""}>
+                      {value}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+        ) : (
+          <div className="empty-state">Diagnostics are unavailable right now.</div>
         )}
       </section>
 
@@ -169,44 +171,7 @@ function Health() {
           ))}
         </div>
       </section>
-
-      <section className="card card-pad health-section">
-        <h2>Chain Health</h2>
-        <div className="block-meta">
-          <div className="meta-item">
-            <span className="meta-label">Current Block Height</span>
-            <span className="meta-value">{chainHealth.height}</span>
-          </div>
-          <div className="meta-item">
-            <span className="meta-label">Chain Valid</span>
-            <span className={chainHealth.valid ? "green" : "red"}>
-              {chainHealth.valid ? "Valid" : "Invalid"}
-            </span>
-          </div>
-          <div className="meta-item">
-            <span className="meta-label">Last Block Hash</span>
-            <span className="meta-value">{chainHealth.lastHash}</span>
-          </div>
-          <div className="meta-item">
-            <span className="meta-label">Last Block Timestamp</span>
-            <span className="meta-value">{chainHealth.lastTimestamp}</span>
-          </div>
-        </div>
-      </section>
     </main>
-  );
-}
-
-function HealthRow({ label, health }) {
-  const online = Boolean(health?.online);
-  return (
-    <div className="health-row">
-      <span className={`health-icon ${online ? "online" : "offline"}`}>
-        {online ? "\u2713" : "\u00d7"}
-      </span>
-      <strong>{label}</strong>
-      <span>{online ? `${health.responseTime} ms` : "offline"}</span>
-    </div>
   );
 }
 

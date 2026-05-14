@@ -4,7 +4,7 @@ from typing import Any
 
 from block import Block
 from logger import vorliq_logger
-from transaction import SYSTEM_ADDRESS, Transaction
+from transaction import SYSTEM_ADDRESSES, SYSTEM_ADDRESS, Transaction
 
 
 class Blockchain:
@@ -45,7 +45,7 @@ class Blockchain:
             vorliq_logger.warning("Rejected block %s because proof of work was invalid", block.index)
             return False
 
-        if not self._all_transactions_are_valid(block.transactions):
+        if not self._transactions_are_valid_for_next_block(block.transactions):
             vorliq_logger.warning("Rejected block %s because a transaction was invalid", block.index)
             return False
 
@@ -81,9 +81,9 @@ class Blockchain:
                 vorliq_logger.warning("Chain validation failed at block %s: previous hash mismatch", current_block.index)
                 return False
 
-            if not self._all_transactions_are_valid(current_block.transactions):
-                vorliq_logger.warning("Chain validation failed at block %s: invalid transaction", current_block.index)
-                return False
+        if not self._chain_transactions_are_valid(self.chain):
+            vorliq_logger.warning("Chain validation failed because balances or transaction signatures are invalid")
+            return False
 
         vorliq_logger.info("Chain validation passed for %s blocks", len(self.chain))
         return True
@@ -94,6 +94,9 @@ class Blockchain:
 
         if not transaction.verify_transaction():
             raise ValueError("transaction signature is invalid")
+
+        if not self._pending_transaction_has_spendable_balance(transaction):
+            raise ValueError("sender does not have enough confirmed VLQ for this transaction")
 
         self.pending_transactions.append(transaction)
         vorliq_logger.info(
@@ -108,9 +111,14 @@ class Blockchain:
         if not miner_address:
             raise ValueError("miner_address is required")
 
+        valid_transactions = self._select_valid_pending_transactions()
+        dropped_count = len(self.pending_transactions) - len(valid_transactions)
+        if dropped_count:
+            vorliq_logger.warning("Dropped %s invalid pending transactions before mining", dropped_count)
+
         block = Block(
             index=len(self.chain),
-            transactions=list(self.pending_transactions),
+            transactions=valid_transactions,
             previous_hash=self.get_latest_block().hash,
         )
         block.proof_of_work(self.difficulty)
@@ -190,6 +198,38 @@ class Blockchain:
 
         return balance
 
+    def prune_pending_transactions(self, drop_system_rewards: bool = False) -> None:
+        confirmed_identities = {
+            self._transaction_identity(transaction)
+            for block in self.chain
+            for transaction in block.transactions
+        }
+        balances = self._confirmed_balances()
+        retained_transactions: list[Transaction] = []
+
+        for pending_transaction in self.pending_transactions:
+            transaction = (
+                Transaction.from_dict(pending_transaction)
+                if isinstance(pending_transaction, dict)
+                else pending_transaction
+            )
+
+            if drop_system_rewards and transaction.sender_address == SYSTEM_ADDRESS:
+                continue
+
+            if self._transaction_identity(transaction) in confirmed_identities:
+                continue
+
+            trial_balances = dict(balances)
+            if self._apply_transactions_to_balances([transaction], trial_balances):
+                retained_transactions.append(transaction)
+                balances = trial_balances
+
+        removed = len(self.pending_transactions) - len(retained_transactions)
+        if removed:
+            vorliq_logger.info("Pruned %s confirmed or invalid pending transactions", removed)
+        self.pending_transactions = retained_transactions
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "coin": "VLQ",
@@ -211,3 +251,109 @@ class Blockchain:
             if not transaction.verify_transaction():
                 return False
         return True
+
+    def _chain_transactions_are_valid(self, chain: list[Block]) -> bool:
+        balances: dict[str, float] = {}
+
+        for block in chain:
+            if not self._apply_transactions_to_balances(block.transactions, balances):
+                return False
+
+        return True
+
+    def _transactions_are_valid_for_next_block(self, transactions: list[Any]) -> bool:
+        balances = self._confirmed_balances()
+        return self._apply_transactions_to_balances(transactions, balances)
+
+    def _apply_transactions_to_balances(
+        self,
+        transactions: list[Any],
+        balances: dict[str, float],
+    ) -> bool:
+        for transaction in transactions:
+            if isinstance(transaction, dict):
+                transaction = Transaction.from_dict(transaction)
+
+            if not isinstance(transaction, Transaction) or not transaction.verify_transaction():
+                return False
+
+            sender = transaction.sender_address
+            receiver = transaction.receiver_address
+            amount = float(transaction.amount)
+
+            if sender not in SYSTEM_ADDRESSES:
+                available = balances.get(sender, 0.0)
+                if available + 1e-9 < amount:
+                    vorliq_logger.warning(
+                        "Transaction rejected during balance validation: %s has %s VLQ but tried to spend %s",
+                        sender,
+                        available,
+                        amount,
+                    )
+                    return False
+                balances[sender] = available - amount
+
+            balances[receiver] = balances.get(receiver, 0.0) + amount
+
+        return True
+
+    def _confirmed_balances(self) -> dict[str, float]:
+        balances: dict[str, float] = {}
+
+        for block in self.chain:
+            if not self._apply_transactions_to_balances(block.transactions, balances):
+                raise ValueError("current chain contains invalid balances")
+
+        return balances
+
+    def _pending_transaction_has_spendable_balance(self, transaction: Transaction) -> bool:
+        if transaction.sender_address in SYSTEM_ADDRESSES:
+            return True
+
+        balances = self._confirmed_balances()
+
+        for pending_transaction in self.pending_transactions:
+            if isinstance(pending_transaction, dict):
+                pending_transaction = Transaction.from_dict(pending_transaction)
+            if pending_transaction.sender_address == transaction.sender_address:
+                balances[transaction.sender_address] = (
+                    balances.get(transaction.sender_address, 0.0) - pending_transaction.amount
+                )
+
+        return balances.get(transaction.sender_address, 0.0) + 1e-9 >= transaction.amount
+
+    def _select_valid_pending_transactions(self) -> list[Transaction]:
+        balances = self._confirmed_balances()
+        valid_transactions: list[Transaction] = []
+
+        for pending_transaction in self.pending_transactions:
+            transaction = (
+                Transaction.from_dict(pending_transaction)
+                if isinstance(pending_transaction, dict)
+                else pending_transaction
+            )
+
+            trial_balances = dict(balances)
+            if self._apply_transactions_to_balances([transaction], trial_balances):
+                valid_transactions.append(transaction)
+                balances = trial_balances
+            else:
+                vorliq_logger.warning(
+                    "Pending transaction from %s to %s for %s VLQ was dropped before mining",
+                    getattr(transaction, "sender_address", "unknown"),
+                    getattr(transaction, "receiver_address", "unknown"),
+                    getattr(transaction, "amount", "unknown"),
+                )
+
+        return valid_transactions
+
+    def _transaction_identity(self, transaction: Any) -> tuple[Any, ...]:
+        if isinstance(transaction, dict):
+            transaction = Transaction.from_dict(transaction)
+        return (
+            transaction.signature,
+            transaction.sender_address,
+            transaction.receiver_address,
+            float(transaction.amount),
+            float(transaction.timestamp),
+        )

@@ -23,4 +23,13 @@ router.get("/api/economics", async (req, res, next) => {
   }
 });
 
+router.get("/api/diagnostics", async (req, res, next) => {
+  try {
+    const response = await axios.get(`${flaskUrl}/diagnostics`);
+    res.json(response.data);
+  } catch (error) {
+    return handleRouteError(res, error, "GET /api/diagnostics", "Unable to load node diagnostics.");
+  }
+});
+
 module.exports = router;

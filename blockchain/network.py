@@ -66,12 +66,22 @@ class Network:
                 vorliq_logger.warning("Failed to sync chain from %s: %s", peer, exc)
                 continue
 
-            if len(peer_chain) > len(best_chain) and self._is_valid_chain(peer_chain, local_blockchain):
+            if len(peer_chain) <= len(best_chain):
+                continue
+
+            if self._is_valid_chain(peer_chain, local_blockchain):
                 best_chain = peer_chain
                 vorliq_logger.info("Longer valid chain found from %s with %s blocks", peer, len(peer_chain))
+            else:
+                vorliq_logger.warning(
+                    "Rejected longer chain from %s because it failed full hash, link, proof, or balance validation",
+                    peer,
+                )
 
         if len(best_chain) > len(local_blockchain.chain):
             local_blockchain.chain = best_chain
+            local_blockchain.pending_transactions = self._filter_pending_after_chain_update(local_blockchain)
+            local_blockchain.prune_pending_transactions(drop_system_rewards=True)
             vorliq_logger.info("Local chain updated to longer network chain with %s blocks", len(best_chain))
             return True
 
@@ -165,9 +175,6 @@ class Network:
             if not block.hash.startswith("0" * blockchain_rules.difficulty):
                 return False
 
-            if not blockchain_rules._all_transactions_are_valid(block.transactions):
-                return False
-
             if index == 0:
                 if block.previous_hash != "0":
                     return False
@@ -176,4 +183,13 @@ class Network:
                 if block.previous_hash != previous_block.hash:
                     return False
 
-        return True
+        return blockchain_rules._chain_transactions_are_valid(chain)
+
+    def _filter_pending_after_chain_update(self, blockchain: Blockchain) -> list[Any]:
+        retained_transactions = []
+        for transaction in list(blockchain.pending_transactions):
+            if getattr(transaction, "sender_address", None) == "SYSTEM":
+                continue
+            if blockchain._pending_transaction_has_spendable_balance(transaction):
+                retained_transactions.append(transaction)
+        return retained_transactions

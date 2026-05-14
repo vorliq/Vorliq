@@ -1,3 +1,6 @@
+import os
+import time
+
 from flask import Flask, jsonify, request
 
 from block import Block
@@ -11,8 +14,14 @@ from storage import Storage
 from transaction import Transaction
 from wallet import Wallet
 
+APP_START_TIME = time.time()
+VORLIQ_HOST = os.environ.get("VORLIQ_HOST", "127.0.0.1")
+VORLIQ_PORT = int(os.environ.get("VORLIQ_PORT", "5001"))
+VORLIQ_ADVERTISED_HOST = "localhost" if VORLIQ_HOST in {"0.0.0.0", "::"} else VORLIQ_HOST
+LOCAL_NODE_URL = os.environ.get("VORLIQ_NODE_URL", f"http://{VORLIQ_ADVERTISED_HOST}:{VORLIQ_PORT}")
+
 app = Flask(__name__)
-storage = Storage()
+storage = Storage(os.environ.get("VORLIQ_DATA_DIR"))
 node = Node()
 saved_blockchain = storage.load_chain()
 if saved_blockchain:
@@ -28,6 +37,7 @@ vorliq_logger.info("Flask startup restored %s pending transactions", len(node.bl
 
 network = Network()
 network.peers = storage.load_peers()
+network.remove_peer(LOCAL_NODE_URL)
 vorliq_logger.info("Flask startup restored %s peers", len(network.peers))
 
 lending_pool = storage.load_lending_pool()
@@ -36,7 +46,6 @@ vorliq_logger.info("Flask startup restored %s lending records", len(lending_pool
 node_registry = storage.load_registry()
 vorliq_logger.info("Flask startup restored %s registry records", len(node_registry.registered_nodes))
 _imports_ready = (Block, Blockchain, Transaction)
-LOCAL_NODE_URL = "http://localhost:5001"
 
 if network.peers:
     network.announce_to_peers(LOCAL_NODE_URL, network.get_peers())
@@ -125,6 +134,28 @@ def get_economics():
     return jsonify(node.get_token_economics())
 
 
+@app.get("/diagnostics")
+def get_diagnostics():
+    latest_block = node.blockchain.get_latest_block()
+    economics = node.blockchain.get_token_economics()
+    return jsonify(
+        {
+            "success": True,
+            "node_url": LOCAL_NODE_URL,
+            "block_height": node.blockchain.get_block_height(),
+            "chain_valid": node.blockchain.is_chain_valid(),
+            "pending_transactions": len(node.blockchain.pending_transactions),
+            "known_peers": len(network.peers),
+            "active_registry_nodes": len(node_registry.get_active_nodes()),
+            "uptime_seconds": round(time.time() - APP_START_TIME, 2),
+            "total_vlq_in_circulation": economics["total_issued"],
+            "current_mining_reward": economics["current_mining_reward"],
+            "last_block_hash": latest_block.hash,
+            "last_block_timestamp": latest_block.timestamp,
+        }
+    )
+
+
 @app.post("/peers/register")
 def register_peer():
     try:
@@ -132,6 +163,7 @@ def register_peer():
         peer = data["peer"]
         network.register_peer(peer)
         network.discover_peers(network.get_peers())
+        network.remove_peer(LOCAL_NODE_URL)
         storage.save_peers(network.peers)
         if not data.get("_announced"):
             network.announce_to_peers(LOCAL_NODE_URL, [peer])
@@ -152,6 +184,7 @@ def announce_peer():
         data = request.get_json(force=True)
         node_url = data["node_url"]
         network.register_peer(node_url)
+        network.remove_peer(LOCAL_NODE_URL)
         storage.save_peers(network.peers)
         return jsonify({"success": True, "message": "Peer announced", "peers": network.get_peers()}), 201
     except Exception as exc:
@@ -173,7 +206,9 @@ def receive_block():
         valid_proof = received_block.hash.startswith("0" * node.blockchain.difficulty)
 
         if valid_previous_hash and valid_proof and node.blockchain.add_block(received_block):
+            node.blockchain.prune_pending_transactions(drop_system_rewards=False)
             storage.save_chain(node.blockchain)
+            storage.save_pending(node.blockchain.pending_transactions)
             return jsonify({"success": True, "message": "Block accepted"}), 201
 
         updated = network.sync_chain(node.blockchain)
@@ -327,5 +362,5 @@ def repay_lending_loan():
 
 
 if __name__ == "__main__":
-    vorliq_logger.info("Starting Vorliq Flask blockchain API on 127.0.0.1:5001")
-    app.run(host="127.0.0.1", port=5001, debug=False)
+    vorliq_logger.info("Starting Vorliq Flask blockchain API on %s:%s", VORLIQ_HOST, VORLIQ_PORT)
+    app.run(host=VORLIQ_HOST, port=VORLIQ_PORT, debug=False)

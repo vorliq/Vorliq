@@ -23,6 +23,8 @@ dist/
 data/
 blockchain/data/
 backend/data/
+stress_test/node_data/
+stress_test/results.txt
 
 # OS and editor files
 .DS_Store
