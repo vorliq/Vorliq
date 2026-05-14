@@ -1,6 +1,7 @@
 import unittest
+from unittest.mock import patch
 
-from wallet import Wallet
+from wallet import Wallet, ripemd160
 
 
 class WalletTests(unittest.TestCase):
@@ -28,6 +29,17 @@ class WalletTests(unittest.TestCase):
         signature = wallet.sign(message)
 
         self.assertFalse(wallet.verify_signature(message, signature, other_wallet.public_key_pem()))
+
+    def test_ripemd160_fallback_matches_known_vector(self):
+        def unsupported_hash(name):
+            if name == "ripemd160":
+                raise ValueError("unsupported hash type ripemd160")
+            raise AssertionError(f"unexpected hash requested: {name}")
+
+        with patch("hashlib.new", side_effect=unsupported_hash):
+            digest = ripemd160(b"abc")
+
+        self.assertEqual(digest.hex(), "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc")
 
 
 if __name__ == "__main__":
