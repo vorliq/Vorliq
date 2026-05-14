@@ -5,6 +5,7 @@ from blockchain import Blockchain
 from lending import LendingPool
 from network import Network
 from node import Node
+from registry import NodeRegistry
 from storage import Storage
 from transaction import Transaction
 from wallet import Wallet
@@ -25,6 +26,7 @@ network.peers = storage.load_peers()
 
 lending_pool = storage.load_lending_pool()
 lending_pool.blockchain = node.blockchain
+node_registry = storage.load_registry()
 _imports_ready = (Block, Blockchain, Transaction)
 LOCAL_NODE_URL = "http://localhost:5001"
 
@@ -186,6 +188,36 @@ def sync_peers():
             "peer_statuses": peer_statuses,
         }
     )
+
+
+@app.post("/registry/register")
+def register_public_node():
+    try:
+        data = request.get_json(force=True)
+        node_registry.register_node(
+            node_url=data.get("node_url") or data.get("nodeUrl"),
+            display_name=data.get("display_name") or data.get("displayName"),
+        )
+        storage.save_registry(node_registry)
+        return jsonify({"success": True, "nodes": node_registry.get_active_nodes()}), 201
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/registry/nodes")
+def get_registry_nodes():
+    return jsonify({"success": True, "nodes": node_registry.get_active_nodes()})
+
+
+@app.post("/registry/heartbeat")
+def registry_heartbeat():
+    try:
+        data = request.get_json(force=True)
+        node = node_registry.heartbeat(data.get("node_url") or data.get("nodeUrl"))
+        storage.save_registry(node_registry)
+        return jsonify({"success": True, "node": node})
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
 
 
 @app.post("/lending/request")

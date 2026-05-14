@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="The Vorliq whitepaper for VLQ and the Vorliq community blockchain." />
+    <title>Vorliq Whitepaper</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+      :root {
+        --bg: #0f0f1a;
+        --card: #1a1a2e;
+        --accent: #6c63ff;
+        --text: #ffffff;
+        --muted: #c7c7d4;
+        --border: rgba(255, 255, 255, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at top left, rgba(108, 99, 255, 0.2), transparent 34rem),
+          var(--bg);
+        color: var(--muted);
+        font-family: "Inter", Arial, sans-serif;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .wrap {
+        width: min(920px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      header {
+        padding: 26px 0;
+      }
+
+      .brand {
+        color: var(--text);
+        font-size: 1.1rem;
+        font-weight: 900;
+      }
+
+      .hero {
+        padding: 42px 0 24px;
+      }
+
+      .eyebrow {
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2 {
+        color: var(--text);
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(2.5rem, 8vw, 5.4rem);
+        line-height: 0.98;
+        margin: 12px 0 18px;
+      }
+
+      h2 {
+        font-size: clamp(1.5rem, 4vw, 2.2rem);
+        margin-bottom: 12px;
+      }
+
+      p {
+        line-height: 1.78;
+        margin: 0;
+      }
+
+      .lead {
+        max-width: 760px;
+        font-size: 1.08rem;
+      }
+
+      article {
+        display: grid;
+        gap: 26px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent), var(--card);
+        padding: clamp(20px, 5vw, 38px);
+        margin: 22px 0 64px;
+      }
+
+      article section {
+        display: grid;
+        gap: 12px;
+      }
+
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .links a,
+      .button {
+        border-radius: 10px;
+        background: var(--accent);
+        color: var(--text);
+        display: inline-flex;
+        font-weight: 900;
+        min-height: 46px;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 16px;
+      }
+
+      footer {
+        border-top: 1px solid var(--border);
+        padding: 26px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="wrap">
+      <a class="brand" href="index.html">Vorliq</a>
+    </header>
+
+    <main class="wrap">
+      <section class="hero">
+        <span class="eyebrow">Vorliq Whitepaper</span>
+        <h1>Community savings on an independent blockchain</h1>
+        <p class="lead">
+          Vorliq is designed to give communities a simple, transparent, and self contained
+          way to save, send, lend, and govern value using VLQ.
+        </p>
+      </section>
+
+      <article>
+        <section>
+          <h2>Introduction</h2>
+          <p>
+            Vorliq is a self contained community blockchain platform where ordinary people can
+            save, send, and lend VLQ without depending on any external cryptocurrency network.
+            The platform is built around the idea that a community should be able to keep its
+            own ledger, operate its own coin, and use that shared record without relying on
+            Ethereum, Bitcoin, Solana, or any other outside chain.
+          </p>
+          <p>
+            Most crypto projects are inaccessible to everyday communities because they often
+            involve high fees, technical complexity, and dependence on infrastructure that the
+            community does not control. Vorliq solves this by keeping the blockchain, wallet
+            system, transaction layer, lending tools, and user application inside one focused
+            network built for practical community use.
+          </p>
+        </section>
+
+        <section>
+          <h2>The VLQ Coin</h2>
+          <p>
+            VLQ is the native coin of the Vorliq network. It is the unit of value used for
+            transactions, mining rewards, balances, community lending, and future governance.
+            Vorliq uses a maximum supply of 21 million VLQ, mirroring the scarcity model made
+            familiar by Bitcoin while keeping the network independent and community focused.
+          </p>
+          <p>
+            The initial mining reward is 50 VLQ per block, and this reward halves every 210000
+            blocks. No VLQ can be created outside of mining rewards and the genesis allocation,
+            which means supply growth is transparent, predictable, and controlled by the rules
+            of the chain rather than by a central operator.
+          </p>
+        </section>
+
+        <section>
+          <h2>How the Blockchain Works</h2>
+          <p>
+            Vorliq runs its own proof of work blockchain with a difficulty target of four
+            leading zeros. Miners search for a valid nonce that produces a block hash matching
+            this target, and the resulting proof makes it costly to rewrite history while
+            remaining lightweight enough for community nodes to run.
+          </p>
+          <p>
+            Transactions are signed with SECP256K1 elliptic curve cryptography, the same curve
+            used by Bitcoin. Every block contains a list of signed transactions and links to
+            the previous block by hash. Each node validates the full chain by checking block
+            hashes, previous hash links, proof of work, and transaction signatures.
+          </p>
+        </section>
+
+        <section>
+          <h2>Community Governance</h2>
+          <p>
+            Vorliq is designed to be governed by its community. In future versions, members
+            will be able to vote on changes to mining rewards, difficulty, and lending rules
+            using their VLQ balance as voting weight. The goal is to make the people using the
+            system the people who guide its direction.
+          </p>
+          <p>
+            This approach is intended to give economic power back to communities instead of
+            outside investors or developers. Vorliq should grow as a shared tool where rules
+            are visible, decisions are accountable, and participation is tied to real use of
+            the network.
+          </p>
+        </section>
+
+        <section>
+          <h2>Roadmap</h2>
+          <p>
+            Phase one is the current phase: the launch of the core blockchain and application.
+            This includes the Python blockchain, the Express backend API, the React frontend,
+            wallet creation, signed transactions, mining, chain inspection, token economics,
+            persistence, and the public landing page.
+          </p>
+          <p>
+            Phase two is peer to peer networking so multiple Vorliq nodes can connect, share
+            blocks, compare chain state, and sync with each other. This moves Vorliq from a
+            self contained local chain toward a community operated network.
+          </p>
+          <p>
+            Phase three is the community lending system where members can request loans, review
+            proposals, approve lending activity, and track repayment using transparent records
+            tied to VLQ balances.
+          </p>
+          <p>
+            Phase four is mobile application support. The goal of this phase is to make Vorliq
+            easier to use for everyday members who need wallet access, balance checks, transfers,
+            loan participation, and community updates from their phones.
+          </p>
+        </section>
+
+        <section>
+          <h2>Community Links</h2>
+          <div class="links">
+            <a href="https://discord.gg/qpX5sHD4pC" target="_blank" rel="noreferrer">Discord</a>
+            <a href="https://t.me/Vorliq" target="_blank" rel="noreferrer">Telegram</a>
+            <a href="https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS" target="_blank" rel="noreferrer">Reddit</a>
+            <a href="https://github.com/vorliq/Vorliq" target="_blank" rel="noreferrer">GitHub</a>
+            <a href="https://x.com/vorliq" target="_blank" rel="noreferrer">X</a>
+          </div>
+        </section>
+      </article>
+    </main>
+
+    <footer>
+      <div class="wrap">2025 Vorliq. All rights reserved.</div>
+    </footer>
+  </body>
+</html>

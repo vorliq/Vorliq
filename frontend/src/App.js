@@ -13,6 +13,7 @@ import Whitepaper from "./pages/Whitepaper";
 import Network from "./pages/Network";
 import Lending from "./pages/Lending";
 import Stats from "./pages/Stats";
+import Registry from "./pages/Registry";
 import Login from "./pages/Login";
 import Account from "./pages/Account";
 import Footer from "./components/Footer";
@@ -68,6 +69,9 @@ function AppShell() {
             <NavLink className="nav-link" to="/stats">
               Stats
             </NavLink>
+            <NavLink className="nav-link" to="/registry">
+              Registry
+            </NavLink>
 
             <div className="auth-actions">
               {isLoggedIn ? (
@@ -99,6 +103,7 @@ function AppShell() {
         <Route path="/network" element={<Network />} />
         <Route path="/lending" element={<Lending />} />
         <Route path="/stats" element={<Stats />} />
+        <Route path="/registry" element={<Registry />} />
         <Route path="/login" element={<Login />} />
         <Route
           path="/account"

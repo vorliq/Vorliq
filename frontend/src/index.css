@@ -491,6 +491,37 @@ p {
   margin-bottom: 18px;
 }
 
+.tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.tab-button {
+  min-height: 42px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-strong);
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 10px 14px;
+}
+
+.tab-button.active {
+  background: var(--primary);
+  color: var(--text);
+  border-color: var(--primary);
+}
+
+.explorer-result {
+  display: grid;
+  grid-template-columns: 130px 120px minmax(0, 1fr) 140px;
+  align-items: center;
+  gap: 12px;
+}
+
 .peer-url {
   display: inline-flex;
   align-items: center;
@@ -672,6 +703,23 @@ p {
   text-transform: uppercase;
 }
 
+.registry-section {
+  margin-top: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.registry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.registry-card {
+  display: grid;
+  gap: 12px;
+}
+
 .site-footer {
   border-top: 1px solid var(--border);
   background: rgba(10, 10, 18, 0.62);
@@ -734,7 +782,9 @@ p {
   .block-meta,
   .loan-grid,
   .account-wallet-grid,
-  .history-row {
+  .history-row,
+  .explorer-result,
+  .registry-grid {
     grid-template-columns: 1fr;
   }
 

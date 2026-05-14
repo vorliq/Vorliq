@@ -7,6 +7,7 @@ from typing import Any
 from block import Block
 from blockchain import Blockchain
 from lending import LendingPool
+from registry import NodeRegistry
 from transaction import Transaction
 
 
@@ -18,6 +19,7 @@ class Storage:
         self.pending_file = self.data_dir / "pending.json"
         self.lending_file = self.data_dir / "lending.json"
         self.peers_file = self.data_dir / "peers.json"
+        self.registry_file = self.data_dir / "registry.json"
 
     def save_chain(self, blockchain: Blockchain) -> None:
         chain_data = {
@@ -94,6 +96,24 @@ class Storage:
             raise ValueError("peer data must be a list")
 
         return {str(peer) for peer in data}
+
+    def save_registry(self, registry: NodeRegistry) -> None:
+        self._write_json(self.registry_file, {"registered_nodes": registry.registered_nodes})
+
+    def load_registry(self) -> NodeRegistry:
+        registry = NodeRegistry()
+
+        if not self.registry_file.exists():
+            return registry
+
+        data = self._read_json(self.registry_file)
+        registered_nodes = data.get("registered_nodes", {})
+
+        if not isinstance(registered_nodes, dict):
+            raise ValueError("registry data must contain a registered_nodes object")
+
+        registry.registered_nodes = registered_nodes
+        return registry
 
     def _write_json(self, path: Path, data: Any) -> None:
         path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")

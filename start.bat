@@ -18,6 +18,11 @@ start "Vorliq Frontend" cmd /k "cd /d ""%ROOT%frontend"" && npm start"
 
 timeout /t 3 /nobreak >nul
 
+echo Starting Vorliq node registry heartbeat...
+start "Vorliq Registry Heartbeat" cmd /k "cd /d ""%ROOT%backend"" && node heartbeat.js"
+
+timeout /t 3 /nobreak >nul
+
 echo.
 echo Vorliq is running. Open http://localhost:3000 in your browser.
 echo To connect to another node ask them for their IP address and port 5001 and add it in the Network page.

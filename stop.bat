@@ -10,5 +10,7 @@ for %%P in (5000 5001 3000) do (
   )
 )
 
+powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*heartbeat.js*' } | ForEach-Object { Write-Host ('Stopping registry heartbeat process ' + $_.ProcessId + '...'); Stop-Process -Id $_.ProcessId -Force }"
+
 echo Vorliq services stopped.
 endlocal
