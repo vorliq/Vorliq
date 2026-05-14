@@ -4,12 +4,12 @@ Vorliq Contribution Guide
 Welcome
 -------
 
-Thank you for your interest in contributing to Vorliq. Vorliq is a community project built around the idea that people should be able to save, send, lend, and govern value together using a self contained blockchain. All thoughtful contributions are welcome, whether they improve code, documentation, design, testing, security, accessibility, or community education.
+Thank you for your interest in contributing to Vorliq. Vorliq is a community project built around the idea that people should be able to save, send, lend, trade, and govern value together using a self contained blockchain. Version 1.0 includes the blockchain core, backend API, React web app, React Native mobile app, community lending, decentralized exchange, peer networking, governance, testing, and public documentation. All thoughtful contributions are welcome, whether they improve code, documentation, design, testing, security, accessibility, or community education.
 
 How to Contribute
 -----------------
 
-To contribute, fork the Vorliq repository on GitHub, make your changes in your fork, and open a pull request back to the main project. Your pull request should include a clear description of what you changed and why the change matters. If your change affects the user interface, API behavior, blockchain rules, wallet handling, lending, or networking, please explain how you tested it so reviewers can understand the impact.
+To contribute, fork the Vorliq repository on GitHub, make your changes in your fork, and open a pull request back to the main project. Your pull request should include a clear description of what you changed and why the change matters. If your change affects the user interface, API behavior, blockchain rules, wallet handling, lending, exchange, governance, mobile behavior, or networking, please explain how you tested it so reviewers can understand the impact.
 
 Code Standards
 --------------
