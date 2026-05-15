@@ -10,7 +10,10 @@ export function AuthProvider({ children }) {
 
   async function login(password) {
     const loadedWallet = await loadWallet(password);
-    setWallet(loadedWallet);
+    setWallet({
+      address: loadedWallet.address,
+      public_key: loadedWallet.public_key,
+    });
     return loadedWallet;
   }
 
@@ -25,7 +28,6 @@ export function AuthProvider({ children }) {
     setWallet({
       address: newWallet.address,
       public_key: newWallet.public_key,
-      private_key: newWallet.private_key,
     });
     return newWallet;
   }

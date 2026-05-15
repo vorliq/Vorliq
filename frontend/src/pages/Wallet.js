@@ -15,8 +15,14 @@ function Wallet() {
   const [checking, setChecking] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [receiveAmount, setReceiveAmount] = useState("");
+  const [safetyConfirmed, setSafetyConfirmed] = useState(false);
 
   async function createWallet() {
+    if (!safetyConfirmed) {
+      toast.error("Confirm that you understand Vorliq cannot recover your private key.");
+      return;
+    }
+
     setCreating(true);
     try {
       const response = await api.post("/wallet/create");
@@ -72,9 +78,25 @@ function Wallet() {
         <section className="card card-pad stack">
           <div className="section-title">
             <h2>New Wallet</h2>
-            <button className="button" onClick={createWallet} disabled={creating}>
+            <button className="button" onClick={createWallet} disabled={creating || !safetyConfirmed}>
               {creating ? "Creating..." : "Create New Wallet"}
             </button>
+          </div>
+
+          <div className="wallet-safety-box">
+            <strong>Before you create a wallet</strong>
+            <p>
+              Vorliq cannot recover your private key. Anyone with your private key can control
+              this wallet and spend its VLQ. Save it somewhere safe before using the wallet.
+            </p>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={safetyConfirmed}
+                onChange={(event) => setSafetyConfirmed(event.target.checked)}
+              />
+              <span>I understand that my private key cannot be recovered by Vorliq.</span>
+            </label>
           </div>
 
           {creating ? (
@@ -109,7 +131,10 @@ function Wallet() {
               <div className="field">
                 <label>Private Key</label>
                 <div className="value-box">{wallet.private_key}</div>
-                <p className="warning">save your private key now it cannot be recovered</p>
+                <p className="warning">
+                  Save this private key now. It is shown only so you can back it up, and it
+                  cannot be recovered by Vorliq later.
+                </p>
               </div>
             </div>
           ) : (

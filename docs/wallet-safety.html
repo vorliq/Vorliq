@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Wallet Safety</title>
+    <meta name="description" content="How to protect, export, and restore a Vorliq wallet safely." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      :root { --bg:#0f0f1a; --card:#1a1a2e; --card2:#20203a; --accent:#6c63ff; --text:#fff; --muted:#c7c7d4; --border:rgba(255,255,255,.12); --green:#35d07f; --yellow:#ffd166; --red:#ff5d6c; }
+      * { box-sizing:border-box; }
+      body { margin:0; min-width:320px; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at top left,rgba(108,99,255,.2),transparent 34rem),var(--bg); color:var(--text); }
+      a { color:inherit; }
+      .wrap { width:min(1040px,calc(100% - 32px)); margin:0 auto; }
+      header { padding:24px 0; border-bottom:1px solid var(--border); }
+      footer { padding:28px 0; border-top:1px solid var(--border); color:var(--muted); }
+      nav { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+      .brand { display:flex; align-items:center; gap:12px; font-weight:900; text-decoration:none; }
+      .brand img { width:42px; height:42px; object-fit:contain; }
+      .links { display:flex; gap:10px; flex-wrap:wrap; }
+      .button { display:inline-flex; align-items:center; justify-content:center; min-height:44px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,.04); color:var(--muted); font-weight:800; padding:10px 14px; text-decoration:none; }
+      .button.primary { border-color:var(--accent); background:var(--accent); color:#fff; }
+      main { padding:54px 0; }
+      .hero { display:grid; gap:14px; margin-bottom:28px; }
+      .eyebrow { color:var(--green); font-size:.82rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+      h1, h2, h3, p { margin:0; }
+      h1 { font-size:clamp(2.4rem,7vw,4.8rem); line-height:1; }
+      h2 { font-size:clamp(1.35rem,4vw,2rem); margin-bottom:14px; }
+      h3 { margin:18px 0 8px; }
+      p { color:var(--muted); line-height:1.75; }
+      .subtitle { max-width:760px; font-size:1.08rem; }
+      .section { margin-top:18px; }
+      .card { border:1px solid var(--border); border-radius:12px; background:linear-gradient(180deg,rgba(255,255,255,.05),transparent),var(--card); box-shadow:0 24px 70px rgba(0,0,0,.24); padding:22px; }
+      .warning { border-color:rgba(255,209,102,.45); background:rgba(255,209,102,.1); }
+      .danger { border-color:rgba(255,93,108,.45); background:rgba(255,93,108,.1); }
+      ol { color:var(--muted); line-height:1.75; padding-left:22px; }
+      code { color:#fff; background:rgba(255,255,255,.08); border:1px solid var(--border); border-radius:6px; padding:2px 6px; }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+      @media (max-width:760px) { main { padding:34px 0; } .grid { grid-template-columns:1fr; } .button { width:100%; } .links { width:100%; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a class="brand" href="index.html"><img src="logo.png" alt="Vorliq logo" />Vorliq</a>
+        <div class="links">
+          <a class="button" href="privacy.html">Privacy</a>
+          <a class="button" href="terms.html">Terms</a>
+          <a class="button primary" href="https://vorliq.org">Open App</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <section class="hero">
+        <span class="eyebrow">Self-Custody</span>
+        <h1>Wallet Safety</h1>
+        <p class="subtitle">A Vorliq wallet is controlled by its private key. The server cannot recover it for you, so safe backup habits matter as much as the software itself.</p>
+      </section>
+
+      <section class="section card danger">
+        <h2>The Rule To Remember</h2>
+        <p>If someone has your private key, they can control your wallet. If nobody has your private key, including you, the wallet cannot be recovered. Vorliq does not store your private key or wallet password on the server.</p>
+      </section>
+
+      <section class="section grid">
+        <article class="card">
+          <h2>How To Protect A Wallet</h2>
+          <p>Use a strong wallet password, keep your device updated, avoid shared browsers, and back up your wallet before storing meaningful VLQ. Keep backups in a password manager, encrypted drive, or offline location that only you control.</p>
+        </article>
+        <article class="card">
+          <h2>What Not To Do</h2>
+          <p>Do not post private keys in chat, email, screenshots, support requests, forum posts, cloud notes, or public documents. Do not enter a private key on a site you reached from an unknown link.</p>
+        </article>
+      </section>
+
+      <section class="section card">
+        <h2>Export An Encrypted Wallet Backup</h2>
+        <ol>
+          <li>Open <a href="https://vorliq.org/account">https://vorliq.org/account</a> after unlocking your wallet.</li>
+          <li>Click <strong>Export Encrypted Wallet</strong>.</li>
+          <li>Enter your wallet password.</li>
+          <li>Save <code>vorliq-wallet-backup.json</code> somewhere safe.</li>
+        </ol>
+        <p>The backup contains the encrypted private key, address, public key, salt, initialization vector, encryption method, timestamps, and version. It does not contain the raw private key in plaintext.</p>
+      </section>
+
+      <section class="section card">
+        <h2>Import A Wallet Backup</h2>
+        <ol>
+          <li>Open <a href="https://vorliq.org/login">https://vorliq.org/login</a> in the browser where you want to restore the wallet.</li>
+          <li>Use <strong>Import Wallet Backup</strong> when no wallet is saved in that browser.</li>
+          <li>Select <code>vorliq-wallet-backup.json</code> and enter the password used to encrypt it.</li>
+          <li>The app decrypts locally to confirm the password before saving the encrypted wallet in browser storage.</li>
+        </ol>
+      </section>
+
+      <section class="section card warning">
+        <h2>Verify The Official Site</h2>
+        <p>Before entering a wallet password, revealing a private key, or importing a backup, check that the browser address is exactly <code>https://vorliq.org</code>. Do not trust lookalike domains, shortened links, direct messages, or pages that ask you to upload a backup and password outside the official app or your own trusted local node.</p>
+      </section>
+
+      <section class="section card">
+        <h2>Mobile Wallets</h2>
+        <p>The mobile app stores wallet data locally on the device. In this release, mobile file export/import is not enabled. Mobile users should unlock the private key only on a trusted device, save it in a secure password manager or offline backup, and keep their node URL from Settings with their records.</p>
+      </section>
+    </main>
+
+    <footer><div class="wrap">2026 Vorliq. Your Community Your Coin.</div></footer>
+  </body>
+</html>

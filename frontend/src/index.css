@@ -657,6 +657,52 @@ p {
   margin-top: 8px;
 }
 
+.wallet-safety-box,
+.wallet-import-panel,
+.wallet-action-panel,
+.private-key-warning {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--soft-surface);
+  padding: 16px;
+}
+
+.wallet-safety-box {
+  border-color: rgba(255, 209, 102, 0.42);
+  background: rgba(255, 209, 102, 0.08);
+}
+
+.wallet-safety-box strong,
+.private-key-warning strong {
+  color: var(--text);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.checkbox-row input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--primary);
+  flex: 0 0 auto;
+}
+
+.private-key-warning {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
 .section-title {
   display: flex;
   align-items: center;

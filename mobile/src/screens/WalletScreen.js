@@ -26,6 +26,7 @@ export default function WalletScreen() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [privateKeyUnlocked, setPrivateKeyUnlocked] = useState(false);
+  const [safetyConfirmed, setSafetyConfirmed] = useState(false);
   const [receiveAmount, setReceiveAmount] = useState("");
   const previousBalanceRef = useRef(null);
 
@@ -69,6 +70,11 @@ export default function WalletScreen() {
   }, [wallet, loadBalance]);
 
   const handleCreateWallet = async () => {
+    if (!safetyConfirmed) {
+      setError("Confirm that you understand Vorliq cannot recover your private key.");
+      return;
+    }
+
     setCreating(true);
     setError("");
     setMessage("");
@@ -109,6 +115,12 @@ export default function WalletScreen() {
     setPrivateKeyUnlocked(true);
   };
 
+  const copyPrivateKey = async () => {
+    if (!wallet?.private_key) return;
+    await Clipboard.setStringAsync(wallet.private_key);
+    setMessage("Private key copied. Store it somewhere safe and clear your clipboard when finished.");
+  };
+
   const confirmDelete = () => {
     Alert.alert("Delete Wallet", "This removes the wallet from this phone. Make sure your private key is backed up first.", [
       { text: "Cancel", style: "cancel" },
@@ -138,8 +150,26 @@ export default function WalletScreen() {
       <View style={[sharedStyles.screen, styles.center]}>
         <Text style={sharedStyles.title}>Create Your Wallet</Text>
         <Text style={[sharedStyles.subtitle, styles.centerText]}>Generate a Vorliq wallet on this phone so you can receive, send, and vote with VLQ.</Text>
+        <View style={[sharedStyles.card, styles.safetyCard]}>
+          <Text style={sharedStyles.label}>Wallet Safety</Text>
+          <Text style={sharedStyles.mutedText}>
+            Vorliq cannot recover your private key. Anyone with your private key can control
+            your wallet. After creating a wallet, save the private key somewhere safe before
+            storing meaningful VLQ on it.
+          </Text>
+          <Pressable style={styles.confirmRow} onPress={() => setSafetyConfirmed((confirmed) => !confirmed)}>
+            <View style={[styles.checkbox, safetyConfirmed && styles.checkboxChecked]}>
+              {safetyConfirmed ? <Text style={styles.checkboxMark}>OK</Text> : null}
+            </View>
+            <Text style={styles.confirmText}>I understand that my private key cannot be recovered by Vorliq.</Text>
+          </Pressable>
+        </View>
         {error ? <Text style={sharedStyles.errorText}>{error}</Text> : null}
-        <Pressable style={[sharedStyles.button, styles.wideButton]} onPress={handleCreateWallet} disabled={creating}>
+        <Pressable
+          style={[sharedStyles.button, styles.wideButton, (!safetyConfirmed || creating) && styles.disabledButton]}
+          onPress={handleCreateWallet}
+          disabled={creating || !safetyConfirmed}
+        >
           <Text style={sharedStyles.buttonText}>{creating ? "Creating..." : "Create Wallet"}</Text>
         </Pressable>
       </View>
@@ -195,13 +225,29 @@ export default function WalletScreen() {
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.label}>Private Key Backup</Text>
         {privateKeyUnlocked ? (
-          <Text style={styles.keyText}>{wallet.private_key}</Text>
+          <>
+            <Text style={styles.keyText}>{wallet.private_key}</Text>
+            <Pressable style={[sharedStyles.button, styles.marginTop]} onPress={copyPrivateKey}>
+              <Text style={sharedStyles.buttonText}>Copy Private Key</Text>
+            </Pressable>
+          </>
         ) : (
           <Pressable style={sharedStyles.button} onPress={unlockPrivateKey}>
             <Text style={sharedStyles.buttonText}>Unlock Private Key Backup</Text>
           </Pressable>
         )}
         <Text style={[sharedStyles.errorText, styles.marginTop]}>Backup Warning: save your private key securely. If you lose it, it cannot be recovered.</Text>
+      </View>
+
+      <View style={sharedStyles.card}>
+        <Text style={sharedStyles.label}>Backup Instructions</Text>
+        <Text style={sharedStyles.mutedText}>
+          Mobile encrypted file export and import are not enabled in this release. To back up
+          this mobile wallet, unlock the private key on a trusted device, copy it only long
+          enough to save it in a secure password manager or offline backup, and keep your node
+          URL from Settings with the backup. Never send the private key through chat, email, or
+          screenshots.
+        </Text>
       </View>
 
       <Pressable style={[sharedStyles.button, sharedStyles.dangerButton]} onPress={confirmDelete}>
@@ -248,5 +294,41 @@ const styles = StyleSheet.create({
     color: theme.text,
     fontSize: theme.fonts.small,
     lineHeight: 18,
+  },
+  safetyCard: {
+    alignSelf: "stretch",
+    marginTop: theme.spacing.lg,
+  },
+  confirmRow: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+  },
+  checkbox: {
+    alignItems: "center",
+    borderColor: theme.border,
+    borderRadius: 6,
+    borderWidth: 1,
+    height: 24,
+    justifyContent: "center",
+    width: 24,
+  },
+  checkboxChecked: {
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
+  },
+  checkboxMark: {
+    color: theme.text,
+    fontWeight: "900",
+  },
+  confirmText: {
+    color: theme.text,
+    flex: 1,
+    fontSize: theme.fonts.body,
+    lineHeight: 22,
+  },
+  disabledButton: {
+    opacity: 0.55,
   },
 });

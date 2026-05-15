@@ -24,7 +24,7 @@ async function main() {
 main().catch(console.error);
 ```
 
-To create a new wallet, call `createWallet`. The returned object contains the address, public key, and private key. Store the private key securely because Vorliq cannot recover it for you.
+To create a new wallet, call `createWallet`. The returned object contains the address, public key, and private key. Store the private key securely because Vorliq cannot recover it for you. Applications built with the SDK should not send private keys to their own servers, analytics tools, logs, or support systems. If an application stores a private key, it should encrypt it locally with a password chosen by the user.
 
 ```js
 const { VorliqSDK } = require("./dist/vorliq-sdk");

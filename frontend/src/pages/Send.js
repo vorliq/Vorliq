@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
 import QRPayment from "../components/QRPayment";
+import { useAuth } from "../context/AuthContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 import { signTransaction } from "../helpers/signer";
+import { loadWallet } from "../helpers/storage";
 
 const initialForm = {
   senderAddress: "",
@@ -16,10 +18,23 @@ const initialForm = {
 };
 
 function Send() {
+  const { isLoggedIn, wallet } = useAuth();
   const [form, setForm] = useState(initialForm);
+  const [walletPassword, setWalletPassword] = useState("");
   const [sending, setSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [scannerOpen, setScannerOpen] = useState(false);
+
+  useEffect(() => {
+    if (isLoggedIn && wallet?.address) {
+      setForm((current) => ({
+        ...current,
+        senderAddress: wallet.address,
+        senderPublicKey: wallet.public_key,
+        senderPrivateKey: "",
+      }));
+    }
+  }, [isLoggedIn, wallet]);
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -37,22 +52,29 @@ function Send() {
   async function sendVlq(event) {
     event.preventDefault();
 
-    if (
-      !form.senderAddress.trim() ||
-      !form.senderPrivateKey.trim() ||
-      !form.senderPublicKey.trim() ||
-      !form.receiverAddress.trim() ||
-      !form.amount
-    ) {
+    if (!form.senderAddress.trim() || !form.senderPublicKey.trim() || !form.receiverAddress.trim() || !form.amount) {
       toast.error("Fill in every transaction field.");
+      return;
+    }
+
+    if (isLoggedIn && !walletPassword) {
+      toast.error("Enter your wallet password to sign this transaction locally.");
+      return;
+    }
+
+    if (!isLoggedIn && !form.senderPrivateKey.trim()) {
+      toast.error("Enter the sender private key for manual signing.");
       return;
     }
 
     setSending(true);
     try {
+      const senderPrivateKey = isLoggedIn
+        ? (await loadWallet(walletPassword)).private_key
+        : form.senderPrivateKey.trim();
       const payload = await signTransaction({
         senderAddress: form.senderAddress.trim(),
-        senderPrivateKey: form.senderPrivateKey.trim(),
+        senderPrivateKey,
         senderPublicKey: form.senderPublicKey.trim(),
         receiverAddress: form.receiverAddress.trim(),
         amount: form.amount,
@@ -65,7 +87,8 @@ function Send() {
 
       toast.success("Transaction signed and sent to the pending pool.");
       setErrorMessage("");
-      setForm(initialForm);
+      setWalletPassword("");
+      setForm(isLoggedIn && wallet?.address ? { ...initialForm, senderAddress: wallet.address, senderPublicKey: wallet.public_key } : initialForm);
     } catch (error) {
       const message = apiErrorMessage(error, "Unable to send VLQ.");
       setErrorMessage(message);
@@ -106,6 +129,25 @@ function Send() {
           </div>
         )}
 
+        {isLoggedIn ? (
+          <div className="wallet-safety-box">
+            <strong>Signed with your saved wallet</strong>
+            <p>
+              Your sender address and public key are filled from your unlocked account. Enter
+              your wallet password only when you are ready to sign; the private key is decrypted
+              locally for this transaction and is not shown on the page.
+            </p>
+          </div>
+        ) : (
+          <div className="private-key-warning">
+            <strong>Manual private key mode</strong>
+            <p>
+              Pasting private keys into any website is risky. Use manual mode only on trusted
+              local Vorliq nodes or the official https://vorliq.org app, and never share your key.
+            </p>
+          </div>
+        )}
+
         <form className="form" onSubmit={sendVlq}>
           <div className="field">
             <label htmlFor="sender-address">Sender Address</label>
@@ -116,19 +158,22 @@ function Send() {
               value={form.senderAddress}
               onChange={(event) => updateField("senderAddress", event.target.value)}
               autoComplete="off"
+              readOnly={isLoggedIn}
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="sender-private-key">Sender Private Key</label>
-            <textarea
-              id="sender-private-key"
-              className="textarea"
-              value={form.senderPrivateKey}
-              onChange={(event) => updateField("senderPrivateKey", event.target.value)}
-              autoComplete="off"
-            />
-          </div>
+          {!isLoggedIn && (
+            <div className="field">
+              <label htmlFor="sender-private-key">Sender Private Key</label>
+              <textarea
+                id="sender-private-key"
+                className="textarea"
+                value={form.senderPrivateKey}
+                onChange={(event) => updateField("senderPrivateKey", event.target.value)}
+                autoComplete="off"
+              />
+            </div>
+          )}
 
           <div className="field">
             <label htmlFor="sender-public-key">Sender Public Key</label>
@@ -138,6 +183,7 @@ function Send() {
               value={form.senderPublicKey}
               onChange={(event) => updateField("senderPublicKey", event.target.value)}
               autoComplete="off"
+              readOnly={isLoggedIn}
             />
           </div>
 
@@ -166,13 +212,26 @@ function Send() {
             />
           </div>
 
+          {isLoggedIn && (
+            <div className="field">
+              <label htmlFor="wallet-password">Wallet Password</label>
+              <input
+                id="wallet-password"
+                className="input"
+                type="password"
+                value={walletPassword}
+                onChange={(event) => setWalletPassword(event.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+          )}
+
           <button className="button" type="submit" disabled={sending}>
             {sending ? "Sending..." : "Send VLQ"}
           </button>
           <p className="help-text">
-            You can find your sender public key and private key on the Wallet page when a
-            wallet is created. Your saved wallet is also available from the Account page after
-            you unlock it.
+            Saved wallets sign locally after password confirmation. Manual mode is available
+            only when you are not logged in.
           </p>
         </form>
       </section>

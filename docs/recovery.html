@@ -68,6 +68,12 @@
         <p>Vorliq server backups do not contain private wallet keys. Private keys are created for users and must be saved by users locally. If a user loses a private key, it cannot be recovered from the server, the blockchain data folder, the backup archive, GitHub, or the Vorliq team.</p>
       </section>
 
+      <section class="section card danger">
+        <h2>Server Recovery Is Not Wallet Recovery</h2>
+        <p>Server recovery restores the public Vorliq node: the blockchain data folder, public transactions, forum content, lending records, exchange offers, governance data, treasury data, price signals, achievements, and safe operational logs. It does not restore a user's private wallet key.</p>
+        <p>Wallet recovery depends on the user's own backup. A user can recover a wallet only if they still have the private key or an encrypted wallet backup plus the password for that backup. The production server backup cannot recreate a lost private key, cannot reveal a wallet password, and cannot move VLQ from a wallet whose key has been lost.</p>
+      </section>
+
       <section class="section card">
         <h2>What Is Backed Up</h2>
         <p>The backup archive contains the complete <code>/home/vorliq/app/blockchain/data</code> folder. This is the critical node state folder used by the Python blockchain API. It includes the saved chain, pending transactions, peer list, node registry, lending records, exchange offers, governance proposals and settings, treasury proposals, price signals, forum posts, achievements, and operational blockchain logs when those files exist.</p>

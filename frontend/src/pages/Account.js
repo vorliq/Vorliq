@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
+import { exportEncryptedWalletBackup, loadWallet } from "../helpers/storage";
 
 function Account() {
   const { wallet } = useAuth();
@@ -20,6 +21,12 @@ function Account() {
   const [loading, setLoading] = useState(true);
   const [repayingLoanId, setRepayingLoanId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportPassword, setExportPassword] = useState("");
+  const [exportingWallet, setExportingWallet] = useState(false);
+  const [revealOpen, setRevealOpen] = useState(false);
+  const [revealPassword, setRevealPassword] = useState("");
+  const [revealedPrivateKey, setRevealedPrivateKey] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -124,6 +131,88 @@ function Account() {
     }
   }
 
+  useEffect(() => {
+    if (!revealedPrivateKey) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setRevealedPrivateKey("");
+      setRevealPassword("");
+      setRevealOpen(false);
+    }, 60000);
+
+    return () => window.clearTimeout(timeout);
+  }, [revealedPrivateKey]);
+
+  async function exportEncryptedWallet(event) {
+    event.preventDefault();
+
+    if (!exportPassword) {
+      toast.error("Enter your wallet password to export the encrypted backup.");
+      return;
+    }
+
+    setExportingWallet(true);
+    try {
+      const backup = await exportEncryptedWalletBackup(exportPassword);
+      const blob = new Blob([JSON.stringify(backup, null, 2)], {
+        type: "application/json;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "vorliq-wallet-backup.json";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      setExportPassword("");
+      setExportOpen(false);
+      toast.success("Encrypted wallet backup exported.");
+    } catch (error) {
+      toast.error("Unable to export wallet backup. Check your password.");
+    } finally {
+      setExportingWallet(false);
+    }
+  }
+
+  async function revealPrivateKey(event) {
+    event.preventDefault();
+
+    if (!revealPassword) {
+      toast.error("Enter your wallet password to reveal the private key.");
+      return;
+    }
+
+    try {
+      const unlockedWallet = await loadWallet(revealPassword);
+      setRevealedPrivateKey(unlockedWallet.private_key);
+      toast.success("Private key revealed for 60 seconds.");
+    } catch (error) {
+      toast.error("Unable to reveal private key. Check your password.");
+    }
+  }
+
+  async function copyPrivateKey() {
+    if (!revealedPrivateKey) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(revealedPrivateKey);
+      toast.success("Private key copied.");
+    } catch (error) {
+      toast.error("Unable to copy private key.");
+    }
+  }
+
+  function hidePrivateKey() {
+    setRevealedPrivateKey("");
+    setRevealPassword("");
+    setRevealOpen(false);
+  }
+
   async function repayLoan(loanId) {
     setRepayingLoanId(loanId);
     try {
@@ -188,9 +277,25 @@ function Account() {
       <section className="card card-pad stack">
         <div className="section-title">
           <h2>My Wallet</h2>
-          <button className="button secondary small-button" type="button" onClick={copyAddress}>
-            Copy Address
-          </button>
+          <div className="button-row">
+            <button className="button secondary small-button" type="button" onClick={copyAddress}>
+              Copy Address
+            </button>
+            <button
+              className="button secondary small-button"
+              type="button"
+              onClick={() => setExportOpen((open) => !open)}
+            >
+              Export Encrypted Wallet
+            </button>
+            <button
+              className="button secondary small-button"
+              type="button"
+              onClick={() => setRevealOpen((open) => !open)}
+            >
+              Reveal Private Key
+            </button>
+          </div>
         </div>
         <div className="grid account-wallet-grid">
           <div className="field">
@@ -202,6 +307,73 @@ function Account() {
             <div className="value-box">{loading ? "Loading balance..." : `${balance ?? 0} VLQ`}</div>
           </div>
         </div>
+
+        {exportOpen && (
+          <form className="form wallet-action-panel" onSubmit={exportEncryptedWallet}>
+            <h3>Export Encrypted Wallet Backup</h3>
+            <p className="help-text">
+              This downloads an encrypted JSON backup. It does not include your raw private key
+              in plaintext.
+            </p>
+            <div className="field">
+              <label htmlFor="wallet-export-password">Wallet Password</label>
+              <input
+                id="wallet-export-password"
+                className="input"
+                type="password"
+                value={exportPassword}
+                onChange={(event) => setExportPassword(event.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+            <button className="button" type="submit" disabled={exportingWallet}>
+              {exportingWallet ? "Exporting..." : "Download vorliq-wallet-backup.json"}
+            </button>
+          </form>
+        )}
+
+        {revealOpen && (
+          <form className="form wallet-action-panel" onSubmit={revealPrivateKey}>
+            <h3>Reveal Private Key</h3>
+            <p className="help-text">
+              Only reveal your private key when you are alone, on a trusted device, and on the
+              official Vorliq site. It will hide automatically after 60 seconds.
+            </p>
+            <div className="field">
+              <label htmlFor="wallet-reveal-password">Wallet Password</label>
+              <input
+                id="wallet-reveal-password"
+                className="input"
+                type="password"
+                value={revealPassword}
+                onChange={(event) => setRevealPassword(event.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+            <button className="button" type="submit">
+              Reveal for 60 Seconds
+            </button>
+          </form>
+        )}
+
+        {revealedPrivateKey && (
+          <div className="private-key-warning">
+            <strong>Private key visible</strong>
+            <p>
+              Anyone with this key can control your wallet. Do not share it, paste it into
+              untrusted websites, or send it in chat.
+            </p>
+            <div className="value-box">{revealedPrivateKey}</div>
+            <div className="button-row">
+              <button className="button secondary small-button" type="button" onClick={copyPrivateKey}>
+                Copy
+              </button>
+              <button className="button secondary small-button" type="button" onClick={hidePrivateKey}>
+                Hide
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="card card-pad account-section">
