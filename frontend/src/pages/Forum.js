@@ -94,11 +94,14 @@ function TipForm({ form, onChange, onSubmit }) {
 
 function Forum() {
   const [posts, setPosts] = useState([]);
+  const [featuredPosts, setFeaturedPosts] = useState([]);
   const [selectedPostId, setSelectedPostId] = useState("");
   const [selectedPost, setSelectedPost] = useState(null);
   const [postForm, setPostForm] = useState(initialPostForm);
   const [replyForm, setReplyForm] = useState(initialReplyForm);
   const [upvoteAddress, setUpvoteAddress] = useState("");
+  const [featureVoterAddress, setFeatureVoterAddress] = useState("");
+  const [activeTab, setActiveTab] = useState("featured");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [tipForms, setTipForms] = useState({});
@@ -115,6 +118,22 @@ function Forum() {
     } catch (error) {
       if (!quiet) {
         const message = apiErrorMessage(error, "Unable to load forum posts.");
+        setErrorMessage(message);
+        toast.error(message);
+      }
+    } finally {
+      setLoadingPosts(false);
+    }
+  }
+
+  async function loadFeaturedPosts({ quiet = false } = {}) {
+    try {
+      const response = await api.get("/forum/featured");
+      setFeaturedPosts(response.data.posts || []);
+      setErrorMessage("");
+    } catch (error) {
+      if (!quiet) {
+        const message = apiErrorMessage(error, "Unable to load featured forum posts.");
         setErrorMessage(message);
         toast.error(message);
       }
@@ -141,6 +160,7 @@ function Forum() {
 
   useEffect(() => {
     loadPosts();
+    loadFeaturedPosts({ quiet: true });
   }, []);
 
   useEffect(() => {
@@ -166,12 +186,13 @@ function Forum() {
   }, [searchQuery]);
 
   const displayedPosts = useMemo(() => {
+    const sourcePosts = activeTab === "featured" ? featuredPosts : posts;
     if (categoryFilter === "all") {
-      return posts;
+      return sourcePosts;
     }
 
-    return posts.filter((post) => (post.category || "general") === categoryFilter);
-  }, [posts, categoryFilter]);
+    return sourcePosts.filter((post) => (post.category || "general") === categoryFilter);
+  }, [activeTab, featuredPosts, posts, categoryFilter]);
 
   async function createPost(event) {
     event.preventDefault();
@@ -192,6 +213,7 @@ function Forum() {
       toast.success("Forum post created.");
       setPostForm(initialPostForm);
       await loadPosts({ quiet: true });
+      await loadFeaturedPosts({ quiet: true });
       await loadPost(response.data.post_id);
     } catch (error) {
       const message = apiErrorMessage(error, "Unable to create forum post.");
@@ -221,6 +243,7 @@ function Forum() {
       setReplyForm(initialReplyForm);
       await loadPost(selectedPostId);
       await loadPosts({ quiet: true });
+      await loadFeaturedPosts({ quiet: true });
     } catch (error) {
       const message = apiErrorMessage(error, "Unable to post reply.");
       setErrorMessage(message);
@@ -245,8 +268,34 @@ function Forum() {
       setUpvoteAddress("");
       await loadPost(selectedPostId);
       await loadPosts({ quiet: true });
+      await loadFeaturedPosts({ quiet: true });
     } catch (error) {
       const message = apiErrorMessage(error, "Unable to upvote this post.");
+      setErrorMessage(message);
+      toast.error(message);
+    }
+  }
+
+  async function featurePost(postId) {
+    if (!postId || !featureVoterAddress.trim()) {
+      toast.error("Enter your wallet address before featuring a post.");
+      return;
+    }
+
+    try {
+      await api.post("/forum/feature", {
+        post_id: postId,
+        voter_address: featureVoterAddress.trim(),
+      });
+      toast.success("Your feature vote was recorded.");
+      setFeatureVoterAddress("");
+      if (selectedPostId === postId) {
+        await loadPost(postId);
+      }
+      await loadPosts({ quiet: true });
+      await loadFeaturedPosts({ quiet: true });
+    } catch (error) {
+      const message = apiErrorMessage(error, "Unable to record your feature vote.");
       setErrorMessage(message);
       toast.error(message);
     }
@@ -293,6 +342,7 @@ function Forum() {
         await loadPost(selectedPostId);
       }
       await loadPosts({ quiet: true });
+      await loadFeaturedPosts({ quiet: true });
     } catch (error) {
       const message = apiErrorMessage(error, "Unable to send tip.");
       setErrorMessage(message);
@@ -320,6 +370,28 @@ function Forum() {
               Refresh
             </button>
           </div>
+          <div className="tab-list">
+            <button
+              className={`tab-button ${activeTab === "featured" ? "active" : ""}`}
+              type="button"
+              onClick={() => {
+                setActiveTab("featured");
+                loadFeaturedPosts();
+              }}
+            >
+              Featured
+            </button>
+            <button
+              className={`tab-button ${activeTab === "all" ? "active" : ""}`}
+              type="button"
+              onClick={() => {
+                setActiveTab("all");
+                loadPosts();
+              }}
+            >
+              All Posts
+            </button>
+          </div>
           <div className="forum-controls">
             <input
               className="input"
@@ -340,10 +412,21 @@ function Forum() {
               ))}
             </select>
           </div>
+          <input
+            className="input"
+            type="text"
+            placeholder="Wallet address for feature votes"
+            value={featureVoterAddress}
+            onChange={(event) => setFeatureVoterAddress(event.target.value)}
+          />
           {loadingPosts ? (
             <Spinner label="Loading forum posts..." />
           ) : displayedPosts.length === 0 ? (
-            <div className="empty-state">No forum posts yet. Start the first discussion.</div>
+            <div className="empty-state">
+              {activeTab === "featured"
+                ? "No featured posts yet. Be the first to feature a great post."
+                : "No forum posts yet. Start the first discussion."}
+            </div>
           ) : (
             <div className="forum-list">
               {displayedPosts.map((post) => (
@@ -354,17 +437,23 @@ function Forum() {
                   key={post.post_id}
                 >
                   <button className="forum-open-button" type="button" onClick={() => loadPost(post.post_id)}>
-                    <strong>{post.title}</strong>
+                    <strong>
+                      {post.featured && <span className="featured-star" aria-label="Featured post">&#9733;</span>}
+                      {post.title}
+                    </strong>
                     <span className="badge forum-category">{post.category || "general"}</span>
                     <span>By {shortAddress(post.author_address)}</span>
                     <span>
-                      {post.vote_count} votes · {post.replies?.length || 0} replies · {post.tips?.length || 0} tips
+                      {post.vote_count} votes - {post.feature_vote_count || 0} feature votes - {post.replies?.length || 0} replies - {post.tips?.length || 0} tips
                     </span>
                     {post.image_data && <img className="forum-thumb" src={post.image_data} alt="Forum attachment" />}
                     <small>{formatTime(post.timestamp)}</small>
                   </button>
                   <button className="button secondary small-button" type="button" onClick={() => toggleTipForm(`post:${post.post_id}`)}>
                     Tip
+                  </button>
+                  <button className="button secondary small-button" type="button" onClick={() => featurePost(post.post_id)}>
+                    Feature this Post
                   </button>
                   {tipForms[`post:${post.post_id}`] && (
                     <TipForm
@@ -467,7 +556,10 @@ function Forum() {
               <div className="section-title">
                 <div>
                   <span className="eyebrow">Full Post</span>
-                  <h2>{selectedPost.title}</h2>
+                  <h2>
+                    {selectedPost.featured && <span className="featured-star" aria-label="Featured post">&#9733;</span>}
+                    {selectedPost.title}
+                  </h2>
                   <span className="badge forum-category">{selectedPost.category || "general"}</span>
                 </div>
               </div>
@@ -481,6 +573,10 @@ function Forum() {
                 <div className="meta-item">
                   <span className="meta-label">Votes</span>
                   <span className="meta-value">{selectedPost.vote_count}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Feature Votes</span>
+                  <span className="meta-value">{selectedPost.feature_vote_count || 0}</span>
                 </div>
               </div>
               <div className="inline-form">
@@ -497,6 +593,9 @@ function Forum() {
               </div>
               <button className="button secondary small-button" type="button" onClick={() => toggleTipForm(`post:${selectedPost.post_id}`)}>
                 Tip This Post
+              </button>
+              <button className="button secondary small-button" type="button" onClick={() => featurePost(selectedPost.post_id)}>
+                Feature this Post
               </button>
               {tipForms[`post:${selectedPost.post_id}`] && (
                 <TipForm
@@ -516,7 +615,7 @@ function Forum() {
                       <p>{reply.body}</p>
                       {reply.image_data && <img className="forum-image" src={reply.image_data} alt="Reply attachment" />}
                       <span>
-                        {shortAddress(reply.author_address)} · {reply.vote_count} votes · {reply.tips?.length || 0} tips ·{" "}
+                        {shortAddress(reply.author_address)} - {reply.vote_count} votes - {reply.tips?.length || 0} tips -{" "}
                         {formatTime(reply.timestamp)}
                       </span>
                       <button className="button secondary small-button" type="button" onClick={() => toggleTipForm(`reply:${reply.reply_id}`)}>

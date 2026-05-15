@@ -20,9 +20,15 @@ const quickLinks = [
   { to: "/health", label: "Health", detail: "Check node status and deployment" },
 ];
 
+function shortAddress(address) {
+  if (!address) return "Unknown";
+  return address.length > 12 ? `${address.slice(0, 12)}...` : address;
+}
+
 function Dashboard() {
   const [chainData, setChainData] = useState(null);
   const [economics, setEconomics] = useState(null);
+  const [featuredPosts, setFeaturedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -32,14 +38,16 @@ function Dashboard() {
 
     async function loadDashboard() {
       try {
-        const [chainResponse, economicsResponse] = await Promise.all([
+        const [chainResponse, economicsResponse, featuredResponse] = await Promise.all([
           api.get("/chain"),
           api.get("/economics"),
+          api.get("/forum/featured"),
         ]);
         if (mounted) {
           setErrorMessage("");
           setChainData(chainResponse.data);
           setEconomics(economicsResponse.data);
+          setFeaturedPosts((featuredResponse.data.posts || []).slice(0, 3));
           setLastUpdated(new Date());
         }
       } catch (error) {
@@ -152,6 +160,32 @@ function Dashboard() {
           cryptographic keys and recorded by the chain after it is mined into a block.
         </p>
         <p>Deployed automatically via GitHub Actions.</p>
+      </section>
+
+      <section className="card card-pad featured-community-card">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">Community Signal</span>
+            <h2>Featured Community Posts</h2>
+          </div>
+        </div>
+        {featuredPosts.length ? (
+          <div className="featured-post-grid">
+            {featuredPosts.map((post) => (
+              <article className="featured-post-card" key={post.post_id}>
+                <strong>
+                  <span className="featured-star" aria-label="Featured post">&#9733;</span>
+                  {post.title}
+                </strong>
+                <span>By {shortAddress(post.author_address)}</span>
+                <span>{post.feature_vote_count || 0} feature votes</span>
+                <Link className="text-button" to="/forum">Read More</Link>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">No featured posts yet. Be the first to feature a great post.</div>
+        )}
       </section>
     </main>
   );

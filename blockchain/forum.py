@@ -37,6 +37,9 @@ class Forum:
             "category": category,
             "image_data": self._normalize_image(image_data),
             "pinned": False,
+            "featured": False,
+            "feature_votes": [],
+            "feature_vote_count": 0,
             "tips": [],
             "timestamp": timestamp,
             "replies": [],
@@ -97,6 +100,20 @@ class Forum:
         vorliq_logger.info("Forum reply %s upvoted by %s", reply_id, address)
         return reply
 
+    def feature_post(self, post_id: str, voter_address: str) -> dict[str, Any]:
+        post = self._get_existing_post(post_id)
+        voter_address = self._require_text(voter_address, "voter address")
+        voters = set(post.get("feature_votes", []))
+        if voter_address in voters:
+            raise ValueError("address has already voted to feature this post")
+        voters.add(voter_address)
+        post["feature_votes"] = sorted(voters)
+        post["feature_vote_count"] = len(voters)
+        if post["feature_vote_count"] >= 5:
+            post["featured"] = True
+        vorliq_logger.info("Forum post %s received a feature vote from %s", post_id, voter_address)
+        return post
+
     def get_all_posts(self) -> list[dict[str, Any]]:
         self._normalize_existing_posts()
         return sorted(
@@ -112,6 +129,17 @@ class Forum:
     def get_post(self, post_id: str) -> dict[str, Any] | None:
         self._normalize_existing_posts()
         return self.posts.get(post_id)
+
+    def get_featured_posts(self) -> list[dict[str, Any]]:
+        self._normalize_existing_posts()
+        return sorted(
+            [post for post in self.posts.values() if bool(post.get("featured", False))],
+            key=lambda post: (
+                int(post.get("feature_vote_count", 0)),
+                float(post.get("timestamp", 0)),
+            ),
+            reverse=True,
+        )
 
     def search_posts(self, query: str) -> list[dict[str, Any]]:
         query = self._require_text(query, "query").casefold()
@@ -196,6 +224,12 @@ class Forum:
         post["category"] = post.get("category") if post.get("category") in self.VALID_CATEGORIES else "general"
         post["image_data"] = self._normalize_image(post.get("image_data"))
         post["pinned"] = bool(post.get("pinned", False))
+        post["featured"] = bool(post.get("featured", False))
+        legacy_feature_voters = post.pop("feature_voters", [])
+        post["feature_votes"] = list(post.get("feature_votes", legacy_feature_voters))
+        post["feature_vote_count"] = int(post.get("feature_vote_count", len(post["feature_votes"])))
+        if post["feature_vote_count"] >= 5:
+            post["featured"] = True
         post["voters"] = list(post.get("voters", []))
         post["replies"] = list(post.get("replies", []))
         post["tips"] = list(post.get("tips", []))

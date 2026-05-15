@@ -396,6 +396,43 @@ p {
   gap: 10px;
 }
 
+.featured-community-card {
+  margin-top: 24px;
+}
+
+.featured-post-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.featured-post-card {
+  display: grid;
+  gap: 10px;
+  min-height: 146px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--soft-surface);
+  padding: 15px;
+}
+
+.featured-post-card strong {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.featured-post-card span {
+  color: var(--muted-2);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.featured-star {
+  color: var(--yellow);
+  display: inline-block;
+  margin-right: 8px;
+}
+
 .quick-links-card {
   margin-top: 24px;
   display: grid;
@@ -1744,6 +1781,7 @@ p {
 
   .stats-grid,
   .quick-link-grid,
+  .featured-post-grid,
   .two-column,
   .block-meta,
   .loan-grid,
@@ -1878,6 +1916,7 @@ p {
 
   .stats-grid,
   .quick-link-grid,
+  .featured-post-grid,
   .two-column,
   .block-meta,
   .loan-grid,

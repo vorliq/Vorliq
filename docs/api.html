@@ -42,6 +42,8 @@
       .field-box { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:12px; }
       .field-box strong { color:#fff; }
       .try { color:#fff; text-decoration:none; border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-weight:900; background:var(--accent); }
+      .sdk-callout { border:1px solid var(--border); border-radius:12px; background:rgba(108,99,255,.12); padding:18px; margin-top:18px; }
+      .sdk-callout a { display:inline-flex; border:1px solid var(--border); border-radius:8px; background:var(--accent); color:#fff; font-weight:900; padding:10px 13px; text-decoration:none; }
       footer { color:var(--muted); padding:28px 0; border-top:1px solid var(--border); }
       @media (max-width:900px) { .layout { grid-template-columns:1fr; } aside { position:relative; height:auto; } nav { grid-template-columns:repeat(2,minmax(0,1fr)); } .fields { grid-template-columns:1fr; } }
     </style>
@@ -57,6 +59,10 @@
           <span class="eyebrow">Developer Documentation</span>
           <h1>Vorliq Public API</h1>
           <p>These endpoints are served through <strong>https://vorliq.org/api</strong>. They let developers inspect the chain, build wallet tools, monitor nodes, and integrate with Vorliq community features. POST endpoints should be used carefully because many of them create real pending transactions, votes, proposals, or community records.</p>
+          <div class="sdk-callout">
+            <p>Developers who want a simpler integration can use the official Vorliq JavaScript SDK instead of calling the API directly. The SDK creates wallets, checks balances, signs VLQ transactions locally, watches for new blocks, and builds payment URLs.</p>
+            <a href="https://github.com/vorliq/Vorliq/tree/main/sdk#readme">Read the SDK README</a>
+          </div>
         </div>
         <div id="content"></div>
         <footer>2026 Vorliq. All rights reserved.</footer>
@@ -118,10 +124,12 @@
         ["Forum", [
           ["POST", "/api/forum/post", "Creates a forum post.", [["author_address","string","Author wallet."],["title","string","Post title."],["body","string","Post body."],["category","string","Forum category."]], [["post","object","Created post."]], "curl -X POST https://vorliq.org/api/forum/post -H 'Content-Type: application/json' -d '{\"author_address\":\"VLQ\",\"title\":\"Hello\",\"body\":\"First post\",\"category\":\"general\"}'", { success:true, post:{ title:"Hello" } }],
           ["GET", "/api/forum/posts", "Returns forum posts sorted by pinned, votes, and recency.", [], [["posts","array","Forum posts."]], "curl https://vorliq.org/api/forum/posts", { success:true, posts:[] }],
+          ["GET", "/api/forum/featured", "Returns forum posts that have reached the community feature threshold.", [], [["posts","array","Featured forum posts sorted by feature vote count."]], "curl https://vorliq.org/api/forum/featured", { success:true, posts:[] }],
           ["GET", "/api/forum/post?post_id=ID", "Returns one forum post with replies.", [], [["post","object","Post details."]], "curl 'https://vorliq.org/api/forum/post?post_id=post123'", { success:true, post:{ replies:[] } }],
           ["GET", "/api/forum/search?q=QUERY", "Searches forum post titles and bodies.", [], [["posts","array","Matching posts."]], "curl 'https://vorliq.org/api/forum/search?q=mining'", { success:true, posts:[] }],
           ["POST", "/api/forum/reply", "Adds a reply to a post.", [["post_id","string","Post ID."],["author_address","string","Author wallet."],["body","string","Reply text."]], [["reply","object","Created reply."]], "curl -X POST https://vorliq.org/api/forum/reply -H 'Content-Type: application/json' -d '{\"post_id\":\"post123\",\"author_address\":\"VLQ\",\"body\":\"Thanks\"}'", { success:true, reply:{ body:"Thanks" } }],
           ["POST", "/api/forum/upvote", "Upvotes a forum post once per wallet address.", [["post_id","string","Post ID."],["address","string","Voter wallet."]], [["post","object","Updated post."]], "curl -X POST https://vorliq.org/api/forum/upvote -H 'Content-Type: application/json' -d '{\"post_id\":\"post123\",\"address\":\"VLQ\"}'", { success:true, post:{ vote_count:1 } }],
+          ["POST", "/api/forum/feature", "Records a community feature vote for a post and marks it featured after five unique feature votes.", [["post_id","string","Post ID."],["voter_address","string","Feature voter wallet."]], [["post","object","Updated post."]], "curl -X POST https://vorliq.org/api/forum/feature -H 'Content-Type: application/json' -d '{\"post_id\":\"post123\",\"voter_address\":\"VLQ\"}'", { success:true, post:{ featured:false, feature_vote_count:1 } }],
           ["POST", "/api/forum/tip/post", "Sends a signed VLQ tip to a post author.", [["post_id","string","Post ID."],["sender_address","string","Tipper wallet."],["sender_private_key","string","Tipper private key PEM."],["receiver_address","string","Receiver wallet."],["amount","number","1 to 100 VLQ."]], [["tip","object","Recorded tip."]], "curl -X POST https://vorliq.org/api/forum/tip/post -H 'Content-Type: application/json' -d '{\"post_id\":\"post123\",\"sender_address\":\"VLQ1\",\"receiver_address\":\"VLQ2\",\"amount\":1,\"sender_private_key\":\"...\"}'", { success:true, tip:{ amount:1 } }],
           ["POST", "/api/forum/tip/reply", "Sends a signed VLQ tip to a reply author.", [["post_id","string","Post ID."],["reply_id","string","Reply ID."],["sender_address","string","Tipper wallet."],["sender_private_key","string","Tipper private key PEM."],["receiver_address","string","Receiver wallet."],["amount","number","1 to 100 VLQ."]], [["tip","object","Recorded tip."]], "curl -X POST https://vorliq.org/api/forum/tip/reply -H 'Content-Type: application/json' -d '{\"post_id\":\"post123\",\"reply_id\":\"reply123\",\"sender_address\":\"VLQ1\",\"receiver_address\":\"VLQ2\",\"amount\":1,\"sender_private_key\":\"...\"}'", { success:true, tip:{ amount:1 } }]
         ]],

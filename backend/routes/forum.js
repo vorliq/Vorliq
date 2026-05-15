@@ -23,6 +23,15 @@ router.get("/api/forum/posts", async (req, res) => {
   }
 });
 
+router.get("/api/forum/featured", async (req, res) => {
+  try {
+    const response = await axios.get(`${flaskUrl}/forum/featured`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    return handleRouteError(res, error, "GET /api/forum/featured", "Unable to load featured forum posts.");
+  }
+});
+
 router.get("/api/forum/post", async (req, res) => {
   try {
     const response = await axios.get(`${flaskUrl}/forum/post`, {
@@ -60,6 +69,15 @@ router.post("/api/forum/upvote", async (req, res) => {
     res.status(response.status).json(response.data);
   } catch (error) {
     return handleRouteError(res, error, "POST /api/forum/upvote", "Unable to upvote forum post.");
+  }
+});
+
+router.post("/api/forum/feature", async (req, res) => {
+  try {
+    const response = await axios.post(`${flaskUrl}/forum/feature`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    return handleRouteError(res, error, "POST /api/forum/feature", "Unable to record feature vote.");
   }
 });
 

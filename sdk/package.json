@@ -1,0 +1,17 @@
+{
+  "name": "vorliq-sdk",
+  "version": "1.0.0",
+  "description": "The official JavaScript SDK for the Vorliq blockchain network",
+  "main": "dist/vorliq-sdk.js",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "example": "node examples/basic.js"
+  },
+  "repository": "https://github.com/vorliq/Vorliq",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "elliptic": "^6.6.1",
+    "node-fetch": "^3.3.2"
+  }
+}

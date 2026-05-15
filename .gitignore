@@ -14,6 +14,8 @@ yarn-error.log*
 # React builds
 build/
 dist/
+!sdk/dist/
+!sdk/dist/*.js
 
 # Local configuration
 .env

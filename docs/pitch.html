@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Pitch Deck</title>
+    <meta name="description" content="Vorliq pitch deck for supporters, partners, and community members." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      :root { --bg:#0f0f1a; --card:#1a1a2e; --card2:#20203a; --accent:#6c63ff; --text:#fff; --muted:#c7c7d4; --border:rgba(255,255,255,.12); --green:#35d07f; --gold:#ffd166; }
+      * { box-sizing:border-box; }
+      body { margin:0; min-height:100vh; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at top left,rgba(108,99,255,.2),transparent 34rem),radial-gradient(circle at bottom right,rgba(53,208,127,.1),transparent 28rem),var(--bg); color:var(--text); overflow:hidden; }
+      a { color:inherit; }
+      .deck { min-height:100vh; display:grid; grid-template-rows:1fr auto; }
+      .slide { display:none; min-height:calc(100vh - 92px); padding:clamp(28px,5vw,72px); align-content:center; animation:fadeIn 280ms ease both; }
+      .slide.active { display:grid; }
+      .content { width:min(1080px,100%); margin:0 auto; display:grid; gap:22px; }
+      .center { justify-items:center; text-align:center; }
+      .logo { width:clamp(92px,14vw,150px); height:auto; }
+      .eyebrow { color:var(--green); font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+      h1 { margin:0; font-size:clamp(3.6rem,12vw,8rem); line-height:.9; letter-spacing:0; }
+      h2 { margin:0; font-size:clamp(2.2rem,7vw,5.2rem); line-height:.95; letter-spacing:0; }
+      p { margin:0; max-width:900px; color:var(--muted); font-size:clamp(1rem,2.2vw,1.32rem); line-height:1.7; }
+      .subtitle { color:#fff; font-size:clamp(1.15rem,2.5vw,1.65rem); font-weight:800; }
+      .tagline { color:var(--gold); font-size:clamp(1.35rem,3vw,2rem); font-weight:900; }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+      .fact, .component, .phase { border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,.045); padding:18px; color:var(--muted); line-height:1.6; }
+      .fact strong, .component strong, .phase strong { color:var(--text); display:block; margin-bottom:8px; }
+      .components { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+      .links { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px; width:100%; max-width:980px; }
+      .link-button { display:grid; place-items:center; min-height:72px; border:1px solid var(--border); border-radius:8px; background:var(--accent); color:#fff; font-weight:900; text-decoration:none; }
+      .controls { display:flex; align-items:center; justify-content:space-between; gap:18px; border-top:1px solid var(--border); background:rgba(15,15,26,.9); padding:18px clamp(18px,4vw,44px); }
+      .nav-button { width:54px; height:54px; border:1px solid var(--border); border-radius:8px; background:var(--card2); color:#fff; cursor:pointer; font-size:1.7rem; font-weight:900; }
+      .counter { color:var(--muted); font-weight:900; }
+      @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+      @media (max-width:840px) { body { overflow:auto; } .slide { min-height:calc(100dvh - 92px); } .grid, .components, .links { grid-template-columns:1fr; } .link-button { min-height:58px; } }
+    </style>
+  </head>
+  <body>
+    <main class="deck">
+      <section class="slide active">
+        <div class="content center">
+          <img class="logo" src="logo.png" alt="Vorliq logo" />
+          <h1>Vorliq</h1>
+          <div class="tagline">Your Community Your Coin</div>
+          <p class="subtitle">A decentralized community savings bank built on its own blockchain.</p>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content">
+          <span class="eyebrow">Slide 2</span>
+          <h2>The Problem</h2>
+          <p>Most people in the world do not have access to fair financial services. Many communities still face high fees, limited credit, weak savings tools, and financial systems that are designed around institutions rather than the people trying to build security together.</p>
+          <p>Existing cryptocurrency projects often promise access, but they are usually too complex and too expensive for ordinary communities to use. They depend on outside networks, confusing wallets, volatile fees, and technical workflows that make simple saving, lending, and local exchange harder than they need to be.</p>
+          <p>Community savings groups already exist all over the world. People pool money, lend to one another, build trust, and create local accountability, but most groups have no digital infrastructure that reflects how they actually operate or gives them transparent records they can own.</p>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content">
+          <span class="eyebrow">Slide 3</span>
+          <h2>The Solution</h2>
+          <p>Vorliq is a self contained blockchain platform built specifically for community savings and lending. It combines a native coin, wallet tools, community loans, exchange offers, governance, treasury features, achievements, chat, and network diagnostics in one practical system.</p>
+          <p>Vorliq requires no external cryptocurrency infrastructure. Communities do not need Ethereum, Solana, Bitcoin, or another chain to save, send, lend, trade, or govern value together.</p>
+          <p>The result is a platform where communities can have their own coin, their own rules, and their own governance. VLQ becomes a shared local digital asset for people who want transparent records and collective financial action without surrendering control to a central platform.</p>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content">
+          <span class="eyebrow">Slide 4</span>
+          <h2>How It Works</h2>
+          <p>Vorliq runs a proof of work blockchain, which means nodes compete to solve a small cryptographic challenge before adding the next block of records. Each block links to the one before it, making the history difficult to rewrite and easy for nodes to verify.</p>
+          <p>VLQ is the native coin of the network, with a maximum supply of 21 million. Members can create wallets, receive mining rewards, send signed transactions, and use VLQ inside community savings, lending, exchange, treasury, and payment flows.</p>
+          <p>The lending system lets members request loans and lets the community vote on whether those loans should be approved. The decentralized exchange lets members post buy and sell offers in real-world terms such as money, goods, services, or time. Governance lets VLQ holders vote on supported network rules, while the treasury gives the community a shared pool for funding useful work.</p>
+          <p>The peer to peer network lets Vorliq nodes discover each other, share transactions and blocks, synchronize chain history, and monitor node health. In simple terms, Vorliq is designed so communities can run the network together instead of depending on one company to hold the records.</p>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content">
+          <span class="eyebrow">Slide 5</span>
+          <h2>What We Have Built</h2>
+          <div class="components">
+            <div class="component"><strong>Blockchain Core</strong>Proof of work blocks, signed transactions, validation, storage, and VLQ economics.</div>
+            <div class="component"><strong>Web Application</strong>Browser access for wallets, mining, lending, exchange, governance, forum, chat, and diagnostics.</div>
+            <div class="component"><strong>Mobile Application</strong>React Native app for wallet, send, mining, lending, exchange, governance, and notifications.</div>
+            <div class="component"><strong>Peer to Peer Network</strong>Peer registration, broadcasts, synchronization, and node health monitoring.</div>
+            <div class="component"><strong>Community Lending</strong>Loan requests, voting, approval states, repayments, and achievement hooks.</div>
+            <div class="component"><strong>Exchange</strong>Open buy and sell offers for VLQ with community-defined real-world pricing.</div>
+            <div class="component"><strong>Governance</strong>Proposal creation, voting, and supported rule updates.</div>
+            <div class="component"><strong>Treasury</strong>Community treasury balance and spending proposal workflows.</div>
+            <div class="component"><strong>Chat</strong>Real-time community chat through the live web application.</div>
+            <div class="component"><strong>Achievements</strong>Wallet milestones for participation across the network.</div>
+            <div class="component"><strong>QR Payments</strong>Payment URLs and QR flows for receiving VLQ in the web application.</div>
+            <div class="component"><strong>Developer Docs</strong>Public API documentation, examples, and integration guidance for builders.</div>
+            <div class="component"><strong>Developer SDK</strong>JavaScript tools for wallets, balances, local signing, payments, and block subscriptions.</div>
+            <div class="component"><strong>Monitoring</strong>Status pages, health endpoints, diagnostics, and deployment visibility.</div>
+            <div class="component"><strong>Backups</strong>Persistent storage and production backup workflows for operational resilience.</div>
+            <div class="component"><strong>Public Node</strong>The live public node at https://vorliq.org.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content">
+          <span class="eyebrow">Slide 6</span>
+          <h2>Traction</h2>
+          <div class="grid">
+            <div class="fact"><strong>Live Network</strong>Vorliq is live at https://vorliq.org with a public application and node available today.</div>
+            <div class="fact"><strong>Status Page</strong>The public status page is live at https://status.vorliq.org for uptime and service visibility.</div>
+            <div class="fact"><strong>Open Source</strong>The project is open source at https://github.com/vorliq/Vorliq.</div>
+            <div class="fact"><strong>Stress Tested</strong>The network passed the five node stress test with eight checks and zero failures.</div>
+            <div class="fact"><strong>Automated Tests</strong>The project has automated tests for the blockchain, backend, and frontend build.</div>
+            <div class="fact"><strong>Continuous Deployment</strong>GitHub Actions runs tests first and deploys to production after CI passes.</div>
+            <div class="fact"><strong>Community Channels</strong>Vorliq has public channels on Discord, Telegram, Reddit, and X.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content">
+          <span class="eyebrow">Slide 7</span>
+          <h2>The Roadmap</h2>
+          <div class="grid">
+            <div class="phase"><strong>Phase One</strong>Grow the node network to fifty community nodes, making Vorliq more resilient, more visible, and more useful as a shared public network.</div>
+            <div class="phase"><strong>Phase Two</strong>Prepare the mobile app for Google Play and the App Store after the public node experience is stable, so members can create wallets, send VLQ, vote, and participate from their phones.</div>
+            <div class="phase"><strong>Phase Three</strong>Partner with community savings groups in the UK and Africa to pilot real VLQ economies with practical savings, lending, exchange, and governance activity.</div>
+            <div class="phase"><strong>Phase Four</strong>Expand governance so communities can create their own sub-networks with custom rules, giving local groups more control while staying connected to the broader Vorliq vision.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content center">
+          <span class="eyebrow">Slide 8</span>
+          <h2>Join Us</h2>
+          <div class="links">
+            <a class="link-button" href="https://discord.gg/qpX5sHD4pC">Discord</a>
+            <a class="link-button" href="https://t.me/Vorliq">Telegram</a>
+            <a class="link-button" href="https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS">Reddit</a>
+            <a class="link-button" href="https://github.com/vorliq/Vorliq">GitHub</a>
+            <a class="link-button" href="https://x.com/vorliq">X</a>
+          </div>
+          <div class="tagline">Your Community Your Coin</div>
+        </div>
+      </section>
+
+      <div class="controls">
+        <button class="nav-button" id="previousSlide" type="button" aria-label="Previous slide">&larr;</button>
+        <div class="counter"><span id="currentSlide">1</span> / <span id="totalSlides">8</span></div>
+        <button class="nav-button" id="nextSlide" type="button" aria-label="Next slide">&rarr;</button>
+      </div>
+    </main>
+
+    <script>
+      const slides = Array.from(document.querySelectorAll(".slide"));
+      const current = document.getElementById("currentSlide");
+      const total = document.getElementById("totalSlides");
+      let index = 0;
+
+      total.textContent = slides.length;
+
+      function showSlide(nextIndex) {
+        index = Math.max(0, Math.min(slides.length - 1, nextIndex));
+        slides.forEach((slide, slideIndex) => {
+          slide.classList.toggle("active", slideIndex === index);
+        });
+        current.textContent = index + 1;
+      }
+
+      document.getElementById("previousSlide").addEventListener("click", () => showSlide(index - 1));
+      document.getElementById("nextSlide").addEventListener("click", () => showSlide(index + 1));
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowLeft") showSlide(index - 1);
+        if (event.key === "ArrowRight") showSlide(index + 1);
+      });
+    </script>
+  </body>
+</html>

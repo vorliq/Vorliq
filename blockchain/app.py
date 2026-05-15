@@ -743,6 +743,11 @@ def get_forum_posts():
     return jsonify({"success": True, "posts": forum.get_all_posts()})
 
 
+@app.get("/forum/featured")
+def get_featured_forum_posts():
+    return jsonify({"success": True, "posts": forum.get_featured_posts()})
+
+
 @app.get("/forum/search")
 def search_forum_posts():
     try:
@@ -791,6 +796,21 @@ def upvote_forum_post():
         return jsonify({"success": True, "post": post})
     except Exception as exc:
         vorliq_logger.error("Forum upvote endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/forum/feature")
+def feature_forum_post():
+    try:
+        data = request.get_json(force=True)
+        post = forum.feature_post(
+            post_id=data.get("post_id") or data.get("postId"),
+            voter_address=data.get("voter_address") or data.get("voterAddress"),
+        )
+        storage.save_forum(forum)
+        return jsonify({"success": True, "post": post})
+    except Exception as exc:
+        vorliq_logger.error("Forum feature endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
