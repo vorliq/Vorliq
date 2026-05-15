@@ -19,6 +19,7 @@ const priceRoutes = require("./routes/price");
 const achievementsRoutes = require("./routes/achievements");
 const backupRoutes = require("./routes/backup");
 const deploymentRoutes = require("./routes/deployment");
+const incidentsRoutes = require("./routes/incidents");
 const reportsRoutes = require("./routes/reports");
 const { logError, logInfo } = require("./logger");
 const { sendWeeklyReport } = require("./reports");
@@ -174,6 +175,7 @@ app.use(priceRoutes);
 app.use(achievementsRoutes);
 app.use(backupRoutes);
 app.use(deploymentRoutes);
+app.use(incidentsRoutes);
 app.use(reportsRoutes);
 
 app.use((req, res) => {

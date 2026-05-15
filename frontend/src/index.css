@@ -129,6 +129,53 @@ a {
   backdrop-filter: blur(16px);
 }
 
+.incident-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  padding: 12px max(16px, calc((100% - 1180px) / 2));
+}
+
+.incident-banner.minor {
+  background: rgba(255, 171, 74, 0.14);
+  color: var(--text);
+}
+
+.incident-banner.major,
+.incident-banner.critical {
+  background: rgba(255, 93, 108, 0.16);
+  color: var(--text);
+}
+
+.incident-banner div {
+  display: grid;
+  gap: 3px;
+}
+
+.incident-banner strong {
+  color: var(--text);
+  font-size: 0.98rem;
+}
+
+.incident-banner span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.incident-banner a {
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-strong);
+  color: var(--text);
+  font-weight: 800;
+  padding: 9px 12px;
+}
+
 .navbar-inner {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
@@ -995,6 +1042,16 @@ p {
   background: var(--blue);
 }
 
+.status-badge.minor {
+  background: var(--orange);
+}
+
+.status-badge.major,
+.status-badge.critical {
+  background: var(--red);
+  color: var(--text);
+}
+
 .vote-bar-wrap {
   display: grid;
   gap: 8px;
@@ -1234,6 +1291,39 @@ p {
 
 .health-icon.offline {
   background: var(--red);
+}
+
+.incident-status-list {
+  display: grid;
+  gap: 12px;
+}
+
+.incident-status-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--soft-surface);
+  padding: 16px;
+}
+
+.incident-status-card.major,
+.incident-status-card.critical {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.incident-meta-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--muted-2);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.incident-admin-hint {
+  margin-top: 14px;
 }
 
 .notification-panel {
@@ -1965,6 +2055,16 @@ p {
 
   .qr-panel {
     overflow: hidden;
+  }
+
+  .incident-banner {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 12px 16px;
+  }
+
+  .incident-banner a {
+    text-align: center;
   }
 }
 

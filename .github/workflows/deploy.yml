@@ -40,10 +40,28 @@ jobs:
               sed -i '/Environment=VORLIQ_DATA_DIR=/a Environment=NODE_ENV=production' /etc/systemd/system/vorliq-blockchain.service
               systemctl daemon-reload
             fi
+            mkdir -p /etc/vorliq
+            if [ ! -f /etc/vorliq/backend.env ] || ! grep -q '^ADMIN_TOKEN=' /etc/vorliq/backend.env; then
+              BACKEND_ENV_TMP="$(mktemp)"
+              if [ -f /etc/vorliq/backend.env ]; then
+                grep -v '^ADMIN_TOKEN=' /etc/vorliq/backend.env > "${BACKEND_ENV_TMP}" || true
+              fi
+              printf 'ADMIN_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "${BACKEND_ENV_TMP}"
+              install -o root -g root -m 600 "${BACKEND_ENV_TMP}" /etc/vorliq/backend.env
+              rm -f "${BACKEND_ENV_TMP}"
+            else
+              chmod 600 /etc/vorliq/backend.env
+            fi
+            if ! grep -q '^EnvironmentFile=-/etc/vorliq/backend.env' /etc/systemd/system/vorliq-backend.service; then
+              sed -i '/WorkingDirectory=\/home\/vorliq\/app\/backend/a EnvironmentFile=-/etc/vorliq/backend.env' /etc/systemd/system/vorliq-backend.service
+              systemctl daemon-reload
+            fi
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/backend && npm install'
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm install'
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm run build'
+            bash -n /home/vorliq/app/deployment/alert.sh
             bash -n /home/vorliq/app/deployment/backup.sh
+            bash -n /home/vorliq/app/deployment/monitor.sh
             bash -n /home/vorliq/app/deployment/restore_backup.sh
             bash -n /home/vorliq/app/deployment/verify_backup.sh
             bash -n /home/vorliq/app/deployment/setup_server.sh
@@ -55,8 +73,18 @@ jobs:
             cp /home/vorliq/app/deployment/backup.sh /home/vorliq/backup.sh
             chmod 750 /home/vorliq/backup.sh
             chown root:vorliq /home/vorliq/backup.sh
+            cp /home/vorliq/app/deployment/alert.sh /home/vorliq/alert.sh
+            chmod 750 /home/vorliq/alert.sh
+            chown root:vorliq /home/vorliq/alert.sh
+            cp /home/vorliq/app/deployment/monitor.sh /home/vorliq/monitor.sh
+            chmod 750 /home/vorliq/monitor.sh
+            chown root:vorliq /home/vorliq/monitor.sh
             printf '15 2 * * * root /home/vorliq/backup.sh >/dev/null 2>&1\n' >/etc/cron.d/vorliq-backup
             chmod 644 /etc/cron.d/vorliq-backup
+            printf '*/5 * * * * root /home/vorliq/monitor.sh >/dev/null 2>&1\n' >/etc/cron.d/vorliq-monitor
+            chmod 644 /etc/cron.d/vorliq-monitor
+            /home/vorliq/alert.sh warning "Vorliq deployment alert smoke test" "Deployment verified alert logging on the production server."
+            grep -q 'Vorliq deployment alert smoke test' /var/log/vorliq-alerts.log
             /home/vorliq/backup.sh
             LATEST_BACKUP="$(ls -1t /home/vorliq/backups/vorliq-backup-*.tar.gz 2>/dev/null | head -n1 || true)"
             if [ -n "${LATEST_BACKUP}" ]; then
@@ -91,6 +119,20 @@ jobs:
             done
             echo "${HEALTH_RESPONSE}"
             echo "${HEALTH_RESPONSE}" | grep -q '"success":true'
+            ADMIN_TOKEN="$(sed -n 's/^ADMIN_TOKEN=//p' /etc/vorliq/backend.env | tail -n1)"
+            test -n "${ADMIN_TOKEN}"
+            curl -fsS http://localhost:5000/api/incidents >/dev/null
+            UNAUTHORIZED_STATUS="$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:5000/api/incidents -H 'Content-Type: application/json' --data '{"title":"Unauthorized smoke test","description":"This should be rejected.","severity":"minor"}')"
+            test "${UNAUTHORIZED_STATUS}" = "401"
+            INCIDENT_RESPONSE="$(curl -fsS -X POST http://localhost:5000/api/incidents -H 'Content-Type: application/json' -H "x-admin-token: ${ADMIN_TOKEN}" --data '{"title":"Deployment incident smoke test","description":"Temporary minor incident created during deployment verification.","severity":"minor"}')"
+            INCIDENT_ID="$(printf '%s' "${INCIDENT_RESPONSE}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["incident"]["id"])')"
+            test -n "${INCIDENT_ID}"
+            curl -fsS http://localhost:5000/api/incidents/active | grep -q "${INCIDENT_ID}"
+            curl -fsS -X POST "http://localhost:5000/api/incidents/${INCIDENT_ID}/resolve" -H "x-admin-token: ${ADMIN_TOKEN}" >/dev/null
+            if curl -fsS http://localhost:5000/api/incidents/active | grep -q "${INCIDENT_ID}"; then
+              echo "Temporary deployment incident is still active after resolve."
+              exit 1
+            fi
           EOF
 
       - name: Print deployment success

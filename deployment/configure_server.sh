@@ -8,6 +8,19 @@ fi
 
 SERVER_IP="$(hostname -I | awk '{print $1}')"
 
+mkdir -p /etc/vorliq
+if [[ ! -f /etc/vorliq/backend.env ]] || ! grep -q '^ADMIN_TOKEN=' /etc/vorliq/backend.env; then
+  BACKEND_ENV_TMP="$(mktemp)"
+  if [[ -f /etc/vorliq/backend.env ]]; then
+    grep -v '^ADMIN_TOKEN=' /etc/vorliq/backend.env > "${BACKEND_ENV_TMP}" || true
+  fi
+  printf 'ADMIN_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "${BACKEND_ENV_TMP}"
+  install -o root -g root -m 600 "${BACKEND_ENV_TMP}" /etc/vorliq/backend.env
+  rm -f "${BACKEND_ENV_TMP}"
+else
+  chmod 600 /etc/vorliq/backend.env
+fi
+
 cat >/etc/systemd/system/vorliq-blockchain.service <<'SERVICE'
 [Unit]
 Description=Vorliq Blockchain API
@@ -43,6 +56,7 @@ Type=simple
 User=vorliq
 Group=vorliq
 WorkingDirectory=/home/vorliq/app/backend
+EnvironmentFile=-/etc/vorliq/backend.env
 Environment=NODE_ENV=production
 Environment=PORT=5000
 Environment=FLASK_URL=http://127.0.0.1:5001
@@ -98,8 +112,16 @@ chown -R vorliq:vorliq /home/vorliq/backups
 cp /home/vorliq/app/deployment/backup.sh /home/vorliq/backup.sh
 chmod 750 /home/vorliq/backup.sh
 chown root:vorliq /home/vorliq/backup.sh
+cp /home/vorliq/app/deployment/alert.sh /home/vorliq/alert.sh
+chmod 750 /home/vorliq/alert.sh
+chown root:vorliq /home/vorliq/alert.sh
+cp /home/vorliq/app/deployment/monitor.sh /home/vorliq/monitor.sh
+chmod 750 /home/vorliq/monitor.sh
+chown root:vorliq /home/vorliq/monitor.sh
 printf '15 2 * * * root /home/vorliq/backup.sh >/dev/null 2>&1\n' >/etc/cron.d/vorliq-backup
 chmod 644 /etc/cron.d/vorliq-backup
+printf '*/5 * * * * root /home/vorliq/monitor.sh >/dev/null 2>&1\n' >/etc/cron.d/vorliq-monitor
+chmod 644 /etc/cron.d/vorliq-monitor
 
 if [ -f /etc/letsencrypt/live/vorliq.org/fullchain.pem ] && [ -f /etc/letsencrypt/live/vorliq.org/privkey.pem ]; then
   CERT_DOMAIN=vorliq.org

@@ -8,6 +8,8 @@ DATA_DIR="${VORLIQ_DATA_DIR:-${APP_DIR}/blockchain/data}"
 BACKUP_DIR="${VORLIQ_BACKUP_DIR:-/home/vorliq/backups}"
 TIMESTAMP="$(date +%Y-%m-%d-%H%M%S)"
 TMP_DIR="$(mktemp -d)"
+ALERT_SCRIPT="${VORLIQ_ALERT_SCRIPT:-/home/vorliq/alert.sh}"
+ALERT_SENT=0
 
 cleanup() {
   rm -rf "${TMP_DIR}"
@@ -15,9 +17,27 @@ cleanup() {
 trap cleanup EXIT
 
 fail() {
+  send_failure_alert "$*"
   echo "RESTORE FAILED: $*" >&2
   exit 1
 }
+
+send_failure_alert() {
+  local message="$1"
+  if (( ALERT_SENT == 1 )); then
+    return
+  fi
+  ALERT_SENT=1
+  if [[ -x "${ALERT_SCRIPT}" ]]; then
+    "${ALERT_SCRIPT}" "critical" "Vorliq restore failed" "${message}" || true
+  fi
+}
+
+on_error() {
+  local line_number="$1"
+  send_failure_alert "Restore failed on line ${line_number} while processing ${BACKUP_ARCHIVE:-unknown archive}."
+}
+trap 'on_error "$LINENO"' ERR
 
 if [[ -z "${BACKUP_ARCHIVE}" ]]; then
   fail "usage: $0 /path/to/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz [--dry-run]"

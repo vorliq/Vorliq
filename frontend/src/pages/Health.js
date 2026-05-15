@@ -22,6 +22,7 @@ function Health() {
   const [deployment, setDeployment] = useState(null);
   const [securityStatus, setSecurityStatus] = useState(null);
   const [backupStatus, setBackupStatus] = useState(null);
+  const [activeIncidents, setActiveIncidents] = useState([]);
   const [weeklyReport, setWeeklyReport] = useState(null);
   const [registryNodes, setRegistryNodes] = useState([]);
   const [networkHealth, setNetworkHealth] = useState([]);
@@ -42,13 +43,23 @@ function Health() {
         const deploymentRequest = api.get("/deployment");
         const securityRequest = api.get("/security/status");
         const backupRequest = api.get("/backup/status");
+        const incidentsRequest = api.get("/incidents/active");
         const weeklyReportRequest = api.get("/reports/weekly");
-        const [diagnosticsResponse, registryResponse, deploymentResponse, securityResponse, backupResponse, weeklyReportResponse] = await Promise.all([
+        const [
+          diagnosticsResponse,
+          registryResponse,
+          deploymentResponse,
+          securityResponse,
+          backupResponse,
+          incidentsResponse,
+          weeklyReportResponse,
+        ] = await Promise.all([
           diagnosticsRequest,
           registryRequest,
           deploymentRequest,
           securityRequest,
           backupRequest,
+          incidentsRequest,
           weeklyReportRequest,
         ]);
         const diagnosticsResponseTime = Math.round(performance.now() - diagnosticsStart);
@@ -79,6 +90,7 @@ function Health() {
           setDeployment(deploymentResponse.data);
           setSecurityStatus(securityResponse.data);
           setBackupStatus(backupResponse.data);
+          setActiveIncidents(incidentsResponse.data.incidents || []);
           setWeeklyReport(weeklyReportResponse.data);
           setRegistryNodes(nodes);
           setNetworkHealth(nodeChecks);
@@ -256,6 +268,37 @@ function Health() {
         ) : (
           <div className="empty-state">Security status is unavailable right now.</div>
         )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <h2>Incident Status</h2>
+        {loading ? (
+          <Spinner label="Loading incident status..." />
+        ) : activeIncidents.length > 0 ? (
+          <div className="incident-status-list">
+            {activeIncidents.map((incident) => (
+              <article className={`incident-status-card ${incident.severity}`} key={incident.id}>
+                <div className="section-title">
+                  <h3>{incident.title}</h3>
+                  <span className={`status-badge ${incident.severity}`}>{incident.severity}</span>
+                </div>
+                <p>{incident.description}</p>
+                <div className="incident-meta-row">
+                  <span>Status: {incident.status}</span>
+                  <span>
+                    Updated:{" "}
+                    {incident.updated_at ? new Date(incident.updated_at).toLocaleString() : "Unavailable"}
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">All clear.</div>
+        )}
+        <p className="help-text incident-admin-hint">
+          Incident creation and updates are available through the protected API using ADMIN_TOKEN.
+        </p>
       </section>
 
       <section className="card card-pad health-section">

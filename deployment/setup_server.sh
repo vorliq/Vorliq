@@ -13,7 +13,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get upgrade -y
 
-apt-get install -y curl ca-certificates gnupg software-properties-common
+apt-get install -y curl ca-certificates gnupg software-properties-common openssl
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 
 add-apt-repository -y ppa:deadsnakes/ppa

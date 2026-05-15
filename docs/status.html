@@ -249,6 +249,35 @@
         gap: 12px;
       }
 
+      .incident-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .incident-row {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.035);
+        padding: 16px;
+      }
+
+      .incident-row.major,
+      .incident-row.critical {
+        border-color: rgba(255, 93, 108, 0.55);
+        background: rgba(255, 93, 108, 0.12);
+      }
+
+      .incident-meta {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        color: var(--muted-2);
+        font-size: 0.82rem;
+        font-weight: 800;
+        margin: 8px 0;
+        text-transform: uppercase;
+      }
+
       .block-row {
         display: grid;
         grid-template-columns: 100px minmax(0, 1fr) 210px;
@@ -338,6 +367,11 @@
         <div class="activity-list" id="activity"></div>
       </section>
 
+      <section class="section card">
+        <h2>Incidents</h2>
+        <div class="incident-list" id="incidents"></div>
+      </section>
+
       <p class="last-checked" id="last-checked">Last checked: never</p>
     </main>
 
@@ -348,12 +382,22 @@
       const servicesElement = document.getElementById("services");
       const statsElement = document.getElementById("stats");
       const activityElement = document.getElementById("activity");
+      const incidentsElement = document.getElementById("incidents");
       const statusBadge = document.getElementById("network-status");
       const statusMessage = document.getElementById("network-message");
       const lastCheckedElement = document.getElementById("last-checked");
 
       function shortHash(hash) {
         return hash ? `${hash.slice(0, 16)}...` : "Unavailable";
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
       }
 
       function serviceRow(name, ok) {
@@ -387,6 +431,7 @@
         let health = null;
         let diagnostics = null;
         let chain = null;
+        let incidents = [];
         let backendOk = false;
         let blockchainOk = false;
         const frontendOk = true;
@@ -415,12 +460,22 @@
           diagnostics = null;
         }
 
-        const allOk = backendOk && blockchainOk && frontendOk && sslOk && diagnostics?.success;
+        try {
+          const incidentResponse = await fetchJson(`${API_BASE}/incidents/active`);
+          incidents = Array.isArray(incidentResponse.incidents) ? incidentResponse.incidents : [];
+        } catch (error) {
+          incidents = [];
+        }
+
+        const hasMajorIncident = incidents.some((incident) => ["major", "critical"].includes(incident.severity));
+        const allOk = backendOk && blockchainOk && frontendOk && sslOk && diagnostics?.success && !hasMajorIncident;
         statusBadge.className = `status-badge ${allOk ? "ok" : "bad"}`;
         statusBadge.textContent = allOk ? "All Systems Operational" : "Service Disruption";
         statusMessage.textContent = allOk
           ? "The public Vorliq services are responding normally."
-          : "One or more Vorliq services did not respond correctly during the last check.";
+          : hasMajorIncident
+            ? "A major or critical incident is active. Follow updates below."
+            : "One or more Vorliq services did not respond correctly during the last check.";
 
         servicesElement.innerHTML = [
           serviceRow("Blockchain API", blockchainOk),
@@ -453,6 +508,24 @@
               )
               .join("")
           : '<p class="message">No block activity is available right now.</p>';
+
+        incidentsElement.innerHTML = incidents.length
+          ? incidents
+              .map(
+                (incident) => `
+                  <div class="incident-row ${incident.severity}">
+                    <strong>${escapeHtml(incident.title)}</strong>
+                    <div class="incident-meta">
+                      <span>${escapeHtml(incident.severity)}</span>
+                      <span>${escapeHtml(incident.status)}</span>
+                      <span>${incident.updated_at ? new Date(incident.updated_at).toLocaleString() : "Updated time unavailable"}</span>
+                    </div>
+                    <p>${escapeHtml(incident.description)}</p>
+                  </div>
+                `
+              )
+              .join("")
+          : '<p>No active incidents.</p>';
 
         lastCheckedElement.textContent = `Last checked: ${checkedAt.toLocaleString()}`;
       }

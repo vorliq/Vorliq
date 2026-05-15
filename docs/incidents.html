@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Incident Response</title>
+    <meta name="description" content="How Vorliq communicates incidents, maintenance, and service disruption updates." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      :root { --bg:#0f0f1a; --card:#1a1a2e; --card2:#20203a; --accent:#6c63ff; --text:#fff; --muted:#c7c7d4; --border:rgba(255,255,255,.12); --green:#35d07f; --orange:#ffab4a; --red:#ff5d6c; }
+      * { box-sizing:border-box; }
+      body { margin:0; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at top left,rgba(108,99,255,.18),transparent 34rem),var(--bg); color:var(--text); }
+      a { color:inherit; }
+      .wrap { width:min(980px,calc(100% - 32px)); margin:0 auto; }
+      header, footer { padding:24px 0; border-bottom:1px solid var(--border); }
+      footer { border-top:1px solid var(--border); border-bottom:0; color:var(--muted); }
+      nav { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+      .brand { display:inline-flex; align-items:center; gap:10px; color:var(--text); font-weight:900; text-decoration:none; }
+      .brand img { width:40px; height:40px; object-fit:contain; }
+      .links { display:flex; gap:10px; flex-wrap:wrap; }
+      .button { display:inline-flex; align-items:center; justify-content:center; min-height:44px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,.04); color:var(--muted); font-weight:800; padding:10px 14px; text-decoration:none; }
+      .button.primary { border-color:var(--accent); background:var(--accent); color:#fff; }
+      main { padding:46px 0 64px; }
+      .hero { display:grid; justify-items:center; text-align:center; gap:14px; margin-bottom:28px; }
+      .logo { width:96px; height:96px; object-fit:contain; }
+      .eyebrow { color:var(--green); font-size:.82rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+      h1 { margin:0; font-size:clamp(2.4rem,8vw,5rem); line-height:.95; }
+      h2 { margin:0 0 12px; font-size:1.7rem; }
+      h3 { margin:0 0 8px; }
+      p { color:var(--muted); line-height:1.8; font-size:1.03rem; }
+      section { background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.025)); border:1px solid var(--border); border-radius:12px; padding:24px; margin:18px 0; box-shadow:0 24px 70px rgba(0,0,0,.22); }
+      .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+      .severity { border:1px solid var(--border); border-radius:10px; background:var(--card2); padding:16px; }
+      .severity strong { display:block; margin-bottom:8px; }
+      .minor strong { color:var(--orange); }
+      .major strong { color:var(--red); }
+      .critical strong { color:#ffd9de; }
+      code { color:#fff; }
+      pre { overflow:auto; border:1px solid var(--border); border-radius:10px; background:#101020; color:#fff; line-height:1.6; padding:16px; }
+      .warning { border-color:rgba(255,171,74,.45); background:rgba(255,171,74,.1); }
+      @media (max-width:760px) { .grid { grid-template-columns:1fr; } .button { width:100%; } .links { width:100%; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a class="brand" href="index.html"><img src="logo.png" alt="Vorliq logo" />Vorliq</a>
+        <div class="links">
+          <a class="button" href="status.html">Status</a>
+          <a class="button" href="recovery.html">Recovery Guide</a>
+          <a class="button primary" href="https://github.com/vorliq/Vorliq">GitHub</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <section class="hero">
+        <img class="logo" src="logo.png" alt="Vorliq logo" />
+        <span class="eyebrow">Incident Response</span>
+        <h1>Clear updates when Vorliq needs attention</h1>
+        <p>Vorliq uses public incident records, app-wide maintenance banners, and operator alerts so users can see what is happening while the operator works on the underlying system.</p>
+      </section>
+
+      <section>
+        <h2>How Incidents Work</h2>
+        <p>Public incident records are stored by the backend and shown on the status page and inside the Vorliq web app. Users can read incidents without signing in, while incident creation and updates are protected by an operator-only admin token.</p>
+        <p>Active incidents are any incidents whose status is not <code>resolved</code>. The public status page shows active incidents and marks the network as a service disruption when any active major or critical incident exists.</p>
+      </section>
+
+      <section>
+        <h2>Severity Levels</h2>
+        <div class="grid">
+          <article class="severity minor"><strong>Minor</strong><p>A minor incident means a feature is degraded, delayed, or under maintenance, but the main wallet and chain experience should still be usable.</p></article>
+          <article class="severity major"><strong>Major</strong><p>A major incident means important parts of the service are unavailable or unreliable, such as the backend API, chat, forum, or public node operations.</p></article>
+          <article class="severity critical"><strong>Critical</strong><p>A critical incident means the production node, blockchain API, deployment, or data recovery path needs immediate operator attention.</p></article>
+        </div>
+      </section>
+
+      <section>
+        <h2>Where Users Check Status</h2>
+        <p>Users should check <a href="https://status.vorliq.org">status.vorliq.org</a> for public updates. The Vorliq web app also shows a maintenance banner at the top of every page while an active incident exists.</p>
+      </section>
+
+      <section class="warning">
+        <h2>Operator Token</h2>
+        <p>Incident write routes require <code>ADMIN_TOKEN</code> on the production backend. The token must be generated on the server, stored outside the repository, and never committed, printed in logs, or shared publicly.</p>
+      </section>
+
+      <section>
+        <h2>Create an Incident</h2>
+        <p>Use the protected API to create an incident. Replace <code>ADMIN_TOKEN_HERE</code> with the production admin token on the server or in a private operator shell.</p>
+        <pre><code>curl -X POST https://vorliq.org/api/incidents \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ADMIN_TOKEN_HERE" \
+  -d '{
+    "title": "Public node is degraded",
+    "description": "The public API is responding slowly while the operator investigates.",
+    "severity": "major"
+  }'</code></pre>
+      </section>
+
+      <section>
+        <h2>Update an Incident</h2>
+        <p>Move an incident through <code>investigating</code>, <code>identified</code>, <code>monitoring</code>, and <code>resolved</code> as the work progresses.</p>
+        <pre><code>curl -X PATCH https://vorliq.org/api/incidents/INCIDENT_ID_HERE \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ADMIN_TOKEN_HERE" \
+  -d '{
+    "status": "monitoring",
+    "description": "A fix has been deployed and the operator is watching recovery."
+  }'</code></pre>
+      </section>
+
+      <section>
+        <h2>Resolve an Incident</h2>
+        <p>Resolve the incident when the service has recovered and no user-facing maintenance banner is needed.</p>
+        <pre><code>curl -X POST https://vorliq.org/api/incidents/INCIDENT_ID_HERE/resolve \
+  -H "Authorization: Bearer ADMIN_TOKEN_HERE"</code></pre>
+      </section>
+    </main>
+
+    <footer><div class="wrap">2026 Vorliq. Your Community Your Coin.</div></footer>
+  </body>
+</html>

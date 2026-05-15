@@ -10,11 +10,30 @@ ARCHIVE_PATH="${BACKUP_DIR}/${ARCHIVE_NAME}"
 CONTENTS_PATH="${BACKUP_DIR}/vorliq-backup-${TIMESTAMP}.contents.txt"
 LOG_FILE="${VORLIQ_BACKUP_LOG:-${BACKUP_DIR}/backup.log}"
 TMP_DIR="$(mktemp -d)"
+ALERT_SCRIPT="${VORLIQ_ALERT_SCRIPT:-/home/vorliq/alert.sh}"
+ALERT_SENT=0
 
 cleanup() {
   rm -rf "${TMP_DIR}"
 }
 trap cleanup EXIT
+
+send_failure_alert() {
+  local message="$1"
+  if (( ALERT_SENT == 1 )); then
+    return
+  fi
+  ALERT_SENT=1
+  if [[ -x "${ALERT_SCRIPT}" ]]; then
+    "${ALERT_SCRIPT}" "critical" "Vorliq backup failed" "${message}" || true
+  fi
+}
+
+on_error() {
+  local line_number="$1"
+  send_failure_alert "Backup failed on line ${line_number}. Check ${LOG_FILE} on the production server."
+}
+trap 'on_error "$LINENO"' ERR
 
 log() {
   printf '%s %s\n' "$(date -Is)" "$*" | tee -a "${LOG_FILE}"
@@ -28,6 +47,7 @@ chmod 750 "${BACKUP_DIR}"
 
 if [[ ! -d "${APP_DIR}" ]]; then
   log "ERROR app directory does not exist: ${APP_DIR}"
+  send_failure_alert "Backup failed because app directory does not exist."
   exit 1
 fi
 
@@ -79,6 +99,7 @@ if tar -tzf "${ARCHIVE_PATH}" > "${CONTENTS_PATH}"; then
 else
   log "ERROR archive verification failed for ${ARCHIVE_PATH}"
   rm -f "${ARCHIVE_PATH}" "${CONTENTS_PATH}"
+  send_failure_alert "Backup archive verification failed for ${ARCHIVE_NAME}."
   exit 1
 fi
 

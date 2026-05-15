@@ -22,9 +22,11 @@ dist/
 .env.*
 !.env.example
 !backend/.env
-data/
+/data/
 blockchain/data/
-backend/data/
+!backend/data/
+backend/data/*
+!backend/data/.gitkeep
 stress_test/node_data/
 stress_test/results.txt
 

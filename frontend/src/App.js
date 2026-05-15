@@ -32,6 +32,7 @@ import Ambassador from "./pages/Ambassador";
 import Chat from "./pages/Chat";
 import Achievements from "./pages/Achievements";
 import Footer from "./components/Footer";
+import IncidentBanner from "./components/IncidentBanner";
 import api from "./helpers/api";
 import logo from "./assets/logo.png";
 
@@ -249,6 +250,8 @@ function AppShell() {
           </div>
         </div>
       </nav>
+
+      <IncidentBanner />
 
       <Routes>
         <Route path="/" element={<Dashboard />} />
