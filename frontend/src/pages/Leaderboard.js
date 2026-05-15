@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import ErrorMessage from "../components/ErrorMessage";
 import Spinner from "../components/Spinner";
@@ -13,8 +13,7 @@ const tabs = [
 
 function Leaderboard() {
   const [activeTab, setActiveTab] = useState("holders");
-  const [chainData, setChainData] = useState(null);
-  const [loans, setLoans] = useState([]);
+  const [leaderboard, setLeaderboard] = useState({ holders: [], miners: [], lenders: [] });
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -23,14 +22,14 @@ function Leaderboard() {
 
     async function loadLeaderboard() {
       try {
-        const [chainResponse, loansResponse] = await Promise.all([
-          api.get("/chain"),
-          api.get("/lending/loans"),
-        ]);
+        const response = await api.get("/leaderboard", { params: { limit: 20 } });
 
         if (mounted) {
-          setChainData(chainResponse.data);
-          setLoans(loansResponse.data.loans || []);
+          setLeaderboard({
+            holders: response.data.holders || [],
+            miners: response.data.miners || [],
+            lenders: response.data.lenders || [],
+          });
           setErrorMessage("");
         }
       } catch (error) {
@@ -50,42 +49,6 @@ function Leaderboard() {
       mounted = false;
     };
   }, []);
-
-  const leaderboard = useMemo(() => {
-    const chain = chainData?.chain || [];
-    const balances = new Map();
-    const miners = new Map();
-    const repaidLoans = new Map();
-
-    chain.forEach((block) => {
-      if (block.miner_address) {
-        miners.set(block.miner_address, (miners.get(block.miner_address) || 0) + 1);
-      }
-
-      (block.transactions || []).forEach((transaction) => {
-        const sender = transaction.sender_address;
-        const receiver = transaction.receiver_address;
-        const amount = Number(transaction.amount) || 0;
-        balances.set(sender, (balances.get(sender) || 0) - amount);
-        balances.set(receiver, (balances.get(receiver) || 0) + amount);
-      });
-    });
-
-    loans
-      .filter((loan) => loan.status === "repaid")
-      .forEach((loan) => {
-        const requester = loan.requester_address;
-        if (requester) {
-          repaidLoans.set(requester, (repaidLoans.get(requester) || 0) + 1);
-        }
-      });
-
-    return {
-      holders: rankMap(balances, { positiveOnly: true }),
-      miners: rankMap(miners),
-      lenders: rankMap(repaidLoans),
-    };
-  }, [chainData, loans]);
 
   if (loading) {
     return (
@@ -165,12 +128,12 @@ function LeaderboardTable({ rows, title, valueLabel, valueSuffix = "" }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map(([address, value], index) => (
-                <tr key={address}>
+              {rows.map((row, index) => (
+                <tr key={row.address}>
                   <td>{index + 1}</td>
-                  <td>{shorten(address)}</td>
+                  <td>{shorten(row.address)}</td>
                   <td>
-                    {formatNumber(value)} {valueSuffix}
+                    {formatNumber(row.value)} {valueSuffix}
                   </td>
                 </tr>
               ))}
@@ -180,18 +143,6 @@ function LeaderboardTable({ rows, title, valueLabel, valueSuffix = "" }) {
       )}
     </>
   );
-}
-
-function rankMap(map, { positiveOnly = false } = {}) {
-  return Array.from(map.entries())
-    .filter(
-      ([address, value]) =>
-        address &&
-        !["SYSTEM", "LENDING_POOL"].includes(address) &&
-        (!positiveOnly || value > 0)
-    )
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 20);
 }
 
 function shorten(address) {

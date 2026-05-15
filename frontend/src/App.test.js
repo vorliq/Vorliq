@@ -52,6 +52,34 @@ function defaultApiGet(path) {
     return Promise.resolve({ data: { success: true, chain: [], is_valid: true } });
   }
 
+  if (path === "/chain/summary") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        summary: {
+          block_height: 0,
+          total_blocks: 1,
+          total_transactions: 0,
+          current_mining_reward: 50,
+          total_issued: 0,
+          chain_valid: true,
+        },
+      },
+    });
+  }
+
+  if (path === "/chain/blocks") {
+    return Promise.resolve({ data: { success: true, blocks: [], total_blocks: 0, has_more: false } });
+  }
+
+  if (path === "/chain/address") {
+    return Promise.resolve({ data: { success: true, transactions: [], total: 0, has_more: false } });
+  }
+
+  if (path === "/leaderboard") {
+    return Promise.resolve({ data: { success: true, holders: [], miners: [], lenders: [] } });
+  }
+
   if (path === "/economics") {
     return Promise.resolve({
       data: {

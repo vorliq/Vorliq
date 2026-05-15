@@ -99,6 +99,42 @@ class BlockchainTests(unittest.TestCase):
         self.assertEqual(blockchain.get_block_height(), 10)
         self.assertEqual(blockchain.difficulty, 3)
 
+    def test_chain_summary_does_not_return_full_chain(self):
+        blockchain = Blockchain()
+        summary = blockchain.get_chain_summary()
+
+        self.assertEqual(summary["block_height"], 0)
+        self.assertEqual(summary["total_blocks"], 1)
+        self.assertEqual(summary["total_transactions"], 0)
+        self.assertTrue(summary["chain_valid"])
+        self.assertNotIn("chain", summary)
+
+    def test_blocks_page_returns_newest_first_with_has_more(self):
+        blockchain = Blockchain()
+        blockchain.mine_pending_transactions("miner_one")
+        self.make_latest_block_ready(blockchain)
+        blockchain.mine_pending_transactions("miner_two")
+
+        blocks, total, has_more = blockchain.get_blocks_page(limit=1, offset=0)
+
+        self.assertEqual(total, 3)
+        self.assertTrue(has_more)
+        self.assertEqual(blocks[0]["index"], 2)
+
+    def test_address_transactions_are_paginated_and_include_block_metadata(self):
+        blockchain = Blockchain()
+        blockchain.mine_pending_transactions("miner_one")
+        self.make_latest_block_ready(blockchain)
+        blockchain.mine_pending_transactions("miner_two")
+
+        transactions, total, has_more = blockchain.get_address_transactions("miner_one", limit=1, offset=0)
+
+        self.assertEqual(total, 1)
+        self.assertFalse(has_more)
+        self.assertEqual(transactions[0]["receiver_address"], "miner_one")
+        self.assertEqual(transactions[0]["block_index"], 2)
+        self.assertIn("block_timestamp", transactions[0])
+
 
 if __name__ == "__main__":
     unittest.main()

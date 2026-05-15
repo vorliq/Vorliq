@@ -13,6 +13,14 @@ function trimNodeUrl(nodeUrl) {
   return String(nodeUrl || "https://vorliq.org").replace(/\/+$/, "");
 }
 
+function paginationQuery(limit, offset) {
+  const params = new URLSearchParams();
+  if (limit !== undefined) params.set("limit", String(limit));
+  if (offset !== undefined) params.set("offset", String(offset));
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 class VorliqSDK {
   /**
    * Creates a Vorliq SDK client.
@@ -60,6 +68,51 @@ class VorliqSDK {
    */
   async getChain() {
     return this.request("/api/chain");
+  }
+
+  /**
+   * Gets a lightweight summary of the blockchain without downloading every block.
+   *
+   * @returns {Promise<object>} Chain summary containing height, totals, last block details, and validity.
+   */
+  async getChainSummary() {
+    const data = await this.request("/api/chain/summary");
+    return data.summary || data;
+  }
+
+  /**
+   * Gets a paginated page of blocks ordered newest first.
+   *
+   * @param {number} [limit=50] - Maximum number of blocks to return.
+   * @param {number} [offset=0] - Number of newest blocks to skip.
+   * @returns {Promise<object>} Paginated block response with blocks, total_blocks, limit, offset, and has_more.
+   */
+  async getBlocks(limit = 50, offset = 0) {
+    return this.request(`/api/chain/blocks${paginationQuery(limit, offset)}`);
+  }
+
+  /**
+   * Gets paginated transactions involving one wallet address.
+   *
+   * @param {string} address - Wallet address to search.
+   * @param {number} [limit=50] - Maximum number of transactions to return.
+   * @param {number} [offset=0] - Number of matching transactions to skip.
+   * @returns {Promise<object>} Paginated transaction response with total count and has_more.
+   */
+  async getAddressTransactions(address, limit = 50, offset = 0) {
+    const query = new URLSearchParams({ address, limit: String(limit), offset: String(offset) });
+    return this.request(`/api/chain/address?${query.toString()}`);
+  }
+
+  /**
+   * Gets the community leaderboard calculated server side.
+   *
+   * @param {number} [limit=20] - Maximum rows per leaderboard section.
+   * @param {number} [offset=0] - Number of rows to skip per section.
+   * @returns {Promise<object>} Leaderboard response containing holders, miners, and lenders.
+   */
+  async getLeaderboard(limit = 20, offset = 0) {
+    return this.request(`/api/leaderboard${paginationQuery(limit, offset)}`);
   }
 
   /**

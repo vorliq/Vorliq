@@ -249,6 +249,51 @@ class Blockchain:
     def get_chain_data(self) -> list[dict[str, Any]]:
         return [block.to_dict() for block in self.chain]
 
+    def get_blocks_page(self, limit: int, offset: int) -> tuple[list[dict[str, Any]], int, bool]:
+        blocks = [block.to_dict() for block in reversed(self.chain)]
+        total = len(blocks)
+        page = blocks[offset : offset + limit]
+        return page, total, offset + limit < total
+
+    def get_chain_summary(self) -> dict[str, Any]:
+        last_block = self.get_latest_block()
+        return {
+            "block_height": self.get_block_height(),
+            "total_blocks": len(self.chain),
+            "total_transactions": sum(len(block.transactions or []) for block in self.chain),
+            "total_issued": self.get_total_issued(),
+            "current_difficulty": self.difficulty,
+            "current_mining_reward": self.get_current_mining_reward(),
+            "last_block_hash": last_block.hash,
+            "last_block_timestamp": last_block.timestamp,
+            "chain_valid": self.is_chain_valid(),
+        }
+
+    def get_address_transactions(self, address: str, limit: int, offset: int) -> tuple[list[dict[str, Any]], int, bool]:
+        if not address:
+            raise ValueError("address is required")
+
+        matches: list[dict[str, Any]] = []
+        for block in reversed(self.chain):
+            for index, transaction in enumerate(block.transactions or []):
+                if isinstance(transaction, dict):
+                    transaction = Transaction.from_dict(transaction)
+                if transaction.sender_address == address or transaction.receiver_address == address:
+                    transaction_data = transaction.to_dict()
+                    transaction_data.update(
+                        {
+                            "block_index": block.index,
+                            "block_hash": block.hash,
+                            "block_timestamp": block.timestamp,
+                            "transaction_index": index,
+                        }
+                    )
+                    matches.append(transaction_data)
+
+        total = len(matches)
+        page = matches[offset : offset + limit]
+        return page, total, offset + limit < total
+
     def get_block_height(self) -> int:
         return len(self.chain) - 1
 

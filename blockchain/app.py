@@ -37,6 +37,8 @@ ALLOWED_ORIGINS = {
     "https://vorliq.github.io/Vorliq",
 }
 MAX_PUBLIC_TRANSACTION_AMOUNT = 21_000_000.0
+DEFAULT_PAGE_LIMIT = 50
+MAX_PAGE_LIMIT = 200
 MAX_TEXT_LENGTHS = {
     "forum_title": 140,
     "forum_body": 5000,
@@ -151,6 +153,25 @@ def _require_enum(value: object, field_name: str, allowed: set[str]) -> str:
     return normalized
 
 
+def _pagination(default_limit: int = DEFAULT_PAGE_LIMIT) -> tuple[int, int]:
+    try:
+        limit = int(request.args.get("limit", default_limit))
+        offset = int(request.args.get("offset", 0))
+    except (TypeError, ValueError):
+        raise ValueError("limit and offset must be integers")
+    if limit <= 0:
+        raise ValueError("limit must be greater than zero")
+    if offset < 0:
+        raise ValueError("offset must be zero or greater")
+    return min(limit, MAX_PAGE_LIMIT), offset
+
+
+def _page(items: list, limit: int, offset: int) -> tuple[list, int, bool]:
+    total = len(items)
+    page_items = items[offset : offset + limit]
+    return page_items, total, offset + limit < total
+
+
 def _is_private_hostname(hostname: str) -> bool:
     host = hostname.lower()
     if host in {"localhost", "::1"} or host.endswith(".local"):
@@ -198,6 +219,51 @@ def health():
 @app.get("/chain")
 def get_chain():
     return jsonify(node.get_full_chain())
+
+
+@app.get("/chain/blocks")
+def get_chain_blocks():
+    try:
+        limit, offset = _pagination()
+        blocks, total, has_more = node.blockchain.get_blocks_page(limit, offset)
+        return jsonify(
+            {
+                "success": True,
+                "blocks": blocks,
+                "total_blocks": total,
+                "limit": limit,
+                "offset": offset,
+                "has_more": has_more,
+            }
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/chain/summary")
+def get_chain_summary():
+    return jsonify({"success": True, "summary": node.blockchain.get_chain_summary()})
+
+
+@app.get("/chain/address")
+def get_chain_address():
+    try:
+        address = _require_text(request.args.get("address"), "address", 160)
+        limit, offset = _pagination()
+        transactions, total, has_more = node.blockchain.get_address_transactions(address, limit, offset)
+        return jsonify(
+            {
+                "success": True,
+                "address": address,
+                "transactions": transactions,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+                "has_more": has_more,
+            }
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.get("/pending")
@@ -429,14 +495,24 @@ def get_treasury_balance():
 def get_treasury_proposals():
     if treasury.expire_proposals():
         storage.save_treasury(treasury)
-    return jsonify({"success": True, "proposals": treasury.get_active_proposals()})
+    try:
+        limit, offset = _pagination()
+        proposals, total, has_more = _page(treasury.get_active_proposals(), limit, offset)
+        return jsonify({"success": True, "proposals": proposals, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.get("/treasury/all")
 def get_all_treasury_proposals():
     if treasury.expire_proposals():
         storage.save_treasury(treasury)
-    return jsonify({"success": True, "proposals": treasury.get_all_proposals()})
+    try:
+        limit, offset = _pagination()
+        proposals, total, has_more = _page(treasury.get_all_proposals(), limit, offset)
+        return jsonify({"success": True, "proposals": proposals, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.post("/treasury/propose")
@@ -503,7 +579,12 @@ def get_price_signals():
     expired = price_discovery.expire_old_signals()
     if expired:
         storage.save_price_discovery(price_discovery)
-    return jsonify({"success": True, "signals": price_discovery.get_active_signals()})
+    try:
+        limit, offset = _pagination()
+        signals, total, has_more = _page(price_discovery.get_active_signals(), limit, offset)
+        return jsonify({"success": True, "signals": signals, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.get("/price/median")
@@ -676,7 +757,12 @@ def create_lending_request():
 
 @app.get("/lending/loans")
 def get_lending_loans():
-    return jsonify({"loans": lending_pool.get_all_loans()})
+    try:
+        limit, offset = _pagination()
+        loans, total, has_more = _page(lending_pool.get_all_loans(), limit, offset)
+        return jsonify({"success": True, "loans": loans, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.get("/lending/loan")
@@ -762,12 +848,22 @@ def create_exchange_offer():
 
 @app.get("/exchange/offers")
 def get_exchange_open_offers():
-    return jsonify({"success": True, "offers": exchange.get_open_offers()})
+    try:
+        limit, offset = _pagination()
+        offers, total, has_more = _page(exchange.get_open_offers(), limit, offset)
+        return jsonify({"success": True, "offers": offers, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.get("/exchange/all")
 def get_exchange_all_offers():
-    return jsonify({"success": True, "offers": exchange.get_all_offers()})
+    try:
+        limit, offset = _pagination()
+        offers, total, has_more = _page(exchange.get_all_offers(), limit, offset)
+        return jsonify({"success": True, "offers": offers, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.get("/exchange/my")
@@ -849,19 +945,31 @@ def create_forum_post():
 
 @app.get("/forum/posts")
 def get_forum_posts():
-    return jsonify({"success": True, "posts": forum.get_all_posts()})
+    try:
+        limit, offset = _pagination()
+        posts, total, has_more = _page(forum.get_all_posts(), limit, offset)
+        return jsonify({"success": True, "posts": posts, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.get("/forum/featured")
 def get_featured_forum_posts():
-    return jsonify({"success": True, "posts": forum.get_featured_posts()})
+    try:
+        limit, offset = _pagination()
+        posts, total, has_more = _page(forum.get_featured_posts(), limit, offset)
+        return jsonify({"success": True, "posts": posts, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.get("/forum/search")
 def search_forum_posts():
     try:
         query = request.args.get("q", "")
-        return jsonify({"success": True, "posts": forum.search_posts(query)})
+        limit, offset = _pagination()
+        posts, total, has_more = _page(forum.search_posts(query), limit, offset)
+        return jsonify({"success": True, "posts": posts, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
     except Exception as exc:
         vorliq_logger.error("Forum search endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
@@ -1009,13 +1117,23 @@ def create_governance_proposal():
 @app.get("/governance/proposals")
 def get_active_governance_proposals():
     _expire_governance_if_needed()
-    return jsonify({"success": True, "proposals": governance.get_active_proposals()})
+    try:
+        limit, offset = _pagination()
+        proposals, total, has_more = _page(governance.get_active_proposals(), limit, offset)
+        return jsonify({"success": True, "proposals": proposals, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.get("/governance/all")
 def get_all_governance_proposals():
     _expire_governance_if_needed()
-    return jsonify({"success": True, "proposals": governance.get_all_proposals()})
+    try:
+        limit, offset = _pagination()
+        proposals, total, has_more = _page(governance.get_all_proposals(), limit, offset)
+        return jsonify({"success": True, "proposals": proposals, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.get("/governance/proposal")
@@ -1062,6 +1180,72 @@ def vote_on_governance_proposal():
 @app.get("/governance/settings")
 def get_governance_settings():
     return jsonify({"success": True, "settings": _current_governance_settings()})
+
+
+@app.get("/leaderboard")
+def get_leaderboard():
+    try:
+        limit, offset = _pagination(default_limit=20)
+        excluded_addresses = set(SYSTEM_ADDRESSES) | {TREASURY_ADDRESS}
+        balances: dict[str, float] = {}
+        miners: dict[str, int] = {}
+        lenders: dict[str, int] = {}
+
+        for block in node.blockchain.chain:
+            miner_address = getattr(block, "miner_address", None)
+            if miner_address and miner_address not in excluded_addresses:
+                miners[miner_address] = miners.get(miner_address, 0) + 1
+
+            for transaction in block.transactions or []:
+                if isinstance(transaction, dict):
+                    transaction = Transaction.from_dict(transaction)
+                sender = transaction.sender_address
+                receiver = transaction.receiver_address
+                amount = float(transaction.amount)
+                balances[sender] = balances.get(sender, 0.0) - amount
+                balances[receiver] = balances.get(receiver, 0.0) + amount
+
+        for loan in lending_pool.get_all_loans():
+            if loan.get("status") == "repaid" and loan.get("requester_address"):
+                address = loan["requester_address"]
+                lenders[address] = lenders.get(address, 0) + 1
+
+        def ranked(mapping: dict[str, float | int], positive_only: bool = False) -> tuple[list[dict], int, bool]:
+            rows = [
+                {"address": address, "value": value}
+                for address, value in mapping.items()
+                if address and address not in excluded_addresses and (not positive_only or float(value) > 0)
+            ]
+            rows.sort(key=lambda row: float(row["value"]), reverse=True)
+            page_rows, total_rows, has_more_rows = _page(rows, limit, offset)
+            return page_rows, total_rows, has_more_rows
+
+        holders, holders_total, holders_more = ranked(balances, positive_only=True)
+        top_miners, miners_total, miners_more = ranked(miners)
+        top_lenders, lenders_total, lenders_more = ranked(lenders)
+
+        return jsonify(
+            {
+                "success": True,
+                "limit": limit,
+                "offset": offset,
+                "holders": holders,
+                "miners": top_miners,
+                "lenders": top_lenders,
+                "totals": {
+                    "holders": holders_total,
+                    "miners": miners_total,
+                    "lenders": lenders_total,
+                },
+                "has_more": {
+                    "holders": holders_more,
+                    "miners": miners_more,
+                    "lenders": lenders_more,
+                },
+            }
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 if __name__ == "__main__":

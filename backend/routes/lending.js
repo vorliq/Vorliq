@@ -1,6 +1,7 @@
 const express = require("express");
 const axios = require("axios");
 const { handleRouteError } = require("./routeError");
+const { paginationParams } = require("../pagination");
 
 const router = express.Router();
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
@@ -16,9 +17,12 @@ router.post("/api/lending/request", async (req, res, next) => {
 
 router.get("/api/lending/loans", async (req, res, next) => {
   try {
-    const response = await axios.get(`${flaskUrl}/lending/loans`);
+    const response = await axios.get(`${flaskUrl}/lending/loans`, { params: paginationParams(req) });
     res.status(response.status).json(response.data);
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     return handleRouteError(res, error, "GET /api/lending/loans", "Unable to load loan requests.");
   }
 });

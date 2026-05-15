@@ -10,6 +10,27 @@ const { VorliqSDK } = require("./dist/vorliq-sdk");
 const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
 ```
 
+Production applications should prefer the lightweight and paginated methods when they do not need the entire blockchain. The `getChain` method remains available for compatibility and local tooling, but it downloads the full chain and can become expensive as the network grows. For dashboards, explorers, and account history, use `getChainSummary`, `getBlocks`, `getAddressTransactions`, and `getLeaderboard`.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const summary = await vorliq.getChainSummary();
+  const firstPage = await vorliq.getBlocks(25, 0);
+  const walletHistory = await vorliq.getAddressTransactions("VLQ_ADDRESS_HERE", 25, 0);
+  const leaderboard = await vorliq.getLeaderboard(10, 0);
+
+  console.log("Height:", summary.block_height);
+  console.log("Newest blocks:", firstPage.blocks.length);
+  console.log("Wallet transactions:", walletHistory.transactions.length);
+  console.log("Top holders:", leaderboard.holders);
+}
+
+main().catch(console.error);
+```
+
 To get a wallet balance, create a client and pass the wallet address to `getBalance`. This complete example prints the balance as a number.
 
 ```js

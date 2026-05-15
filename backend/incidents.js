@@ -55,6 +55,17 @@ function listActiveIncidents() {
   return listIncidents().filter((incident) => incident.status !== "resolved");
 }
 
+function pageIncidents(incidents, { limit, offset }) {
+  const total = incidents.length;
+  return {
+    incidents: incidents.slice(offset, offset + limit),
+    total,
+    limit,
+    offset,
+    has_more: offset + limit < total,
+  };
+}
+
 function requireText(value, fieldName, maxLength) {
   if (typeof value !== "string" || !value.trim()) {
     throw new Error(`${fieldName} is required`);
@@ -141,6 +152,7 @@ module.exports = {
   createIncident,
   listActiveIncidents,
   listIncidents,
+  pageIncidents,
   resolveIncident,
   updateIncident,
 };

@@ -125,6 +125,13 @@ app.use("/api/forum", express.json({ limit: "2.5mb" }));
 app.use(express.json({ limit: "100kb" }));
 app.use((req, res, next) => {
   logInfo(`${req.method} ${req.path}`);
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (duration > 1000) {
+      logInfo(`Slow route ${req.method} ${req.path} completed in ${duration}ms with status ${res.statusCode}`);
+    }
+  });
   next();
 });
 app.use("/api", generalLimiter, apiSlowDown);

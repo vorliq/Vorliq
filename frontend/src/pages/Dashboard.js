@@ -26,8 +26,7 @@ function shortAddress(address) {
 }
 
 function Dashboard() {
-  const [chainData, setChainData] = useState(null);
-  const [economics, setEconomics] = useState(null);
+  const [summary, setSummary] = useState(null);
   const [featuredPosts, setFeaturedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -38,15 +37,13 @@ function Dashboard() {
 
     async function loadDashboard() {
       try {
-        const [chainResponse, economicsResponse, featuredResponse] = await Promise.all([
-          api.get("/chain"),
-          api.get("/economics"),
-          api.get("/forum/featured"),
+        const [summaryResponse, featuredResponse] = await Promise.all([
+          api.get("/chain/summary"),
+          api.get("/forum/featured", { params: { limit: 3 } }),
         ]);
         if (mounted) {
           setErrorMessage("");
-          setChainData(chainResponse.data);
-          setEconomics(economicsResponse.data);
+          setSummary(summaryResponse.data.summary || {});
           setFeaturedPosts((featuredResponse.data.posts || []).slice(0, 3));
           setLastUpdated(new Date());
         }
@@ -69,18 +66,15 @@ function Dashboard() {
   }, []);
 
   const stats = useMemo(() => {
-    const chain = chainData?.chain || [];
-    const transactions = chain.reduce((total, block) => total + (block.transactions?.length || 0), 0);
-
     return {
-      blocks: chain.length,
-      transactions,
-      reward: economics?.current_mining_reward ?? chainData?.mining_reward ?? 50,
-      blockHeight: economics?.current_block_height ?? Math.max(chain.length - 1, 0),
-      totalIssued: economics?.total_issued ?? 0,
-      valid: Boolean(chainData?.is_valid),
+      blocks: summary?.total_blocks ?? 0,
+      transactions: summary?.total_transactions ?? 0,
+      reward: summary?.current_mining_reward ?? 50,
+      blockHeight: summary?.block_height ?? 0,
+      totalIssued: summary?.total_issued ?? 0,
+      valid: Boolean(summary?.chain_valid),
     };
-  }, [chainData, economics]);
+  }, [summary]);
 
   return (
     <main className="page">

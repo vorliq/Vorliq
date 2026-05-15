@@ -1,6 +1,7 @@
 const express = require("express");
 const axios = require("axios");
 const { handleRouteError } = require("./routeError");
+const { paginationParams } = require("../pagination");
 
 const router = express.Router();
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
@@ -16,18 +17,24 @@ router.post("/api/forum/post", async (req, res) => {
 
 router.get("/api/forum/posts", async (req, res) => {
   try {
-    const response = await axios.get(`${flaskUrl}/forum/posts`);
+    const response = await axios.get(`${flaskUrl}/forum/posts`, { params: paginationParams(req) });
     res.status(response.status).json(response.data);
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     return handleRouteError(res, error, "GET /api/forum/posts", "Unable to load forum posts.");
   }
 });
 
 router.get("/api/forum/featured", async (req, res) => {
   try {
-    const response = await axios.get(`${flaskUrl}/forum/featured`);
+    const response = await axios.get(`${flaskUrl}/forum/featured`, { params: paginationParams(req) });
     res.status(response.status).json(response.data);
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     return handleRouteError(res, error, "GET /api/forum/featured", "Unable to load featured forum posts.");
   }
 });
@@ -46,10 +53,13 @@ router.get("/api/forum/post", async (req, res) => {
 router.get("/api/forum/search", async (req, res) => {
   try {
     const response = await axios.get(`${flaskUrl}/forum/search`, {
-      params: { q: req.query.q },
+      params: { q: req.query.q, ...paginationParams(req) },
     });
     res.status(response.status).json(response.data);
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     return handleRouteError(res, error, "GET /api/forum/search", "Unable to search forum posts.");
   }
 });

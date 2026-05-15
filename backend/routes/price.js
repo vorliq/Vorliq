@@ -1,6 +1,7 @@
 const express = require("express");
 const axios = require("axios");
 const { handleRouteError } = require("./routeError");
+const { paginationParams } = require("../pagination");
 
 const router = express.Router();
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
@@ -16,9 +17,12 @@ router.post("/api/price/signal", async (req, res) => {
 
 router.get("/api/price/signals", async (req, res) => {
   try {
-    const response = await axios.get(`${flaskUrl}/price/signals`);
+    const response = await axios.get(`${flaskUrl}/price/signals`, { params: paginationParams(req) });
     res.status(response.status).json(response.data);
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     return handleRouteError(res, error, "GET /api/price/signals", "Unable to load price signals.");
   }
 });

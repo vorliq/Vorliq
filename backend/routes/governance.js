@@ -1,6 +1,7 @@
 const express = require("express");
 const axios = require("axios");
 const { handleRouteError } = require("./routeError");
+const { paginationParams } = require("../pagination");
 
 const router = express.Router();
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
@@ -16,18 +17,24 @@ router.post("/api/governance/propose", async (req, res) => {
 
 router.get("/api/governance/proposals", async (req, res) => {
   try {
-    const response = await axios.get(`${flaskUrl}/governance/proposals`);
+    const response = await axios.get(`${flaskUrl}/governance/proposals`, { params: paginationParams(req) });
     res.status(response.status).json(response.data);
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     return handleRouteError(res, error, "GET /api/governance/proposals", "Unable to load active governance proposals.");
   }
 });
 
 router.get("/api/governance/all", async (req, res) => {
   try {
-    const response = await axios.get(`${flaskUrl}/governance/all`);
+    const response = await axios.get(`${flaskUrl}/governance/all`, { params: paginationParams(req) });
     res.status(response.status).json(response.data);
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     return handleRouteError(res, error, "GET /api/governance/all", "Unable to load governance history.");
   }
 });

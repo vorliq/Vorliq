@@ -1,4 +1,5 @@
 const express = require("express");
+const { sendCachedJson } = require("../cache");
 const { generateWeeklyReport } = require("../reports");
 const { logError } = require("../logger");
 
@@ -6,8 +7,10 @@ const router = express.Router();
 
 router.get("/api/reports/weekly", async (req, res) => {
   try {
-    const report = await generateWeeklyReport({ sendEmail: false });
-    res.json(report);
+    return sendCachedJson(req, res, "weekly-report", 60_000, async () => {
+      const report = await generateWeeklyReport({ sendEmail: false });
+      return { status: 200, data: report };
+    });
   } catch (error) {
     logError(`GET /api/reports/weekly failed: ${error.message}`);
     res.status(503).json({

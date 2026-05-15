@@ -1,6 +1,7 @@
 const express = require("express");
 const axios = require("axios");
 const { handleRouteError } = require("./routeError");
+const { paginationParams } = require("../pagination");
 
 const router = express.Router();
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
@@ -16,18 +17,24 @@ router.post("/api/exchange/offer", async (req, res) => {
 
 router.get("/api/exchange/offers", async (req, res) => {
   try {
-    const response = await axios.get(`${flaskUrl}/exchange/offers`);
+    const response = await axios.get(`${flaskUrl}/exchange/offers`, { params: paginationParams(req) });
     res.status(response.status).json(response.data);
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     return handleRouteError(res, error, "GET /api/exchange/offers", "Unable to load exchange offers.");
   }
 });
 
 router.get("/api/exchange/all", async (req, res) => {
   try {
-    const response = await axios.get(`${flaskUrl}/exchange/all`);
+    const response = await axios.get(`${flaskUrl}/exchange/all`, { params: paginationParams(req) });
     res.status(response.status).json(response.data);
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     return handleRouteError(res, error, "GET /api/exchange/all", "Unable to load exchange history.");
   }
 });

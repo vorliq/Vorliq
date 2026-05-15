@@ -14,7 +14,7 @@ function Account() {
   const { addNotification } = useNotifications();
   const previousIncomingCountRef = useRef(null);
   const [balance, setBalance] = useState(null);
-  const [chain, setChain] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [loans, setLoans] = useState([]);
   const [earnedAchievements, setEarnedAchievements] = useState([]);
   const [allAchievements, setAllAchievements] = useState([]);
@@ -33,17 +33,17 @@ function Account() {
 
     async function loadAccount() {
       try {
-        const [balanceResponse, chainResponse, loansResponse, earnedResponse, allAchievementsResponse] = await Promise.all([
+        const [balanceResponse, transactionResponse, loansResponse, earnedResponse, allAchievementsResponse] = await Promise.all([
           api.get("/wallet/balance", { params: { address: wallet.address } }),
-          api.get("/chain"),
-          api.get("/lending/loans"),
+          api.get("/chain/address", { params: { address: wallet.address, limit: 100 } }),
+          api.get("/lending/loans", { params: { limit: 200 } }),
           api.get("/achievements", { params: { address: wallet.address } }),
           api.get("/achievements/all"),
         ]);
 
         if (mounted) {
           setBalance(balanceResponse.data.balance);
-          setChain(chainResponse.data.chain || []);
+          setTransactions(transactionResponse.data.transactions || []);
           setLoans(loansResponse.data.loans || []);
           setEarnedAchievements(earnedResponse.data.achievements || []);
           setAllAchievements(allAchievementsResponse.data.achievements || []);
@@ -68,26 +68,18 @@ function Account() {
   }, [wallet.address]);
 
   const myTransactions = useMemo(() => {
-    return chain.flatMap((block) =>
-      (block.transactions || [])
-        .filter(
-          (transaction) =>
-            transaction.sender_address === wallet.address ||
-            transaction.receiver_address === wallet.address
-        )
-        .map((transaction) => {
-          const sent = transaction.sender_address === wallet.address;
-          const otherParty = sent ? transaction.receiver_address : transaction.sender_address;
-          return {
-            blockIndex: block.index,
-            direction: sent ? "Sent" : "Received",
-            otherParty,
-            amount: transaction.amount,
-            timestamp: block.timestamp,
-          };
-        })
-    );
-  }, [chain, wallet.address]);
+    return transactions.map((transaction) => {
+      const sent = transaction.sender_address === wallet.address;
+      const otherParty = sent ? transaction.receiver_address : transaction.sender_address;
+      return {
+        blockIndex: transaction.block_index,
+        direction: sent ? "Sent" : "Received",
+        otherParty,
+        amount: transaction.amount,
+        timestamp: transaction.block_timestamp || transaction.timestamp,
+      };
+    });
+  }, [transactions, wallet.address]);
 
   const myLoans = useMemo(
     () => loans.filter((loan) => loan.requester_address === wallet.address),

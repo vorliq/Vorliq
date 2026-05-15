@@ -3,10 +3,12 @@ const {
   createIncident,
   listActiveIncidents,
   listIncidents,
+  pageIncidents,
   resolveIncident,
   updateIncident,
 } = require("../incidents");
 const { logError } = require("../logger");
+const { paginationParams } = require("../pagination");
 
 const router = express.Router();
 
@@ -35,19 +37,25 @@ function requireAdmin(req, res, next) {
 
 router.get("/api/incidents", (req, res) => {
   try {
-    res.json({ success: true, incidents: listIncidents() });
+    res.json({ success: true, ...pageIncidents(listIncidents(), paginationParams(req)) });
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     logError(`GET /api/incidents failed: ${error.message}`);
-    res.status(500).json({ success: false, message: "Incidents are currently unavailable." });
+    return res.status(500).json({ success: false, message: "Incidents are currently unavailable." });
   }
 });
 
 router.get("/api/incidents/active", (req, res) => {
   try {
-    res.json({ success: true, incidents: listActiveIncidents() });
+    res.json({ success: true, ...pageIncidents(listActiveIncidents(), paginationParams(req)) });
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     logError(`GET /api/incidents/active failed: ${error.message}`);
-    res.status(500).json({ success: false, message: "Active incidents are currently unavailable." });
+    return res.status(500).json({ success: false, message: "Active incidents are currently unavailable." });
   }
 });
 
