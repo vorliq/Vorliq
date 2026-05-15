@@ -8,6 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { CameraView, Camera } from "expo-camera";
 import * as Crypto from "expo-crypto";
 import elliptic from "elliptic";
 import { sendTransaction } from "../api";
@@ -59,6 +60,27 @@ function extractPrivateKeyHex(privateKeyPem) {
   throw new Error("Unable to read private key.");
 }
 
+function parseVorliqPaymentUrl(value) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "vorliq:" || url.hostname !== "pay") {
+      return null;
+    }
+
+    const to = url.searchParams.get("to");
+    if (!to) {
+      return null;
+    }
+
+    return {
+      to,
+      amount: url.searchParams.get("amount") || "",
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function signVorliqTransaction(wallet, receiverAddress, amount) {
   const timestamp = Date.now() / 1000;
   const payload =
@@ -90,6 +112,8 @@ export default function SendScreen() {
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -134,6 +158,32 @@ export default function SendScreen() {
     setSending(false);
   };
 
+  const openScanner = async () => {
+    setError("");
+    const permission = await Camera.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      setError("Camera permission is required to scan Vorliq payment QR codes.");
+      return;
+    }
+    setScannerOpen(true);
+  };
+
+  const handleBarcodeScanned = ({ data }) => {
+    if (!cameraReady) return;
+    const payment = parseVorliqPaymentUrl(data);
+    if (!payment) {
+      setError("This QR code is not a Vorliq payment request.");
+      return;
+    }
+
+    setReceiver(payment.to);
+    if (payment.amount) {
+      setAmount(payment.amount);
+    }
+    setScannerOpen(false);
+    setMessage("Payment QR code scanned.");
+  };
+
   if (loading) {
     return (
       <View style={[sharedStyles.screen, styles.center]}>
@@ -160,6 +210,23 @@ export default function SendScreen() {
 
       {message ? <Text style={sharedStyles.successText}>{message}</Text> : null}
       {error ? <Text style={sharedStyles.errorText}>{error}</Text> : null}
+
+      <Pressable style={[sharedStyles.button, styles.scanButton]} onPress={scannerOpen ? () => setScannerOpen(false) : openScanner}>
+        <Text style={sharedStyles.buttonText}>{scannerOpen ? "Close Scanner" : "Scan QR Code"}</Text>
+      </Pressable>
+
+      {scannerOpen ? (
+        <View style={styles.cameraWrap}>
+          <CameraView
+            style={styles.camera}
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+            onCameraReady={() => setCameraReady(true)}
+            onBarcodeScanned={handleBarcodeScanned}
+          />
+          <Text style={sharedStyles.mutedText}>Point your camera at a Vorliq payment QR code.</Text>
+        </View>
+      ) : null}
 
       <Text style={sharedStyles.label}>Receiver Address</Text>
       <TextInput
@@ -197,5 +264,20 @@ const styles = StyleSheet.create({
     color: theme.text,
     fontSize: theme.fonts.small,
     lineHeight: 18,
+  },
+  scanButton: {
+    marginBottom: theme.spacing.md,
+  },
+  cameraWrap: {
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.card,
+    marginBottom: theme.spacing.md,
+  },
+  camera: {
+    height: 280,
+    width: "100%",
   },
 });

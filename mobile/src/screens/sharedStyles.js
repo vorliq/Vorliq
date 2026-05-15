@@ -45,6 +45,7 @@ const sharedStyles = StyleSheet.create({
   value: {
     color: theme.text,
     fontSize: theme.fonts.body,
+    flexShrink: 1,
     lineHeight: 24,
   },
   input: {

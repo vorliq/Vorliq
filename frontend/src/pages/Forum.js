@@ -11,11 +11,13 @@ const initialPostForm = {
   category: "general",
   title: "",
   body: "",
+  imageData: "",
 };
 
 const initialReplyForm = {
   authorAddress: "",
   body: "",
+  imageData: "",
 };
 
 const forumCategories = [
@@ -35,6 +37,27 @@ function shortAddress(address) {
 
 function formatTime(timestamp) {
   return new Date(timestamp * 1000).toLocaleString();
+}
+
+function readImageFile(file, onLoad) {
+  if (!file) {
+    onLoad("");
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    toast.error("Please choose an image file.");
+    return;
+  }
+
+  if (file.size > 2_000_000) {
+    toast.error("Please choose an image under 2 MB.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => onLoad(String(reader.result || ""));
+  reader.readAsDataURL(file);
 }
 
 function TipForm({ form, onChange, onSubmit }) {
@@ -164,6 +187,7 @@ function Forum() {
         category: postForm.category,
         title: postForm.title.trim(),
         body: postForm.body.trim(),
+        image_data: postForm.imageData,
       });
       toast.success("Forum post created.");
       setPostForm(initialPostForm);
@@ -191,6 +215,7 @@ function Forum() {
         post_id: selectedPostId,
         author_address: replyForm.authorAddress.trim(),
         body: replyForm.body.trim(),
+        image_data: replyForm.imageData,
       });
       toast.success("Reply posted.");
       setReplyForm(initialReplyForm);
@@ -335,6 +360,7 @@ function Forum() {
                     <span>
                       {post.vote_count} votes · {post.replies?.length || 0} replies · {post.tips?.length || 0} tips
                     </span>
+                    {post.image_data && <img className="forum-thumb" src={post.image_data} alt="Forum attachment" />}
                     <small>{formatTime(post.timestamp)}</small>
                   </button>
                   <button className="button secondary small-button" type="button" onClick={() => toggleTipForm(`post:${post.post_id}`)}>
@@ -411,6 +437,21 @@ function Forum() {
                   }
                 />
               </div>
+              <div className="field">
+                <label htmlFor="forum-image">Image or Screenshot</label>
+                <input
+                  id="forum-image"
+                  className="input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) =>
+                    readImageFile(event.target.files?.[0], (imageData) =>
+                      setPostForm((current) => ({ ...current, imageData }))
+                    )
+                  }
+                />
+                {postForm.imageData && <img className="forum-preview" src={postForm.imageData} alt="Selected upload preview" />}
+              </div>
               <button className="button" type="submit" disabled={submitting}>
                 {submitting ? "Posting..." : "Post Message"}
               </button>
@@ -431,6 +472,7 @@ function Forum() {
                 </div>
               </div>
               <p>{selectedPost.body}</p>
+              {selectedPost.image_data && <img className="forum-image" src={selectedPost.image_data} alt="Forum attachment" />}
               <div className="block-meta">
                 <div className="meta-item">
                   <span className="meta-label">Author</span>
@@ -472,6 +514,7 @@ function Forum() {
                   selectedPost.replies.map((reply) => (
                     <article className="reply-card" key={reply.reply_id}>
                       <p>{reply.body}</p>
+                      {reply.image_data && <img className="forum-image" src={reply.image_data} alt="Reply attachment" />}
                       <span>
                         {shortAddress(reply.author_address)} · {reply.vote_count} votes · {reply.tips?.length || 0} tips ·{" "}
                         {formatTime(reply.timestamp)}
@@ -524,6 +567,21 @@ function Forum() {
                       setReplyForm((current) => ({ ...current, body: event.target.value }))
                     }
                   />
+                </div>
+                <div className="field">
+                  <label htmlFor="reply-image">Image or Screenshot</label>
+                  <input
+                    id="reply-image"
+                    className="input"
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) =>
+                      readImageFile(event.target.files?.[0], (imageData) =>
+                        setReplyForm((current) => ({ ...current, imageData }))
+                      )
+                    }
+                  />
+                  {replyForm.imageData && <img className="forum-preview" src={replyForm.imageData} alt="Selected reply upload preview" />}
                 </div>
                 <button className="button" type="submit" disabled={submitting}>
                   {submitting ? "Posting..." : "Post Reply"}

@@ -237,6 +237,73 @@ def get_diagnostics():
     )
 
 
+def _weekly_report_stats():
+    cutoff = time.time() - 7 * 24 * 60 * 60
+    chain = node.blockchain.chain
+    transactions = []
+    for block in chain:
+        for transaction in block.transactions:
+            transaction_data = transaction.to_dict() if hasattr(transaction, "to_dict") else dict(transaction)
+            transaction_data["block_timestamp"] = block.timestamp
+            transactions.append(transaction_data)
+
+    recent_transactions = [
+        transaction
+        for transaction in transactions
+        if float(transaction.get("timestamp") or transaction.get("block_timestamp") or 0) >= cutoff
+    ]
+
+    return {
+        "generated_at": time.time(),
+        "new_blocks_mined": len([block for block in chain if block.timestamp >= cutoff]),
+        "new_transactions": len(recent_transactions),
+        "new_vlq_issued": sum(
+            float(transaction.get("amount", 0))
+            for transaction in recent_transactions
+            if transaction.get("sender_address") == "SYSTEM"
+        ),
+        "new_loan_requests": len([loan for loan in lending_pool.loan_requests.values() if float(loan.get("timestamp", 0)) >= cutoff]),
+        "new_loans_approved": len(
+            [
+                loan
+                for loan in lending_pool.loan_requests.values()
+                if loan.get("status") == "approved" and float(loan.get("timestamp", 0)) >= cutoff
+            ]
+        ),
+        "new_exchange_offers": len([offer for offer in exchange.offers.values() if float(offer.get("timestamp", 0)) >= cutoff]),
+        "new_exchange_trades_completed": len(
+            [
+                offer
+                for offer in exchange.offers.values()
+                if offer.get("status") == "completed"
+                and float(offer.get("accepted_timestamp") or offer.get("timestamp", 0)) >= cutoff
+            ]
+        ),
+        "new_governance_proposals": len([proposal for proposal in governance.proposals.values() if float(proposal.get("timestamp", 0)) >= cutoff]),
+        "new_treasury_proposals": len([proposal for proposal in treasury.proposals.values() if float(proposal.get("timestamp", 0)) >= cutoff]),
+        "current_treasury_balance": treasury.get_treasury_balance(node.blockchain),
+    }
+
+
+@app.get("/api/reports/weekly")
+@app.get("/reports/weekly")
+def get_weekly_report_preview():
+    latest_block = node.blockchain.get_latest_block()
+    return jsonify(
+        {
+            "success": True,
+            "subject": f"Vorliq Weekly Network Report {time.strftime('%Y-%m-%d')}",
+            "stats": {
+                **_weekly_report_stats(),
+                "block_height": node.blockchain.get_block_height(),
+                "chain_valid": node.blockchain.is_chain_valid(),
+                "current_mining_reward": node.blockchain.get_current_mining_reward(),
+                "last_block_hash": latest_block.hash,
+            },
+        }
+    )
+
+
 @app.get("/treasury/balance")
 def get_treasury_balance():
     return jsonify(
@@ -662,6 +729,7 @@ def create_forum_post():
             title=data["title"],
             body=data["body"],
             category=data.get("category", "general"),
+            image_data=data.get("image_data") or data.get("imageData"),
         )
         storage.save_forum(forum)
         return jsonify({"success": True, "post_id": post_id, "post": forum.get_post(post_id)}), 201
@@ -702,6 +770,7 @@ def reply_to_forum_post():
             post_id=data.get("post_id") or data.get("postId"),
             author_address=data.get("author_address") or data.get("authorAddress"),
             body=data["body"],
+            image_data=data.get("image_data") or data.get("imageData"),
         )
         storage.save_forum(forum)
         return jsonify({"success": True, "reply": reply}), 201

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Developer API</title>
+    <meta name="description" content="Complete public API documentation for the Vorliq VLQ community blockchain." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      :root { --bg:#0f0f1a; --card:#1a1a2e; --card2:#20203a; --accent:#6c63ff; --text:#fff; --muted:#c7c7d4; --border:rgba(255,255,255,.12); --green:#35d07f; --blue:#4aa3ff; --red:#ff5252; }
+      * { box-sizing:border-box; }
+      html { scroll-behavior:smooth; }
+      body { margin:0; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at top left,rgba(108,99,255,.18),transparent 34rem),var(--bg); color:var(--text); }
+      a { color:inherit; }
+      .layout { display:grid; grid-template-columns:280px minmax(0,1fr); min-height:100vh; }
+      aside { position:sticky; top:0; height:100vh; overflow:auto; border-right:1px solid var(--border); background:rgba(15,15,26,.9); padding:24px; }
+      .brand { display:flex; align-items:center; gap:12px; text-decoration:none; font-weight:900; margin-bottom:24px; }
+      .brand img { width:40px; height:40px; }
+      nav { display:grid; gap:8px; }
+      nav a { color:var(--muted); text-decoration:none; border:1px solid transparent; border-radius:8px; padding:10px 12px; font-weight:800; }
+      nav a:hover { border-color:var(--border); color:#fff; background:rgba(255,255,255,.04); }
+      main { width:min(1120px,calc(100% - 32px)); margin:0 auto; padding:42px 0 72px; }
+      .hero { margin-bottom:34px; }
+      .eyebrow { color:var(--green); font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+      h1 { margin:8px 0 14px; font-size:clamp(2.4rem,7vw,5rem); line-height:.95; }
+      h2 { margin:0 0 18px; font-size:clamp(1.8rem,4vw,2.8rem); }
+      h3 { margin:0; font-size:1.35rem; }
+      p { color:var(--muted); line-height:1.75; }
+      section { padding:34px 0; border-top:1px solid var(--border); }
+      .endpoint { background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025)); border:1px solid var(--border); border-radius:12px; padding:20px; margin:16px 0; box-shadow:0 24px 70px rgba(0,0,0,.18); }
+      .endpoint-head { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
+      .method { display:inline-flex; min-width:64px; justify-content:center; border-radius:999px; padding:7px 10px; font-size:.78rem; font-weight:900; }
+      .GET { background:rgba(53,208,127,.16); color:#9cf1bf; }
+      .POST { background:rgba(74,163,255,.16); color:#b9dcff; }
+      .DELETE { background:rgba(255,82,82,.16); color:#ffb8b8; }
+      code, pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+      .path { color:#fff; overflow-wrap:anywhere; }
+      pre { overflow:auto; border:1px solid var(--border); border-radius:10px; background:#0b0b14; color:#e7e7f0; padding:14px; line-height:1.55; }
+      .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+      .field-box { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:12px; }
+      .field-box strong { color:#fff; }
+      .try { color:#fff; text-decoration:none; border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-weight:900; background:var(--accent); }
+      footer { color:var(--muted); padding:28px 0; border-top:1px solid var(--border); }
+      @media (max-width:900px) { .layout { grid-template-columns:1fr; } aside { position:relative; height:auto; } nav { grid-template-columns:repeat(2,minmax(0,1fr)); } .fields { grid-template-columns:1fr; } }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside>
+        <a class="brand" href="index.html"><img src="logo.png" alt="Vorliq logo" />Vorliq API</a>
+        <nav id="sideNav"></nav>
+      </aside>
+      <main>
+        <div class="hero">
+          <span class="eyebrow">Developer Documentation</span>
+          <h1>Vorliq Public API</h1>
+          <p>These endpoints are served through <strong>https://vorliq.org/api</strong>. They let developers inspect the chain, build wallet tools, monitor nodes, and integrate with Vorliq community features. POST endpoints should be used carefully because many of them create real pending transactions, votes, proposals, or community records.</p>
+        </div>
+        <div id="content"></div>
+        <footer>2026 Vorliq. All rights reserved.</footer>
+      </main>
+    </div>
+
+    <script>
+      const base = "https://vorliq.org";
+      const sections = [
+        ["Authentication", [
+          ["GET", "/api/deployment", "Returns the Git commit currently deployed on the production server.", [], [["success","boolean","Whether the request succeeded."],["commit_hash","string","The deployed commit hash."],["commit_timestamp","string","The commit timestamp."]], "curl https://vorliq.org/api/deployment", { success:true, commit_hash:"602adf...", commit_timestamp:"2026-05-15T10:04:27+01:00" }]
+        ]],
+        ["Blockchain", [
+          ["GET", "/api/chain", "Returns the full Vorliq blockchain.", [], [["chain","array","All blocks from genesis to latest."],["coin","string","The native coin symbol, VLQ."]], "curl https://vorliq.org/api/chain", { success:true, coin:"VLQ", chain:[{ index:0, hash:"0000..." }] }],
+          ["GET", "/api/economics", "Returns token economics including max supply, reward, halving, height, and issued VLQ.", [], [["maximum_supply","number","Maximum VLQ supply."],["current_mining_reward","number","Current mining reward."],["total_issued","number","Total issued VLQ."]], "curl https://vorliq.org/api/economics", { success:true, maximum_supply:21000000, current_mining_reward:50 }],
+          ["GET", "/api/diagnostics", "Returns node health, uptime, block height, chain validity, peers, and last block information.", [], [["block_height","number","Current block height."],["chain_valid","boolean","Whether the chain validates."],["uptime_seconds","number","Node uptime."]], "curl https://vorliq.org/api/diagnostics", { success:true, block_height:12, chain_valid:true }]
+        ]],
+        ["Wallet", [
+          ["POST", "/api/wallet/create", "Creates a new wallet and returns address, public key, and private key.", [], [["address","string","New wallet address."],["public_key","string","Public key PEM."],["private_key","string","Private key PEM. Save this immediately."]], "curl -X POST https://vorliq.org/api/wallet/create", { address:"VLQ...", public_key:"-----BEGIN PUBLIC KEY-----", private_key_warning:"Save this private key now." }],
+          ["GET", "/api/wallet/balance?address=ADDRESS", "Returns the confirmed and pending VLQ balance for an address.", [], [["address","string","Wallet address queried."],["balance","number","Current VLQ balance."],["coin","string","VLQ."]], "curl 'https://vorliq.org/api/wallet/balance?address=VLQ_ADDRESS'", { success:true, address:"VLQ_ADDRESS", balance:50, coin:"VLQ" }]
+        ]],
+        ["Transactions", [
+          ["POST", "/api/transaction/send", "Submits a signed VLQ transaction to the pending pool.", [["sender_address","string","Sender wallet address."],["sender_public_key","string","Sender public key PEM."],["receiver_address","string","Receiver wallet address."],["amount","number","Amount of VLQ."],["timestamp","number","Unix timestamp."],["signature","string","DER ECDSA signature."]], [["success","boolean","Whether the transaction was accepted."],["message","string","Success or error message."]], "curl -X POST https://vorliq.org/api/transaction/send -H 'Content-Type: application/json' -d '{\"sender_address\":\"VLQ1\",\"receiver_address\":\"VLQ2\",\"amount\":1,\"signature\":\"...\"}'", { success:true, message:"Transaction added to pending pool." }]
+        ]],
+        ["Mining", [
+          ["POST", "/api/mine", "Mines a new block for the supplied miner address if the fair mining rules allow it.", [["miner_address","string","Wallet address receiving the miner reward."]], [["success","boolean","Whether the block was mined."],["block","object","The new block data."],["wait_seconds","number","Cooldown seconds if rejected."]], "curl -X POST https://vorliq.org/api/mine -H 'Content-Type: application/json' -d '{\"miner_address\":\"VLQ_MINER\"}'", { success:true, block:{ index:1, hash:"0000..." } }]
+        ]],
+        ["Lending", [
+          ["POST", "/api/lending/request", "Creates a community loan request.", [["requester_address","string","Borrower address."],["amount","number","VLQ requested."],["reason","string","Reason for the loan."]], [["loan_id","string","Created loan ID."],["loan","object","Loan object."]], "curl -X POST https://vorliq.org/api/lending/request -H 'Content-Type: application/json' -d '{\"requester_address\":\"VLQ\",\"amount\":200,\"reason\":\"tools\"}'", { success:true, loan_id:"abc123" }],
+          ["GET", "/api/lending/loans", "Returns all loan requests.", [], [["loans","array","All loans."]], "curl https://vorliq.org/api/lending/loans", { success:true, loans:[] }],
+          ["GET", "/api/lending/loan?loan_id=ID", "Returns one loan request.", [], [["loan","object","Loan details."]], "curl 'https://vorliq.org/api/lending/loan?loan_id=abc123'", { success:true, loan:{ status:"pending" } }],
+          ["POST", "/api/lending/vote", "Votes yes or no on a loan using wallet balance as voting weight.", [["loan_id","string","Loan ID."],["voter_address","string","Voter wallet."],["vote","string","yes or no."]], [["loan","object","Updated loan."]], "curl -X POST https://vorliq.org/api/lending/vote -H 'Content-Type: application/json' -d '{\"loan_id\":\"abc\",\"voter_address\":\"VLQ\",\"vote\":\"yes\"}'", { success:true, loan:{ status:"approved" } }],
+          ["POST", "/api/lending/repay", "Marks an approved loan as repaid and creates a repayment transaction.", [["loan_id","string","Loan ID."],["repayer_address","string","Borrower address."]], [["loan","object","Updated loan."]], "curl -X POST https://vorliq.org/api/lending/repay -H 'Content-Type: application/json' -d '{\"loan_id\":\"abc\",\"repayer_address\":\"VLQ\"}'", { success:true, loan:{ status:"repaid" } }]
+        ]],
+        ["Exchange", [
+          ["POST", "/api/exchange/offer", "Creates a buy or sell offer.", [["creator_address","string","Offer creator."],["offer_type","string","buy or sell."],["amount","number","VLQ amount."],["price","string","Real-world price description."],["description","string","Offer details."]], [["offer_id","string","Created offer ID."],["offer","object","Offer object."]], "curl -X POST https://vorliq.org/api/exchange/offer -H 'Content-Type: application/json' -d '{\"creator_address\":\"VLQ\",\"offer_type\":\"sell\",\"amount\":50,\"price\":\"3 USD\",\"description\":\"Local trade\"}'", { success:true, offer_id:"offer123" }],
+          ["GET", "/api/exchange/offers", "Returns open exchange offers.", [], [["offers","array","Open offers."]], "curl https://vorliq.org/api/exchange/offers", { success:true, offers:[] }],
+          ["GET", "/api/exchange/all", "Returns every exchange offer regardless of status.", [], [["offers","array","All offers."]], "curl https://vorliq.org/api/exchange/all", { success:true, offers:[] }],
+          ["GET", "/api/exchange/my?address=ADDRESS", "Returns offers created or accepted by an address.", [], [["offers","array","Matching offers."]], "curl 'https://vorliq.org/api/exchange/my?address=VLQ_ADDRESS'", { success:true, offers:[] }],
+          ["POST", "/api/exchange/accept", "Accepts an open offer.", [["offer_id","string","Offer ID."],["acceptor_address","string","Acceptor address."]], [["offer","object","Updated offer."]], "curl -X POST https://vorliq.org/api/exchange/accept -H 'Content-Type: application/json' -d '{\"offer_id\":\"offer123\",\"acceptor_address\":\"VLQ2\"}'", { success:true, offer:{ status:"accepted" } }],
+          ["POST", "/api/exchange/complete", "Marks an accepted offer as completed.", [["offer_id","string","Offer ID."],["caller_address","string","Creator or acceptor."]], [["offer","object","Updated offer."]], "curl -X POST https://vorliq.org/api/exchange/complete -H 'Content-Type: application/json' -d '{\"offer_id\":\"offer123\",\"caller_address\":\"VLQ\"}'", { success:true, offer:{ status:"completed" } }],
+          ["POST", "/api/exchange/cancel", "Cancels an open or accepted offer by its creator.", [["offer_id","string","Offer ID."],["caller_address","string","Creator address."]], [["offer","object","Updated offer."]], "curl -X POST https://vorliq.org/api/exchange/cancel -H 'Content-Type: application/json' -d '{\"offer_id\":\"offer123\",\"caller_address\":\"VLQ\"}'", { success:true, offer:{ status:"cancelled" } }]
+        ]],
+        ["Governance", [
+          ["POST", "/api/governance/propose", "Creates a governance proposal.", [["proposer_address","string","Proposer wallet."],["title","string","Proposal title."],["description","string","Proposal details."],["category","string","Governable category."],["parameter","number","Proposed value."]], [["proposal_id","string","Created proposal ID."],["proposal","object","Proposal object."]], "curl -X POST https://vorliq.org/api/governance/propose -H 'Content-Type: application/json' -d '{\"proposer_address\":\"VLQ\",\"title\":\"Reward\",\"description\":\"Change reward\",\"category\":\"mining_reward\",\"parameter\":25}'", { success:true, proposal_id:"prop123" }],
+          ["GET", "/api/governance/proposals", "Returns active governance proposals.", [], [["proposals","array","Active proposals."]], "curl https://vorliq.org/api/governance/proposals", { success:true, proposals:[] }],
+          ["GET", "/api/governance/all", "Returns all governance proposals.", [], [["proposals","array","All proposals."]], "curl https://vorliq.org/api/governance/all", { success:true, proposals:[] }],
+          ["GET", "/api/governance/proposal?proposal_id=ID", "Returns one governance proposal.", [], [["proposal","object","Proposal details."]], "curl 'https://vorliq.org/api/governance/proposal?proposal_id=prop123'", { success:true, proposal:{ status:"active" } }],
+          ["POST", "/api/governance/vote", "Votes on a governance proposal.", [["proposal_id","string","Proposal ID."],["voter_address","string","Voter wallet."],["vote","string","yes or no."]], [["proposal","object","Updated proposal."]], "curl -X POST https://vorliq.org/api/governance/vote -H 'Content-Type: application/json' -d '{\"proposal_id\":\"prop123\",\"voter_address\":\"VLQ\",\"vote\":\"yes\"}'", { success:true, proposal:{ status:"passed" } }],
+          ["GET", "/api/governance/settings", "Returns current governance settings and default values.", [], [["settings","object","Governable settings."]], "curl https://vorliq.org/api/governance/settings", { success:true, settings:{} }]
+        ]],
+        ["Treasury", [
+          ["GET", "/api/treasury/balance", "Returns the community treasury VLQ balance.", [], [["balance","number","Treasury balance."]], "curl https://vorliq.org/api/treasury/balance", { success:true, balance:25 }],
+          ["GET", "/api/treasury/proposals", "Returns active treasury proposals.", [], [["proposals","array","Active proposals."]], "curl https://vorliq.org/api/treasury/proposals", { success:true, proposals:[] }],
+          ["GET", "/api/treasury/all", "Returns all treasury proposals.", [], [["proposals","array","All proposals."]], "curl https://vorliq.org/api/treasury/all", { success:true, proposals:[] }],
+          ["POST", "/api/treasury/propose", "Creates a proposal to spend treasury VLQ.", [["proposer_address","string","Proposer wallet."],["title","string","Proposal title."],["description","string","Details."],["category","string","development, marketing, community, or infrastructure."],["requested_amount","number","VLQ requested."],["recipient_address","string","Recipient wallet."]], [["proposal_id","string","Created proposal ID."],["proposal","object","Proposal."]], "curl -X POST https://vorliq.org/api/treasury/propose -H 'Content-Type: application/json' -d '{\"proposer_address\":\"VLQ\",\"title\":\"Docs\",\"category\":\"development\",\"requested_amount\":10,\"recipient_address\":\"VLQ2\"}'", { success:true, proposal_id:"treasury123" }],
+          ["POST", "/api/treasury/vote", "Votes on a treasury spending proposal.", [["proposal_id","string","Proposal ID."],["voter_address","string","Voter wallet."],["vote","string","yes or no."]], [["proposal","object","Updated proposal."]], "curl -X POST https://vorliq.org/api/treasury/vote -H 'Content-Type: application/json' -d '{\"proposal_id\":\"treasury123\",\"voter_address\":\"VLQ\",\"vote\":\"yes\"}'", { success:true, proposal:{ status:"passed" } }]
+        ]],
+        ["Forum", [
+          ["POST", "/api/forum/post", "Creates a forum post.", [["author_address","string","Author wallet."],["title","string","Post title."],["body","string","Post body."],["category","string","Forum category."]], [["post","object","Created post."]], "curl -X POST https://vorliq.org/api/forum/post -H 'Content-Type: application/json' -d '{\"author_address\":\"VLQ\",\"title\":\"Hello\",\"body\":\"First post\",\"category\":\"general\"}'", { success:true, post:{ title:"Hello" } }],
+          ["GET", "/api/forum/posts", "Returns forum posts sorted by pinned, votes, and recency.", [], [["posts","array","Forum posts."]], "curl https://vorliq.org/api/forum/posts", { success:true, posts:[] }],
+          ["GET", "/api/forum/post?post_id=ID", "Returns one forum post with replies.", [], [["post","object","Post details."]], "curl 'https://vorliq.org/api/forum/post?post_id=post123'", { success:true, post:{ replies:[] } }],
+          ["GET", "/api/forum/search?q=QUERY", "Searches forum post titles and bodies.", [], [["posts","array","Matching posts."]], "curl 'https://vorliq.org/api/forum/search?q=mining'", { success:true, posts:[] }],
+          ["POST", "/api/forum/reply", "Adds a reply to a post.", [["post_id","string","Post ID."],["author_address","string","Author wallet."],["body","string","Reply text."]], [["reply","object","Created reply."]], "curl -X POST https://vorliq.org/api/forum/reply -H 'Content-Type: application/json' -d '{\"post_id\":\"post123\",\"author_address\":\"VLQ\",\"body\":\"Thanks\"}'", { success:true, reply:{ body:"Thanks" } }],
+          ["POST", "/api/forum/upvote", "Upvotes a forum post once per wallet address.", [["post_id","string","Post ID."],["address","string","Voter wallet."]], [["post","object","Updated post."]], "curl -X POST https://vorliq.org/api/forum/upvote -H 'Content-Type: application/json' -d '{\"post_id\":\"post123\",\"address\":\"VLQ\"}'", { success:true, post:{ vote_count:1 } }],
+          ["POST", "/api/forum/tip/post", "Sends a signed VLQ tip to a post author.", [["post_id","string","Post ID."],["sender_address","string","Tipper wallet."],["sender_private_key","string","Tipper private key PEM."],["receiver_address","string","Receiver wallet."],["amount","number","1 to 100 VLQ."]], [["tip","object","Recorded tip."]], "curl -X POST https://vorliq.org/api/forum/tip/post -H 'Content-Type: application/json' -d '{\"post_id\":\"post123\",\"sender_address\":\"VLQ1\",\"receiver_address\":\"VLQ2\",\"amount\":1,\"sender_private_key\":\"...\"}'", { success:true, tip:{ amount:1 } }],
+          ["POST", "/api/forum/tip/reply", "Sends a signed VLQ tip to a reply author.", [["post_id","string","Post ID."],["reply_id","string","Reply ID."],["sender_address","string","Tipper wallet."],["sender_private_key","string","Tipper private key PEM."],["receiver_address","string","Receiver wallet."],["amount","number","1 to 100 VLQ."]], [["tip","object","Recorded tip."]], "curl -X POST https://vorliq.org/api/forum/tip/reply -H 'Content-Type: application/json' -d '{\"post_id\":\"post123\",\"reply_id\":\"reply123\",\"sender_address\":\"VLQ1\",\"receiver_address\":\"VLQ2\",\"amount\":1,\"sender_private_key\":\"...\"}'", { success:true, tip:{ amount:1 } }]
+        ]],
+        ["Chat", [
+          ["GET", "/api/socket.io/?EIO=4&transport=polling", "Socket.IO transport endpoint for real-time chat. Clients should use socket.io-client with path /api/socket.io and events welcome, join, history, message, user_count, chat_error, and disconnect.", [], [["sid","string","Socket.IO session ID."],["upgrades","array","Available transports."]], "curl 'https://vorliq.org/api/socket.io/?EIO=4&transport=polling'", { sid:"socket-session", upgrades:["websocket"] }]
+        ]],
+        ["Achievements", [
+          ["GET", "/api/achievements?address=ADDRESS", "Returns achievements earned by a wallet address.", [], [["achievements","array","Earned achievement definitions."]], "curl 'https://vorliq.org/api/achievements?address=VLQ_ADDRESS'", { success:true, achievements:[] }],
+          ["GET", "/api/achievements/all", "Returns the full achievement catalog.", [], [["achievements","array","All possible achievements."]], "curl https://vorliq.org/api/achievements/all", { success:true, achievements:[{ id:"first_wallet", title:"First Steps" }] }]
+        ]],
+        ["Price", [
+          ["POST", "/api/price/signal", "Submits a community price signal for VLQ.", [["submitter_address","string","Submitter wallet."],["currency","string","GBP, USD, EUR, hours, or another unit."],["price","number","Suggested price."]], [["signal","object","Created signal."]], "curl -X POST https://vorliq.org/api/price/signal -H 'Content-Type: application/json' -d '{\"submitter_address\":\"VLQ\",\"currency\":\"GBP\",\"price\":1}'", { success:true, signal:{ currency:"GBP", price:1 } }],
+          ["GET", "/api/price/signals", "Returns active unexpired price signals.", [], [["signals","array","Active signals."]], "curl https://vorliq.org/api/price/signals", { success:true, signals:[] }],
+          ["GET", "/api/price/median?currency=GBP", "Returns the median active community price for one currency.", [], [["currency","string","Requested currency."],["median","number","Median price or null."]], "curl 'https://vorliq.org/api/price/median?currency=GBP'", { success:true, currency:"GBP", median:null }]
+        ]],
+        ["Registry", [
+          ["POST", "/api/registry/register", "Registers a public node in the active node registry.", [["node_url","string","Public node URL."],["display_name","string","Operator display name."]], [["nodes","array","Active nodes."]], "curl -X POST https://vorliq.org/api/registry/register -H 'Content-Type: application/json' -d '{\"node_url\":\"https://node.vorliq.org\",\"display_name\":\"Vorliq Public Node\"}'", { success:true, nodes:[] }],
+          ["GET", "/api/registry/nodes", "Returns active registry nodes seen in the last 30 minutes.", [], [["nodes","array","Active nodes."]], "curl https://vorliq.org/api/registry/nodes", { success:true, nodes:[] }],
+          ["POST", "/api/registry/heartbeat", "Updates the last-seen timestamp for a registered node.", [["node_url","string","Node URL."]], [["success","boolean","Whether heartbeat was accepted."]], "curl -X POST https://vorliq.org/api/registry/heartbeat -H 'Content-Type: application/json' -d '{\"node_url\":\"https://node.vorliq.org\"}'", { success:true }]
+        ]],
+        ["Network", [
+          ["POST", "/api/peers/add", "Adds a peer to the local node.", [["peer","string","Peer URL such as http://host:5001."]], [["peers","array","Known peers."]], "curl -X POST https://vorliq.org/api/peers/add -H 'Content-Type: application/json' -d '{\"peer\":\"http://192.168.1.5:5001\"}'", { success:true, peers:[] }],
+          ["GET", "/api/peers", "Returns known peers for the node.", [], [["peers","array","Known peer URLs."]], "curl https://vorliq.org/api/peers", { success:true, peers:[] }],
+          ["POST", "/api/peers/sync", "Triggers longest-valid-chain synchronization.", [], [["updated","boolean","Whether the local chain changed."]], "curl -X POST https://vorliq.org/api/peers/sync", { success:true, updated:false }],
+          ["POST", "/api/peers/announce", "Announces a node URL to a peer so the connection becomes two-way.", [["node_url","string","Node URL to announce."]], [["success","boolean","Whether the node was registered."]], "curl -X POST https://vorliq.org/api/peers/announce -H 'Content-Type: application/json' -d '{\"node_url\":\"http://host:5001\"}'", { success:true }]
+        ]],
+        ["Diagnostics", [
+          ["GET", "/api/health", "Returns backend health.", [], [["success","boolean","Whether backend is running."],["message","string","Health message."]], "curl https://vorliq.org/api/health", { success:true, message:"Vorliq backend is running" }],
+          ["GET", "/api/reports/weekly", "Generates a preview of the weekly community report without sending email.", [], [["subject","string","Report subject."],["stats","object","Seven-day network statistics."],["html","string","HTML email body."]], "curl https://vorliq.org/api/reports/weekly", { success:true, subject:"Vorliq Weekly Network Report 2026-05-15", stats:{ new_blocks_mined:2 } }]
+        ]]
+      ];
+
+      function escape(value) {
+        return String(value).replace(/[&<>"']/g, (char) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[char]));
+      }
+
+      function fieldList(fields) {
+        if (!fields.length) return "<p>No request body fields are required.</p>";
+        return `<div class="fields">${fields.map(([name,type,description]) => `<div class="field-box"><strong>${escape(name)}</strong> <span>${escape(type)}</span><p>${escape(description)}</p></div>`).join("")}</div>`;
+      }
+
+      function endpointHtml(endpoint) {
+        const [method, path, description, requestFields, responseFields, requestExample, responseExample] = endpoint;
+        const tryButton = method === "GET" ? `<a class="try" href="${base}${path}" target="_blank" rel="noreferrer">Try It</a>` : "";
+        return `<article class="endpoint">
+          <div class="endpoint-head">
+            <div><span class="method ${method}">${method}</span> <code class="path">${base}${escape(path)}</code></div>
+            ${tryButton}
+          </div>
+          <p>${escape(description)}</p>
+          <h3>Request Fields</h3>${fieldList(requestFields)}
+          <h3>Response Fields</h3>${fieldList(responseFields)}
+          <h3>Example Request</h3><pre>${escape(requestExample)}</pre>
+          <h3>Example Response</h3><pre>${escape(JSON.stringify(responseExample, null, 2))}</pre>
+        </article>`;
+      }
+
+      const nav = document.getElementById("sideNav");
+      const content = document.getElementById("content");
+      nav.innerHTML = sections.map(([title]) => `<a href="#${title.toLowerCase().replaceAll(" ","-")}">${title}</a>`).join("");
+      content.innerHTML = sections.map(([title, endpoints]) => `<section id="${title.toLowerCase().replaceAll(" ","-")}"><h2>${title}</h2>${endpoints.map(endpointHtml).join("")}</section>`).join("");
+    </script>
+  </body>
+</html>

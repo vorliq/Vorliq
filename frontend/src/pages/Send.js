@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import QRPayment from "../components/QRPayment";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 import { signTransaction } from "../helpers/signer";
@@ -18,9 +19,19 @@ function Send() {
   const [form, setForm] = useState(initialForm);
   const [sending, setSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function handleQrScan(payment) {
+    setForm((current) => ({
+      ...current,
+      receiverAddress: payment.to,
+      amount: payment.amount || current.amount,
+    }));
+    setScannerOpen(false);
   }
 
   async function sendVlq(event) {
@@ -78,6 +89,23 @@ function Send() {
       <ErrorMessage message={errorMessage} />
 
       <section className="card card-pad">
+        <div className="section-title">
+          <h2>Payment Details</h2>
+          <button className="button secondary compact" type="button" onClick={() => setScannerOpen((current) => !current)}>
+            {scannerOpen ? "Close Scanner" : "Scan QR Code"}
+          </button>
+        </div>
+
+        {scannerOpen && (
+          <div className="scanner-panel">
+            <QRPayment
+              walletAddress={form.senderAddress || "scan-mode"}
+              defaultScanMode
+              onScanComplete={handleQrScan}
+            />
+          </div>
+        )}
+
         <form className="form" onSubmit={sendVlq}>
           <div className="field">
             <label htmlFor="sender-address">Sender Address</label>

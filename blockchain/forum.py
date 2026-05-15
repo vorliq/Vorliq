@@ -14,7 +14,14 @@ class Forum:
     def __init__(self) -> None:
         self.posts: dict[str, dict[str, Any]] = {}
 
-    def create_post(self, author_address: str, title: str, body: str, category: str = "general") -> str:
+    def create_post(
+        self,
+        author_address: str,
+        title: str,
+        body: str,
+        category: str = "general",
+        image_data: str | None = None,
+    ) -> str:
         author_address = self._require_text(author_address, "author address")
         title = self._require_text(title, "title")
         body = self._require_text(body, "body")
@@ -28,6 +35,7 @@ class Forum:
             "title": title,
             "body": body,
             "category": category,
+            "image_data": self._normalize_image(image_data),
             "pinned": False,
             "tips": [],
             "timestamp": timestamp,
@@ -38,7 +46,13 @@ class Forum:
         vorliq_logger.info("Forum post created by %s with id %s", author_address, post_id)
         return post_id
 
-    def add_reply(self, post_id: str, author_address: str, body: str) -> dict[str, Any]:
+    def add_reply(
+        self,
+        post_id: str,
+        author_address: str,
+        body: str,
+        image_data: str | None = None,
+    ) -> dict[str, Any]:
         post = self._get_existing_post(post_id)
         author_address = self._require_text(author_address, "author address")
         body = self._require_text(body, "body")
@@ -48,6 +62,7 @@ class Forum:
             "reply_id": reply_id,
             "author_address": author_address,
             "body": body,
+            "image_data": self._normalize_image(image_data),
             "timestamp": timestamp,
             "vote_count": 0,
             "voters": [],
@@ -179,6 +194,7 @@ class Forum:
 
     def _normalize_post(self, post: dict[str, Any]) -> None:
         post["category"] = post.get("category") if post.get("category") in self.VALID_CATEGORIES else "general"
+        post["image_data"] = self._normalize_image(post.get("image_data"))
         post["pinned"] = bool(post.get("pinned", False))
         post["voters"] = list(post.get("voters", []))
         post["replies"] = list(post.get("replies", []))
@@ -187,6 +203,18 @@ class Forum:
             reply["voters"] = list(reply.get("voters", []))
             reply["vote_count"] = int(reply.get("vote_count", 0))
             reply["tips"] = list(reply.get("tips", []))
+            reply["image_data"] = self._normalize_image(reply.get("image_data"))
+
+    def _normalize_image(self, image_data: str | None) -> str | None:
+        if image_data is None or image_data == "":
+            return None
+        if not isinstance(image_data, str):
+            raise ValueError("image data must be a string")
+        if not image_data.startswith("data:image/"):
+            raise ValueError("image must be a browser image data URL")
+        if len(image_data) > 2_000_000:
+            raise ValueError("image is too large; please use an image under 2 MB")
+        return image_data
 
     def _create_tip(
         self,

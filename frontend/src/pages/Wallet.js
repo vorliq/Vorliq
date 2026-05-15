@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import QRPayment from "../components/QRPayment";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
@@ -14,6 +14,7 @@ function Wallet() {
   const [balance, setBalance] = useState(null);
   const [checking, setChecking] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [receiveAmount, setReceiveAmount] = useState("");
 
   async function createWallet() {
     setCreating(true);
@@ -84,17 +85,23 @@ function Wallet() {
                 <label>Wallet Address</label>
                 <div className="value-box">{wallet.address}</div>
               </div>
-              <div className="qr-panel">
-                <QRCodeSVG
-                  value={wallet.address}
-                  size={180}
-                  bgColor="var(--qr-bg)"
-                  fgColor="var(--qr-fg)"
-                  level="M"
-                  includeMargin
-                />
-                <span>scan to receive VLQ</span>
-              </div>
+              <section className="receive-panel">
+                <h2>Receive VLQ</h2>
+                <div className="field">
+                  <label htmlFor="receive-amount">Optional Requested Amount</label>
+                  <input
+                    id="receive-amount"
+                    className="input"
+                    type="number"
+                    min="0"
+                    step="0.000001"
+                    value={receiveAmount}
+                    onChange={(event) => setReceiveAmount(event.target.value)}
+                    placeholder="Leave blank for any amount"
+                  />
+                </div>
+                <QRPayment walletAddress={wallet.address} amount={receiveAmount} />
+              </section>
               <div className="field">
                 <label>Public Key</label>
                 <div className="value-box">{wallet.public_key}</div>

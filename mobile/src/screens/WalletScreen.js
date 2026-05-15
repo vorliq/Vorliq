@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
@@ -25,6 +26,7 @@ export default function WalletScreen() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [privateKeyUnlocked, setPrivateKeyUnlocked] = useState(false);
+  const [receiveAmount, setReceiveAmount] = useState("");
   const previousBalanceRef = useRef(null);
 
   const loadSavedWallet = useCallback(async () => {
@@ -161,8 +163,23 @@ export default function WalletScreen() {
       </View>
 
       <View style={[sharedStyles.card, styles.qrCard]}>
-        <QRCode value={wallet.address} size={190} backgroundColor={theme.card} color={theme.text} />
+        <QRCode
+          value={`vorliq://pay?to=${encodeURIComponent(wallet.address)}${
+            receiveAmount.trim() ? `&amount=${encodeURIComponent(receiveAmount.trim())}` : ""
+          }`}
+          size={190}
+          backgroundColor={theme.card}
+          color={theme.text}
+        />
         <Text style={[sharedStyles.mutedText, styles.marginTop]}>Scan to receive VLQ</Text>
+        <TextInput
+          keyboardType="decimal-pad"
+          style={[sharedStyles.input, styles.amountInput]}
+          placeholder="Optional requested amount"
+          placeholderTextColor={theme.textSecondary}
+          value={receiveAmount}
+          onChangeText={setReceiveAmount}
+        />
       </View>
 
       <View style={sharedStyles.card}>
@@ -217,6 +234,10 @@ const styles = StyleSheet.create({
   },
   qrCard: {
     alignItems: "center",
+  },
+  amountInput: {
+    alignSelf: "stretch",
+    marginTop: theme.spacing.md,
   },
   balance: {
     color: theme.success,

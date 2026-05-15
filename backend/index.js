@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
+const cron = require("node-cron");
 require("dotenv").config();
 
 const chainRoutes = require("./routes/chain");
@@ -18,7 +19,9 @@ const treasuryRoutes = require("./routes/treasury");
 const priceRoutes = require("./routes/price");
 const achievementsRoutes = require("./routes/achievements");
 const deploymentRoutes = require("./routes/deployment");
+const reportsRoutes = require("./routes/reports");
 const { logError, logInfo } = require("./logger");
+const { sendWeeklyReport } = require("./reports");
 
 const app = express();
 const server = http.createServer(app);
@@ -109,6 +112,7 @@ app.use(treasuryRoutes);
 app.use(priceRoutes);
 app.use(achievementsRoutes);
 app.use(deploymentRoutes);
+app.use(reportsRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
@@ -131,6 +135,17 @@ app.use((error, req, res, next) => {
 });
 
 if (require.main === module) {
+  cron.schedule(
+    "0 9 * * 1",
+    () => {
+      sendWeeklyReport().catch((error) => {
+        logError(`Scheduled weekly report failed: ${error.message}`);
+      });
+    },
+    { timezone: "Europe/London" }
+  );
+  logInfo("Weekly community report scheduled for Monday 09:00 Europe/London");
+
   server.listen(port, () => {
     console.log(`Vorliq backend API running on port ${port}`);
     logInfo(`Vorliq backend API running on port ${port}`);

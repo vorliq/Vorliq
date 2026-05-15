@@ -20,6 +20,7 @@ function getPublicNodeDisplayUrl(nodeUrl) {
 function Health() {
   const [diagnostics, setDiagnostics] = useState(null);
   const [deployment, setDeployment] = useState(null);
+  const [weeklyReport, setWeeklyReport] = useState(null);
   const [registryNodes, setRegistryNodes] = useState([]);
   const [networkHealth, setNetworkHealth] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,10 +38,12 @@ function Health() {
         const diagnosticsRequest = api.get("/diagnostics");
         const registryRequest = api.get("/registry/nodes");
         const deploymentRequest = api.get("/deployment");
-        const [diagnosticsResponse, registryResponse, deploymentResponse] = await Promise.all([
+        const weeklyReportRequest = api.get("/reports/weekly");
+        const [diagnosticsResponse, registryResponse, deploymentResponse, weeklyReportResponse] = await Promise.all([
           diagnosticsRequest,
           registryRequest,
           deploymentRequest,
+          weeklyReportRequest,
         ]);
         const diagnosticsResponseTime = Math.round(performance.now() - diagnosticsStart);
         const registeredNodes = registryResponse.data.nodes || [];
@@ -68,6 +71,7 @@ function Health() {
         if (mounted) {
           setDiagnostics(diagnosticsResponse.data);
           setDeployment(deploymentResponse.data);
+          setWeeklyReport(weeklyReportResponse.data);
           setRegistryNodes(nodes);
           setNetworkHealth(nodeChecks);
         }
@@ -205,6 +209,26 @@ function Health() {
           </div>
         ) : (
           <div className="empty-state">Deployment information is unavailable right now.</div>
+        )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <h2>Weekly Community Report Preview</h2>
+        {loading ? (
+          <Spinner label="Generating weekly report preview..." />
+        ) : weeklyReport?.success ? (
+          <div className="stats-grid compact-stats">
+            {Object.entries(weeklyReport.stats)
+              .filter(([key]) => !["generated_at"].includes(key))
+              .map(([key, value]) => (
+                <div className="stat-card" key={key}>
+                  <span>{key.replaceAll("_", " ")}</span>
+                  <strong>{String(value)}</strong>
+                </div>
+              ))}
+          </div>
+        ) : (
+          <div className="empty-state">Weekly report preview is unavailable right now.</div>
         )}
       </section>
     </main>

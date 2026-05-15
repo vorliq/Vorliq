@@ -48,7 +48,7 @@ export default function NotificationsScreen() {
               onPress={() => markAsRead(notification.id)}
             >
               <Text style={styles.notificationTitle}>{notification.title}</Text>
-              <Text style={sharedStyles.value}>{notification.body}</Text>
+              <Text style={styles.notificationBody} selectable>{notification.body}</Text>
               <Text style={[sharedStyles.mutedText, styles.timestamp]}>{timeAgo(notification.timestamp)}</Text>
             </Pressable>
           ))
@@ -70,6 +70,12 @@ const styles = StyleSheet.create({
     fontSize: theme.fonts.heading,
     fontWeight: "800",
     marginBottom: theme.spacing.xs,
+  },
+  notificationBody: {
+    color: theme.text,
+    flexShrink: 1,
+    fontSize: theme.fonts.body,
+    lineHeight: 24,
   },
   timestamp: {
     marginTop: theme.spacing.sm,

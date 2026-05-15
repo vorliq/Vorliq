@@ -83,6 +83,9 @@ function NotificationPanel({ open, onClose }) {
         <button className="button secondary small-button" type="button" onClick={clearAll}>
           Clear All
         </button>
+        <button className="button secondary small-button" type="button" onClick={onClose}>
+          Close
+        </button>
       </div>
 
       <div className="notification-list">
