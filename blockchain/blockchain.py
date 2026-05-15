@@ -6,7 +6,7 @@ from typing import Any
 
 from block import Block
 from logger import vorliq_logger
-from transaction import SYSTEM_ADDRESSES, SYSTEM_ADDRESS, Transaction
+from transaction import SYSTEM_ADDRESSES, SYSTEM_ADDRESS, TREASURY_ADDRESS, Transaction
 
 
 class MiningCooldownError(ValueError):
@@ -23,6 +23,8 @@ class Blockchain:
     BLOCK_TIME_TARGET = 60
     BLOCK_TIME_MINIMUM = 30
     DIFFICULTY_ADJUSTMENT_INTERVAL = 10
+    TREASURY_PERCENTAGE = 0.05
+    TREASURY_ADDRESS = TREASURY_ADDRESS
 
     def __init__(self) -> None:
         self.mining_reward = self.initial_mining_reward
@@ -173,15 +175,36 @@ class Blockchain:
             raise RuntimeError("mined block failed validation")
 
         mining_reward = self.get_current_mining_reward()
+        miner_reward = round(mining_reward * (1 - self.TREASURY_PERCENTAGE), 8)
+        treasury_reward = round(mining_reward * self.TREASURY_PERCENTAGE, 8)
         reward_transaction = Transaction(
             sender_address=SYSTEM_ADDRESS,
             receiver_address=miner_address,
-            amount=mining_reward,
+            amount=miner_reward,
         )
-        self.pending_transactions = [reward_transaction] if mining_reward > 0 else []
+        treasury_transaction = Transaction(
+            sender_address=SYSTEM_ADDRESS,
+            receiver_address=self.TREASURY_ADDRESS,
+            amount=treasury_reward,
+        )
+        self.pending_transactions = (
+            [reward_transaction, treasury_transaction] if mining_reward > 0 else []
+        )
         vorliq_logger.info("Mined block %s with hash %s", block.index, block.hash)
 
         return block
+
+    def get_treasury_balance(self) -> float:
+        balance = 0.0
+        for block in self.chain:
+            for transaction in block.transactions:
+                if isinstance(transaction, dict):
+                    transaction = Transaction.from_dict(transaction)
+                if transaction.sender_address == self.TREASURY_ADDRESS:
+                    balance -= transaction.amount
+                if transaction.receiver_address == self.TREASURY_ADDRESS:
+                    balance += transaction.amount
+        return balance
 
     def adjust_difficulty(self) -> None:
         height = self.get_block_height()
@@ -323,6 +346,9 @@ class Blockchain:
             "block_time_target": self.BLOCK_TIME_TARGET,
             "block_time_minimum": self.BLOCK_TIME_MINIMUM,
             "difficulty_adjustment_interval": self.DIFFICULTY_ADJUSTMENT_INTERVAL,
+            "treasury_percentage": self.TREASURY_PERCENTAGE,
+            "treasury_address": self.TREASURY_ADDRESS,
+            "treasury_balance": self.get_treasury_balance(),
             "is_valid": self.is_chain_valid(),
             "pending_transactions": self.get_pending_transactions(),
             "chain": self.get_chain_data(),

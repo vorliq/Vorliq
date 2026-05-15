@@ -12,9 +12,11 @@ from lending import LendingPool
 from logger import vorliq_logger
 from network import Network
 from node import Node
+from price import PriceDiscovery
 from registry import NodeRegistry
 from storage import Storage
-from transaction import Transaction
+from transaction import SYSTEM_ADDRESSES, Transaction
+from treasury import Treasury
 from wallet import Wallet
 
 APP_START_TIME = time.time()
@@ -60,7 +62,22 @@ if governance.governance_settings["difficulty"]["changed"]:
 vorliq_logger.info("Flask startup restored %s governance proposals", len(governance.proposals))
 node_registry = storage.load_registry()
 vorliq_logger.info("Flask startup restored %s registry records", len(node_registry.registered_nodes))
-_imports_ready = (Block, Blockchain, MiningCooldownError, Transaction, Exchange, Forum, Governance)
+treasury = storage.load_treasury()
+treasury.blockchain = node.blockchain
+vorliq_logger.info("Flask startup restored %s treasury proposals", len(treasury.proposals))
+price_discovery = storage.load_price_discovery()
+vorliq_logger.info("Flask startup restored %s price signals", len(price_discovery.signals))
+_imports_ready = (
+    Block,
+    Blockchain,
+    MiningCooldownError,
+    Transaction,
+    Exchange,
+    Forum,
+    Governance,
+    Treasury,
+    PriceDiscovery,
+)
 
 if network.peers:
     network.announce_to_peers(LOCAL_NODE_URL, network.get_peers())
@@ -94,6 +111,8 @@ def create_transaction():
     try:
         data = request.get_json(force=True)
         transaction = Transaction.from_dict(data)
+        if transaction.sender_address in SYSTEM_ADDRESSES:
+            raise ValueError("system-controlled addresses cannot submit public transactions")
         node.submit_transaction(transaction)
         storage.save_pending(node.blockchain.pending_transactions)
         if not data.get("_broadcasted"):
@@ -205,6 +224,109 @@ def get_diagnostics():
             "last_block_timestamp": latest_block.timestamp,
         }
     )
+
+
+@app.get("/treasury/balance")
+def get_treasury_balance():
+    return jsonify(
+        {
+            "success": True,
+            "address": node.blockchain.TREASURY_ADDRESS,
+            "balance": treasury.get_treasury_balance(node.blockchain),
+            "treasury_percentage": node.blockchain.TREASURY_PERCENTAGE,
+        }
+    )
+
+
+@app.get("/treasury/proposals")
+def get_treasury_proposals():
+    if treasury.expire_proposals():
+        storage.save_treasury(treasury)
+    return jsonify({"success": True, "proposals": treasury.get_active_proposals()})
+
+
+@app.get("/treasury/all")
+def get_all_treasury_proposals():
+    if treasury.expire_proposals():
+        storage.save_treasury(treasury)
+    return jsonify({"success": True, "proposals": treasury.get_all_proposals()})
+
+
+@app.post("/treasury/propose")
+def create_treasury_proposal():
+    try:
+        data = request.get_json(force=True)
+        proposal_id = treasury.create_proposal(
+            proposer_address=data.get("proposer_address") or data.get("proposerAddress"),
+            title=data["title"],
+            description=data["description"],
+            category=data["category"],
+            requested_amount=float(data.get("requested_amount") or data.get("requestedAmount")),
+            recipient_address=data.get("recipient_address") or data.get("recipientAddress"),
+            current_blockchain=node.blockchain,
+        )
+        storage.save_treasury(treasury)
+        return jsonify({"success": True, "proposal_id": proposal_id, "proposal": treasury.get_proposal(proposal_id)}), 201
+    except Exception as exc:
+        vorliq_logger.error("Treasury propose endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/treasury/vote")
+def vote_on_treasury_proposal():
+    try:
+        data = request.get_json(force=True)
+        voter_address = data.get("voter_address") or data.get("voterAddress")
+        voter_balance = node.blockchain.get_balance(voter_address)
+        proposal = treasury.vote_on_proposal(
+            proposal_id=data.get("proposal_id") or data.get("proposalId"),
+            voter_address=voter_address,
+            vote=data["vote"],
+            voter_balance=voter_balance,
+            current_blockchain=node.blockchain,
+        )
+        storage.save_treasury(treasury)
+        storage.save_pending(node.blockchain.pending_transactions)
+        return jsonify({"success": True, "proposal": proposal})
+    except Exception as exc:
+        vorliq_logger.error("Treasury vote endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/price/signal")
+def submit_price_signal():
+    try:
+        data = request.get_json(force=True)
+        signal_id = price_discovery.submit_signal(
+            submitter_address=data.get("submitter_address") or data.get("submitterAddress"),
+            currency=data["currency"],
+            price_value=float(data.get("price_value") or data.get("priceValue")),
+        )
+        storage.save_price_discovery(price_discovery)
+        return jsonify({"success": True, "signal_id": signal_id, "signal": price_discovery.signals[signal_id]}), 201
+    except Exception as exc:
+        vorliq_logger.error("Price signal endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/price/signals")
+def get_price_signals():
+    expired = price_discovery.expire_old_signals()
+    if expired:
+        storage.save_price_discovery(price_discovery)
+    return jsonify({"success": True, "signals": price_discovery.get_active_signals()})
+
+
+@app.get("/price/median")
+def get_price_median():
+    try:
+        currency = request.args.get("currency", "")
+        median = price_discovery.get_median_price(currency)
+        storage.save_price_discovery(price_discovery)
+        return jsonify({"success": True, **median})
+    except Exception as exc:
+        vorliq_logger.error("Price median endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
 
 
 @app.post("/peers/register")

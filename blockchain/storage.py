@@ -11,8 +11,10 @@ from forum import Forum
 from governance import Governance
 from lending import LendingPool
 from logger import vorliq_logger
+from price import PriceDiscovery
 from registry import NodeRegistry
 from transaction import Transaction
+from treasury import Treasury
 
 
 class Storage:
@@ -25,6 +27,8 @@ class Storage:
         self.exchange_file = self.data_dir / "exchange.json"
         self.forum_file = self.data_dir / "forum.json"
         self.governance_file = self.data_dir / "governance.json"
+        self.treasury_file = self.data_dir / "treasury.json"
+        self.price_file = self.data_dir / "price.json"
         self.peers_file = self.data_dir / "peers.json"
         self.registry_file = self.data_dir / "registry.json"
 
@@ -182,6 +186,43 @@ class Storage:
         governance.governance_settings.update(settings)
         vorliq_logger.info("Loaded governance with %s proposal records", len(proposals))
         return governance
+
+    def save_treasury(self, treasury: Treasury) -> None:
+        self._write_json(self.treasury_file, {"proposals": treasury.proposals})
+        vorliq_logger.info("Saved treasury with %s proposal records", len(treasury.proposals))
+
+    def load_treasury(self) -> Treasury:
+        treasury = Treasury()
+        if not self.treasury_file.exists():
+            vorliq_logger.info("No saved treasury found on disk")
+            return treasury
+
+        data = self._read_json(self.treasury_file)
+        proposals = data.get("proposals", {})
+        if not isinstance(proposals, dict):
+            raise ValueError("treasury data must contain a proposals object")
+        treasury.proposals = proposals
+        vorliq_logger.info("Loaded treasury with %s proposal records", len(proposals))
+        return treasury
+
+    def save_price_discovery(self, price_discovery: PriceDiscovery) -> None:
+        self._write_json(self.price_file, {"signals": price_discovery.signals})
+        vorliq_logger.info("Saved price discovery with %s signal records", len(price_discovery.signals))
+
+    def load_price_discovery(self) -> PriceDiscovery:
+        price_discovery = PriceDiscovery()
+        if not self.price_file.exists():
+            vorliq_logger.info("No saved price discovery found on disk")
+            return price_discovery
+
+        data = self._read_json(self.price_file)
+        signals = data.get("signals", {})
+        if not isinstance(signals, dict):
+            raise ValueError("price discovery data must contain a signals object")
+        price_discovery.signals = signals
+        price_discovery.expire_old_signals()
+        vorliq_logger.info("Loaded price discovery with %s signal records", len(price_discovery.signals))
+        return price_discovery
 
     def save_peers(self, peer_urls: set[str]) -> None:
         self._write_json(self.peers_file, sorted(peer_urls))

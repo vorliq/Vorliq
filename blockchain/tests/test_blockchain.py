@@ -42,9 +42,11 @@ class BlockchainTests(unittest.TestCase):
         blockchain = Blockchain()
         blockchain.mine_pending_transactions("miner")
 
-        self.assertEqual(len(blockchain.pending_transactions), 1)
+        self.assertEqual(len(blockchain.pending_transactions), 2)
         self.assertEqual(blockchain.pending_transactions[0].receiver_address, "miner")
-        self.assertEqual(blockchain.pending_transactions[0].amount, 50)
+        self.assertEqual(blockchain.pending_transactions[0].amount, 47.5)
+        self.assertEqual(blockchain.pending_transactions[1].receiver_address, blockchain.TREASURY_ADDRESS)
+        self.assertEqual(blockchain.pending_transactions[1].amount, 2.5)
 
     def test_halving_calculation(self):
         blockchain = Blockchain()

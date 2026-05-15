@@ -972,6 +972,11 @@ p {
   border: 1px solid var(--border);
 }
 
+.vote-bar span {
+  display: block;
+  background: var(--green);
+}
+
 .vote-yes {
   background: var(--green);
 }
@@ -1454,6 +1459,41 @@ p {
   background: var(--primary-soft);
   color: var(--primary);
   text-transform: uppercase;
+}
+
+.hero-number {
+  color: var(--primary);
+  font-size: clamp(2.6rem, 9vw, 5rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.success-box {
+  border: 1px solid rgba(0, 200, 83, 0.38);
+  border-radius: 8px;
+  background: rgba(0, 200, 83, 0.12);
+  color: var(--green);
+  font-weight: 800;
+  padding: 14px;
+}
+
+.error-box {
+  border: 1px solid var(--danger-border);
+  border-radius: 8px;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  font-weight: 800;
+  padding: 14px;
+}
+
+.accent-empty {
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 900;
+}
+
+.ambassador-highlight {
+  align-self: start;
 }
 
 .forum-card:hover,

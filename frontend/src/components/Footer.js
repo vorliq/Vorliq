@@ -11,6 +11,7 @@ function Footer() {
     { label: "GitHub", href: "https://github.com/vorliq/Vorliq" },
     { label: "X", href: "https://x.com/vorliq" },
     { label: "Network Status", href: "https://status.vorliq.org" },
+    { label: "Become an Ambassador", href: "/ambassador", internal: true },
   ];
 
   return (
@@ -23,7 +24,7 @@ function Footer() {
 
         <div className="footer-links">
           {links.map((link) => (
-            <a key={link.href} href={link.href} target="_blank" rel="noreferrer">
+            <a key={link.href} href={link.href} target={link.internal ? undefined : "_blank"} rel={link.internal ? undefined : "noreferrer"}>
               {link.label}
             </a>
           ))}
