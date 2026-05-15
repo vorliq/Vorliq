@@ -63,4 +63,22 @@ router.post("/api/forum/upvote", async (req, res) => {
   }
 });
 
+router.post("/api/forum/tip/post", async (req, res) => {
+  try {
+    const response = await axios.post(`${flaskUrl}/forum/tip/post`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    return handleRouteError(res, error, "POST /api/forum/tip/post", "Unable to tip forum post.");
+  }
+});
+
+router.post("/api/forum/tip/reply", async (req, res) => {
+  try {
+    const response = await axios.post(`${flaskUrl}/forum/tip/reply`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    return handleRouteError(res, error, "POST /api/forum/tip/reply", "Unable to tip forum reply.");
+  }
+});
+
 module.exports = router;

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from achievements import Achievements
 from block import Block
 from blockchain import Blockchain
 from exchange import Exchange
@@ -29,6 +30,7 @@ class Storage:
         self.governance_file = self.data_dir / "governance.json"
         self.treasury_file = self.data_dir / "treasury.json"
         self.price_file = self.data_dir / "price.json"
+        self.achievements_file = self.data_dir / "achievements.json"
         self.peers_file = self.data_dir / "peers.json"
         self.registry_file = self.data_dir / "registry.json"
 
@@ -223,6 +225,24 @@ class Storage:
         price_discovery.expire_old_signals()
         vorliq_logger.info("Loaded price discovery with %s signal records", len(price_discovery.signals))
         return price_discovery
+
+    def save_achievements(self, achievements: Achievements) -> None:
+        self._write_json(self.achievements_file, {"earned": achievements.earned})
+        vorliq_logger.info("Saved achievements for %s wallet records", len(achievements.earned))
+
+    def load_achievements(self) -> Achievements:
+        achievements = Achievements()
+        if not self.achievements_file.exists():
+            vorliq_logger.info("No saved achievements found on disk")
+            return achievements
+
+        data = self._read_json(self.achievements_file)
+        earned = data.get("earned", {})
+        if not isinstance(earned, dict):
+            raise ValueError("achievements data must contain an earned object")
+        achievements.earned = earned
+        vorliq_logger.info("Loaded achievements for %s wallet records", len(earned))
+        return achievements
 
     def save_peers(self, peer_urls: set[str]) -> None:
         self._write_json(self.peers_file, sorted(peer_urls))

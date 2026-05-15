@@ -37,6 +37,38 @@ function formatTime(timestamp) {
   return new Date(timestamp * 1000).toLocaleString();
 }
 
+function TipForm({ form, onChange, onSubmit }) {
+  return (
+    <div className="tip-form">
+      <input
+        className="input"
+        type="text"
+        placeholder="Your wallet address"
+        value={form.senderAddress}
+        onChange={(event) => onChange("senderAddress", event.target.value)}
+      />
+      <textarea
+        className="textarea"
+        placeholder="Your private key"
+        value={form.privateKey}
+        onChange={(event) => onChange("privateKey", event.target.value)}
+      />
+      <input
+        className="input"
+        type="number"
+        min="1"
+        max="100"
+        placeholder="Amount 1-100 VLQ"
+        value={form.amount}
+        onChange={(event) => onChange("amount", event.target.value)}
+      />
+      <button className="button" type="button" onClick={onSubmit}>
+        Send Tip
+      </button>
+    </div>
+  );
+}
+
 function Forum() {
   const [posts, setPosts] = useState([]);
   const [selectedPostId, setSelectedPostId] = useState("");
@@ -46,6 +78,7 @@ function Forum() {
   const [upvoteAddress, setUpvoteAddress] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [tipForms, setTipForms] = useState({});
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [loadingPost, setLoadingPost] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -194,6 +227,54 @@ function Forum() {
     }
   }
 
+  function updateTipForm(key, field, value) {
+    setTipForms((current) => ({
+      ...current,
+      [key]: {
+        senderAddress: "",
+        privateKey: "",
+        amount: "",
+        ...current[key],
+        [field]: value,
+      },
+    }));
+  }
+
+  function toggleTipForm(key) {
+    setTipForms((current) => ({
+      ...current,
+      [key]: current[key] ? undefined : { senderAddress: "", privateKey: "", amount: "" },
+    }));
+  }
+
+  async function sendTip(type, payload, key, receiverAddress) {
+    const tipForm = tipForms[key];
+    if (!tipForm?.senderAddress.trim() || !tipForm.privateKey.trim() || !tipForm.amount) {
+      toast.error("Enter your wallet address, private key, and tip amount.");
+      return;
+    }
+
+    try {
+      await api.post(type === "post" ? "/forum/tip/post" : "/forum/tip/reply", {
+        ...payload,
+        sender_address: tipForm.senderAddress.trim(),
+        sender_private_key: tipForm.privateKey,
+        receiver_address: receiverAddress,
+        amount: Number(tipForm.amount),
+      });
+      toast.success(`You tipped ${tipForm.amount} VLQ to ${shortAddress(receiverAddress)}.`);
+      setTipForms((current) => ({ ...current, [key]: undefined }));
+      if (selectedPostId) {
+        await loadPost(selectedPostId);
+      }
+      await loadPosts({ quiet: true });
+    } catch (error) {
+      const message = apiErrorMessage(error, "Unable to send tip.");
+      setErrorMessage(message);
+      toast.error(message);
+    }
+  }
+
   return (
     <main className="page">
       <section className="hero">
@@ -241,22 +322,34 @@ function Forum() {
           ) : (
             <div className="forum-list">
               {displayedPosts.map((post) => (
-                <button
+                <article
                   className={`forum-card ${selectedPostId === post.post_id ? "active" : ""} ${
                     post.pinned ? "pinned" : ""
                   }`}
-                  type="button"
                   key={post.post_id}
-                  onClick={() => loadPost(post.post_id)}
                 >
-                  <strong>{post.title}</strong>
-                  <span className="badge forum-category">{post.category || "general"}</span>
-                  <span>By {shortAddress(post.author_address)}</span>
-                  <span>
-                    {post.vote_count} votes · {post.replies?.length || 0} replies
-                  </span>
-                  <small>{formatTime(post.timestamp)}</small>
-                </button>
+                  <button className="forum-open-button" type="button" onClick={() => loadPost(post.post_id)}>
+                    <strong>{post.title}</strong>
+                    <span className="badge forum-category">{post.category || "general"}</span>
+                    <span>By {shortAddress(post.author_address)}</span>
+                    <span>
+                      {post.vote_count} votes · {post.replies?.length || 0} replies · {post.tips?.length || 0} tips
+                    </span>
+                    <small>{formatTime(post.timestamp)}</small>
+                  </button>
+                  <button className="button secondary small-button" type="button" onClick={() => toggleTipForm(`post:${post.post_id}`)}>
+                    Tip
+                  </button>
+                  {tipForms[`post:${post.post_id}`] && (
+                    <TipForm
+                      form={tipForms[`post:${post.post_id}`]}
+                      onChange={(field, value) => updateTipForm(`post:${post.post_id}`, field, value)}
+                      onSubmit={() =>
+                        sendTip("post", { post_id: post.post_id }, `post:${post.post_id}`, post.author_address)
+                      }
+                    />
+                  )}
+                </article>
               ))}
             </div>
           )}
@@ -360,6 +453,18 @@ function Forum() {
                   Upvote
                 </button>
               </div>
+              <button className="button secondary small-button" type="button" onClick={() => toggleTipForm(`post:${selectedPost.post_id}`)}>
+                Tip This Post
+              </button>
+              {tipForms[`post:${selectedPost.post_id}`] && (
+                <TipForm
+                  form={tipForms[`post:${selectedPost.post_id}`]}
+                  onChange={(field, value) => updateTipForm(`post:${selectedPost.post_id}`, field, value)}
+                  onSubmit={() =>
+                    sendTip("post", { post_id: selectedPost.post_id }, `post:${selectedPost.post_id}`, selectedPost.author_address)
+                  }
+                />
+              )}
 
               <section className="stack">
                 <h2>Replies</h2>
@@ -368,9 +473,26 @@ function Forum() {
                     <article className="reply-card" key={reply.reply_id}>
                       <p>{reply.body}</p>
                       <span>
-                        {shortAddress(reply.author_address)} · {reply.vote_count} votes ·{" "}
+                        {shortAddress(reply.author_address)} · {reply.vote_count} votes · {reply.tips?.length || 0} tips ·{" "}
                         {formatTime(reply.timestamp)}
                       </span>
+                      <button className="button secondary small-button" type="button" onClick={() => toggleTipForm(`reply:${reply.reply_id}`)}>
+                        Tip Reply
+                      </button>
+                      {tipForms[`reply:${reply.reply_id}`] && (
+                        <TipForm
+                          form={tipForms[`reply:${reply.reply_id}`]}
+                          onChange={(field, value) => updateTipForm(`reply:${reply.reply_id}`, field, value)}
+                          onSubmit={() =>
+                            sendTip(
+                              "reply",
+                              { post_id: selectedPost.post_id, reply_id: reply.reply_id },
+                              `reply:${reply.reply_id}`,
+                              reply.author_address
+                            )
+                          }
+                        />
+                      )}
                     </article>
                   ))
                 ) : (

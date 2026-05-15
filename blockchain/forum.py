@@ -5,6 +5,7 @@ import time
 from typing import Any
 
 from logger import vorliq_logger
+from transaction import Transaction
 
 
 class Forum:
@@ -28,6 +29,7 @@ class Forum:
             "body": body,
             "category": category,
             "pinned": False,
+            "tips": [],
             "timestamp": timestamp,
             "replies": [],
             "vote_count": 0,
@@ -49,6 +51,7 @@ class Forum:
             "timestamp": timestamp,
             "vote_count": 0,
             "voters": [],
+            "tips": [],
         }
         post["replies"].append(reply)
         vorliq_logger.info("Forum reply added to post %s by %s", post_id, author_address)
@@ -110,6 +113,38 @@ class Forum:
         vorliq_logger.info("Forum post %s was pinned", post_id)
         return post
 
+    def tip_post(
+        self,
+        post_id: str,
+        sender_address: str,
+        receiver_address: str,
+        amount: float,
+        blockchain: Any,
+        transaction: Transaction | None = None,
+    ) -> dict[str, Any]:
+        post = self._get_existing_post(post_id)
+        tip = self._create_tip(sender_address, receiver_address, amount, blockchain, transaction)
+        post.setdefault("tips", []).append(tip)
+        vorliq_logger.info("Forum post %s received tip of %s VLQ", post_id, amount)
+        return tip
+
+    def tip_reply(
+        self,
+        post_id: str,
+        reply_id: str,
+        sender_address: str,
+        receiver_address: str,
+        amount: float,
+        blockchain: Any,
+        transaction: Transaction | None = None,
+    ) -> dict[str, Any]:
+        post = self._get_existing_post(post_id)
+        reply = self._get_existing_reply(post, reply_id)
+        tip = self._create_tip(sender_address, receiver_address, amount, blockchain, transaction)
+        reply.setdefault("tips", []).append(tip)
+        vorliq_logger.info("Forum reply %s received tip of %s VLQ", reply_id, amount)
+        return tip
+
     def _get_existing_post(self, post_id: str) -> dict[str, Any]:
         post_id = self._require_text(post_id, "post ID")
         post = self.posts.get(post_id)
@@ -147,6 +182,33 @@ class Forum:
         post["pinned"] = bool(post.get("pinned", False))
         post["voters"] = list(post.get("voters", []))
         post["replies"] = list(post.get("replies", []))
+        post["tips"] = list(post.get("tips", []))
         for reply in post["replies"]:
             reply["voters"] = list(reply.get("voters", []))
             reply["vote_count"] = int(reply.get("vote_count", 0))
+            reply["tips"] = list(reply.get("tips", []))
+
+    def _create_tip(
+        self,
+        sender_address: str,
+        receiver_address: str,
+        amount: float,
+        blockchain: Any,
+        transaction: Transaction | None = None,
+    ) -> dict[str, Any]:
+        sender_address = self._require_text(sender_address, "sender address")
+        receiver_address = self._require_text(receiver_address, "receiver address")
+        amount = float(amount)
+        if amount < 1 or amount > 100:
+            raise ValueError("tip amount must be between 1 and 100 VLQ")
+        if blockchain is None:
+            raise ValueError("blockchain is required to submit a tip")
+
+        tip_transaction = transaction or Transaction(sender_address, receiver_address, amount)
+        blockchain.add_pending_transaction(tip_transaction)
+        return {
+            "sender_address": sender_address,
+            "receiver_address": receiver_address,
+            "amount": amount,
+            "timestamp": time.time(),
+        }

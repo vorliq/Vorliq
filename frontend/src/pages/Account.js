@@ -15,6 +15,8 @@ function Account() {
   const [balance, setBalance] = useState(null);
   const [chain, setChain] = useState([]);
   const [loans, setLoans] = useState([]);
+  const [earnedAchievements, setEarnedAchievements] = useState([]);
+  const [allAchievements, setAllAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [repayingLoanId, setRepayingLoanId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -24,16 +26,20 @@ function Account() {
 
     async function loadAccount() {
       try {
-        const [balanceResponse, chainResponse, loansResponse] = await Promise.all([
+        const [balanceResponse, chainResponse, loansResponse, earnedResponse, allAchievementsResponse] = await Promise.all([
           api.get("/wallet/balance", { params: { address: wallet.address } }),
           api.get("/chain"),
           api.get("/lending/loans"),
+          api.get("/achievements", { params: { address: wallet.address } }),
+          api.get("/achievements/all"),
         ]);
 
         if (mounted) {
           setBalance(balanceResponse.data.balance);
           setChain(chainResponse.data.chain || []);
           setLoans(loansResponse.data.loans || []);
+          setEarnedAchievements(earnedResponse.data.achievements || []);
+          setAllAchievements(allAchievementsResponse.data.achievements || []);
           setErrorMessage("");
         }
       } catch (error) {
@@ -264,7 +270,39 @@ function Account() {
           ))}
         </div>
       </section>
+
+      <section className="card card-pad account-section">
+        <h2>My Achievements</h2>
+        {loading && <Spinner label="Loading achievements..." />}
+        {!loading && (
+          <AchievementGrid
+            allAchievements={allAchievements}
+            earnedAchievements={earnedAchievements}
+          />
+        )}
+      </section>
     </main>
+  );
+}
+
+function AchievementGrid({ allAchievements, earnedAchievements }) {
+  const earnedIds = new Set(earnedAchievements.map((achievement) => achievement.id || achievement.achievement_id));
+  return (
+    <div className="achievement-grid">
+      {allAchievements.map((achievement) => {
+        const unlocked = earnedIds.has(achievement.id);
+        return (
+          <article
+            className={`achievement-badge ${unlocked ? "earned" : "locked"} achievement-${achievement.badge_color}`}
+            key={achievement.id}
+          >
+            <strong>{achievement.title}</strong>
+            <p>{achievement.description}</p>
+            <span>{unlocked ? "Earned" : "Locked"}</span>
+          </article>
+        );
+      })}
+    </div>
   );
 }
 

@@ -1496,6 +1496,125 @@ p {
   align-self: start;
 }
 
+.chat-shell {
+  min-height: 620px;
+}
+
+.chat-header,
+.chat-form {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chat-window {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 360px;
+  max-height: 52vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--value-bg);
+  padding: 16px;
+}
+
+.chat-message {
+  max-width: min(620px, 85%);
+  align-self: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  padding: 12px 14px;
+}
+
+.chat-message.own {
+  align-self: flex-end;
+  background: var(--primary);
+  color: #fff;
+}
+
+.chat-message span {
+  color: var(--muted-2);
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.chat-message.own span,
+.chat-message.own p {
+  color: #fff;
+}
+
+.chat-message p {
+  margin: 0;
+}
+
+.chat-form .input {
+  margin-bottom: 0;
+}
+
+.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.achievement-badge {
+  display: grid;
+  gap: 8px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--soft-surface);
+  padding: 16px;
+}
+
+.achievement-badge strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.achievement-badge p {
+  margin: 0;
+}
+
+.achievement-badge span {
+  color: var(--muted-2);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.achievement-badge.locked {
+  filter: grayscale(1);
+  opacity: 0.48;
+}
+
+.achievement-green { border-color: var(--green); }
+.achievement-blue { border-color: var(--blue); }
+.achievement-yellow { border-color: var(--yellow); }
+.achievement-orange { border-color: var(--orange); }
+.achievement-purple { border-color: var(--primary); }
+.achievement-teal { border-color: #34d5c8; }
+.achievement-red { border-color: var(--red); }
+.achievement-pink { border-color: #ff6fcf; }
+.achievement-gold { border-color: #ffd700; }
+.achievement-silver { border-color: #c0c0c0; }
+
+@media (max-width: 700px) {
+  .chat-header,
+  .chat-form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .chat-message {
+    max-width: 95%;
+  }
+}
+
 .forum-card:hover,
 .forum-card.active {
   border-color: var(--primary);
@@ -1507,11 +1626,30 @@ p {
   font-size: 1.02rem;
 }
 
+.forum-open-button {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
 .forum-card span,
 .forum-card small,
 .reply-card span {
   color: var(--muted-2);
   font-weight: 700;
+}
+
+.tip-form {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
 }
 
 .forum-create {

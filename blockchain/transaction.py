@@ -11,7 +11,7 @@ from wallet import address_from_public_key_pem, verify_signature
 SYSTEM_ADDRESS = "SYSTEM"
 LENDING_POOL_ADDRESS = "LENDING_POOL"
 TREASURY_ADDRESS = "VORLIQ_TREASURY"
-SYSTEM_ADDRESSES = {SYSTEM_ADDRESS, LENDING_POOL_ADDRESS, TREASURY_ADDRESS}
+SYSTEM_ADDRESSES = {SYSTEM_ADDRESS, LENDING_POOL_ADDRESS}
 
 
 class Transaction:
@@ -66,6 +66,9 @@ class Transaction:
 
     def verify_transaction(self, sender_public_key: str | None = None) -> bool:
         if self.sender_address in SYSTEM_ADDRESSES:
+            return self.signature is None
+
+        if self.sender_address == TREASURY_ADDRESS:
             return self.signature is None
 
         if self.receiver_address == LENDING_POOL_ADDRESS and self.signature is None:

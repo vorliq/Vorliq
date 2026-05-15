@@ -36,6 +36,7 @@ jobs:
             set -euo pipefail
             sudo -u vorliq -H git -C /home/vorliq/app fetch origin
             sudo -u vorliq -H git -C /home/vorliq/app reset --hard origin/main
+            sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/backend && npm install'
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm install'
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm run build'
             chmod -R 755 /home/vorliq/app/frontend/build

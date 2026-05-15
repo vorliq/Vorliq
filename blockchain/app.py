@@ -3,6 +3,7 @@ import time
 
 from flask import Flask, jsonify, request
 
+from achievements import Achievements
 from block import Block
 from blockchain import Blockchain, MiningCooldownError
 from exchange import Exchange
@@ -15,7 +16,7 @@ from node import Node
 from price import PriceDiscovery
 from registry import NodeRegistry
 from storage import Storage
-from transaction import SYSTEM_ADDRESSES, Transaction
+from transaction import SYSTEM_ADDRESSES, TREASURY_ADDRESS, Transaction
 from treasury import Treasury
 from wallet import Wallet
 
@@ -67,7 +68,10 @@ treasury.blockchain = node.blockchain
 vorliq_logger.info("Flask startup restored %s treasury proposals", len(treasury.proposals))
 price_discovery = storage.load_price_discovery()
 vorliq_logger.info("Flask startup restored %s price signals", len(price_discovery.signals))
+achievements = storage.load_achievements()
+vorliq_logger.info("Flask startup restored achievements for %s wallets", len(achievements.earned))
 _imports_ready = (
+    Achievements,
     Block,
     Blockchain,
     MiningCooldownError,
@@ -111,10 +115,12 @@ def create_transaction():
     try:
         data = request.get_json(force=True)
         transaction = Transaction.from_dict(data)
-        if transaction.sender_address in SYSTEM_ADDRESSES:
+        if transaction.sender_address in SYSTEM_ADDRESSES or transaction.sender_address == TREASURY_ADDRESS:
             raise ValueError("system-controlled addresses cannot submit public transactions")
         node.submit_transaction(transaction)
+        achievements.check_and_award(transaction.sender_address, "first_transaction", node.blockchain)
         storage.save_pending(node.blockchain.pending_transactions)
+        storage.save_achievements(achievements)
         if not data.get("_broadcasted"):
             network.broadcast_transaction({**transaction.to_dict(), "_broadcasted": True})
         return jsonify({"success": True, "message": "Transaction added to pending pool"}), 201
@@ -132,6 +138,9 @@ def mine_block():
         storage.save_chain(node.blockchain)
         storage.save_pending(node.blockchain.pending_transactions)
         storage.save_lending_pool(lending_pool)
+        achievements.check_and_award(miner_address, "first_mine", node.blockchain)
+        achievements.check_and_award(miner_address, "ten_blocks", node.blockchain)
+        storage.save_achievements(achievements)
         network.broadcast_block(block)
         return jsonify({"success": True, "block": block}), 201
     except MiningCooldownError as exc:
@@ -154,6 +163,8 @@ def mine_block():
 @app.post("/wallet")
 def create_wallet():
     wallet = Wallet()
+    achievements.check_and_award(wallet.address, "first_wallet", node.blockchain)
+    storage.save_achievements(achievements)
     vorliq_logger.info("Wallet created through Flask API for address %s", wallet.address)
     return jsonify(
         {
@@ -285,8 +296,10 @@ def vote_on_treasury_proposal():
             voter_balance=voter_balance,
             current_blockchain=node.blockchain,
         )
+        achievements.check_and_award(voter_address, "treasury_voter", node.blockchain)
         storage.save_treasury(treasury)
         storage.save_pending(node.blockchain.pending_transactions)
+        storage.save_achievements(achievements)
         return jsonify({"success": True, "proposal": proposal})
     except Exception as exc:
         vorliq_logger.error("Treasury vote endpoint failed: %s", exc)
@@ -327,6 +340,21 @@ def get_price_median():
     except Exception as exc:
         vorliq_logger.error("Price median endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/achievements")
+def get_wallet_achievements():
+    try:
+        address = request.args.get("address", "")
+        return jsonify({"success": True, "achievements": achievements.get_achievements(address)})
+    except Exception as exc:
+        vorliq_logger.error("Achievements endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/achievements/all")
+def get_all_achievements():
+    return jsonify({"success": True, "achievements": achievements.get_all_achievements()})
 
 
 @app.post("/peers/register")
@@ -505,8 +533,10 @@ def vote_on_lending_loan():
             vote=data["vote"],
             voter_vlq_balance=voter_balance,
         )
+        achievements.check_and_award(voter_address, "first_loan", node.blockchain)
         storage.save_lending_pool(lending_pool)
         storage.save_pending(node.blockchain.pending_transactions)
+        storage.save_achievements(achievements)
         return jsonify({"success": True, "loan": loan})
     except Exception as exc:
         vorliq_logger.error("Lending vote endpoint failed: %s", exc)
@@ -520,8 +550,10 @@ def repay_lending_loan():
         loan_id = data.get("loan_id") or data.get("loanId")
         repayer_address = data.get("repayer_address") or data.get("repayerAddress")
         loan = lending_pool.repay_loan(loan_id, repayer_address, node.blockchain)
+        achievements.check_and_award(repayer_address, "first_repayment", node.blockchain)
         storage.save_lending_pool(lending_pool)
         storage.save_pending(node.blockchain.pending_transactions)
+        storage.save_achievements(achievements)
         return jsonify(
             {
                 "success": True,
@@ -595,7 +627,11 @@ def complete_exchange_offer():
             offer_id=data.get("offer_id") or data.get("offerId"),
             caller_address=data.get("caller_address") or data.get("callerAddress"),
         )
+        achievements.check_and_award(offer["creator_address"], "first_trade", node.blockchain)
+        if offer.get("acceptor_address"):
+            achievements.check_and_award(offer["acceptor_address"], "first_trade", node.blockchain)
         storage.save_exchange(exchange)
+        storage.save_achievements(achievements)
         return jsonify({"success": True, "offer": offer})
     except Exception as exc:
         vorliq_logger.error("Exchange complete endpoint failed: %s", exc)
@@ -689,6 +725,65 @@ def upvote_forum_post():
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
+@app.post("/forum/tip/post")
+def tip_forum_post():
+    try:
+        data = request.get_json(force=True)
+        sender_address = data.get("sender_address") or data.get("senderAddress")
+        sender_private_key = data.get("sender_private_key") or data.get("senderPrivateKey")
+        receiver_address = data.get("receiver_address") or data.get("receiverAddress")
+        amount = float(data["amount"])
+        wallet = Wallet.from_private_key_pem(sender_private_key)
+        transaction = Transaction(sender_address, receiver_address, amount)
+        transaction.sign_transaction(wallet)
+        tip = forum.tip_post(
+            post_id=data.get("post_id") or data.get("postId"),
+            sender_address=sender_address,
+            receiver_address=receiver_address,
+            amount=amount,
+            blockchain=node.blockchain,
+            transaction=transaction,
+        )
+        achievements.check_and_award(sender_address, "first_tip", node.blockchain)
+        storage.save_forum(forum)
+        storage.save_pending(node.blockchain.pending_transactions)
+        storage.save_achievements(achievements)
+        return jsonify({"success": True, "tip": tip}), 201
+    except Exception as exc:
+        vorliq_logger.error("Forum post tip endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/forum/tip/reply")
+def tip_forum_reply():
+    try:
+        data = request.get_json(force=True)
+        sender_address = data.get("sender_address") or data.get("senderAddress")
+        sender_private_key = data.get("sender_private_key") or data.get("senderPrivateKey")
+        receiver_address = data.get("receiver_address") or data.get("receiverAddress")
+        amount = float(data["amount"])
+        wallet = Wallet.from_private_key_pem(sender_private_key)
+        transaction = Transaction(sender_address, receiver_address, amount)
+        transaction.sign_transaction(wallet)
+        tip = forum.tip_reply(
+            post_id=data.get("post_id") or data.get("postId"),
+            reply_id=data.get("reply_id") or data.get("replyId"),
+            sender_address=sender_address,
+            receiver_address=receiver_address,
+            amount=amount,
+            blockchain=node.blockchain,
+            transaction=transaction,
+        )
+        achievements.check_and_award(sender_address, "first_tip", node.blockchain)
+        storage.save_forum(forum)
+        storage.save_pending(node.blockchain.pending_transactions)
+        storage.save_achievements(achievements)
+        return jsonify({"success": True, "tip": tip}), 201
+    except Exception as exc:
+        vorliq_logger.error("Forum reply tip endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
 @app.post("/governance/propose")
 def create_governance_proposal():
     try:
@@ -751,8 +846,10 @@ def vote_on_governance_proposal():
             voter_vlq_balance=voter_balance,
             current_blockchain=node.blockchain,
         )
+        achievements.check_and_award(voter_address, "first_vote", node.blockchain)
         storage.save_governance(governance)
         storage.save_chain(node.blockchain)
+        storage.save_achievements(achievements)
         return jsonify({"success": True, "proposal": proposal})
     except Exception as exc:
         vorliq_logger.error("Governance vote endpoint failed: %s", exc)

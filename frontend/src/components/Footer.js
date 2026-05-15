@@ -12,6 +12,7 @@ function Footer() {
     { label: "X", href: "https://x.com/vorliq" },
     { label: "Network Status", href: "https://status.vorliq.org" },
     { label: "Become an Ambassador", href: "/ambassador", internal: true },
+    { label: "Achievements", href: "/achievements", internal: true },
   ];
 
   return (

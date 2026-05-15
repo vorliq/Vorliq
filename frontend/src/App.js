@@ -29,6 +29,8 @@ import Leaderboard from "./pages/Leaderboard";
 import Treasury from "./pages/Treasury";
 import Price from "./pages/Price";
 import Ambassador from "./pages/Ambassador";
+import Chat from "./pages/Chat";
+import Achievements from "./pages/Achievements";
 import Footer from "./components/Footer";
 import api from "./helpers/api";
 import logo from "./assets/logo.png";
@@ -52,6 +54,7 @@ const navSections = [
       { to: "/treasury", label: "Treasury" },
       { to: "/price", label: "Price" },
       { to: "/forum", label: "Forum" },
+      { to: "/chat", label: "Chat" },
       { to: "/leaderboard", label: "Leaderboard" },
       { to: "/registry", label: "Registry" },
     ],
@@ -261,8 +264,10 @@ function AppShell() {
         <Route path="/treasury" element={<Treasury />} />
         <Route path="/price" element={<Price />} />
         <Route path="/forum" element={<Forum />} />
+        <Route path="/chat" element={<Chat />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/ambassador" element={<Ambassador />} />
+        <Route path="/achievements" element={<Achievements />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/registry" element={<Registry />} />
         <Route path="/health" element={<Health />} />
