@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+import time
 from typing import Any
 
 from block import Block
@@ -7,11 +9,20 @@ from logger import vorliq_logger
 from transaction import SYSTEM_ADDRESSES, SYSTEM_ADDRESS, Transaction
 
 
+class MiningCooldownError(ValueError):
+    def __init__(self, wait_seconds: int) -> None:
+        self.wait_seconds = wait_seconds
+        super().__init__(f"too soon to mine the next block; wait {wait_seconds} seconds")
+
+
 class Blockchain:
     difficulty = 4
     maximum_supply = 21_000_000.0
     initial_mining_reward = 50.0
     halving_interval = 210_000
+    BLOCK_TIME_TARGET = 60
+    BLOCK_TIME_MINIMUM = 30
+    DIFFICULTY_ADJUSTMENT_INTERVAL = 10
 
     def __init__(self) -> None:
         self.mining_reward = self.initial_mining_reward
@@ -24,6 +35,7 @@ class Blockchain:
             index=0,
             transactions=[],
             previous_hash="0",
+            timestamp=time.time() - self.BLOCK_TIME_MINIMUM,
         )
         genesis_block.proof_of_work(self.difficulty)
         vorliq_logger.info("Genesis block created with hash %s", genesis_block.hash)
@@ -43,6 +55,16 @@ class Blockchain:
             vorliq_logger.warning("Rejected block %s because previous hash did not match", block.index)
             return False
 
+        if block.timestamp - latest_block.timestamp < self.BLOCK_TIME_MINIMUM:
+            vorliq_logger.warning("Rejected block %s because it was mined too soon after block %s", block.index, latest_block.index)
+            return False
+
+        previous_miner = getattr(latest_block, "miner_address", None)
+        current_miner = getattr(block, "miner_address", None)
+        if previous_miner and current_miner and previous_miner == current_miner:
+            vorliq_logger.warning("Rejected block %s because miner %s mined consecutive blocks", block.index, current_miner)
+            return False
+
         if not block.has_valid_proof(getattr(block, "difficulty", self.difficulty)):
             vorliq_logger.warning("Rejected block %s because proof of work was invalid", block.index)
             return False
@@ -52,6 +74,7 @@ class Blockchain:
             return False
 
         self.chain.append(block)
+        self.adjust_difficulty()
         return True
 
     def is_chain_valid(self) -> bool:
@@ -84,6 +107,15 @@ class Blockchain:
                 vorliq_logger.warning("Chain validation failed at block %s: previous hash mismatch", current_block.index)
                 return False
 
+            current_miner = getattr(current_block, "miner_address", None)
+            previous_miner = getattr(previous_block, "miner_address", None)
+            if current_miner and current_block.timestamp - previous_block.timestamp < self.BLOCK_TIME_MINIMUM:
+                vorliq_logger.warning("Chain validation failed at block %s: block was mined too soon", current_block.index)
+                return False
+            if current_miner and previous_miner and current_miner == previous_miner:
+                vorliq_logger.warning("Chain validation failed at block %s: consecutive miner address", current_block.index)
+                return False
+
         if not self._chain_transactions_are_valid(self.chain):
             vorliq_logger.warning("Chain validation failed because balances or transaction signatures are invalid")
             return False
@@ -114,6 +146,12 @@ class Blockchain:
         if not miner_address:
             raise ValueError("miner_address is required")
 
+        latest_block = self.get_latest_block()
+        elapsed_seconds = time.time() - latest_block.timestamp
+        if elapsed_seconds < self.BLOCK_TIME_MINIMUM:
+            wait_seconds = int(math.ceil(self.BLOCK_TIME_MINIMUM - elapsed_seconds))
+            raise MiningCooldownError(wait_seconds)
+
         valid_transactions = self._select_valid_pending_transactions()
         dropped_count = len(self.pending_transactions) - len(valid_transactions)
         if dropped_count:
@@ -123,8 +161,13 @@ class Blockchain:
             index=len(self.chain),
             transactions=valid_transactions,
             previous_hash=self.get_latest_block().hash,
+            miner_address=miner_address,
         )
         block.proof_of_work(self.difficulty)
+
+        previous_miner = getattr(latest_block, "miner_address", None)
+        if previous_miner and previous_miner == miner_address:
+            raise ValueError("the same address cannot mine two consecutive blocks")
 
         if not self.add_block(block):
             raise RuntimeError("mined block failed validation")
@@ -139,6 +182,43 @@ class Blockchain:
         vorliq_logger.info("Mined block %s with hash %s", block.index, block.hash)
 
         return block
+
+    def adjust_difficulty(self) -> None:
+        height = self.get_block_height()
+        if height <= 0 or height % self.DIFFICULTY_ADJUSTMENT_INTERVAL != 0:
+            return
+
+        if len(self.chain) <= self.DIFFICULTY_ADJUSTMENT_INTERVAL:
+            return
+
+        window_start = self.chain[-(self.DIFFICULTY_ADJUSTMENT_INTERVAL + 1)]
+        window_end = self.chain[-1]
+        elapsed_time = max(window_end.timestamp - window_start.timestamp, 0.0)
+        average_block_time = elapsed_time / self.DIFFICULTY_ADJUSTMENT_INTERVAL
+        old_difficulty = int(self.difficulty)
+        new_difficulty = old_difficulty
+
+        if average_block_time < self.BLOCK_TIME_TARGET * 0.75:
+            new_difficulty = old_difficulty + 1
+        elif average_block_time > self.BLOCK_TIME_TARGET * 1.25:
+            new_difficulty = max(2, old_difficulty - 1)
+
+        if new_difficulty != old_difficulty:
+            self.difficulty = new_difficulty
+            self.proof_target = "0" * self.difficulty
+            vorliq_logger.info(
+                "Difficulty adjusted from %s to %s after average block time %.2f seconds",
+                old_difficulty,
+                new_difficulty,
+                average_block_time,
+            )
+        else:
+            vorliq_logger.info(
+                "Difficulty checked at height %s and remained %s after average block time %.2f seconds",
+                height,
+                self.difficulty,
+                average_block_time,
+            )
 
     def get_pending_transactions(self) -> list[dict[str, Any]]:
         return [transaction.to_dict() for transaction in self.pending_transactions]
@@ -240,6 +320,9 @@ class Blockchain:
             "mining_reward": self.get_current_mining_reward(),
             "maximum_supply": self.maximum_supply,
             "halving_interval": self.halving_interval,
+            "block_time_target": self.BLOCK_TIME_TARGET,
+            "block_time_minimum": self.BLOCK_TIME_MINIMUM,
+            "difficulty_adjustment_interval": self.DIFFICULTY_ADJUSTMENT_INTERVAL,
             "is_valid": self.is_chain_valid(),
             "pending_transactions": self.get_pending_transactions(),
             "chain": self.get_chain_data(),

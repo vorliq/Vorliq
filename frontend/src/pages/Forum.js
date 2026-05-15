@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
@@ -8,6 +8,7 @@ import { apiErrorMessage } from "../helpers/errors";
 
 const initialPostForm = {
   authorAddress: "",
+  category: "general",
   title: "",
   body: "",
 };
@@ -16,6 +17,16 @@ const initialReplyForm = {
   authorAddress: "",
   body: "",
 };
+
+const forumCategories = [
+  { value: "all", label: "All Categories" },
+  { value: "general", label: "General" },
+  { value: "mining", label: "Mining" },
+  { value: "lending", label: "Lending" },
+  { value: "exchange", label: "Exchange" },
+  { value: "governance", label: "Governance" },
+  { value: "technical", label: "Technical" },
+];
 
 function shortAddress(address) {
   if (!address) return "Unknown";
@@ -33,6 +44,8 @@ function Forum() {
   const [postForm, setPostForm] = useState(initialPostForm);
   const [replyForm, setReplyForm] = useState(initialReplyForm);
   const [upvoteAddress, setUpvoteAddress] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [loadingPost, setLoadingPost] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -74,6 +87,36 @@ function Forum() {
     loadPosts();
   }, []);
 
+  useEffect(() => {
+    const timeout = window.setTimeout(async () => {
+      const query = searchQuery.trim();
+      if (!query) {
+        await loadPosts({ quiet: true });
+        return;
+      }
+
+      try {
+        const response = await api.get("/forum/search", { params: { q: query } });
+        setPosts(response.data.posts || []);
+        setErrorMessage("");
+      } catch (error) {
+        setErrorMessage(apiErrorMessage(error, "Unable to search forum posts."));
+      } finally {
+        setLoadingPosts(false);
+      }
+    }, 500);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
+
+  const displayedPosts = useMemo(() => {
+    if (categoryFilter === "all") {
+      return posts;
+    }
+
+    return posts.filter((post) => (post.category || "general") === categoryFilter);
+  }, [posts, categoryFilter]);
+
   async function createPost(event) {
     event.preventDefault();
     if (!postForm.authorAddress.trim() || !postForm.title.trim() || !postForm.body.trim()) {
@@ -85,6 +128,7 @@ function Forum() {
     try {
       const response = await api.post("/forum/post", {
         author_address: postForm.authorAddress.trim(),
+        category: postForm.category,
         title: postForm.title.trim(),
         body: postForm.body.trim(),
       });
@@ -170,20 +214,43 @@ function Forum() {
               Refresh
             </button>
           </div>
+          <div className="forum-controls">
+            <input
+              className="input"
+              type="search"
+              placeholder="Search forum posts"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+            <select
+              className="input"
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+            >
+              {forumCategories.map((category) => (
+                <option value={category.value} key={category.value}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
+          </div>
           {loadingPosts ? (
             <Spinner label="Loading forum posts..." />
-          ) : posts.length === 0 ? (
+          ) : displayedPosts.length === 0 ? (
             <div className="empty-state">No forum posts yet. Start the first discussion.</div>
           ) : (
             <div className="forum-list">
-              {posts.map((post) => (
+              {displayedPosts.map((post) => (
                 <button
-                  className={`forum-card ${selectedPostId === post.post_id ? "active" : ""}`}
+                  className={`forum-card ${selectedPostId === post.post_id ? "active" : ""} ${
+                    post.pinned ? "pinned" : ""
+                  }`}
                   type="button"
                   key={post.post_id}
                   onClick={() => loadPost(post.post_id)}
                 >
                   <strong>{post.title}</strong>
+                  <span className="badge forum-category">{post.category || "general"}</span>
                   <span>By {shortAddress(post.author_address)}</span>
                   <span>
                     {post.vote_count} votes · {post.replies?.length || 0} replies
@@ -222,6 +289,25 @@ function Forum() {
                 />
               </div>
               <div className="field">
+                <label htmlFor="forum-category">Category</label>
+                <select
+                  id="forum-category"
+                  className="input"
+                  value={postForm.category}
+                  onChange={(event) =>
+                    setPostForm((current) => ({ ...current, category: event.target.value }))
+                  }
+                >
+                  {forumCategories
+                    .filter((category) => category.value !== "all")
+                    .map((category) => (
+                      <option value={category.value} key={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div className="field">
                 <label htmlFor="forum-body">Message</label>
                 <textarea
                   id="forum-body"
@@ -248,6 +334,7 @@ function Forum() {
                 <div>
                   <span className="eyebrow">Full Post</span>
                   <h2>{selectedPost.title}</h2>
+                  <span className="badge forum-category">{selectedPost.category || "general"}</span>
                 </div>
               </div>
               <p>{selectedPost.body}</p>

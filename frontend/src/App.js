@@ -25,6 +25,7 @@ import Health from "./pages/Health";
 import Exchange from "./pages/Exchange";
 import Governance from "./pages/Governance";
 import Forum from "./pages/Forum";
+import Leaderboard from "./pages/Leaderboard";
 import Footer from "./components/Footer";
 import api from "./helpers/api";
 import logo from "./assets/logo.png";
@@ -46,6 +47,7 @@ const navSections = [
       { to: "/exchange", label: "Exchange" },
       { to: "/governance", label: "Governance" },
       { to: "/forum", label: "Forum" },
+      { to: "/leaderboard", label: "Leaderboard" },
       { to: "/registry", label: "Registry" },
     ],
   },
@@ -252,6 +254,7 @@ function AppShell() {
         <Route path="/exchange" element={<Exchange />} />
         <Route path="/governance" element={<Governance />} />
         <Route path="/forum" element={<Forum />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/registry" element={<Registry />} />
         <Route path="/health" element={<Health />} />

@@ -8,13 +8,16 @@ from logger import vorliq_logger
 
 
 class Forum:
+    VALID_CATEGORIES = {"general", "mining", "lending", "exchange", "governance", "technical"}
+
     def __init__(self) -> None:
         self.posts: dict[str, dict[str, Any]] = {}
 
-    def create_post(self, author_address: str, title: str, body: str) -> str:
+    def create_post(self, author_address: str, title: str, body: str, category: str = "general") -> str:
         author_address = self._require_text(author_address, "author address")
         title = self._require_text(title, "title")
         body = self._require_text(body, "body")
+        category = self._normalize_category(category)
         timestamp = time.time()
         post_id = hashlib.sha256(f"{author_address}{title}{timestamp}".encode("utf-8")).hexdigest()
 
@@ -23,6 +26,8 @@ class Forum:
             "author_address": author_address,
             "title": title,
             "body": body,
+            "category": category,
+            "pinned": False,
             "timestamp": timestamp,
             "replies": [],
             "vote_count": 0,
@@ -75,20 +80,42 @@ class Forum:
         return reply
 
     def get_all_posts(self) -> list[dict[str, Any]]:
+        self._normalize_existing_posts()
         return sorted(
             self.posts.values(),
-            key=lambda post: (int(post.get("vote_count", 0)), float(post.get("timestamp", 0))),
+            key=lambda post: (
+                bool(post.get("pinned", False)),
+                int(post.get("vote_count", 0)),
+                float(post.get("timestamp", 0)),
+            ),
             reverse=True,
         )
 
     def get_post(self, post_id: str) -> dict[str, Any] | None:
+        self._normalize_existing_posts()
         return self.posts.get(post_id)
+
+    def search_posts(self, query: str) -> list[dict[str, Any]]:
+        query = self._require_text(query, "query").casefold()
+        return [
+            post
+            for post in self.get_all_posts()
+            if query in str(post.get("title", "")).casefold()
+            or query in str(post.get("body", "")).casefold()
+        ]
+
+    def pin_post(self, post_id: str) -> dict[str, Any]:
+        post = self._get_existing_post(post_id)
+        post["pinned"] = True
+        vorliq_logger.info("Forum post %s was pinned", post_id)
+        return post
 
     def _get_existing_post(self, post_id: str) -> dict[str, Any]:
         post_id = self._require_text(post_id, "post ID")
         post = self.posts.get(post_id)
         if not post:
             raise ValueError("post does not exist")
+        self._normalize_post(post)
         return post
 
     def _get_existing_reply(self, post: dict[str, Any], reply_id: str) -> dict[str, Any]:
@@ -102,3 +129,24 @@ class Forum:
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{field_name} must be a non-empty string")
         return value.strip()
+
+    def _normalize_category(self, category: str) -> str:
+        category = self._require_text(category or "general", "category").lower()
+        if category not in self.VALID_CATEGORIES:
+            raise ValueError(
+                "category must be one of general, mining, lending, exchange, governance, or technical"
+            )
+        return category
+
+    def _normalize_existing_posts(self) -> None:
+        for post in self.posts.values():
+            self._normalize_post(post)
+
+    def _normalize_post(self, post: dict[str, Any]) -> None:
+        post["category"] = post.get("category") if post.get("category") in self.VALID_CATEGORIES else "general"
+        post["pinned"] = bool(post.get("pinned", False))
+        post["voters"] = list(post.get("voters", []))
+        post["replies"] = list(post.get("replies", []))
+        for reply in post["replies"]:
+            reply["voters"] = list(reply.get("voters", []))
+            reply["vote_count"] = int(reply.get("vote_count", 0))

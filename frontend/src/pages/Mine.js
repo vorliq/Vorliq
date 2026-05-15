@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
@@ -14,6 +14,19 @@ function Mine() {
   const [minedBlock, setMinedBlock] = useState(null);
   const [sessionMinedBlocks, setSessionMinedBlocks] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) {
+      return undefined;
+    }
+
+    const interval = window.setInterval(() => {
+      setCooldownSeconds((seconds) => Math.max(seconds - 1, 0));
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [cooldownSeconds]);
 
   async function mineBlock(event) {
     event.preventDefault();
@@ -41,6 +54,10 @@ function Mine() {
     } catch (error) {
       const message = apiErrorMessage(error, "Unable to mine block.");
       setErrorMessage(message);
+      if (error.response?.status === 429) {
+        const waitSeconds = Number(error.response.data?.wait_seconds);
+        setCooldownSeconds(Number.isFinite(waitSeconds) && waitSeconds > 0 ? Math.ceil(waitSeconds) : 30);
+      }
       toast.error(message);
     } finally {
       setMining(false);
@@ -74,8 +91,19 @@ function Mine() {
                 autoComplete="off"
               />
             </div>
-            <button className="button" type="submit" disabled={mining}>
-              {mining ? "Mining Block..." : "Mine Block"}
+            {cooldownSeconds > 0 ? (
+              <div className="value-box warning">
+                Cooling down. Ready to mine in {cooldownSeconds} seconds.
+              </div>
+            ) : (
+              <div className="value-box green">Ready to mine.</div>
+            )}
+            <button className="button" type="submit" disabled={mining || cooldownSeconds > 0}>
+              {mining
+                ? "Mining Block..."
+                : cooldownSeconds > 0
+                  ? `Cooling Down (${cooldownSeconds}s)`
+                  : "Mine Block"}
             </button>
             <div className="value-box">Blocks mined this session: {sessionMinedBlocks}</div>
           </form>

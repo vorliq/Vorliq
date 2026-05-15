@@ -7,6 +7,7 @@ import Svg, { Circle, Path, Rect } from "react-native-svg";
 import HomeScreen from "./src/screens/HomeScreen";
 import WalletScreen from "./src/screens/WalletScreen";
 import SendScreen from "./src/screens/SendScreen";
+import MineScreen from "./src/screens/MineScreen";
 import LendingScreen from "./src/screens/LendingScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 import NotificationsScreen from "./src/screens/NotificationsScreen";
@@ -57,6 +58,14 @@ function TabIcon({ name, color }) {
       <Svg width={24} height={24} viewBox="0 0 24 24">
         <Path {...common} d="M4 12h15" />
         <Path {...common} d="m13 6 6 6-6 6" />
+      </Svg>
+    );
+  }
+
+  if (name === "Mine") {
+    return (
+      <Svg width={24} height={24} viewBox="0 0 24 24">
+        <Path {...common} d="M14 3 5 14h6l-1 7 9-12h-6l1-6Z" />
       </Svg>
     );
   }
@@ -167,6 +176,7 @@ function VorliqTabs() {
         <Tab.Screen name="Home" component={HomeScreen} />
         <Tab.Screen name="Wallet" component={WalletScreen} />
         <Tab.Screen name="Send" component={SendScreen} />
+        <Tab.Screen name="Mine" component={MineScreen} />
         <Tab.Screen name="Lending" component={LendingScreen} />
         <Tab.Screen name="Exchange" component={ExchangeScreen} />
         <Tab.Screen name="Governance" component={GovernanceScreen} />

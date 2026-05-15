@@ -34,6 +34,17 @@ router.get("/api/forum/post", async (req, res) => {
   }
 });
 
+router.get("/api/forum/search", async (req, res) => {
+  try {
+    const response = await axios.get(`${flaskUrl}/forum/search`, {
+      params: { q: req.query.q },
+    });
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    return handleRouteError(res, error, "GET /api/forum/search", "Unable to search forum posts.");
+  }
+});
+
 router.post("/api/forum/reply", async (req, res) => {
   try {
     const response = await axios.post(`${flaskUrl}/forum/reply`, req.body);

@@ -4,7 +4,7 @@ import time
 from flask import Flask, jsonify, request
 
 from block import Block
-from blockchain import Blockchain
+from blockchain import Blockchain, MiningCooldownError
 from exchange import Exchange
 from forum import Forum
 from governance import Governance
@@ -60,7 +60,7 @@ if governance.governance_settings["difficulty"]["changed"]:
 vorliq_logger.info("Flask startup restored %s governance proposals", len(governance.proposals))
 node_registry = storage.load_registry()
 vorliq_logger.info("Flask startup restored %s registry records", len(node_registry.registered_nodes))
-_imports_ready = (Block, Blockchain, Transaction, Exchange, Forum, Governance)
+_imports_ready = (Block, Blockchain, MiningCooldownError, Transaction, Exchange, Forum, Governance)
 
 if network.peers:
     network.announce_to_peers(LOCAL_NODE_URL, network.get_peers())
@@ -115,6 +115,18 @@ def mine_block():
         storage.save_lending_pool(lending_pool)
         network.broadcast_block(block)
         return jsonify({"success": True, "block": block}), 201
+    except MiningCooldownError as exc:
+        vorliq_logger.warning("Mine endpoint rejected request during cooldown: %s", exc)
+        return (
+            jsonify({"success": False, "message": str(exc), "wait_seconds": exc.wait_seconds}),
+            429,
+        )
+    except ValueError as exc:
+        if "same address cannot mine two consecutive blocks" in str(exc):
+            vorliq_logger.warning("Mine endpoint rejected consecutive miner: %s", exc)
+            return jsonify({"success": False, "message": str(exc)}), 429
+        vorliq_logger.error("Mine endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
     except Exception as exc:
         vorliq_logger.error("Mine endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
@@ -186,6 +198,9 @@ def get_diagnostics():
             "uptime_seconds": round(time.time() - APP_START_TIME, 2),
             "total_vlq_in_circulation": economics["total_issued"],
             "current_mining_reward": economics["current_mining_reward"],
+            "current_difficulty": node.blockchain.difficulty,
+            "block_time_target": node.blockchain.BLOCK_TIME_TARGET,
+            "block_time_minimum": node.blockchain.BLOCK_TIME_MINIMUM,
             "last_block_hash": latest_block.hash,
             "last_block_timestamp": latest_block.timestamp,
         }
@@ -488,6 +503,7 @@ def create_forum_post():
             author_address=data.get("author_address") or data.get("authorAddress"),
             title=data["title"],
             body=data["body"],
+            category=data.get("category", "general"),
         )
         storage.save_forum(forum)
         return jsonify({"success": True, "post_id": post_id, "post": forum.get_post(post_id)}), 201
@@ -499,6 +515,16 @@ def create_forum_post():
 @app.get("/forum/posts")
 def get_forum_posts():
     return jsonify({"success": True, "posts": forum.get_all_posts()})
+
+
+@app.get("/forum/search")
+def search_forum_posts():
+    try:
+        query = request.args.get("q", "")
+        return jsonify({"success": True, "posts": forum.search_posts(query)})
+    except Exception as exc:
+        vorliq_logger.error("Forum search endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
 
 
 @app.get("/forum/post")

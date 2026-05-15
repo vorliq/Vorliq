@@ -1,9 +1,16 @@
 import unittest
+import time
 
 from blockchain import Blockchain
 
 
 class BlockchainTests(unittest.TestCase):
+    def make_latest_block_ready(self, blockchain, seconds=31):
+        latest_block = blockchain.get_latest_block()
+        latest_block.timestamp = time.time() - seconds
+        latest_block.nonce = 0
+        latest_block.proof_of_work(latest_block.difficulty)
+
     def test_genesis_block_is_created_automatically(self):
         blockchain = Blockchain()
 
@@ -49,6 +56,46 @@ class BlockchainTests(unittest.TestCase):
 
     def test_maximum_supply_constant(self):
         self.assertEqual(Blockchain.maximum_supply, 21000000)
+
+    def test_mining_two_blocks_too_quickly_raises_value_error(self):
+        blockchain = Blockchain()
+        blockchain.mine_pending_transactions("miner_one")
+
+        with self.assertRaises(ValueError) as context:
+            blockchain.mine_pending_transactions("miner_two")
+
+        self.assertIn("too soon to mine the next block", str(context.exception))
+
+    def test_same_address_cannot_mine_two_consecutive_blocks(self):
+        blockchain = Blockchain()
+        blockchain.mine_pending_transactions("miner_one")
+        self.make_latest_block_ready(blockchain)
+
+        with self.assertRaises(ValueError) as context:
+            blockchain.mine_pending_transactions("miner_one")
+
+        self.assertIn("the same address cannot mine two consecutive blocks", str(context.exception))
+
+    def test_mining_with_time_gap_and_different_addresses_succeeds(self):
+        blockchain = Blockchain()
+        blockchain.mine_pending_transactions("miner_one")
+        self.make_latest_block_ready(blockchain)
+        mined_block = blockchain.mine_pending_transactions("miner_two")
+
+        self.assertEqual(len(blockchain.chain), 3)
+        self.assertEqual(mined_block.miner_address, "miner_two")
+
+    def test_difficulty_increases_after_ten_fast_blocks(self):
+        blockchain = Blockchain()
+        blockchain.difficulty = 2
+        blockchain.proof_target = "0" * blockchain.difficulty
+
+        for index in range(10):
+            self.make_latest_block_ready(blockchain)
+            blockchain.mine_pending_transactions(f"miner_{index % 2}")
+
+        self.assertEqual(blockchain.get_block_height(), 10)
+        self.assertEqual(blockchain.difficulty, 3)
 
 
 if __name__ == "__main__":

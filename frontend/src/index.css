@@ -773,6 +773,13 @@ p {
   margin-bottom: 18px;
 }
 
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
 .tab-button {
   min-height: 48px;
   border-radius: 8px;
@@ -1417,6 +1424,12 @@ p {
   gap: 12px;
 }
 
+.forum-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 12px;
+}
+
 .forum-card {
   display: grid;
   gap: 7px;
@@ -1429,6 +1442,18 @@ p {
   cursor: pointer;
   padding: 15px;
   text-align: left;
+}
+
+.forum-card.pinned {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary-soft);
+}
+
+.forum-category {
+  justify-self: start;
+  background: var(--primary-soft);
+  color: var(--primary);
+  text-transform: uppercase;
 }
 
 .forum-card:hover,

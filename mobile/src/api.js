@@ -19,7 +19,12 @@ async function request(method, path, options = {}) {
       error.message ||
       "Unable to reach the Vorliq node.";
 
-    return { success: false, error: message };
+    return {
+      success: false,
+      error: message,
+      status: error.response?.status,
+      wait_seconds: error.response?.data?.wait_seconds,
+    };
   }
 }
 

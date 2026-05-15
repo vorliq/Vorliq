@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Block Explorer</title>
+    <meta name="description" content="Public Vorliq block explorer for blocks, transactions, and VLQ network statistics." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      :root { --bg:#0f0f1a; --card:#1a1a2e; --accent:#6c63ff; --text:#fff; --muted:#c7c7d4; --border:rgba(255,255,255,.12); --green:#35d07f; --red:#ff5b6e; }
+      * { box-sizing:border-box; }
+      body { margin:0; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at top left,rgba(108,99,255,.22),transparent 34rem),var(--bg); color:var(--text); }
+      a { color:inherit; }
+      .wrap { width:min(1180px,calc(100% - 32px)); margin:0 auto; }
+      header { border-bottom:1px solid var(--border); padding:24px 0; }
+      nav { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+      .brand { display:flex; align-items:center; gap:12px; font-size:1.1rem; font-weight:900; text-decoration:none; }
+      .brand img { width:40px; height:40px; object-fit:contain; }
+      .links { display:flex; gap:10px; flex-wrap:wrap; }
+      .button, .links a { border:1px solid var(--border); border-radius:10px; padding:11px 14px; background:rgba(255,255,255,.04); color:var(--muted); font-weight:800; text-decoration:none; cursor:pointer; }
+      .button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+      main { padding:54px 0; }
+      h1 { margin:0; font-size:clamp(2.6rem,8vw,5.6rem); line-height:.95; }
+      h2 { margin:0 0 16px; font-size:clamp(1.5rem,4vw,2.25rem); }
+      p { color:var(--muted); line-height:1.7; }
+      .hero { display:grid; gap:18px; margin-bottom:34px; }
+      .subtitle { max-width:760px; font-size:1.12rem; }
+      .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin:28px 0; }
+      .stat, .card { background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025)); border:1px solid var(--border); border-radius:14px; box-shadow:0 24px 70px rgba(0,0,0,.22); }
+      .stat { padding:18px; }
+      .stat span { display:block; color:var(--muted); font-size:.82rem; font-weight:800; text-transform:uppercase; }
+      .stat strong { display:block; color:var(--accent); font-size:1.65rem; margin-top:8px; overflow-wrap:anywhere; }
+      .toolbar { display:flex; gap:12px; margin:26px 0; flex-wrap:wrap; }
+      input { flex:1 1 320px; min-height:52px; border:1px solid var(--border); border-radius:12px; background:#111122; color:#fff; font:inherit; padding:0 14px; outline:none; }
+      input:focus { border-color:var(--accent); box-shadow:0 0 0 4px rgba(108,99,255,.18); }
+      .card { margin-bottom:14px; overflow:hidden; }
+      .block-summary { width:100%; display:grid; grid-template-columns:120px minmax(0,1fr) 130px 210px 120px; gap:14px; align-items:center; border:0; background:transparent; color:inherit; cursor:pointer; padding:18px; text-align:left; }
+      .block-summary strong { color:#fff; }
+      .muted, .hash { color:var(--muted); overflow-wrap:anywhere; }
+      .block-details { display:none; border-top:1px solid var(--border); padding:18px; }
+      .card.open .block-details { display:block; }
+      .details-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+      .detail-box { background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:10px; padding:12px; overflow-wrap:anywhere; }
+      .tx { border:1px solid var(--border); border-radius:10px; padding:12px; margin-top:10px; background:rgba(255,255,255,.035); }
+      .badge { display:inline-flex; border-radius:999px; padding:5px 9px; font-size:.78rem; font-weight:900; }
+      .valid { background:rgba(53,208,127,.16); color:var(--green); }
+      .invalid { background:rgba(255,91,110,.15); color:var(--red); }
+      .empty, .error { border:1px dashed var(--border); border-radius:12px; color:var(--muted); padding:20px; text-align:center; }
+      .error { border-color:rgba(255,91,110,.45); color:#ffb9c1; }
+      footer { border-top:1px solid var(--border); color:var(--muted); padding:28px 0; }
+      @media (max-width:900px) { .stats { grid-template-columns:1fr 1fr; } .block-summary { grid-template-columns:1fr; } .details-grid { grid-template-columns:1fr; } }
+      @media (max-width:560px) { .stats { grid-template-columns:1fr; } .toolbar .button { width:100%; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a class="brand" href="index.html"><img src="logo.png" alt="Vorliq logo" />Vorliq Explorer</a>
+        <div class="links">
+          <a href="index.html">Home</a>
+          <a href="whitepaper.html">Whitepaper</a>
+          <a href="status.html">Network Status</a>
+          <a href="https://vorliq.org">Open App</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <section class="hero">
+        <h1>Block Explorer</h1>
+        <p class="subtitle">Explore the live Vorliq blockchain, inspect blocks, search wallet activity, and follow public VLQ network statistics.</p>
+      </section>
+
+      <section class="stats" id="stats"></section>
+
+      <section class="toolbar">
+        <input id="searchInput" type="search" placeholder="Search by block number or wallet address" />
+        <button class="button primary" id="searchButton" type="button">Search</button>
+        <button class="button" id="clearButton" type="button">Clear</button>
+      </section>
+
+      <div id="status" class="empty">Loading Vorliq blocks...</div>
+      <section id="blocks"></section>
+    </main>
+
+    <footer><div class="wrap">2025 Vorliq. All rights reserved.</div></footer>
+
+    <script>
+      const API = "https://vorliq.org/api";
+      let chain = [];
+      let diagnostics = null;
+      let activeSearch = "";
+
+      function shortHash(value, length = 20) {
+        return value ? `${String(value).slice(0, length)}...` : "Unknown";
+      }
+
+      function formatTime(timestamp) {
+        return new Date(Number(timestamp) * 1000).toLocaleString();
+      }
+
+      function transactionSignatureStatus(transaction) {
+        if (transaction.sender_address === "SYSTEM" || transaction.sender_address === "LENDING_POOL") {
+          return { label: "Valid system transaction", valid: true };
+        }
+        if (transaction.signature && transaction.sender_public_key) {
+          return { label: "Valid signed transaction", valid: true };
+        }
+        return { label: "Invalid or missing signature", valid: false };
+      }
+
+      async function loadExplorer() {
+        const status = document.getElementById("status");
+        try {
+          const [chainResponse, diagnosticsResponse] = await Promise.all([
+            fetch(`${API}/chain`),
+            fetch(`${API}/diagnostics`),
+          ]);
+          if (!chainResponse.ok || !diagnosticsResponse.ok) {
+            throw new Error("Vorliq API did not respond successfully.");
+          }
+
+          const chainData = await chainResponse.json();
+          diagnostics = await diagnosticsResponse.json();
+          chain = chainData.chain || [];
+          renderStats(chainData);
+          renderBlocks();
+          status.style.display = "none";
+        } catch (error) {
+          status.className = "error";
+          status.style.display = "block";
+          status.textContent = `Unable to load the Vorliq explorer: ${error.message}`;
+        }
+      }
+
+      function renderStats(chainData) {
+        const totalTransactions = chain.reduce((sum, block) => sum + (block.transactions || []).length, 0);
+        const stats = [
+          ["Total Blocks", chain.length],
+          ["Total Transactions", totalTransactions],
+          ["VLQ in Circulation", `${diagnostics?.total_vlq_in_circulation ?? 0} VLQ`],
+          ["Mining Difficulty", diagnostics?.current_difficulty ?? chainData.difficulty ?? "Unknown"],
+        ];
+        document.getElementById("stats").innerHTML = stats
+          .map(([label, value]) => `<article class="stat"><span>${label}</span><strong>${value}</strong></article>`)
+          .join("");
+      }
+
+      function filteredBlocks() {
+        const query = activeSearch.trim();
+        if (!query) {
+          return [...chain].reverse();
+        }
+        if (/^\d+$/.test(query)) {
+          return chain.filter((block) => String(block.index) === query).reverse();
+        }
+        const lowered = query.toLowerCase();
+        return chain
+          .filter((block) =>
+            (block.transactions || []).some((transaction) =>
+              String(transaction.sender_address || "").toLowerCase().includes(lowered) ||
+              String(transaction.receiver_address || "").toLowerCase().includes(lowered)
+            )
+          )
+          .reverse();
+      }
+
+      function renderBlocks() {
+        const blocks = filteredBlocks();
+        const container = document.getElementById("blocks");
+        const status = document.getElementById("status");
+        if (!blocks.length) {
+          status.className = "empty";
+          status.style.display = "block";
+          status.textContent = "No blocks or transactions matched your search.";
+          container.innerHTML = "";
+          return;
+        }
+
+        status.style.display = "none";
+        container.innerHTML = blocks.map(renderBlock).join("");
+      }
+
+      function renderBlock(block) {
+        const transactions = block.transactions || [];
+        const txHtml = transactions.length
+          ? transactions.map(renderTransaction).join("")
+          : '<div class="empty">This block has no transactions.</div>';
+        return `
+          <article class="card">
+            <button class="block-summary" type="button" onclick="this.closest('.card').classList.toggle('open')">
+              <strong>Block #${block.index}</strong>
+              <span class="hash">${shortHash(block.hash)}</span>
+              <span>${transactions.length} tx</span>
+              <span class="muted">${formatTime(block.timestamp)}</span>
+              <span>Nonce ${block.nonce}</span>
+            </button>
+            <div class="block-details">
+              <div class="details-grid">
+                <div class="detail-box"><strong>Full Hash</strong><br />${block.hash}</div>
+                <div class="detail-box"><strong>Previous Hash</strong><br />${block.previous_hash}</div>
+                <div class="detail-box"><strong>Difficulty</strong><br />${block.difficulty ?? "Unknown"}</div>
+                <div class="detail-box"><strong>Miner</strong><br />${block.miner_address || "Unknown"}</div>
+              </div>
+              <h2>Transactions</h2>
+              ${txHtml}
+            </div>
+          </article>
+        `;
+      }
+
+      function renderTransaction(transaction) {
+        const status = transactionSignatureStatus(transaction);
+        return `
+          <div class="tx">
+            <div><strong>Sender:</strong> ${transaction.sender_address}</div>
+            <div><strong>Receiver:</strong> ${transaction.receiver_address}</div>
+            <div><strong>Amount:</strong> ${transaction.amount} VLQ</div>
+            <span class="badge ${status.valid ? "valid" : "invalid"}">${status.label}</span>
+          </div>
+        `;
+      }
+
+      document.getElementById("searchButton").addEventListener("click", () => {
+        activeSearch = document.getElementById("searchInput").value;
+        renderBlocks();
+      });
+      document.getElementById("searchInput").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          activeSearch = event.target.value;
+          renderBlocks();
+        }
+      });
+      document.getElementById("clearButton").addEventListener("click", () => {
+        activeSearch = "";
+        document.getElementById("searchInput").value = "";
+        renderBlocks();
+      });
+
+      loadExplorer();
+      window.setInterval(loadExplorer, 30000);
+    </script>
+  </body>
+</html>
