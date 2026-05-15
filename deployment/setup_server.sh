@@ -49,6 +49,8 @@ sudo -u vorliq -H npm run build
 
 mkdir -p /home/vorliq/app/blockchain/data
 mkdir -p /home/vorliq/app/backend/data
+mkdir -p /home/vorliq/backups
 chown -R vorliq:vorliq /home/vorliq/app
+chown -R vorliq:vorliq /home/vorliq/backups
 
 echo "Installation complete. Now run configure_server.sh to finish setup."

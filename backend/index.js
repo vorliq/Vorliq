@@ -17,6 +17,7 @@ const governanceRoutes = require("./routes/governance");
 const treasuryRoutes = require("./routes/treasury");
 const priceRoutes = require("./routes/price");
 const achievementsRoutes = require("./routes/achievements");
+const backupRoutes = require("./routes/backup");
 const deploymentRoutes = require("./routes/deployment");
 const reportsRoutes = require("./routes/reports");
 const { logError, logInfo } = require("./logger");
@@ -171,6 +172,7 @@ app.use(governanceRoutes);
 app.use(treasuryRoutes);
 app.use(priceRoutes);
 app.use(achievementsRoutes);
+app.use(backupRoutes);
 app.use(deploymentRoutes);
 app.use(reportsRoutes);
 

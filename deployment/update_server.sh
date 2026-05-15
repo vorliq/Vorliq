@@ -35,6 +35,12 @@ fi
 
 sudo -u vorliq -H bash -c "cd /home/vorliq/app/frontend && npm install && npm run build"
 
+mkdir -p /home/vorliq/backups
+chown -R vorliq:vorliq /home/vorliq/backups
+cp /home/vorliq/app/deployment/backup.sh /home/vorliq/backup.sh
+chmod 750 /home/vorliq/backup.sh
+chown root:vorliq /home/vorliq/backup.sh
+
 systemctl restart vorliq-blockchain.service
 systemctl restart vorliq-backend.service
 systemctl restart vorliq-heartbeat.service

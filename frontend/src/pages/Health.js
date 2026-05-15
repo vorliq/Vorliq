@@ -21,6 +21,7 @@ function Health() {
   const [diagnostics, setDiagnostics] = useState(null);
   const [deployment, setDeployment] = useState(null);
   const [securityStatus, setSecurityStatus] = useState(null);
+  const [backupStatus, setBackupStatus] = useState(null);
   const [weeklyReport, setWeeklyReport] = useState(null);
   const [registryNodes, setRegistryNodes] = useState([]);
   const [networkHealth, setNetworkHealth] = useState([]);
@@ -40,12 +41,14 @@ function Health() {
         const registryRequest = api.get("/registry/nodes");
         const deploymentRequest = api.get("/deployment");
         const securityRequest = api.get("/security/status");
+        const backupRequest = api.get("/backup/status");
         const weeklyReportRequest = api.get("/reports/weekly");
-        const [diagnosticsResponse, registryResponse, deploymentResponse, securityResponse, weeklyReportResponse] = await Promise.all([
+        const [diagnosticsResponse, registryResponse, deploymentResponse, securityResponse, backupResponse, weeklyReportResponse] = await Promise.all([
           diagnosticsRequest,
           registryRequest,
           deploymentRequest,
           securityRequest,
+          backupRequest,
           weeklyReportRequest,
         ]);
         const diagnosticsResponseTime = Math.round(performance.now() - diagnosticsStart);
@@ -75,6 +78,7 @@ function Health() {
           setDiagnostics(diagnosticsResponse.data);
           setDeployment(deploymentResponse.data);
           setSecurityStatus(securityResponse.data);
+          setBackupStatus(backupResponse.data);
           setWeeklyReport(weeklyReportResponse.data);
           setRegistryNodes(nodes);
           setNetworkHealth(nodeChecks);
@@ -251,6 +255,52 @@ function Health() {
           </div>
         ) : (
           <div className="empty-state">Security status is unavailable right now.</div>
+        )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <h2>Backup Status</h2>
+        {loading ? (
+          <Spinner label="Loading backup status..." />
+        ) : backupStatus?.success ? (
+          backupStatus.backup_directory_exists && backupStatus.latest_backup ? (
+            <div className="table-wrap">
+              <table className="stats-table">
+                <tbody>
+                  <tr>
+                    <th>Status</th>
+                    <td className="green">Latest backup found</td>
+                  </tr>
+                  <tr>
+                    <th>Backup Name</th>
+                    <td>{backupStatus.latest_backup.file_name}</td>
+                  </tr>
+                  <tr>
+                    <th>Size</th>
+                    <td>{backupStatus.latest_backup.size_mb} MB</td>
+                  </tr>
+                  <tr>
+                    <th>Modified</th>
+                    <td>
+                      {backupStatus.latest_backup.modified_time
+                        ? new Date(backupStatus.latest_backup.modified_time).toLocaleString()
+                        : "Unavailable"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Retention</th>
+                    <td>{backupStatus.retention_days || 14} days</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="empty-state">
+              No backup archive is visible yet. Check the server backup job before relying on disaster recovery.
+            </div>
+          )
+        ) : (
+          <div className="empty-state">Backup status is unavailable right now.</div>
         )}
       </section>
 

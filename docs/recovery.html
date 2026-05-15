@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Recovery Guide</title>
+    <meta name="description" content="Disaster recovery and backup restore guide for the Vorliq production node." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      :root { --bg:#0f0f1a; --card:#1a1a2e; --card2:#20203a; --accent:#6c63ff; --text:#fff; --muted:#c7c7d4; --border:rgba(255,255,255,.12); --green:#35d07f; --yellow:#ffd166; --red:#ff5d6c; }
+      * { box-sizing:border-box; }
+      body { margin:0; min-width:320px; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at top left,rgba(108,99,255,.2),transparent 34rem),var(--bg); color:var(--text); }
+      a { color:inherit; }
+      .wrap { width:min(1040px,calc(100% - 32px)); margin:0 auto; }
+      header, footer { border-color:var(--border); }
+      header { padding:24px 0; border-bottom:1px solid var(--border); }
+      footer { padding:28px 0; border-top:1px solid var(--border); color:var(--muted); }
+      nav { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+      .brand { display:flex; align-items:center; gap:12px; font-weight:900; text-decoration:none; }
+      .brand img { width:42px; height:42px; object-fit:contain; }
+      .links { display:flex; gap:10px; flex-wrap:wrap; }
+      .button { display:inline-flex; align-items:center; justify-content:center; min-height:44px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,.04); color:var(--muted); font-weight:800; padding:10px 14px; text-decoration:none; }
+      .button.primary { border-color:var(--accent); background:var(--accent); color:#fff; }
+      main { padding:54px 0; }
+      .hero { display:grid; gap:14px; margin-bottom:28px; }
+      .eyebrow { color:var(--green); font-size:.82rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+      h1, h2, h3, p { margin:0; }
+      h1 { font-size:clamp(2.4rem,7vw,4.8rem); line-height:1; }
+      h2 { font-size:clamp(1.35rem,4vw,2rem); margin-bottom:14px; }
+      h3 { margin:18px 0 8px; }
+      p { color:var(--muted); line-height:1.75; }
+      .subtitle { max-width:760px; font-size:1.08rem; }
+      .section { margin-top:18px; }
+      .card { border:1px solid var(--border); border-radius:12px; background:linear-gradient(180deg,rgba(255,255,255,.05),transparent),var(--card); box-shadow:0 24px 70px rgba(0,0,0,.24); padding:22px; }
+      .warning { border-color:rgba(255,209,102,.45); background:rgba(255,209,102,.1); }
+      .danger { border-color:rgba(255,93,108,.45); background:rgba(255,93,108,.1); }
+      ul { color:var(--muted); line-height:1.75; padding-left:22px; }
+      code { color:#fff; background:rgba(255,255,255,.08); border:1px solid var(--border); border-radius:6px; padding:2px 6px; }
+      pre { overflow:auto; border:1px solid var(--border); border-radius:10px; background:#080812; color:#f5f5ff; padding:16px; line-height:1.55; }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+      @media (max-width:760px) { main { padding:34px 0; } .grid { grid-template-columns:1fr; } .button { width:100%; } .links { width:100%; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a class="brand" href="index.html"><img src="logo.png" alt="Vorliq logo" />Vorliq</a>
+        <div class="links">
+          <a class="button" href="index.html">Home</a>
+          <a class="button" href="deploy.html">Deploy</a>
+          <a class="button" href="status.html">Status</a>
+          <a class="button primary" href="https://github.com/vorliq/Vorliq">GitHub</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <section class="hero">
+        <span class="eyebrow">Disaster Recovery</span>
+        <h1>Recovery Guide</h1>
+        <p class="subtitle">This guide explains how Vorliq production backups work, how to verify them, and how to restore a node on a fresh Ubuntu server without guessing.</p>
+      </section>
+
+      <section class="section card warning">
+        <h2>Important Wallet Warning</h2>
+        <p>Vorliq server backups do not contain private wallet keys. Private keys are created for users and must be saved by users locally. If a user loses a private key, it cannot be recovered from the server, the blockchain data folder, the backup archive, GitHub, or the Vorliq team.</p>
+      </section>
+
+      <section class="section card">
+        <h2>What Is Backed Up</h2>
+        <p>The backup archive contains the complete <code>/home/vorliq/app/blockchain/data</code> folder. This is the critical node state folder used by the Python blockchain API. It includes the saved chain, pending transactions, peer list, node registry, lending records, exchange offers, governance proposals and settings, treasury proposals, price signals, forum posts, achievements, and operational blockchain logs when those files exist.</p>
+        <p>The backup also includes safe backend log files from <code>/home/vorliq/app/backend/data</code>. It does not include <code>.env</code> files, private keys, SSH keys, <code>node_modules</code>, frontend build artifacts, dependency caches, or unrelated large files.</p>
+      </section>
+
+      <section class="section grid">
+        <article class="card">
+          <h2>Where Backups Live</h2>
+          <p>Production backups are written to <code>/home/vorliq/backups</code> on the server. Archive names follow the exact format <code>vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz</code>. Each successful backup also writes a contents listing next to the archive and appends a line to <code>/home/vorliq/backups/backup.log</code>.</p>
+        </article>
+        <article class="card">
+          <h2>Schedule And Retention</h2>
+          <p>The production cron job runs <code>/home/vorliq/backup.sh</code> daily at 02:15 server time. The script keeps the last 14 days of backup archives and deletes older backup archives after a new backup has been created and verified.</p>
+        </article>
+      </section>
+
+      <section class="section card">
+        <h2>Verify A Backup</h2>
+        <p>Before restoring, verify that the archive opens cleanly and that every critical JSON file inside the backup is valid JSON. This command does not modify live data.</p>
+        <pre><code>sudo /home/vorliq/app/deployment/verify_backup.sh /home/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz</code></pre>
+      </section>
+
+      <section class="section card">
+        <h2>Fresh Ubuntu Server Recovery</h2>
+        <p>Use these commands on a new Ubuntu server after pointing DNS or firewall rules as needed. They install Vorliq, configure the system services, copy a backup archive into place, verify it, dry-run the restore, and then perform the restore.</p>
+        <pre><code>sudo apt-get update -y
+sudo apt-get install -y git
+git clone https://github.com/vorliq/Vorliq.git /tmp/Vorliq
+cd /tmp/Vorliq
+sudo bash deployment/setup_server.sh
+sudo bash /home/vorliq/app/deployment/configure_server.sh
+sudo mkdir -p /home/vorliq/backups
+sudo cp /tmp/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz /home/vorliq/backups/
+sudo bash /home/vorliq/app/deployment/verify_backup.sh /home/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz
+sudo bash /home/vorliq/app/deployment/restore_backup.sh /home/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz --dry-run
+sudo bash /home/vorliq/app/deployment/restore_backup.sh /home/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz
+curl -fsS http://localhost:5000/api/health
+curl -fsS http://localhost:5000/api/diagnostics</code></pre>
+      </section>
+
+      <section class="section card danger">
+        <h2>Live Restore Safety</h2>
+        <p>A live restore stops the blockchain API, backend API, and heartbeat services. The restore script creates a safety copy of the current <code>blockchain/data</code> folder before replacing it. If health checks fail after restart, keep the safety copy and investigate before deleting anything.</p>
+      </section>
+
+      <section class="section card">
+        <h2>If The Server Fails</h2>
+        <p>Start by preserving the newest backup archive from <code>/home/vorliq/backups</code>. If the old server is still reachable, copy the newest archive off the server with <code>scp</code>. If the server is gone, restore from the external copy or snapshot that contains the same backup folder. Bring up a clean Ubuntu server, install Vorliq from GitHub, verify the archive, run the restore script in dry-run mode, then perform the live restore only after verification passes.</p>
+      </section>
+    </main>
+
+    <footer><div class="wrap">2026 Vorliq. All rights reserved.</div></footer>
+  </body>
+</html>

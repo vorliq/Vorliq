@@ -93,6 +93,14 @@ for service in vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat
   fi
 done
 
+mkdir -p /home/vorliq/backups
+chown -R vorliq:vorliq /home/vorliq/backups
+cp /home/vorliq/app/deployment/backup.sh /home/vorliq/backup.sh
+chmod 750 /home/vorliq/backup.sh
+chown root:vorliq /home/vorliq/backup.sh
+printf '15 2 * * * root /home/vorliq/backup.sh >/dev/null 2>&1\n' >/etc/cron.d/vorliq-backup
+chmod 644 /etc/cron.d/vorliq-backup
+
 if [ -f /etc/letsencrypt/live/vorliq.org/fullchain.pem ] && [ -f /etc/letsencrypt/live/vorliq.org/privkey.pem ]; then
   CERT_DOMAIN=vorliq.org
   sed "s#/etc/letsencrypt/live/vorliq.org#/etc/letsencrypt/live/${CERT_DOMAIN}#g" /home/vorliq/app/deployment/vorliq_nginx_ssl.conf > /etc/nginx/sites-available/vorliq

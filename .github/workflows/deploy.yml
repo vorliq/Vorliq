@@ -43,7 +43,34 @@ jobs:
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/backend && npm install'
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm install'
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm run build'
+            bash -n /home/vorliq/app/deployment/backup.sh
+            bash -n /home/vorliq/app/deployment/restore_backup.sh
+            bash -n /home/vorliq/app/deployment/verify_backup.sh
+            bash -n /home/vorliq/app/deployment/setup_server.sh
+            bash -n /home/vorliq/app/deployment/configure_server.sh
+            bash -n /home/vorliq/app/deployment/update_server.sh
             chmod -R 755 /home/vorliq/app/frontend/build
+            mkdir -p /home/vorliq/backups
+            chown -R vorliq:vorliq /home/vorliq/backups
+            cp /home/vorliq/app/deployment/backup.sh /home/vorliq/backup.sh
+            chmod 750 /home/vorliq/backup.sh
+            chown root:vorliq /home/vorliq/backup.sh
+            printf '15 2 * * * root /home/vorliq/backup.sh >/dev/null 2>&1\n' >/etc/cron.d/vorliq-backup
+            chmod 644 /etc/cron.d/vorliq-backup
+            /home/vorliq/backup.sh
+            LATEST_BACKUP="$(ls -1t /home/vorliq/backups/vorliq-backup-*.tar.gz 2>/dev/null | head -n1 || true)"
+            if [ -n "${LATEST_BACKUP}" ]; then
+              DRILL_DIR="$(mktemp -d)"
+              cp "${LATEST_BACKUP}" "${DRILL_DIR}/"
+              DRILL_ARCHIVE="${DRILL_DIR}/$(basename "${LATEST_BACKUP}")"
+              bash /home/vorliq/app/deployment/verify_backup.sh "${DRILL_ARCHIVE}"
+              mkdir -p "${DRILL_DIR}/isolated-extract"
+              tar -xzf "${DRILL_ARCHIVE}" -C "${DRILL_DIR}/isolated-extract"
+              VORLIQ_DATA_DIR="${DRILL_DIR}/isolated-data" bash /home/vorliq/app/deployment/restore_backup.sh "${DRILL_ARCHIVE}" --dry-run
+              rm -rf "${DRILL_DIR}"
+            else
+              echo "No backup archive found for restore drill; backup status endpoint will report this."
+            fi
             if [ -f /etc/letsencrypt/live/vorliq.org/fullchain.pem ] && [ -f /etc/letsencrypt/live/vorliq.org/privkey.pem ]; then
               CERT_DOMAIN=vorliq.org
               sed "s#/etc/letsencrypt/live/vorliq.org#/etc/letsencrypt/live/${CERT_DOMAIN}#g" /home/vorliq/app/deployment/vorliq_nginx_ssl.conf > /etc/nginx/sites-available/vorliq
