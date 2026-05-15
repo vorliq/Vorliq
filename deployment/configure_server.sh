@@ -22,6 +22,7 @@ WorkingDirectory=/home/vorliq/app/blockchain
 Environment=VORLIQ_HOST=0.0.0.0
 Environment=VORLIQ_PORT=5001
 Environment=VORLIQ_DATA_DIR=/home/vorliq/app/blockchain/data
+Environment=NODE_ENV=production
 ExecStart=/home/vorliq/app/blockchain/.venv/bin/python app.py
 Restart=on-failure
 RestartSec=5
@@ -92,47 +93,7 @@ for service in vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat
   fi
 done
 
-cat >/etc/nginx/sites-available/vorliq <<'NGINX'
-server {
-  listen 80;
-  server_name _;
-
-  root /home/vorliq/app/frontend/build;
-  index index.html;
-
-  gzip on;
-  gzip_types text/plain text/css application/javascript application/json image/svg+xml;
-  gzip_min_length 1024;
-
-  location / {
-    try_files $uri /index.html;
-  }
-
-  location /static/ {
-    expires 7d;
-    add_header Cache-Control "public, max-age=604800";
-    try_files $uri =404;
-  }
-
-  location /api/ {
-    proxy_pass http://127.0.0.1:5000/api/;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
-
-  location /blockchain/ {
-    proxy_pass http://127.0.0.1:5001/;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
-}
-NGINX
+cp /home/vorliq/app/deployment/vorliq_nginx.conf /etc/nginx/sites-available/vorliq
 
 ln -sfn /etc/nginx/sites-available/vorliq /etc/nginx/sites-enabled/vorliq
 rm -f /etc/nginx/sites-enabled/default

@@ -1,5 +1,7 @@
+import ipaddress
 import os
 import time
+from urllib.parse import urlparse
 
 from flask import Flask, jsonify, request
 
@@ -25,6 +27,29 @@ VORLIQ_HOST = os.environ.get("VORLIQ_HOST", "127.0.0.1")
 VORLIQ_PORT = int(os.environ.get("VORLIQ_PORT", "5001"))
 VORLIQ_ADVERTISED_HOST = "localhost" if VORLIQ_HOST in {"0.0.0.0", "::"} else VORLIQ_HOST
 LOCAL_NODE_URL = os.environ.get("VORLIQ_NODE_URL", f"http://{VORLIQ_ADVERTISED_HOST}:{VORLIQ_PORT}")
+IS_LOCAL_DEVELOPMENT = os.environ.get("NODE_ENV") != "production" and os.environ.get("FLASK_ENV") != "production"
+ALLOWED_ORIGINS = {
+    "https://vorliq.org",
+    "https://www.vorliq.org",
+    "https://node.vorliq.org",
+    "https://status.vorliq.org",
+    "https://vorliq.github.io",
+    "https://vorliq.github.io/Vorliq",
+}
+MAX_PUBLIC_TRANSACTION_AMOUNT = 21_000_000.0
+MAX_TEXT_LENGTHS = {
+    "forum_title": 140,
+    "forum_body": 5000,
+    "forum_reply": 3000,
+    "proposal_title": 160,
+    "proposal_description": 3000,
+    "proposal_parameter": 500,
+    "exchange_price": 160,
+    "exchange_description": 1000,
+    "loan_reason": 1000,
+    "display_name": 80,
+    "currency": 24,
+}
 
 app = Flask(__name__)
 storage = Storage(os.environ.get("VORLIQ_DATA_DIR"))
@@ -87,9 +112,79 @@ if network.peers:
     network.announce_to_peers(LOCAL_NODE_URL, network.get_peers())
 
 
+def _json_body() -> dict:
+    data = request.get_json(force=True)
+    if not isinstance(data, dict):
+        raise ValueError("request body must be a JSON object")
+    return data
+
+
+def _pick(data: dict, *names: str):
+    for name in names:
+        if data.get(name) is not None:
+            return data.get(name)
+    return None
+
+
+def _require_text(value: object, field_name: str, max_length: int | None = None) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} is required")
+    normalized = value.replace("\x00", "").strip()
+    if max_length and len(normalized) > max_length:
+        raise ValueError(f"{field_name} must be {max_length} characters or fewer")
+    return normalized
+
+
+def _require_number(value: object, field_name: str, maximum: float | None = None) -> float:
+    number = float(value)
+    if number <= 0:
+        raise ValueError(f"{field_name} must be greater than zero")
+    if maximum is not None and number > maximum:
+        raise ValueError(f"{field_name} is too large")
+    return number
+
+
+def _require_enum(value: object, field_name: str, allowed: set[str]) -> str:
+    normalized = _require_text(value, field_name, 80).lower()
+    if normalized not in allowed:
+        raise ValueError(f"{field_name} is not valid")
+    return normalized
+
+
+def _is_private_hostname(hostname: str) -> bool:
+    host = hostname.lower()
+    if host in {"localhost", "::1"} or host.endswith(".local"):
+        return True
+    try:
+        parsed_ip = ipaddress.ip_address(host)
+        return parsed_ip.is_private or parsed_ip.is_loopback or parsed_ip.is_link_local
+    except ValueError:
+        return False
+
+
+def _require_public_url(value: object, field_name: str) -> str:
+    url = _require_text(value, field_name, 240)
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError(f"{field_name} must be a valid http or https URL")
+    if _is_private_hostname(parsed.hostname or "") and not IS_LOCAL_DEVELOPMENT:
+        raise ValueError(f"{field_name} must be a public URL")
+    return url.rstrip("/")
+
+
+def _origin_is_allowed(origin: str) -> bool:
+    if origin in ALLOWED_ORIGINS:
+        return True
+    parsed = urlparse(origin)
+    return parsed.scheme in {"http", "https"} and parsed.hostname in {"localhost", "127.0.0.1"}
+
+
 @app.after_request
 def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
+    origin = request.headers.get("Origin")
+    if origin and _origin_is_allowed(origin):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
@@ -113,10 +208,23 @@ def get_pending_transactions():
 @app.post("/transaction")
 def create_transaction():
     try:
-        data = request.get_json(force=True)
-        transaction = Transaction.from_dict(data)
-        if transaction.sender_address in SYSTEM_ADDRESSES or transaction.sender_address == TREASURY_ADDRESS:
+        data = _json_body()
+        sender_address = _require_text(
+            _pick(data, "sender_address", "senderAddress", "sender"),
+            "sender address",
+            160,
+        )
+        _require_text(
+            _pick(data, "receiver_address", "receiverAddress", "receiver"),
+            "receiver address",
+            160,
+        )
+        _require_number(data.get("amount"), "amount", MAX_PUBLIC_TRANSACTION_AMOUNT)
+        _require_text(data.get("signature"), "signature", 512)
+        _require_text(_pick(data, "sender_public_key", "senderPublicKey"), "sender public key", 3000)
+        if sender_address in SYSTEM_ADDRESSES or sender_address == TREASURY_ADDRESS:
             raise ValueError("system-controlled addresses cannot submit public transactions")
+        transaction = Transaction.from_dict(data)
         node.submit_transaction(transaction)
         achievements.check_and_award(transaction.sender_address, "first_transaction", node.blockchain)
         storage.save_pending(node.blockchain.pending_transactions)
@@ -132,8 +240,8 @@ def create_transaction():
 @app.post("/mine")
 def mine_block():
     try:
-        data = request.get_json(force=True)
-        miner_address = data.get("miner_address") or data.get("minerAddress")
+        data = _json_body()
+        miner_address = _require_text(data.get("miner_address") or data.get("minerAddress"), "miner address", 160)
         block = node.mine_new_block(miner_address)
         storage.save_chain(node.blockchain)
         storage.save_pending(node.blockchain.pending_transactions)
@@ -180,6 +288,7 @@ def create_wallet():
 def get_balance():
     address = request.args.get("address", "")
     try:
+        address = _require_text(address, "address", 160)
         return jsonify(node.get_balance(address))
     except Exception as exc:
         vorliq_logger.error("Balance endpoint failed: %s", exc)
@@ -333,14 +442,14 @@ def get_all_treasury_proposals():
 @app.post("/treasury/propose")
 def create_treasury_proposal():
     try:
-        data = request.get_json(force=True)
+        data = _json_body()
         proposal_id = treasury.create_proposal(
-            proposer_address=data.get("proposer_address") or data.get("proposerAddress"),
-            title=data["title"],
-            description=data["description"],
-            category=data["category"],
-            requested_amount=float(data.get("requested_amount") or data.get("requestedAmount")),
-            recipient_address=data.get("recipient_address") or data.get("recipientAddress"),
+            proposer_address=_require_text(data.get("proposer_address") or data.get("proposerAddress"), "proposer address", 160),
+            title=_require_text(data.get("title"), "title", MAX_TEXT_LENGTHS["proposal_title"]),
+            description=_require_text(data.get("description"), "description", MAX_TEXT_LENGTHS["proposal_description"]),
+            category=_require_enum(data.get("category"), "category", Treasury.VALID_CATEGORIES),
+            requested_amount=_require_number(data.get("requested_amount") or data.get("requestedAmount"), "requested amount", 1_000_000),
+            recipient_address=_require_text(data.get("recipient_address") or data.get("recipientAddress"), "recipient address", 160),
             current_blockchain=node.blockchain,
         )
         storage.save_treasury(treasury)
@@ -376,11 +485,11 @@ def vote_on_treasury_proposal():
 @app.post("/price/signal")
 def submit_price_signal():
     try:
-        data = request.get_json(force=True)
+        data = _json_body()
         signal_id = price_discovery.submit_signal(
-            submitter_address=data.get("submitter_address") or data.get("submitterAddress"),
-            currency=data["currency"],
-            price_value=float(data.get("price_value") or data.get("priceValue")),
+            submitter_address=_require_text(data.get("submitter_address") or data.get("submitterAddress"), "submitter address", 160),
+            currency=_require_text(data.get("currency"), "currency", MAX_TEXT_LENGTHS["currency"]),
+            price_value=_require_number(data.get("price_value") or data.get("priceValue") or data.get("price"), "price", 1_000_000_000),
         )
         storage.save_price_discovery(price_discovery)
         return jsonify({"success": True, "signal_id": signal_id, "signal": price_discovery.signals[signal_id]}), 201
@@ -427,8 +536,8 @@ def get_all_achievements():
 @app.post("/peers/register")
 def register_peer():
     try:
-        data = request.get_json(force=True)
-        peer = data["peer"]
+        data = _json_body()
+        peer = _require_public_url(data.get("peer"), "peer URL")
         network.register_peer(peer)
         network.discover_peers(network.get_peers())
         network.remove_peer(LOCAL_NODE_URL)
@@ -449,8 +558,8 @@ def get_peers():
 @app.post("/peers/announce")
 def announce_peer():
     try:
-        data = request.get_json(force=True)
-        node_url = data["node_url"]
+        data = _json_body()
+        node_url = _require_public_url(data.get("node_url") or data.get("nodeUrl"), "node URL")
         network.register_peer(node_url)
         network.remove_peer(LOCAL_NODE_URL)
         storage.save_peers(network.peers)
@@ -519,10 +628,10 @@ def sync_peers():
 @app.post("/registry/register")
 def register_public_node():
     try:
-        data = request.get_json(force=True)
+        data = _json_body()
         node_registry.register_node(
-            node_url=data.get("node_url") or data.get("nodeUrl"),
-            display_name=data.get("display_name") or data.get("displayName"),
+            node_url=_require_public_url(data.get("node_url") or data.get("nodeUrl"), "node URL"),
+            display_name=_require_text(data.get("display_name") or data.get("displayName"), "display name", MAX_TEXT_LENGTHS["display_name"]),
         )
         storage.save_registry(node_registry)
         return jsonify({"success": True, "nodes": node_registry.get_active_nodes()}), 201
@@ -539,8 +648,8 @@ def get_registry_nodes():
 @app.post("/registry/heartbeat")
 def registry_heartbeat():
     try:
-        data = request.get_json(force=True)
-        node = node_registry.heartbeat(data.get("node_url") or data.get("nodeUrl"))
+        data = _json_body()
+        node = node_registry.heartbeat(_require_public_url(data.get("node_url") or data.get("nodeUrl"), "node URL"))
         storage.save_registry(node_registry)
         return jsonify({"success": True, "node": node})
     except Exception as exc:
@@ -551,12 +660,12 @@ def registry_heartbeat():
 @app.post("/lending/request")
 def create_lending_request():
     try:
-        data = request.get_json(force=True)
-        requester_address = data.get("requester_address") or data.get("requesterAddress")
+        data = _json_body()
+        requester_address = _require_text(data.get("requester_address") or data.get("requesterAddress"), "requester address", 160)
         loan_id = lending_pool.create_loan_request(
             requester_address=requester_address,
-            amount=float(data["amount"]),
-            reason=data["reason"],
+            amount=_require_number(data.get("amount"), "loan amount", lending_pool.maximum_loan_amount),
+            reason=_require_text(data.get("reason"), "reason", MAX_TEXT_LENGTHS["loan_reason"]),
         )
         storage.save_lending_pool(lending_pool)
         return jsonify({"success": True, "loan_id": loan_id, "loan": lending_pool.get_loan(loan_id)}), 201
@@ -636,13 +745,13 @@ def repay_lending_loan():
 @app.post("/exchange/offer")
 def create_exchange_offer():
     try:
-        data = request.get_json(force=True)
+        data = _json_body()
         offer_id = exchange.create_offer(
-            creator_address=data.get("creator_address") or data.get("creatorAddress"),
-            offer_type=data.get("offer_type") or data.get("offerType"),
-            amount=float(data["amount"]),
-            price_description=data.get("price") or data.get("price_description") or data.get("priceDescription"),
-            detail_description=data.get("description") or data.get("detail_description") or data.get("detailDescription"),
+            creator_address=_require_text(data.get("creator_address") or data.get("creatorAddress"), "creator address", 160),
+            offer_type=_require_enum(data.get("offer_type") or data.get("offerType"), "offer type", {"buy", "sell"}),
+            amount=_require_number(data.get("amount"), "offer amount", 100_000),
+            price_description=_require_text(data.get("price") or data.get("price_description") or data.get("priceDescription"), "price", MAX_TEXT_LENGTHS["exchange_price"]),
+            detail_description=_require_text(data.get("description") or data.get("detail_description") or data.get("detailDescription"), "description", MAX_TEXT_LENGTHS["exchange_description"]),
         )
         storage.save_exchange(exchange)
         return jsonify({"success": True, "offer_id": offer_id, "offer": exchange.get_offer(offer_id)}), 201
@@ -723,12 +832,12 @@ def cancel_exchange_offer():
 @app.post("/forum/post")
 def create_forum_post():
     try:
-        data = request.get_json(force=True)
+        data = _json_body()
         post_id = forum.create_post(
-            author_address=data.get("author_address") or data.get("authorAddress"),
-            title=data["title"],
-            body=data["body"],
-            category=data.get("category", "general"),
+            author_address=_require_text(data.get("author_address") or data.get("authorAddress"), "author address", 160),
+            title=_require_text(data.get("title"), "title", MAX_TEXT_LENGTHS["forum_title"]),
+            body=_require_text(data.get("body"), "body", MAX_TEXT_LENGTHS["forum_body"]),
+            category=_require_enum(data.get("category", "general"), "category", Forum.VALID_CATEGORIES),
             image_data=data.get("image_data") or data.get("imageData"),
         )
         storage.save_forum(forum)
@@ -770,11 +879,11 @@ def get_forum_post():
 @app.post("/forum/reply")
 def reply_to_forum_post():
     try:
-        data = request.get_json(force=True)
+        data = _json_body()
         reply = forum.add_reply(
-            post_id=data.get("post_id") or data.get("postId"),
-            author_address=data.get("author_address") or data.get("authorAddress"),
-            body=data["body"],
+            post_id=_require_text(data.get("post_id") or data.get("postId"), "post ID", 128),
+            author_address=_require_text(data.get("author_address") or data.get("authorAddress"), "author address", 160),
+            body=_require_text(data.get("body"), "reply", MAX_TEXT_LENGTHS["forum_reply"]),
             image_data=data.get("image_data") or data.get("imageData"),
         )
         storage.save_forum(forum)
@@ -787,10 +896,10 @@ def reply_to_forum_post():
 @app.post("/forum/upvote")
 def upvote_forum_post():
     try:
-        data = request.get_json(force=True)
+        data = _json_body()
         post = forum.upvote_post(
-            post_id=data.get("post_id") or data.get("postId"),
-            address=data["address"],
+            post_id=_require_text(data.get("post_id") or data.get("postId"), "post ID", 128),
+            address=_require_text(data.get("address"), "wallet address", 160),
         )
         storage.save_forum(forum)
         return jsonify({"success": True, "post": post})
@@ -802,10 +911,10 @@ def upvote_forum_post():
 @app.post("/forum/feature")
 def feature_forum_post():
     try:
-        data = request.get_json(force=True)
+        data = _json_body()
         post = forum.feature_post(
-            post_id=data.get("post_id") or data.get("postId"),
-            voter_address=data.get("voter_address") or data.get("voterAddress"),
+            post_id=_require_text(data.get("post_id") or data.get("postId"), "post ID", 128),
+            voter_address=_require_text(data.get("voter_address") or data.get("voterAddress"), "voter address", 160),
         )
         storage.save_forum(forum)
         return jsonify({"success": True, "post": post})
@@ -876,13 +985,18 @@ def tip_forum_reply():
 @app.post("/governance/propose")
 def create_governance_proposal():
     try:
-        data = request.get_json(force=True)
+        data = _json_body()
+        category = _require_enum(data.get("category"), "category", governance.valid_categories)
+        if category == "general":
+            parameter_value = _require_text(data.get("parameter"), "parameter value", MAX_TEXT_LENGTHS["proposal_parameter"])
+        else:
+            parameter_value = _require_number(data.get("parameter"), "parameter value", 21_000_000)
         proposal_id = governance.create_proposal(
-            proposer_address=data.get("proposer_address") or data.get("proposerAddress"),
-            title=data["title"],
-            description=data["description"],
-            category=data["category"],
-            parameter_value=data.get("parameter"),
+            proposer_address=_require_text(data.get("proposer_address") or data.get("proposerAddress"), "proposer address", 160),
+            title=_require_text(data.get("title"), "title", MAX_TEXT_LENGTHS["proposal_title"]),
+            description=_require_text(data.get("description"), "description", MAX_TEXT_LENGTHS["proposal_description"]),
+            category=category,
+            parameter_value=parameter_value,
             current_blockchain=node.blockchain,
         )
         storage.save_governance(governance)

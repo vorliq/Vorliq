@@ -1,5 +1,4 @@
 const express = require("express");
-const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 const cron = require("node-cron");
@@ -22,15 +21,36 @@ const deploymentRoutes = require("./routes/deployment");
 const reportsRoutes = require("./routes/reports");
 const { logError, logInfo } = require("./logger");
 const { sendWeeklyReport } = require("./reports");
+const { corsMiddleware, helmetMiddleware, isAllowedOrigin, securityStatus } = require("./middleware/security");
+const { validateBody } = require("./middleware/validation");
+const {
+  apiSlowDown,
+  chatLimiter,
+  generalLimiter,
+  miningLimiter,
+  proposalLimiter,
+  registryLimiter,
+  reportLimiter,
+  transactionLimiter,
+  walletLimiter,
+  writeLimiter,
+} = require("./middleware/rateLimits");
 
 const app = express();
+app.set("trust proxy", 1);
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*" },
+  cors: {
+    origin(origin, callback) {
+      callback(null, isAllowedOrigin(origin));
+    },
+    methods: ["GET", "POST"],
+  },
   path: "/api/socket.io",
 });
 const port = process.env.PORT || 5000;
 const socketAddresses = new Map();
+const socketMessageTimes = new Map();
 const chatHistory = [];
 
 function emitUserCount() {
@@ -55,12 +75,24 @@ io.on("connection", (socket) => {
     const senderAddress = String(message?.sender_address || message?.senderAddress || "").trim();
     const text = String(message?.text || "").trim();
     const timestamp = Number(message?.timestamp) || Date.now();
+    const now = Date.now();
+    const recentMessages = (socketMessageTimes.get(socket.id) || []).filter((sentAt) => now - sentAt < 60_000);
+
+    if (recentMessages.length >= 40) {
+      logError(`Chat rate limit rejected socket ${socket.id}`);
+      socket.emit("chat_error", { message: "Chat messages are rate limited. Please slow down." });
+      socketMessageTimes.set(socket.id, recentMessages);
+      return;
+    }
 
     if (!text || text.length > 500) {
+      logError(`Chat validation rejected socket ${socket.id}: invalid message length`);
       socket.emit("chat_error", { message: "Message must be between 1 and 500 characters." });
       return;
     }
 
+    recentMessages.push(now);
+    socketMessageTimes.set(socket.id, recentMessages);
     const chatMessage = {
       sender_address: senderAddress || socketAddresses.get(socket.id) || "Unknown",
       text,
@@ -79,23 +111,51 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     socketAddresses.delete(socket.id);
+    socketMessageTimes.delete(socket.id);
     logInfo(`Chat socket disconnected: ${socket.id}`);
     emitUserCount();
   });
 });
 
-app.use(cors());
-app.use(express.json());
+app.use(helmetMiddleware());
+app.use(corsMiddleware());
+app.use("/api/forum", express.json({ limit: "2.5mb" }));
+app.use(express.json({ limit: "100kb" }));
 app.use((req, res, next) => {
   logInfo(`${req.method} ${req.path}`);
   next();
 });
+app.use("/api", generalLimiter, apiSlowDown);
+app.use("/api/socket.io", chatLimiter);
+app.use("/api/wallet/create", walletLimiter);
+app.use("/api/mine", miningLimiter);
+app.use("/api/transaction/send", transactionLimiter);
+app.use(
+  [
+    "/api/forum/post",
+    "/api/forum/reply",
+    "/api/forum/upvote",
+    "/api/forum/feature",
+    "/api/price/signal",
+    "/api/lending/request",
+    "/api/exchange/offer",
+  ],
+  writeLimiter
+);
+app.use(["/api/governance/propose", "/api/treasury/propose"], proposalLimiter);
+app.use(["/api/registry/register", "/api/registry/heartbeat", "/api/peers/add", "/api/peers/announce"], registryLimiter);
+app.use("/api/reports/weekly", reportLimiter);
+app.use(validateBody);
 
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,
     message: "Vorliq backend is running",
   });
+});
+
+app.get("/api/security/status", (req, res) => {
+  res.json(securityStatus());
 });
 
 app.use(chainRoutes);
@@ -123,6 +183,18 @@ app.use((req, res) => {
 
 app.use((error, req, res, next) => {
   logError(`${req.method} ${req.path} failed: ${error.message}`);
+  if (error.type === "entity.too.large") {
+    return res.status(413).json({
+      success: false,
+      message: "Request body is too large.",
+    });
+  }
+  if (error instanceof SyntaxError && "body" in error) {
+    return res.status(400).json({
+      success: false,
+      message: "Request body must be valid JSON.",
+    });
+  }
   const status = error.response?.status || 500;
   const message =
     error.code === "ECONNREFUSED" || error.code === "ECONNABORTED" || !error.response

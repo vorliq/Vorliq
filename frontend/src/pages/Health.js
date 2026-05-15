@@ -20,6 +20,7 @@ function getPublicNodeDisplayUrl(nodeUrl) {
 function Health() {
   const [diagnostics, setDiagnostics] = useState(null);
   const [deployment, setDeployment] = useState(null);
+  const [securityStatus, setSecurityStatus] = useState(null);
   const [weeklyReport, setWeeklyReport] = useState(null);
   const [registryNodes, setRegistryNodes] = useState([]);
   const [networkHealth, setNetworkHealth] = useState([]);
@@ -38,11 +39,13 @@ function Health() {
         const diagnosticsRequest = api.get("/diagnostics");
         const registryRequest = api.get("/registry/nodes");
         const deploymentRequest = api.get("/deployment");
+        const securityRequest = api.get("/security/status");
         const weeklyReportRequest = api.get("/reports/weekly");
-        const [diagnosticsResponse, registryResponse, deploymentResponse, weeklyReportResponse] = await Promise.all([
+        const [diagnosticsResponse, registryResponse, deploymentResponse, securityResponse, weeklyReportResponse] = await Promise.all([
           diagnosticsRequest,
           registryRequest,
           deploymentRequest,
+          securityRequest,
           weeklyReportRequest,
         ]);
         const diagnosticsResponseTime = Math.round(performance.now() - diagnosticsStart);
@@ -71,6 +74,7 @@ function Health() {
         if (mounted) {
           setDiagnostics(diagnosticsResponse.data);
           setDeployment(deploymentResponse.data);
+          setSecurityStatus(securityResponse.data);
           setWeeklyReport(weeklyReportResponse.data);
           setRegistryNodes(nodes);
           setNetworkHealth(nodeChecks);
@@ -209,6 +213,44 @@ function Health() {
           </div>
         ) : (
           <div className="empty-state">Deployment information is unavailable right now.</div>
+        )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <h2>Abuse Protection</h2>
+        {loading ? (
+          <Spinner label="Loading security status..." />
+        ) : securityStatus?.success ? (
+          <div className="table-wrap">
+            <table className="stats-table">
+              <tbody>
+                <tr>
+                  <th>Rate Limiting</th>
+                  <td className={securityStatus.rate_limiting_enabled ? "green" : "warning"}>
+                    {securityStatus.rate_limiting_enabled ? "Enabled" : "Disabled"}
+                  </td>
+                </tr>
+                <tr>
+                  <th>Security Headers</th>
+                  <td className={securityStatus.security_headers_enabled ? "green" : "warning"}>
+                    {securityStatus.security_headers_enabled ? "Enabled" : "Disabled"}
+                  </td>
+                </tr>
+                <tr>
+                  <th>Production Mode</th>
+                  <td className={securityStatus.production_mode ? "green" : "warning"}>
+                    {securityStatus.production_mode ? "Enabled" : "Development"}
+                  </td>
+                </tr>
+                <tr>
+                  <th>CORS</th>
+                  <td>{securityStatus.cors_restricted ? "Restricted to approved origins" : "Open"}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">Security status is unavailable right now.</div>
         )}
       </section>
 

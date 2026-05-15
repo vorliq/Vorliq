@@ -7,6 +7,7 @@ services:
       VORLIQ_HOST: 0.0.0.0
       VORLIQ_PORT: 5001
       VORLIQ_DATA_DIR: /app/data
+      NODE_ENV: production
     ports:
       - "5001:5001"
     volumes:

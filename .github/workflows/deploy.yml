@@ -36,10 +36,16 @@ jobs:
             set -euo pipefail
             sudo -u vorliq -H git -C /home/vorliq/app fetch origin
             sudo -u vorliq -H git -C /home/vorliq/app reset --hard origin/main
+            if ! grep -q 'Environment=NODE_ENV=production' /etc/systemd/system/vorliq-blockchain.service; then
+              sed -i '/Environment=VORLIQ_DATA_DIR=/a Environment=NODE_ENV=production' /etc/systemd/system/vorliq-blockchain.service
+              systemctl daemon-reload
+            fi
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/backend && npm install'
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm install'
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm run build'
             chmod -R 755 /home/vorliq/app/frontend/build
+            cp /home/vorliq/app/deployment/vorliq_nginx.conf /etc/nginx/sites-available/vorliq
+            nginx -t
             systemctl restart vorliq-blockchain vorliq-backend vorliq-heartbeat nginx
             for attempt in 1 2 3 4 5; do
               HEALTH_RESPONSE="$(curl -s http://localhost:5000/api/health || true)"
