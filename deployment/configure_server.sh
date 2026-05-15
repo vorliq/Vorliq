@@ -93,7 +93,15 @@ for service in vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat
   fi
 done
 
-cp /home/vorliq/app/deployment/vorliq_nginx.conf /etc/nginx/sites-available/vorliq
+if [ -f /etc/letsencrypt/live/vorliq.org/fullchain.pem ] && [ -f /etc/letsencrypt/live/vorliq.org/privkey.pem ]; then
+  CERT_DOMAIN=vorliq.org
+  sed "s#/etc/letsencrypt/live/vorliq.org#/etc/letsencrypt/live/${CERT_DOMAIN}#g" /home/vorliq/app/deployment/vorliq_nginx_ssl.conf > /etc/nginx/sites-available/vorliq
+elif [ -f /etc/letsencrypt/live/status.vorliq.org/fullchain.pem ] && [ -f /etc/letsencrypt/live/status.vorliq.org/privkey.pem ]; then
+  CERT_DOMAIN=status.vorliq.org
+  sed "s#/etc/letsencrypt/live/vorliq.org#/etc/letsencrypt/live/${CERT_DOMAIN}#g" /home/vorliq/app/deployment/vorliq_nginx_ssl.conf > /etc/nginx/sites-available/vorliq
+else
+  cp /home/vorliq/app/deployment/vorliq_nginx.conf /etc/nginx/sites-available/vorliq
+fi
 
 ln -sfn /etc/nginx/sites-available/vorliq /etc/nginx/sites-enabled/vorliq
 rm -f /etc/nginx/sites-enabled/default

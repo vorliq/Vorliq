@@ -44,7 +44,15 @@ jobs:
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm install'
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm run build'
             chmod -R 755 /home/vorliq/app/frontend/build
-            cp /home/vorliq/app/deployment/vorliq_nginx.conf /etc/nginx/sites-available/vorliq
+            if [ -f /etc/letsencrypt/live/vorliq.org/fullchain.pem ] && [ -f /etc/letsencrypt/live/vorliq.org/privkey.pem ]; then
+              CERT_DOMAIN=vorliq.org
+              sed "s#/etc/letsencrypt/live/vorliq.org#/etc/letsencrypt/live/${CERT_DOMAIN}#g" /home/vorliq/app/deployment/vorliq_nginx_ssl.conf > /etc/nginx/sites-available/vorliq
+            elif [ -f /etc/letsencrypt/live/status.vorliq.org/fullchain.pem ] && [ -f /etc/letsencrypt/live/status.vorliq.org/privkey.pem ]; then
+              CERT_DOMAIN=status.vorliq.org
+              sed "s#/etc/letsencrypt/live/vorliq.org#/etc/letsencrypt/live/${CERT_DOMAIN}#g" /home/vorliq/app/deployment/vorliq_nginx_ssl.conf > /etc/nginx/sites-available/vorliq
+            else
+              cp /home/vorliq/app/deployment/vorliq_nginx.conf /etc/nginx/sites-available/vorliq
+            fi
             nginx -t
             systemctl restart vorliq-blockchain vorliq-backend vorliq-heartbeat nginx
             for attempt in 1 2 3 4 5; do
