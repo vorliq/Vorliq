@@ -31,6 +31,7 @@ import Price from "./pages/Price";
 import Ambassador from "./pages/Ambassador";
 import Chat from "./pages/Chat";
 import Achievements from "./pages/Achievements";
+import Transparency from "./pages/Transparency";
 import Footer from "./components/Footer";
 import IncidentBanner from "./components/IncidentBanner";
 import api from "./helpers/api";
@@ -67,6 +68,7 @@ const navSections = [
       { to: "/network", label: "Network" },
       { to: "/stats", label: "Stats" },
       { to: "/health", label: "Health" },
+      { to: "/transparency", label: "Transparency" },
       { to: "/whitepaper", label: "Whitepaper" },
     ],
   },
@@ -274,6 +276,7 @@ function AppShell() {
         <Route path="/stats" element={<Stats />} />
         <Route path="/registry" element={<Registry />} />
         <Route path="/health" element={<Health />} />
+        <Route path="/transparency" element={<Transparency />} />
         <Route path="/login" element={<Login />} />
         <Route
           path="/account"

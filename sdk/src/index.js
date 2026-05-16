@@ -116,6 +116,15 @@ class VorliqSDK {
   }
 
   /**
+   * Gets the public Vorliq network manifest for transparency and integration checks.
+   *
+   * @returns {Promise<object>} Safe public network metadata including URLs, deployment commit, chain summary, diagnostics, SDK version, incident activity, and generated timestamp.
+   */
+  async getNetworkManifest() {
+    return this.request("/api/network/manifest");
+  }
+
+  /**
    * Gets the confirmed VLQ balance for a wallet address.
    *
    * @param {string} address - Vorliq wallet address to check.

@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import Mine from "./pages/Mine";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Send from "./pages/Send";
+import Transparency from "./pages/Transparency";
 import Wallet from "./pages/Wallet";
 
 jest.mock("./helpers/api", () => ({
@@ -93,6 +94,35 @@ function defaultApiGet(path) {
 
   if (path === "/forum/featured") {
     return Promise.resolve({ data: { success: true, posts: [] } });
+  }
+
+  if (path === "/network/manifest") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        project: { name: "Vorliq", version: "1.0.0" },
+        urls: {
+          website: "https://vorliq.org",
+          github: "https://github.com/vorliq/Vorliq",
+        },
+        deployment: { commit_hash: "abc123" },
+        chain_summary: {
+          available: true,
+          block_height: 12,
+          total_blocks: 13,
+          total_transactions: 27,
+          chain_valid: true,
+        },
+        diagnostics: {
+          available: true,
+          node_url: "https://vorliq.org",
+          known_peers: 3,
+        },
+        incidents: { active: false, active_count: 0 },
+        sdk: { supported_version: "1.0.0" },
+        generated_at: "2026-05-16T12:00:00.000Z",
+      },
+    });
   }
 
   return Promise.resolve({ data: { success: true } });
@@ -299,4 +329,14 @@ test("IncidentBanner renders a warning when an active major incident is returned
   expect(await screen.findByText(/public node degraded/i)).toBeInTheDocument();
   expect(screen.getByText(/major incident: investigating/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /view status/i })).toHaveAttribute("href", "https://status.vorliq.org");
+});
+
+test("Transparency page renders experimental and self custody notices from the manifest flow", async () => {
+  renderWithProviders(<Transparency />, "/transparency");
+
+  expect(await screen.findByRole("heading", { name: /experimental software/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /self custody/i })).toBeInTheDocument();
+  expect(screen.getByText(/lost keys cannot be recovered by vorliq/i)).toBeInTheDocument();
+  expect(await screen.findByText(/abc123/i)).toBeInTheDocument();
+  expect(api.get).toHaveBeenCalledWith("/network/manifest", { timeout: 8000 });
 });

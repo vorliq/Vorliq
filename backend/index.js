@@ -21,6 +21,7 @@ const backupRoutes = require("./routes/backup");
 const deploymentRoutes = require("./routes/deployment");
 const incidentsRoutes = require("./routes/incidents");
 const reportsRoutes = require("./routes/reports");
+const manifestRoutes = require("./routes/manifest");
 const { logError, logInfo } = require("./logger");
 const { sendWeeklyReport } = require("./reports");
 const { corsMiddleware, helmetMiddleware, isAllowedOrigin, securityStatus } = require("./middleware/security");
@@ -184,6 +185,7 @@ app.use(backupRoutes);
 app.use(deploymentRoutes);
 app.use(incidentsRoutes);
 app.use(reportsRoutes);
+app.use(manifestRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

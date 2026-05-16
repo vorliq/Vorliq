@@ -41,6 +41,15 @@ The React web application provides the browser interface for wallets, sending VL
 
 Vorliq includes encrypted browser wallet storage, local key storage on mobile, dark and light mode, persistent notifications, push notification support through Expo, node diagnostics, rotating logs, a public node registry, GitHub Pages documentation, a full test suite, GitHub Actions CI, and production deployment documentation.
 
+Transparency and Safety
+-----------------------
+
+Vorliq is live software, but it is still an early cryptocurrency-style network. VLQ is not listed on exchanges, has no guaranteed market value, and should not be treated as a guaranteed investment. The public transparency page explains what is live today, what is experimental, what operational protections exist, and what limitations remain: https://vorliq.github.io/Vorliq/transparency.html.
+
+Vorliq is self-custody. The server stores public blockchain data, forum posts, governance activity, exchange offers, lending records, and operational state, but it does not store user private keys or wallet passwords. Lost private keys cannot be recovered by Vorliq, so users should read the wallet safety guide before using real wallets: https://vorliq.github.io/Vorliq/wallet-safety.html.
+
+Public network proof is available through the status page, the recovery guide, and the machine-readable network manifest. Users and developers can check https://status.vorliq.org, https://vorliq.github.io/Vorliq/recovery.html, and https://vorliq.org/api/network/manifest. The build and deployment process is public through GitHub Actions at https://github.com/vorliq/Vorliq/actions.
+
 How to Run
 ----------
 

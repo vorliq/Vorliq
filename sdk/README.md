@@ -31,6 +31,25 @@ async function main() {
 main().catch(console.error);
 ```
 
+Developers can also verify the live network metadata before showing production status, connecting to a public node, or displaying trust information. The manifest is safe public data and includes the project URLs, deployed commit hash, chain summary, diagnostics, SDK version, incident activity, and generation time.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const manifest = await vorliq.getNetworkManifest();
+
+  console.log("Project:", manifest.project.name);
+  console.log("Website:", manifest.urls.website);
+  console.log("Current commit:", manifest.deployment.commit_hash);
+  console.log("Chain height:", manifest.chain_summary.block_height);
+  console.log("Active incidents:", manifest.incidents.active);
+}
+
+main().catch(console.error);
+```
+
 To get a wallet balance, create a client and pass the wallet address to `getBalance`. This complete example prints the balance as a number.
 
 ```js

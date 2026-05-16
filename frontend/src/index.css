@@ -1291,6 +1291,28 @@ p {
   gap: 16px;
 }
 
+.transparency-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.transparency-notice {
+  display: grid;
+  gap: 12px;
+}
+
+.transparency-notice.experimental {
+  border-color: rgba(255, 171, 74, 0.4);
+  background: linear-gradient(180deg, rgba(255, 171, 74, 0.1), transparent), var(--card);
+}
+
+.transparency-notice.custody {
+  border-color: var(--danger-border);
+  background: linear-gradient(180deg, var(--danger-bg), transparent), var(--card);
+}
+
 .health-list {
   display: grid;
   gap: 10px;
@@ -2111,6 +2133,10 @@ p {
 
   .incident-banner a {
     text-align: center;
+  }
+
+  .transparency-grid {
+    grid-template-columns: 1fr;
   }
 }
 

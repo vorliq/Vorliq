@@ -11,6 +11,7 @@ function Footer() {
     { label: "GitHub", href: "https://github.com/vorliq/Vorliq" },
     { label: "X", href: "https://x.com/vorliq" },
     { label: "Network Status", href: "https://status.vorliq.org" },
+    { label: "Transparency", href: "/transparency", internal: true },
     { label: "Developer API", href: "https://vorliq.github.io/Vorliq/api.html" },
     { label: "Privacy", href: "https://vorliq.github.io/Vorliq/privacy.html" },
     { label: "Terms", href: "https://vorliq.github.io/Vorliq/terms.html" },
