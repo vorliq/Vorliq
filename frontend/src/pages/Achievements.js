@@ -41,7 +41,7 @@ function Achievements() {
   const earnedIds = new Set(earned.map((achievement) => achievement.id || achievement.achievement_id));
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Community Progress</span>
         <h1>Achievements</h1>
@@ -84,7 +84,7 @@ function Achievements() {
           })}
         </section>
       )}
-    </main>
+    </div>
   );
 }
 

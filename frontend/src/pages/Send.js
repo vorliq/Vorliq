@@ -99,7 +99,7 @@ function Send() {
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Send VLQ</span>
         <h1>Sign and submit a transaction</h1>
@@ -235,7 +235,7 @@ function Send() {
           </p>
         </form>
       </section>
-    </main>
+    </div>
   );
 }
 

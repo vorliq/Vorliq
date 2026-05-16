@@ -28,7 +28,7 @@ function Ambassador() {
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Community Growth</span>
         <h1>Become a Vorliq Ambassador</h1>
@@ -104,7 +104,7 @@ function Ambassador() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 

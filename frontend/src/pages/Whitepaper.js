@@ -8,7 +8,7 @@ function Whitepaper() {
   ];
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Vorliq Whitepaper</span>
         <h1>Community savings on an independent blockchain</h1>
@@ -120,7 +120,7 @@ function Whitepaper() {
           </div>
         </section>
       </article>
-    </main>
+    </div>
   );
 }
 

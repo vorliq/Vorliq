@@ -52,14 +52,14 @@ function Leaderboard() {
 
   if (loading) {
     return (
-      <main className="page">
+      <div className="page">
         <Spinner label="Loading leaderboard..." />
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Community Leaders</span>
         <h1>Leaderboard</h1>
@@ -107,7 +107,7 @@ function Leaderboard() {
           />
         )}
       </section>
-    </main>
+    </div>
   );
 }
 

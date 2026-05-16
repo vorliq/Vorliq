@@ -92,7 +92,7 @@ function Chat() {
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Live Community</span>
         <h1>Chat</h1>
@@ -142,6 +142,7 @@ function Chat() {
         <form className="chat-form" onSubmit={sendMessage}>
           <input
             className="input"
+            aria-label="Chat message"
             value={messageText}
             maxLength={500}
             onChange={(event) => setMessageText(event.target.value)}
@@ -150,7 +151,7 @@ function Chat() {
           <button className="button" type="submit">Send</button>
         </form>
       </section>
-    </main>
+    </div>
   );
 }
 

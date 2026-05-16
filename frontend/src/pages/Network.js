@@ -87,7 +87,7 @@ function Network() {
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Peer Network</span>
         <h1>Network</h1>
@@ -162,7 +162,7 @@ function Network() {
           ))}
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 

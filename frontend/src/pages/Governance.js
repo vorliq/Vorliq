@@ -154,7 +154,7 @@ function Governance() {
   const placeholder = selectedSetting ? `Current value: ${selectedSetting.current}` : "Current value";
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Community Governance</span>
         <h1>Governance</h1>
@@ -300,7 +300,7 @@ function Governance() {
           </div>
         </section>
       )}
-    </main>
+    </div>
   );
 }
 
@@ -363,7 +363,7 @@ function ProposalCard({
       </div>
       {voteInput && (
         <div className="inline-form">
-          <input className="input" value={voteInput.address || ""} onChange={(event) => onVoteAddressChange(event.target.value)} placeholder="Voter wallet address" />
+          <input className="input" aria-label="Voter wallet address" value={voteInput.address || ""} onChange={(event) => onVoteAddressChange(event.target.value)} placeholder="Voter wallet address" />
           <button className="button" type="button" onClick={() => onSubmitVote(proposal.proposal_id)}>
             Submit {voteInput.vote}
           </button>

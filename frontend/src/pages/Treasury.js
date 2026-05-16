@@ -126,7 +126,7 @@ function Treasury() {
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Community Fund</span>
         <h1>Treasury</h1>
@@ -246,7 +246,7 @@ function Treasury() {
           )}
         </section>
       )}
-    </main>
+    </div>
   );
 }
 
@@ -276,7 +276,7 @@ function TreasuryProposalCard({ proposal, voteInput, onShowVote, onVoteAddressCh
       </div>
       {voteInput && (
         <div className="inline-form">
-          <input className="input" placeholder="Your wallet address" value={voteInput.address} onChange={(event) => onVoteAddressChange(event.target.value)} />
+          <input className="input" aria-label="Your wallet address for treasury vote" placeholder="Your wallet address" value={voteInput.address} onChange={(event) => onVoteAddressChange(event.target.value)} />
           <button className="button" type="button" onClick={() => onSubmitVote(proposal.proposal_id)}>Cast Vote</button>
         </div>
       )}

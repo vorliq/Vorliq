@@ -71,14 +71,14 @@ function Price() {
 
   if (loading) {
     return (
-      <main className="page">
+      <div className="page">
         <Spinner label="Loading price discovery..." />
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Community Sentiment</span>
         <h1>VLQ Price Discovery</h1>
@@ -144,7 +144,7 @@ function Price() {
           })}
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 

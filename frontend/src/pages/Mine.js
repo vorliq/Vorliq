@@ -65,7 +65,7 @@ function Mine() {
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Proof of Work</span>
         <h1>Mine a new VLQ block</h1>
@@ -134,7 +134,7 @@ function Mine() {
           )}
         </section>
       </div>
-    </main>
+    </div>
   );
 }
 

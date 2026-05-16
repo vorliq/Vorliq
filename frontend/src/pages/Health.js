@@ -144,7 +144,7 @@ function Health() {
   }, [diagnostics]);
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Node Operations</span>
         <h1>Health</h1>
@@ -366,7 +366,7 @@ function Health() {
           <div className="empty-state">Weekly report preview is unavailable right now.</div>
         )}
       </section>
-    </main>
+    </div>
   );
 }
 

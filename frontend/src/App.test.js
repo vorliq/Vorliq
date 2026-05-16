@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import App from "./App";
@@ -12,6 +12,7 @@ import Account from "./pages/Account";
 import Login from "./pages/Login";
 import Mine from "./pages/Mine";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Dashboard from "./pages/Dashboard";
 import Send from "./pages/Send";
 import Transparency from "./pages/Transparency";
 import Wallet from "./pages/Wallet";
@@ -173,6 +174,77 @@ test("onboarding appears for a first-time visitor and can be skipped", async () 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
   expect(window.localStorage.getItem(ONBOARDING_KEY)).toBe("true");
+});
+
+test("App exposes a keyboard skip link to the main content", async () => {
+  window.localStorage.setItem(ONBOARDING_KEY, "true");
+
+  render(<App />);
+
+  expect(await screen.findByRole("link", { name: /skip to main content/i })).toHaveAttribute(
+    "href",
+    "#main-content"
+  );
+  expect(document.querySelector("main#main-content")).toBeInTheDocument();
+});
+
+test("onboarding dialog has ARIA semantics and progress text", async () => {
+  render(<App />);
+
+  const dialog = await screen.findByRole("dialog");
+
+  expect(dialog).toHaveAttribute("aria-modal", "true");
+  expect(dialog).toHaveAttribute("aria-labelledby", "onboarding-title");
+  expect(dialog).toHaveAttribute("aria-describedby", "onboarding-description");
+  expect(screen.getAllByText(/step 1 of 4/i).length).toBeGreaterThan(0);
+});
+
+test("onboarding supports keyboard next, previous, and escape close", async () => {
+  render(<App />);
+
+  expect(await screen.findByRole("dialog")).toBeInTheDocument();
+
+  fireEvent.keyDown(document, { key: "ArrowRight" });
+  expect(await screen.findByText(/create your wallet/i)).toBeInTheDocument();
+
+  fireEvent.keyDown(document, { key: "ArrowLeft" });
+  expect(await within(screen.getByRole("dialog")).findByText(/welcome to vorliq/i)).toBeInTheDocument();
+
+  fireEvent.keyDown(document, { key: "Enter" });
+  expect(await screen.findByText(/create your wallet/i)).toBeInTheDocument();
+
+  fireEvent.keyDown(document, { key: "Escape" });
+
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+  expect(window.localStorage.getItem(ONBOARDING_KEY)).toBe("true");
+});
+
+test("Dashboard shows a first-user Get Started section with core actions", async () => {
+  renderWithProviders(<Dashboard />);
+
+  expect(await screen.findByRole("heading", { name: /get started with vorliq/i })).toBeInTheDocument();
+  const getStarted = screen.getByRole("heading", { name: /get started with vorliq/i }).closest("section");
+
+  expect(within(getStarted).getByText(/read the safety notice/i)).toBeInTheDocument();
+  expect(within(getStarted).getByRole("link", { name: /read transparency/i })).toHaveAttribute("href", "/transparency");
+  expect(within(getStarted).getByRole("link", { name: /mine vlq/i })).toHaveAttribute("href", "/mine");
+  expect(within(getStarted).getByRole("link", { name: /governance/i })).toHaveAttribute("href", "/governance");
+});
+
+test("mobile hamburger announces expanded state when opened", async () => {
+  window.localStorage.setItem(ONBOARDING_KEY, "true");
+
+  render(<App />);
+
+  await screen.findByRole("heading", { name: /welcome to vorliq/i });
+  const hamburger = screen.getByRole("button", { name: /open navigation menu/i });
+
+  expect(hamburger).toHaveAttribute("aria-expanded", "false");
+  await userEvent.click(hamburger);
+  expect(hamburger).toHaveAttribute("aria-expanded", "true");
+  expect(hamburger).toHaveAttribute("aria-controls", "primary-navigation");
 });
 
 test("Login page shows wallet creation when no wallet is stored", () => {

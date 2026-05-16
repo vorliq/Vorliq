@@ -74,7 +74,12 @@ function NotificationPanel({ open, onClose }) {
   }, [onClose, open]);
 
   return (
-    <aside ref={panelRef} className={`notification-panel ${open ? "open" : ""}`}>
+    <aside
+      ref={panelRef}
+      id="notification-panel"
+      className={`notification-panel ${open ? "open" : ""}`}
+      aria-hidden={!open}
+    >
       <div className="notification-header">
         <div>
           <span className="eyebrow">Updates</span>
@@ -83,7 +88,7 @@ function NotificationPanel({ open, onClose }) {
         <button className="button secondary small-button" type="button" onClick={clearAll}>
           Clear All
         </button>
-        <button className="button secondary small-button" type="button" onClick={onClose}>
+        <button className="button secondary small-button" type="button" onClick={onClose} aria-label="Close notifications panel">
           Close
         </button>
       </div>

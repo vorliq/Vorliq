@@ -183,7 +183,7 @@ function Lending() {
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Community Lending</span>
         <h1>Lending</h1>
@@ -333,7 +333,7 @@ function Lending() {
           </button>
         </form>
       </section>
-    </main>
+    </div>
   );
 }
 

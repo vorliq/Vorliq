@@ -70,7 +70,7 @@ function Transparency() {
   }, [manifest]);
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Public Trust</span>
         <h1>Transparency</h1>
@@ -189,7 +189,7 @@ function Transparency() {
           subscriber broadcasting needs a mailing provider beyond Formspree.
         </p>
       </section>
-    </main>
+    </div>
   );
 }
 

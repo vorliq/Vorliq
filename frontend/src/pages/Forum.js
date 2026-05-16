@@ -66,12 +66,14 @@ function TipForm({ form, onChange, onSubmit }) {
       <input
         className="input"
         type="text"
+        aria-label="Your wallet address for tip"
         placeholder="Your wallet address"
         value={form.senderAddress}
         onChange={(event) => onChange("senderAddress", event.target.value)}
       />
       <textarea
         className="textarea"
+        aria-label="Your private key for tip"
         placeholder="Your private key"
         value={form.privateKey}
         onChange={(event) => onChange("privateKey", event.target.value)}
@@ -81,6 +83,7 @@ function TipForm({ form, onChange, onSubmit }) {
         type="number"
         min="1"
         max="100"
+        aria-label="Tip amount in VLQ"
         placeholder="Amount 1-100 VLQ"
         value={form.amount}
         onChange={(event) => onChange("amount", event.target.value)}
@@ -351,7 +354,7 @@ function Forum() {
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Community Discussion</span>
         <h1>Forum</h1>
@@ -396,12 +399,14 @@ function Forum() {
             <input
               className="input"
               type="search"
+              aria-label="Search forum posts"
               placeholder="Search forum posts"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
             />
             <select
               className="input"
+              aria-label="Filter forum posts by category"
               value={categoryFilter}
               onChange={(event) => setCategoryFilter(event.target.value)}
             >
@@ -415,6 +420,7 @@ function Forum() {
           <input
             className="input"
             type="text"
+            aria-label="Wallet address for feature votes"
             placeholder="Wallet address for feature votes"
             value={featureVoterAddress}
             onChange={(event) => setFeatureVoterAddress(event.target.value)}
@@ -583,6 +589,7 @@ function Forum() {
                 <input
                   className="input"
                   type="text"
+                  aria-label="Wallet address for upvote"
                   placeholder="Wallet address for upvote"
                   value={upvoteAddress}
                   onChange={(event) => setUpvoteAddress(event.target.value)}
@@ -692,7 +699,7 @@ function Forum() {
           )}
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 

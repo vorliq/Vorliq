@@ -110,7 +110,7 @@ function Login() {
   }
 
   return (
-    <main className="page auth-page">
+    <div className="page auth-page">
       <section className="hero">
         <span className="eyebrow">Member Access</span>
         <h1>{walletExists ? "Welcome Back" : "Create Your Vorliq Wallet"}</h1>
@@ -223,7 +223,7 @@ function Login() {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }
 

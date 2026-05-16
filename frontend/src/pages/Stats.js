@@ -77,22 +77,22 @@ function Stats() {
 
   if (loading) {
     return (
-      <main className="page">
+      <div className="page">
         <Spinner label="Loading community statistics..." />
-      </main>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <main className="page">
+      <div className="page">
         <ErrorMessage message={error} />
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Community Metrics</span>
         <h1>Stats</h1>
@@ -152,7 +152,7 @@ function Stats() {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }
 

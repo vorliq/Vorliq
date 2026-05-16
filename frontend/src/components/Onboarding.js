@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const ONBOARDING_KEY = "vorliq_onboarding_complete";
 
@@ -34,6 +34,8 @@ const communityLinks = [
 ];
 
 function Onboarding() {
+  const modalRef = useRef(null);
+  const previousFocusRef = useRef(null);
   const [visible, setVisible] = useState(() => {
     if (typeof window === "undefined") {
       return false;
@@ -43,6 +45,72 @@ function Onboarding() {
   });
   const [stepIndex, setStepIndex] = useState(0);
 
+  const completeOnboarding = useCallback(() => {
+    window.localStorage.setItem(ONBOARDING_KEY, "true");
+    setVisible(false);
+  }, []);
+
+  const nextStep = useCallback(() => {
+    setStepIndex((current) => {
+      if (current === steps.length - 1) {
+        completeOnboarding();
+        return current;
+      }
+
+      return current + 1;
+    });
+  }, [completeOnboarding]);
+
+  useEffect(() => {
+    if (!visible) {
+      return undefined;
+    }
+
+    previousFocusRef.current = document.activeElement;
+    window.setTimeout(() => {
+      const firstButton = modalRef.current?.querySelector("button");
+      firstButton?.focus();
+    }, 0);
+
+    return () => {
+      const previous = previousFocusRef.current;
+      if (previous && typeof previous.focus === "function") {
+        previous.focus();
+      }
+    };
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) {
+      return undefined;
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        completeOnboarding();
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        nextStep();
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setStepIndex((current) => Math.min(current + 1, steps.length - 1));
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setStepIndex((current) => Math.max(current - 1, 0));
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [completeOnboarding, nextStep, visible]);
+
   if (!visible) {
     return null;
   }
@@ -50,28 +118,24 @@ function Onboarding() {
   const step = steps[stepIndex];
   const isLastStep = stepIndex === steps.length - 1;
 
-  function completeOnboarding() {
-    window.localStorage.setItem(ONBOARDING_KEY, "true");
-    setVisible(false);
-  }
-
-  function nextStep() {
-    if (isLastStep) {
-      completeOnboarding();
-    } else {
-      setStepIndex((current) => current + 1);
-    }
-  }
-
   return (
-    <div className="onboarding-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
-      <section className="onboarding-modal">
+    <div
+      className="onboarding-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboarding-title"
+      aria-describedby="onboarding-description"
+    >
+      <section className="onboarding-modal" ref={modalRef}>
         <button className="onboarding-skip" type="button" onClick={completeOnboarding}>
           Skip
         </button>
         <span className="eyebrow">Getting Started</span>
+        <div className="onboarding-progress" aria-live="polite">
+          Step {stepIndex + 1} of {steps.length}
+        </div>
         <h2 id="onboarding-title">{step.title}</h2>
-        <p>{step.body}</p>
+        <p id="onboarding-description">{step.body}</p>
         {isLastStep && (
           <div className="onboarding-links">
             {communityLinks.map((link) => (
@@ -82,7 +146,7 @@ function Onboarding() {
           </div>
         )}
         <div className="onboarding-footer">
-          <span>
+          <span aria-hidden="true">
             Step {stepIndex + 1} of {steps.length}
           </span>
           <button className="button" type="button" onClick={nextStep}>

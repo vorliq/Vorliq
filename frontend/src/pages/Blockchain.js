@@ -484,7 +484,7 @@ function Blockchain() {
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Chain Explorer</span>
         <h1>Vorliq Blockchain</h1>
@@ -500,7 +500,7 @@ function Blockchain() {
       {activeTab === "blocks" && renderBlockList()}
       {activeTab === "address" && renderAddressSearch()}
       {activeTab === "lookup" && renderTransactionLookup()}
-    </main>
+    </div>
   );
 }
 

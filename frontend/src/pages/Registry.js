@@ -87,7 +87,7 @@ function Registry() {
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Public Node Registry</span>
         <h1>Registry</h1>
@@ -162,7 +162,7 @@ function Registry() {
           ))}
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 

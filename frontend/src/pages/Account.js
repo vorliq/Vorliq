@@ -255,7 +255,7 @@ function Account() {
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Personal Dashboard</span>
         <h1>Account</h1>
@@ -445,7 +445,7 @@ function Account() {
           />
         )}
       </section>
-    </main>
+    </div>
   );
 }
 

@@ -63,7 +63,7 @@ function Wallet() {
   }
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Wallets</span>
         <h1>Create and inspect VLQ wallets</h1>
@@ -172,7 +172,7 @@ function Wallet() {
           )}
         </section>
       </div>
-    </main>
+    </div>
   );
 }
 

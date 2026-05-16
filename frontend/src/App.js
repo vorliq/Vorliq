@@ -104,6 +104,7 @@ function AppShell() {
       hamburger?.classList.toggle("is-open");
       const isOpen = navMenu?.classList.contains("nav-open") || false;
       hamburger?.setAttribute("aria-expanded", String(isOpen));
+      hamburger?.setAttribute("aria-label", isOpen ? "Close navigation menu" : "Open navigation menu");
       document.body.classList.toggle("mobile-nav-open", isOpen);
     }
 
@@ -111,6 +112,7 @@ function AppShell() {
       navMenu?.classList.remove("nav-open");
       hamburger?.classList.remove("is-open");
       hamburger?.setAttribute("aria-expanded", "false");
+      hamburger?.setAttribute("aria-label", "Open navigation menu");
       document.body.classList.remove("mobile-nav-open");
     }
 
@@ -176,6 +178,9 @@ function AppShell() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
       <nav className="navbar">
         <div className="navbar-inner">
           <NavLink className="brand" to="/">
@@ -193,13 +198,14 @@ function AppShell() {
             type="button"
             aria-label="Open navigation menu"
             aria-expanded="false"
+            aria-controls="primary-navigation"
           >
             <span />
             <span />
             <span />
           </button>
 
-          <div className="nav-links">
+          <div className="nav-links" id="primary-navigation">
             {navSections.map((section) => (
               <div className="nav-section" key={section.title}>
                 <span className="nav-section-title">{section.title}</span>
@@ -225,7 +231,9 @@ function AppShell() {
                 className="icon-button notification-bell"
                 type="button"
                 onClick={() => setNotificationsOpen((open) => !open)}
-                aria-label="Open notifications"
+                aria-label={notificationsOpen ? "Close notifications" : "Open notifications"}
+                aria-expanded={notificationsOpen}
+                aria-controls="notification-panel"
                 title="Notifications"
               >
                 <BellIcon />
@@ -255,38 +263,40 @@ function AppShell() {
 
       <IncidentBanner />
 
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/wallet" element={<Wallet />} />
-        <Route path="/send" element={<Send />} />
-        <Route path="/blockchain" element={<Blockchain />} />
-        <Route path="/mine" element={<Mine />} />
-        <Route path="/whitepaper" element={<Whitepaper />} />
-        <Route path="/network" element={<Network />} />
-        <Route path="/lending" element={<Lending />} />
-        <Route path="/exchange" element={<Exchange />} />
-        <Route path="/governance" element={<Governance />} />
-        <Route path="/treasury" element={<Treasury />} />
-        <Route path="/price" element={<Price />} />
-        <Route path="/forum" element={<Forum />} />
-        <Route path="/chat" element={<Chat />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
-        <Route path="/ambassador" element={<Ambassador />} />
-        <Route path="/achievements" element={<Achievements />} />
-        <Route path="/stats" element={<Stats />} />
-        <Route path="/registry" element={<Registry />} />
-        <Route path="/health" element={<Health />} />
-        <Route path="/transparency" element={<Transparency />} />
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/account"
-          element={
-            <ProtectedRoute>
-              <Account />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
+      <main id="main-content" tabIndex="-1">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/wallet" element={<Wallet />} />
+          <Route path="/send" element={<Send />} />
+          <Route path="/blockchain" element={<Blockchain />} />
+          <Route path="/mine" element={<Mine />} />
+          <Route path="/whitepaper" element={<Whitepaper />} />
+          <Route path="/network" element={<Network />} />
+          <Route path="/lending" element={<Lending />} />
+          <Route path="/exchange" element={<Exchange />} />
+          <Route path="/governance" element={<Governance />} />
+          <Route path="/treasury" element={<Treasury />} />
+          <Route path="/price" element={<Price />} />
+          <Route path="/forum" element={<Forum />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/ambassador" element={<Ambassador />} />
+          <Route path="/achievements" element={<Achievements />} />
+          <Route path="/stats" element={<Stats />} />
+          <Route path="/registry" element={<Registry />} />
+          <Route path="/health" element={<Health />} />
+          <Route path="/transparency" element={<Transparency />} />
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute>
+                <Account />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </main>
 
       <Footer />
       <Onboarding />

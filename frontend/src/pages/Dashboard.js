@@ -20,6 +20,48 @@ const quickLinks = [
   { to: "/health", label: "Health", detail: "Check node status and deployment" },
 ];
 
+const getStartedSteps = [
+  {
+    step: "Step 1",
+    title: "Read the safety notice",
+    body:
+      "Vorliq is experimental self-custody software. Start by reading the transparency page and wallet safety guide so you understand private keys, backups, and live-network risk.",
+    links: [
+      { to: "/transparency", label: "Read Transparency" },
+      { href: "https://vorliq.github.io/Vorliq/wallet-safety.html", label: "Wallet Safety" },
+    ],
+  },
+  {
+    step: "Step 2",
+    title: "Create or import a wallet",
+    body:
+      "A wallet gives you a VLQ address. New users can create an encrypted browser wallet from Login, while advanced users can inspect raw keys on the Wallet page.",
+    links: [
+      { to: "/login", label: "Start Wallet Login" },
+      { to: "/wallet", label: "Open Wallet Tools" },
+    ],
+  },
+  {
+    step: "Step 3",
+    title: "Get your first VLQ",
+    body:
+      "Mine a block to support the chain and earn VLQ. Vorliq has a cooldown, so you may need to wait before mining again.",
+    links: [{ to: "/mine", label: "Mine VLQ" }],
+  },
+  {
+    step: "Step 4",
+    title: "Join the community",
+    body:
+      "Once you understand the basics, introduce yourself, chat with members, trade offers, and vote on community governance.",
+    links: [
+      { to: "/forum", label: "Forum" },
+      { to: "/chat", label: "Chat" },
+      { to: "/exchange", label: "Exchange" },
+      { to: "/governance", label: "Governance" },
+    ],
+  },
+];
+
 function shortAddress(address) {
   if (!address) return "Unknown";
   return address.length > 12 ? `${address.slice(0, 12)}...` : address;
@@ -77,7 +119,7 @@ function Dashboard() {
   }, [summary]);
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">VLQ Community Chain</span>
         <h1>Welcome to Vorliq</h1>
@@ -88,6 +130,37 @@ function Dashboard() {
       </section>
 
       <ErrorMessage message={errorMessage} />
+
+      <section className="card card-pad get-started-card" aria-labelledby="get-started-title">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">First time here?</span>
+            <h2 id="get-started-title">Get Started With Vorliq</h2>
+          </div>
+        </div>
+        <div className="get-started-grid">
+          {getStartedSteps.map((item) => (
+            <article className="get-started-step" key={item.step}>
+              <span className="step-pill">{item.step}</span>
+              <h3>{item.title}</h3>
+              <p>{item.body}</p>
+              <div className="button-row">
+                {item.links.map((link) =>
+                  link.to ? (
+                    <Link className="button small-button" to={link.to} key={link.label}>
+                      {link.label}
+                    </Link>
+                  ) : (
+                    <a className="button secondary small-button" href={link.href} target="_blank" rel="noreferrer" key={link.label}>
+                      {link.label}
+                    </a>
+                  )
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
       {loading ? (
         <Spinner label="Loading dashboard data..." />
@@ -181,7 +254,7 @@ function Dashboard() {
           <div className="empty-state">No featured posts yet. Be the first to feature a great post.</div>
         )}
       </section>
-    </main>
+    </div>
   );
 }
 

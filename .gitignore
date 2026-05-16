@@ -16,6 +16,9 @@ build/
 dist/
 !sdk/dist/
 !sdk/dist/*.js
+frontend/public/docs/
+frontend/public/pitch.html
+frontend/public/sdk/
 
 # Local configuration
 .env

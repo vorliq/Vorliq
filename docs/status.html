@@ -47,6 +47,14 @@
         color: inherit;
       }
 
+      a:focus-visible,
+      button:focus-visible,
+      input:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+        box-shadow: 0 0 0 5px rgba(108, 99, 255, 0.22);
+      }
+
       .wrap {
         width: min(1120px, calc(100% - 32px));
         margin: 0 auto;

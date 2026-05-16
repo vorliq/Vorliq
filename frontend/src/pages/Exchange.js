@@ -208,7 +208,7 @@ function Exchange() {
   }, [allOffers, sortConfig]);
 
   return (
-    <main className="page">
+    <div className="page">
       <section className="hero">
         <span className="eyebrow">Peer to Peer Marketplace</span>
         <h1>Exchange</h1>
@@ -285,7 +285,7 @@ function Exchange() {
         <section className="card card-pad stack">
           <h2>My Offers</h2>
           <form className="form inline-form" onSubmit={searchMyOffers}>
-            <input className="input" type="text" placeholder="Wallet address" value={myAddress} onChange={(event) => setMyAddress(event.target.value)} />
+            <input className="input" type="text" aria-label="Wallet address for My Offers search" placeholder="Wallet address" value={myAddress} onChange={(event) => setMyAddress(event.target.value)} />
             <button className="button" type="submit">Search</button>
           </form>
           {loadingMine ? <Spinner label="Loading your offers..." /> : <MyOfferGrid offers={myOffers} onAction={updateOfferStatus} />}
@@ -303,7 +303,7 @@ function Exchange() {
           {loadingAll ? <Spinner label="Loading exchange history..." /> : <AllTradesTable offers={sortedAllOffers} sortBy={sortBy} sortConfig={sortConfig} />}
         </section>
       )}
-    </main>
+    </div>
   );
 }
 
@@ -321,6 +321,7 @@ function OfferGrid({ offers, acceptAddresses, setAcceptAddresses, acceptOffer })
             <input
               className="input"
               type="text"
+              aria-label="Your wallet address to accept this offer"
               placeholder="Your wallet address"
               value={acceptAddresses[offer.offer_id] || ""}
               onChange={(event) =>
