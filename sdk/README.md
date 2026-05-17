@@ -127,6 +127,32 @@ async function main() {
 main().catch(console.error);
 ```
 
+Exchange offers are peer-to-peer community records. Vorliq can track the VLQ transaction side and both-party completion confirmations, but it cannot enforce off-chain payment, goods, services, or delivery.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const summary = await vorliq.getExchangeSummary();
+  const offers = await vorliq.getExchangeOffers();
+
+  if (offers[0]) {
+    const offer = await vorliq.getExchangeOffer(offers[0].offer_id);
+    const mine = await vorliq.getMyExchangeTrades(offer.creator_address);
+
+    console.log("Exchange summary:", summary);
+    console.log("Offer status:", offer.status);
+    console.log("Trades for creator:", mine.offers.length);
+  }
+
+  // After sending VLQ through the normal signed transaction flow:
+  // await vorliq.recordExchangeVlqTx("OFFER_ID", "TX_ID", "VLQ_SENDER");
+}
+
+main().catch(console.error);
+```
+
 To get a wallet balance, create a client and pass the wallet address to `getBalance`. This complete example prints the balance as a number.
 
 ```js

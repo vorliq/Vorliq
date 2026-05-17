@@ -176,7 +176,7 @@ function validateBody(req, res, next) {
     validateAddress(req, res, body, ["repayer_address", "repayerAddress"], "repayer address");
   }
 
-  if (path === "/api/exchange/offer") {
+  if (req.method === "POST" && path === "/api/exchange/offer") {
     validateAddress(req, res, body, ["creator_address", "creatorAddress"], "creator address");
     if (res.headersSent) return;
     requireEnum(req, res, body, ["offer_type", "offerType"], "offer type", new Set(["buy", "sell"]));
@@ -186,6 +186,34 @@ function validateBody(req, res, next) {
     requireText(req, res, body, ["price"], "price", 160);
     if (res.headersSent) return;
     requireText(req, res, body, ["description"], "description", 1000);
+  }
+
+  if (path === "/api/exchange/accept") {
+    requireText(req, res, body, ["offer_id", "offerId"], "offer ID", 128);
+    if (res.headersSent) return;
+    validateAddress(req, res, body, ["acceptor_address", "acceptorAddress"], "acceptor address");
+  }
+
+  if (path === "/api/exchange/complete" || path === "/api/exchange/cancel" || path === "/api/exchange/confirm-complete") {
+    requireText(req, res, body, ["offer_id", "offerId"], "offer ID", 128);
+    if (res.headersSent) return;
+    validateAddress(req, res, body, ["caller_address", "callerAddress"], "caller address");
+  }
+
+  if (path === "/api/exchange/record-vlq-tx") {
+    requireText(req, res, body, ["offer_id", "offerId"], "offer ID", 128);
+    if (res.headersSent) return;
+    requireText(req, res, body, ["tx_id", "txId"], "transaction ID", 128);
+    if (res.headersSent) return;
+    validateAddress(req, res, body, ["caller_address", "callerAddress"], "caller address");
+  }
+
+  if (path === "/api/exchange/dispute") {
+    requireText(req, res, body, ["offer_id", "offerId"], "offer ID", 128);
+    if (res.headersSent) return;
+    validateAddress(req, res, body, ["caller_address", "callerAddress"], "caller address");
+    if (res.headersSent) return;
+    requireText(req, res, body, ["reason"], "dispute reason", 1000);
   }
 
   if (path === "/api/governance/propose") {

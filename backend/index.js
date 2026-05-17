@@ -153,6 +153,11 @@ app.use(
     "/api/lending/vote",
     "/api/lending/repay",
     "/api/exchange/offer",
+    "/api/exchange/accept",
+    "/api/exchange/cancel",
+    "/api/exchange/record-vlq-tx",
+    "/api/exchange/confirm-complete",
+    "/api/exchange/dispute",
     "/api/profiles/profile",
   ],
   writeLimiter

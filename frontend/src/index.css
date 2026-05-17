@@ -1304,6 +1304,8 @@ select.input {
 .status-badge.pending_vote,
 .status-badge.approved_pending_issue,
 .status-badge.repayment_pending,
+.status-badge.vlq_pending,
+.status-badge.vlq_confirmed,
 .status-badge.active,
 .status-badge.accepted,
 .status-badge.minor {
@@ -1369,6 +1371,7 @@ select.input {
 .status-badge.cancelled,
 .status-badge.rejected,
 .status-badge.overdue,
+.status-badge.disputed,
 .status-badge.major,
 .status-badge.critical,
 .health-icon.offline {

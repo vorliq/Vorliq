@@ -13,6 +13,7 @@ import Account from "./pages/Account";
 import AddressIdentity from "./components/AddressIdentity";
 import Login from "./pages/Login";
 import Lending from "./pages/Lending";
+import Exchange from "./pages/Exchange";
 import Mine from "./pages/Mine";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
@@ -198,6 +199,64 @@ function defaultApiGet(path) {
 
   if (path === "/lending/my") {
     return Promise.resolve({ data: { success: true, borrowed: [], voted: [], loans: [] } });
+  }
+
+  if (path === "/exchange/summary") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        summary: {
+          open_count: 1,
+          active_trades_count: 1,
+          completed_count: 0,
+          disputed_count: 0,
+        },
+      },
+    });
+  }
+
+  if (path === "/exchange/offers") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        offers: [
+          {
+            offer_id: "offer-test-1",
+            creator_address: "VLQ_SELLER",
+            acceptor_address: null,
+            offer_type: "sell",
+            amount: 12,
+            price: "local goods",
+            description: "Community market trade",
+            status: "open",
+            created_at: 1715791000,
+            timestamp: 1715791000,
+            offchain_confirmation_creator: false,
+            offchain_confirmation_acceptor: false,
+            status_history: [{ status: "open", message: "Offer posted." }],
+          },
+          {
+            offer_id: "offer-active-1",
+            creator_address: "VLQ_CREATOR",
+            acceptor_address: "VLQ_ACCEPTOR",
+            offer_type: "sell",
+            amount: 7,
+            price: "services",
+            description: "Active exchange trade",
+            status: "accepted",
+            created_at: 1715791000,
+            accepted_at: 1715792000,
+            offchain_confirmation_creator: false,
+            offchain_confirmation_acceptor: false,
+          },
+        ],
+        total: 2,
+      },
+    });
+  }
+
+  if (path === "/exchange/my") {
+    return Promise.resolve({ data: { success: true, created: [], accepted: [], offers: [] } });
   }
 
   if (path === "/economics") {
@@ -703,6 +762,76 @@ test("Account loan section handles active lifecycle statuses", async () => {
   expect(await screen.findByText(/loan-active-/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /issuance tx/i })).toHaveAttribute("href", "/tx/issue-tx");
   expect(screen.getByRole("button", { name: /^repay$/i })).toBeInTheDocument();
+});
+
+test("Exchange lifecycle tabs render open offer cards and risk notice", async () => {
+  renderWithProviders(<Exchange />, "/exchange");
+
+  expect(await screen.findByRole("button", { name: /browse offers/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /post offer/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /my trades/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /active trades/i })).toBeInTheDocument();
+  expect(screen.getByLabelText(/risk notice/i)).toHaveTextContent(/exchange offers/i);
+  expect(await screen.findByText(/community market trade/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/open/i).length).toBeGreaterThan(0);
+});
+
+test("Exchange My Trades state renders record tx form for active trade", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/exchange/summary") return defaultApiGet(path);
+    if (path === "/exchange/offers") return defaultApiGet(path);
+    if (path === "/exchange/my") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          created: [
+            {
+              offer_id: "offer-active-1",
+              creator_address: "VLQ_CREATOR",
+              acceptor_address: "VLQ_ACCEPTOR",
+              offer_type: "sell",
+              amount: 7,
+              price: "services",
+              description: "Active exchange trade",
+              status: "accepted",
+              created_at: 1715791000,
+              accepted_at: 1715792000,
+              offchain_confirmation_creator: false,
+              offchain_confirmation_acceptor: false,
+            },
+          ],
+          accepted: [],
+          offers: [
+            {
+              offer_id: "offer-active-1",
+              creator_address: "VLQ_CREATOR",
+              acceptor_address: "VLQ_ACCEPTOR",
+              offer_type: "sell",
+              amount: 7,
+              price: "services",
+              description: "Active exchange trade",
+              status: "accepted",
+              created_at: 1715791000,
+              accepted_at: 1715792000,
+              offchain_confirmation_creator: false,
+              offchain_confirmation_acceptor: false,
+            },
+          ],
+        },
+      });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Exchange />, "/exchange");
+
+  await userEvent.click(await screen.findByRole("button", { name: /my trades/i }));
+  fireEvent.change(screen.getByLabelText(/wallet address for my trades search/i), { target: { value: "VLQ_CREATOR" } });
+  await userEvent.click(screen.getByRole("button", { name: /^load$/i }));
+
+  expect(await screen.findByText(/active exchange trade/i)).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: /record vlq transaction/i })).toBeInTheDocument();
+  expect(screen.getByLabelText(/vlq transaction id/i)).toBeInTheDocument();
 });
 
 test("wallet backup import rejects invalid JSON", async () => {

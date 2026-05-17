@@ -203,6 +203,16 @@ def _sync_lending_pool(save: bool = True) -> bool:
 _sync_lending_pool(save=True)
 
 
+def _sync_exchange(save: bool = True) -> bool:
+    changed = exchange.sync_trade_statuses(node.blockchain)
+    if changed and save:
+        storage.save_exchange(exchange)
+    return changed
+
+
+_sync_exchange(save=True)
+
+
 def _is_private_hostname(hostname: str) -> bool:
     host = hostname.lower()
     if host in {"localhost", "::1"} or host.endswith(".local"):
@@ -423,9 +433,11 @@ def mine_block():
         raw_block = node.mine_new_block(miner_address)
         block = node.blockchain.get_block_detail(str(raw_block["index"])) or raw_block
         _sync_lending_pool(save=False)
+        _sync_exchange(save=False)
         storage.save_chain(node.blockchain)
         storage.save_pending(node.blockchain.pending_transactions)
         storage.save_lending_pool(lending_pool)
+        storage.save_exchange(exchange)
         achievements.check_and_award(miner_address, "first_mine", node.blockchain)
         achievements.check_and_award(miner_address, "ten_blocks", node.blockchain)
         storage.save_achievements(achievements)
@@ -566,7 +578,7 @@ def _weekly_report_stats():
                 offer
                 for offer in exchange.offers.values()
                 if offer.get("status") == "completed"
-                and float(offer.get("accepted_timestamp") or offer.get("timestamp", 0)) >= cutoff
+                and float(offer.get("completed_at") or offer.get("accepted_timestamp") or offer.get("timestamp", 0)) >= cutoff
             ]
         ),
         "new_governance_proposals": len([proposal for proposal in governance.proposals.values() if float(proposal.get("timestamp", 0)) >= cutoff]),
@@ -868,16 +880,20 @@ def receive_block():
         if valid_previous_hash and valid_proof and node.blockchain.add_block(received_block):
             node.blockchain.prune_pending_transactions(drop_system_rewards=False)
             _sync_lending_pool(save=False)
+            _sync_exchange(save=False)
             storage.save_chain(node.blockchain)
             storage.save_pending(node.blockchain.pending_transactions)
             storage.save_lending_pool(lending_pool)
+            storage.save_exchange(exchange)
             return jsonify({"success": True, "message": "Block accepted"}), 201
 
         updated = network.sync_chain(node.blockchain)
         if updated:
             _sync_lending_pool(save=False)
+            _sync_exchange(save=False)
             storage.save_chain(node.blockchain)
             storage.save_lending_pool(lending_pool)
+            storage.save_exchange(exchange)
         return jsonify(
             {
                 "success": False,
@@ -889,8 +905,10 @@ def receive_block():
         updated = network.sync_chain(node.blockchain)
         if updated:
             _sync_lending_pool(save=False)
+            _sync_exchange(save=False)
             storage.save_chain(node.blockchain)
             storage.save_lending_pool(lending_pool)
+            storage.save_exchange(exchange)
         vorliq_logger.error("Receive block endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc), "chain_updated": updated}), 400
 
@@ -900,8 +918,10 @@ def sync_peers():
     updated = network.sync_chain(node.blockchain)
     if updated:
         _sync_lending_pool(save=False)
+        _sync_exchange(save=False)
         storage.save_chain(node.blockchain)
         storage.save_lending_pool(lending_pool)
+        storage.save_exchange(exchange)
     peer_statuses = network.check_peer_statuses()
     return jsonify(
         {
@@ -1089,11 +1109,28 @@ def create_exchange_offer():
 
 
 @app.get("/exchange/offers")
-def get_exchange_open_offers():
+def get_exchange_offers():
     try:
         limit, offset = _pagination()
-        offers, total, has_more = _page(exchange.get_open_offers(), limit, offset)
+        _sync_exchange(save=True)
+        status = request.args.get("status") or None
+        offer_type = request.args.get("type") or request.args.get("offer_type") or None
+        address = request.args.get("address") or None
+        offers, total, has_more = _page(exchange.get_offers(status=status, offer_type=offer_type, address=address), limit, offset)
         return jsonify({"success": True, "offers": offers, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/exchange/offer")
+def get_exchange_offer():
+    try:
+        offer_id = _require_text(request.args.get("offer_id") or request.args.get("offerId"), "offer ID", 128)
+        _sync_exchange(save=True)
+        offer = exchange.get_offer(offer_id)
+        if not offer:
+            return jsonify({"success": False, "error": "offer does not exist"}), 404
+        return jsonify({"success": True, "offer": offer})
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
 
@@ -1102,6 +1139,7 @@ def get_exchange_open_offers():
 def get_exchange_all_offers():
     try:
         limit, offset = _pagination()
+        _sync_exchange(save=True)
         offers, total, has_more = _page(exchange.get_all_offers(), limit, offset)
         return jsonify({"success": True, "offers": offers, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
     except ValueError as exc:
@@ -1111,11 +1149,19 @@ def get_exchange_all_offers():
 @app.get("/exchange/my")
 def get_exchange_my_offers():
     try:
-        address = request.args.get("address", "")
-        return jsonify({"success": True, "offers": exchange.get_offers_by_address(address)})
+        address = _require_text(request.args.get("address"), "address", 160)
+        _sync_exchange(save=True)
+        trades = exchange.get_my_trades(address)
+        return jsonify({"success": True, **trades})
     except Exception as exc:
         vorliq_logger.error("Exchange my offers endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/exchange/summary")
+def get_exchange_summary():
+    _sync_exchange(save=True)
+    return jsonify({"success": True, "summary": exchange.get_summary()})
 
 
 @app.post("/exchange/accept")
@@ -1127,7 +1173,7 @@ def accept_exchange_offer():
             acceptor_address=data.get("acceptor_address") or data.get("acceptorAddress"),
         )
         storage.save_exchange(exchange)
-        return jsonify({"success": True, "offer": offer})
+        return jsonify({"success": True, "offer": offer, "message": "Offer accepted. The VLQ side still needs a recorded transaction."})
     except Exception as exc:
         vorliq_logger.error("Exchange accept endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
@@ -1137,18 +1183,72 @@ def accept_exchange_offer():
 def complete_exchange_offer():
     try:
         data = request.get_json(force=True)
-        offer = exchange.complete_offer(
+        offer = exchange.confirm_trade_complete(
             offer_id=data.get("offer_id") or data.get("offerId"),
             caller_address=data.get("caller_address") or data.get("callerAddress"),
         )
-        achievements.check_and_award(offer["creator_address"], "first_trade", node.blockchain)
-        if offer.get("acceptor_address"):
-            achievements.check_and_award(offer["acceptor_address"], "first_trade", node.blockchain)
+        if offer["status"] == "completed":
+            achievements.check_and_award(offer["creator_address"], "first_trade", node.blockchain)
+            if offer.get("acceptor_address"):
+                achievements.check_and_award(offer["acceptor_address"], "first_trade", node.blockchain)
+            storage.save_achievements(achievements)
         storage.save_exchange(exchange)
-        storage.save_achievements(achievements)
         return jsonify({"success": True, "offer": offer})
     except Exception as exc:
         vorliq_logger.error("Exchange complete endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/exchange/record-vlq-tx")
+def record_exchange_vlq_tx():
+    try:
+        data = request.get_json(force=True)
+        offer = exchange.record_vlq_tx(
+            offer_id=data.get("offer_id") or data.get("offerId"),
+            tx_id=data.get("tx_id") or data.get("txId"),
+            caller_address=data.get("caller_address") or data.get("callerAddress"),
+            blockchain=node.blockchain,
+        )
+        storage.save_exchange(exchange)
+        return jsonify({"success": True, "offer": offer, "vlq_tx_id": offer.get("vlq_tx_id")})
+    except Exception as exc:
+        vorliq_logger.error("Exchange record VLQ tx endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/exchange/confirm-complete")
+def confirm_exchange_complete():
+    try:
+        data = request.get_json(force=True)
+        offer = exchange.confirm_trade_complete(
+            offer_id=data.get("offer_id") or data.get("offerId"),
+            caller_address=data.get("caller_address") or data.get("callerAddress"),
+        )
+        if offer["status"] == "completed":
+            achievements.check_and_award(offer["creator_address"], "first_trade", node.blockchain)
+            if offer.get("acceptor_address"):
+                achievements.check_and_award(offer["acceptor_address"], "first_trade", node.blockchain)
+            storage.save_achievements(achievements)
+        storage.save_exchange(exchange)
+        return jsonify({"success": True, "offer": offer})
+    except Exception as exc:
+        vorliq_logger.error("Exchange confirm complete endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/exchange/dispute")
+def dispute_exchange_offer():
+    try:
+        data = request.get_json(force=True)
+        offer = exchange.open_dispute(
+            offer_id=data.get("offer_id") or data.get("offerId"),
+            caller_address=data.get("caller_address") or data.get("callerAddress"),
+            reason=_require_text(data.get("reason"), "dispute reason", 1000),
+        )
+        storage.save_exchange(exchange)
+        return jsonify({"success": True, "offer": offer})
+    except Exception as exc:
+        vorliq_logger.error("Exchange dispute endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 

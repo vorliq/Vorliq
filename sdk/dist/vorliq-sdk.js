@@ -351,6 +351,83 @@ class VorliqSDK {
   }
 
   /**
+   * Gets one exchange offer or trade by ID.
+   *
+   * @param {string} offerId - Exchange offer ID.
+   * @returns {Promise<object>} Offer lifecycle record.
+   */
+  async getExchangeOffer(offerId) {
+    const query = new URLSearchParams({ offer_id: offerId });
+    const data = await this.request(`/api/exchange/offer?${query.toString()}`);
+    return data.offer || data;
+  }
+
+  /**
+   * Gets exchange trades involving one address.
+   *
+   * @param {string} address - Wallet address to inspect.
+   * @returns {Promise<object>} Created, accepted, and combined offer lists.
+   */
+  async getMyExchangeTrades(address) {
+    const query = new URLSearchParams({ address });
+    return this.request(`/api/exchange/my?${query.toString()}`);
+  }
+
+  /**
+   * Gets exchange lifecycle summary counts.
+   *
+   * @returns {Promise<object>} Exchange summary fields.
+   */
+  async getExchangeSummary() {
+    const data = await this.request("/api/exchange/summary");
+    return data.summary || data;
+  }
+
+  /**
+   * Records an already-submitted VLQ transaction against an exchange trade.
+   *
+   * @param {string} offerId - Offer/trade ID.
+   * @param {string} txId - Existing Vorliq transaction ID.
+   * @param {string} callerAddress - Wallet address recording the transaction.
+   * @returns {Promise<object>} Updated offer response.
+   */
+  async recordExchangeVlqTx(offerId, txId, callerAddress) {
+    return this.request("/api/exchange/record-vlq-tx", {
+      method: "POST",
+      body: JSON.stringify({ offer_id: offerId, tx_id: txId, caller_address: callerAddress }),
+    });
+  }
+
+  /**
+   * Confirms off-chain completion for one side of an exchange trade.
+   *
+   * @param {string} offerId - Offer/trade ID.
+   * @param {string} callerAddress - Creator or acceptor address.
+   * @returns {Promise<object>} Updated offer response.
+   */
+  async confirmExchangeComplete(offerId, callerAddress) {
+    return this.request("/api/exchange/confirm-complete", {
+      method: "POST",
+      body: JSON.stringify({ offer_id: offerId, caller_address: callerAddress }),
+    });
+  }
+
+  /**
+   * Opens a participant dispute on an active exchange trade.
+   *
+   * @param {string} offerId - Offer/trade ID.
+   * @param {string} callerAddress - Creator or acceptor address.
+   * @param {string} reason - Public dispute reason.
+   * @returns {Promise<object>} Updated offer response.
+   */
+  async openExchangeDispute(offerId, callerAddress, reason) {
+    return this.request("/api/exchange/dispute", {
+      method: "POST",
+      body: JSON.stringify({ offer_id: offerId, caller_address: callerAddress, reason }),
+    });
+  }
+
+  /**
    * Gets node diagnostic information.
    *
    * @returns {Promise<object>} Full diagnostics object returned by GET /api/diagnostics.

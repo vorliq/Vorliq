@@ -8,6 +8,7 @@ import { apiErrorMessage } from "../helpers/errors";
 function Stats() {
   const [summary, setSummary] = useState(null);
   const [lendingSummary, setLendingSummary] = useState(null);
+  const [exchangeSummary, setExchangeSummary] = useState(null);
   const [leaderboard, setLeaderboard] = useState({ holders: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -17,15 +18,17 @@ function Stats() {
 
     async function loadStats() {
       try {
-        const [summaryResponse, loansResponse, leaderboardResponse] = await Promise.all([
+        const [summaryResponse, loansResponse, exchangeResponse, leaderboardResponse] = await Promise.all([
           api.get("/chain/summary"),
           api.get("/lending/summary"),
+          api.get("/exchange/summary"),
           api.get("/leaderboard", { params: { limit: 10 } }),
         ]);
 
         if (mounted) {
           setSummary(summaryResponse.data.summary || {});
           setLendingSummary(loansResponse.data.summary || {});
+          setExchangeSummary(exchangeResponse.data.summary || {});
           setLeaderboard(leaderboardResponse.data || { holders: [] });
         }
       } catch (requestError) {
@@ -69,9 +72,13 @@ function Stats() {
       repaidLoans: lendingSummary?.repaid_count ?? 0,
       totalLent: lendingSummary?.total_vlq_active ?? 0,
       totalRepaid: lendingSummary?.total_vlq_repaid ?? 0,
+      openOffers: exchangeSummary?.open_count ?? 0,
+      activeTrades: exchangeSummary?.active_trades_count ?? 0,
+      completedTrades: exchangeSummary?.completed_count ?? 0,
+      disputedTrades: exchangeSummary?.disputed_count ?? 0,
       topAddresses: leaderboard.holders || [],
     };
-  }, [leaderboard, lendingSummary, summary]);
+  }, [exchangeSummary, leaderboard, lendingSummary, summary]);
 
   if (loading) {
     return (
@@ -123,6 +130,16 @@ function Stats() {
           ["Repaid Loans", stats.repaidLoans],
           ["Active VLQ", `${formatNumber(stats.totalLent)} VLQ`],
           ["Repaid VLQ", `${formatNumber(stats.totalRepaid)} VLQ`],
+        ]}
+      />
+
+      <StatsSection
+        title="Exchange Statistics"
+        items={[
+          ["Open Offers", stats.openOffers],
+          ["Active Trades", stats.activeTrades],
+          ["Completed Trades", stats.completedTrades],
+          ["Disputed Trades", stats.disputedTrades],
         ]}
       />
 

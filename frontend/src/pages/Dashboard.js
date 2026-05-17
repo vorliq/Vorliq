@@ -65,6 +65,7 @@ const getStartedSteps = [
 function Dashboard() {
   const [summary, setSummary] = useState(null);
   const [lendingSummary, setLendingSummary] = useState(null);
+  const [exchangeSummary, setExchangeSummary] = useState(null);
   const [featuredPosts, setFeaturedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -75,15 +76,17 @@ function Dashboard() {
 
     async function loadDashboard() {
       try {
-        const [summaryResponse, featuredResponse, lendingResponse] = await Promise.all([
+        const [summaryResponse, featuredResponse, lendingResponse, exchangeResponse] = await Promise.all([
           api.get("/chain/summary"),
           api.get("/forum/featured", { params: { limit: 3 } }),
           api.get("/lending/summary"),
+          api.get("/exchange/summary"),
         ]);
         if (mounted) {
           setErrorMessage("");
           setSummary(summaryResponse.data.summary || {});
           setLendingSummary(lendingResponse.data.summary || {});
+          setExchangeSummary(exchangeResponse.data.summary || {});
           setFeaturedPosts((featuredResponse.data.posts || []).slice(0, 3));
           setLastUpdated(new Date());
         }
@@ -115,8 +118,10 @@ function Dashboard() {
       valid: Boolean(summary?.chain_valid),
       pendingVotes: lendingSummary?.pending_vote_count ?? 0,
       activeLoans: (lendingSummary?.active_count ?? 0) + (lendingSummary?.overdue_count ?? 0) + (lendingSummary?.repayment_pending_count ?? 0),
+      openOffers: exchangeSummary?.open_count ?? 0,
+      activeTrades: exchangeSummary?.active_trades_count ?? 0,
     };
-  }, [lendingSummary, summary]);
+  }, [exchangeSummary, lendingSummary, summary]);
 
   return (
     <div className="page">
@@ -210,6 +215,14 @@ function Dashboard() {
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Active Loans</span>
               <span className="stat-value">{stats.activeLoans}</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Open Exchange Offers</span>
+              <span className="stat-value">{stats.openOffers}</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Active Trades</span>
+              <span className="stat-value">{stats.activeTrades}</span>
             </div>
           </div>
         </section>

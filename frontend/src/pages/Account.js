@@ -21,6 +21,7 @@ function Account() {
   const [transactions, setTransactions] = useState([]);
   const [addressHistory, setAddressHistory] = useState(null);
   const [loans, setLoans] = useState([]);
+  const [exchangeTrades, setExchangeTrades] = useState([]);
   const [earnedAchievements, setEarnedAchievements] = useState([]);
   const [allAchievements, setAllAchievements] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -45,10 +46,11 @@ function Account() {
             if (error.response?.status === 404) return { data: { profile: null } };
             throw error;
           });
-        const [balanceResponse, transactionResponse, loansResponse, earnedResponse, allAchievementsResponse, profileResponse] = await Promise.all([
+        const [balanceResponse, transactionResponse, loansResponse, exchangeResponse, earnedResponse, allAchievementsResponse, profileResponse] = await Promise.all([
           api.get("/wallet/balance", { params: { address: wallet.address } }),
           api.get("/chain/address", { params: { address: wallet.address, limit: 100 } }),
           api.get("/lending/my", { params: { address: wallet.address } }),
+          api.get("/exchange/my", { params: { address: wallet.address } }),
           api.get("/achievements", { params: { address: wallet.address } }),
           api.get("/achievements/all"),
           profileRequest,
@@ -59,6 +61,7 @@ function Account() {
           setTransactions(transactionResponse.data.transactions || []);
           setAddressHistory(transactionResponse.data || null);
           setLoans(loansResponse.data.loans || []);
+          setExchangeTrades(exchangeResponse.data.offers || []);
           setEarnedAchievements(earnedResponse.data.achievements || []);
           setAllAchievements(allAchievementsResponse.data.achievements || []);
           setProfile(profileResponse.data.profile || null);
@@ -574,6 +577,51 @@ function Account() {
               </div>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="card card-pad account-section">
+        <h2>My Exchange Trades</h2>
+        {loading && <Spinner label="Loading exchange trades..." />}
+
+        {!loading && exchangeTrades.length === 0 && <div className="empty-state">No exchange trades yet.</div>}
+
+        <div className="exchange-grid">
+          {exchangeTrades.slice(0, 6).map((offer) => {
+            const role = offer.creator_address === wallet.address ? "Creator" : "Acceptor";
+            const counterparty = offer.creator_address === wallet.address ? offer.acceptor_address : offer.creator_address;
+            return (
+              <article className="exchange-card" key={offer.offer_id}>
+                <div className="section-title">
+                  <span className={`exchange-badge ${offer.offer_type}`}>{offer.offer_type}</span>
+                  <span className={`status-badge ${offer.status}`}>{String(offer.status).replace(/_/g, " ")}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Role</span>
+                  <span className="meta-value">{role}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Counterparty</span>
+                  <span className="meta-value">{counterparty ? <AddressIdentity address={counterparty} compact /> : "Not accepted yet"}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Amount</span>
+                  <span className="meta-value">{offer.amount} VLQ</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Terms</span>
+                  <span className="meta-value">{offer.price}</span>
+                </div>
+                {offer.vlq_tx_id && (
+                  <div className="button-row">
+                    <Link className="button secondary small-button" to={`/tx/${offer.vlq_tx_id}`}>
+                      View VLQ Tx
+                    </Link>
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
       </section>
 
