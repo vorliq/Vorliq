@@ -37,8 +37,10 @@ function publicIncident(incident) {
     id: incident.id,
     title: incident.title,
     description: incident.description,
+    message: incident.description,
     severity: incident.severity,
     status: incident.status,
+    affected_services: Array.isArray(incident.affected_services) ? incident.affected_services : [],
     created_at: incident.created_at,
     updated_at: incident.updated_at,
     resolved_at: incident.resolved_at,
@@ -96,12 +98,19 @@ function requireStatus(value) {
 function createIncident(input) {
   const now = new Date().toISOString();
   const incidents = readIncidents();
+  const affectedServices = Array.isArray(input.affected_services || input.affectedServices)
+    ? (input.affected_services || input.affectedServices)
+        .map((service) => String(service || "").trim())
+        .filter(Boolean)
+        .slice(0, 12)
+    : [];
   const incident = {
     id: crypto.randomUUID(),
     title: requireText(input.title, "title", 160),
-    description: requireText(input.description, "description", 3000),
+    description: requireText(input.description || input.message, "description", 3000),
     severity: requireSeverity(input.severity),
     status: input.status ? requireStatus(input.status) : "investigating",
+    affected_services: affectedServices,
     created_at: now,
     updated_at: now,
     resolved_at: null,
@@ -128,6 +137,15 @@ function updateIncident(id, input) {
   }
   if (input.description !== undefined) {
     incident.description = requireText(input.description, "description", 3000);
+  }
+  if (input.message !== undefined) {
+    incident.description = requireText(input.message, "description", 3000);
+  }
+  if (input.affected_services !== undefined || input.affectedServices !== undefined) {
+    const affectedServices = input.affected_services || input.affectedServices;
+    incident.affected_services = Array.isArray(affectedServices)
+      ? affectedServices.map((service) => String(service || "").trim()).filter(Boolean).slice(0, 12)
+      : [];
   }
   if (input.severity !== undefined) {
     incident.severity = requireSeverity(input.severity);

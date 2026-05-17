@@ -9,12 +9,14 @@ fi
 SERVER_IP="$(hostname -I | awk '{print $1}')"
 
 mkdir -p /etc/vorliq
+GENERATED_ADMIN_TOKEN=""
 if [[ ! -f /etc/vorliq/backend.env ]] || ! grep -q '^ADMIN_TOKEN=' /etc/vorliq/backend.env; then
   BACKEND_ENV_TMP="$(mktemp)"
   if [[ -f /etc/vorliq/backend.env ]]; then
     grep -v '^ADMIN_TOKEN=' /etc/vorliq/backend.env > "${BACKEND_ENV_TMP}" || true
   fi
-  printf 'ADMIN_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "${BACKEND_ENV_TMP}"
+  GENERATED_ADMIN_TOKEN="$(openssl rand -hex 32)"
+  printf 'ADMIN_TOKEN=%s\n' "${GENERATED_ADMIN_TOKEN}" >> "${BACKEND_ENV_TMP}"
   install -o root -g root -m 600 "${BACKEND_ENV_TMP}" /etc/vorliq/backend.env
   rm -f "${BACKEND_ENV_TMP}"
 else
@@ -139,5 +141,9 @@ nginx -t
 systemctl restart nginx
 
 echo "Configuration complete. Your Vorliq node is running."
+if [[ -n "${GENERATED_ADMIN_TOKEN}" ]]; then
+  echo "A new Vorliq ADMIN_TOKEN was generated. Save it securely now; it will not be shown again:"
+  echo "${GENERATED_ADMIN_TOKEN}"
+fi
 echo "Server IP address:"
 hostname -I

@@ -156,6 +156,18 @@ class Forum:
         vorliq_logger.info("Forum post %s was pinned", post_id)
         return post
 
+    def set_pinned(self, post_id: str, pinned: bool) -> dict[str, Any]:
+        post = self._get_existing_post(post_id)
+        post["pinned"] = bool(pinned)
+        vorliq_logger.info("Forum post %s pinned state set to %s", post_id, post["pinned"])
+        return post
+
+    def set_featured(self, post_id: str, featured: bool) -> dict[str, Any]:
+        post = self._get_existing_post(post_id)
+        post["featured"] = bool(featured)
+        vorliq_logger.info("Forum post %s featured state set to %s", post_id, post["featured"])
+        return post
+
     def tip_post(
         self,
         post_id: str,

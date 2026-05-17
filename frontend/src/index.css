@@ -1350,6 +1350,62 @@ select.input {
   gap: 12px;
 }
 
+.notification-page-list,
+.admin-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-access-form {
+  display: grid;
+  gap: 14px;
+  max-width: 560px;
+}
+
+.admin-tabs {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-card-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.admin-row,
+.admin-moderation-card {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-glass);
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.admin-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.admin-form-grid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.admin-form-grid textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.admin-moderation-card .button-row {
+  margin-top: 6px;
+}
+
 .vote-weights,
 .incident-meta-row {
   display: flex;
@@ -1979,6 +2035,7 @@ select.input {
   }
 
   .stats-grid,
+  .admin-card-grid,
   .get-started-grid,
   .quick-link-grid,
   .featured-post-grid,
@@ -1992,6 +2049,7 @@ select.input {
   .explorer-result,
   .registry-grid,
   .health-row,
+  .admin-row,
   .transparency-grid {
     grid-template-columns: 1fr;
   }

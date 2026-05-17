@@ -20,6 +20,7 @@ import Profile from "./pages/Profile";
 import Send from "./pages/Send";
 import Transparency from "./pages/Transparency";
 import Wallet from "./pages/Wallet";
+import Admin from "./pages/Admin";
 
 jest.mock("./helpers/api", () => ({
   get: jest.fn(),
@@ -342,6 +343,17 @@ test("More menu opens, exposes grouped links, and closes accessibly", async () =
   expect(moreButton).toHaveAttribute("aria-expanded", "false");
 });
 
+test("notification bell opens the notifications page", async () => {
+  window.localStorage.setItem(ONBOARDING_KEY, "true");
+
+  render(<App />);
+
+  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
+  await userEvent.click(screen.getAllByRole("button", { name: /open notifications page/i })[0]);
+
+  expect(await screen.findByRole("heading", { level: 1, name: /^notifications$/i })).toBeInTheDocument();
+});
+
 test("Footer renders one social link group", async () => {
   window.localStorage.setItem(ONBOARDING_KEY, "true");
 
@@ -629,4 +641,52 @@ test("Transparency page renders experimental and self custody notices from the m
   expect(screen.getByText(/lost keys cannot be recovered by vorliq/i)).toBeInTheDocument();
   expect(await screen.findByText(/abc123/i)).toBeInTheDocument();
   expect(api.get).toHaveBeenCalledWith("/network/manifest", { timeout: 8000 });
+});
+
+test("Admin page shows login form first", () => {
+  renderWithProviders(<Admin />, "/admin");
+
+  expect(screen.getByRole("heading", { name: /admin access/i })).toBeInTheDocument();
+  expect(screen.getByLabelText(/admin token/i)).toHaveAttribute("type", "password");
+});
+
+test("Admin page handles unauthorized token", async () => {
+  api.get.mockRejectedValueOnce({ response: { status: 401 } });
+  renderWithProviders(<Admin />, "/admin");
+
+  fireEvent.change(screen.getByLabelText(/admin token/i), { target: { value: "bad-token" } });
+  await userEvent.click(screen.getByRole("button", { name: /open operator dashboard/i }));
+
+  expect(await screen.findByText(/unauthorized/i)).toBeInTheDocument();
+  expect(screen.queryByText("bad-token")).not.toBeInTheDocument();
+});
+
+test("Admin page renders overview after successful response", async () => {
+  api.get.mockResolvedValueOnce({
+    data: {
+      success: true,
+      deployment: { commit_hash: "abcdef1234567890", commit_timestamp: "2026-05-17T12:00:00Z" },
+      blockchain: {
+        height: 218,
+        chain_valid: true,
+        pending_transaction_count: 2,
+        current_difficulty: 4,
+        current_mining_reward: 50,
+      },
+      treasury: { balance: 25 },
+      backups: { latest_backup: { file_name: "vorliq-backup-2026-05-17-120000.tar.gz" } },
+      incidents: { active_count: 0, total_count: 1 },
+      services: { backend: "active", blockchain: "active", heartbeat: "active", nginx: "active" },
+      server_uptime_seconds: 10,
+    },
+  });
+
+  renderWithProviders(<Admin />, "/admin");
+  fireEvent.change(screen.getByLabelText(/admin token/i), { target: { value: "good-token" } });
+  await userEvent.click(screen.getByRole("button", { name: /open operator dashboard/i }));
+
+  expect(await screen.findByRole("heading", { name: /vorliq operator dashboard/i })).toBeInTheDocument();
+  expect(screen.getByText(/block height/i)).toBeInTheDocument();
+  expect(screen.getByText("218")).toBeInTheDocument();
+  expect(screen.queryByText("good-token")).not.toBeInTheDocument();
 });

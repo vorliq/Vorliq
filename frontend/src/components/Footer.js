@@ -31,6 +31,7 @@ function Footer() {
         { label: "Privacy", href: "https://vorliq.github.io/Vorliq/privacy.html" },
         { label: "Terms", href: "https://vorliq.github.io/Vorliq/terms.html" },
         { label: "Risk Notice", href: "https://vorliq.github.io/Vorliq/terms.html#risk-notice" },
+        { label: "Operator Login", href: "/admin", internal: true },
       ],
     },
   ];

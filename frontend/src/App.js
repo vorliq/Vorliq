@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BrowserRouter, NavLink, Route, Routes } from "react-router-dom";
+import { BrowserRouter, NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -34,6 +34,8 @@ import Ambassador from "./pages/Ambassador";
 import Chat from "./pages/Chat";
 import Achievements from "./pages/Achievements";
 import Transparency from "./pages/Transparency";
+import Admin from "./pages/Admin";
+import Notifications from "./pages/Notifications";
 import Footer from "./components/Footer";
 import IncidentBanner from "./components/IncidentBanner";
 import api from "./helpers/api";
@@ -127,6 +129,7 @@ function AppShell() {
   const { isLoggedIn, logout, wallet } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { unreadCount } = useNotifications();
+  const navigate = useNavigate();
   const [backendOnline, setBackendOnline] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -317,10 +320,11 @@ function AppShell() {
               <button
                 className="icon-button notification-bell"
                 type="button"
-                onClick={() => setNotificationsOpen((open) => !open)}
-                aria-label={notificationsOpen ? "Close notifications" : "Open notifications"}
-                aria-expanded={notificationsOpen}
-                aria-controls="notification-panel"
+                onClick={() => {
+                  setNotificationsOpen(false);
+                  navigate("/notifications");
+                }}
+                aria-label="Open notifications page"
                 title="Notifications"
               >
                 <BellIcon />
@@ -411,10 +415,12 @@ function AppShell() {
           <button
             className="icon-button notification-bell"
             type="button"
-            onClick={() => setNotificationsOpen((open) => !open)}
-            aria-label={notificationsOpen ? "Close notifications" : "Open notifications"}
-            aria-expanded={notificationsOpen}
-            aria-controls="notification-panel"
+            onClick={() => {
+              setMobileNavOpen(false);
+              setNotificationsOpen(false);
+              navigate("/notifications");
+            }}
+            aria-label="Open notifications page"
             title="Notifications"
           >
             <BellIcon />
@@ -474,6 +480,8 @@ function AppShell() {
           <Route path="/transparency" element={<Transparency />} />
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route
             path="/account"
             element={

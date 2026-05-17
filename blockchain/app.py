@@ -1134,6 +1134,44 @@ def feature_forum_post():
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
+def _admin_bool(value: object, field_name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str) and value.lower() in {"true", "false"}:
+        return value.lower() == "true"
+    raise ValueError(f"{field_name} must be a boolean")
+
+
+@app.post("/forum/admin/pin")
+def admin_pin_forum_post():
+    try:
+        data = _json_body()
+        post = forum.set_pinned(
+            post_id=_require_text(data.get("post_id") or data.get("postId"), "post ID", 128),
+            pinned=_admin_bool(data.get("pinned"), "pinned"),
+        )
+        storage.save_forum(forum)
+        return jsonify({"success": True, "post": post})
+    except Exception as exc:
+        vorliq_logger.error("Forum admin pin endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/forum/admin/feature")
+def admin_feature_forum_post():
+    try:
+        data = _json_body()
+        post = forum.set_featured(
+            post_id=_require_text(data.get("post_id") or data.get("postId"), "post ID", 128),
+            featured=_admin_bool(data.get("featured"), "featured"),
+        )
+        storage.save_forum(forum)
+        return jsonify({"success": True, "post": post})
+    except Exception as exc:
+        vorliq_logger.error("Forum admin feature endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
 @app.post("/forum/tip/post")
 def tip_forum_post():
     try:

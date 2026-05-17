@@ -108,13 +108,14 @@ WantedBy=multi-user.target</pre>
       </section>
 
       <section>
-        <h2>Incident Admin Token</h2>
-        <p>Production incident write routes are protected by <code>ADMIN_TOKEN</code>. The automated deployment creates a strong random token in <code>/etc/vorliq/backend.env</code> when one is not already present and loads it through the backend systemd service. Do not commit this token, print it in logs, or share it publicly.</p>
+        <h2>Operator Admin Token</h2>
+        <p>Production incident and operator dashboard routes are protected by <code>ADMIN_TOKEN</code>. The automated deployment creates a strong random token in <code>/etc/vorliq/backend.env</code> when one is not already present and loads it through the backend systemd service. Do not commit this token, print it in logs, or share it publicly.</p>
         <pre>sudo mkdir -p /etc/vorliq
 sudo sh -c 'umask 077 && printf "ADMIN_TOKEN=%s\n" "$(openssl rand -hex 32)" > /etc/vorliq/backend.env'
 sudo systemctl daemon-reload
 sudo systemctl restart vorliq-backend.service</pre>
-        <p>Operators can use this token privately with the protected incident API described in the incident response guide.</p>
+        <p>The backend service should include <code>EnvironmentFile=-/etc/vorliq/backend.env</code> or an equivalent <code>Environment=ADMIN_TOKEN=...</code> line in <code>/etc/systemd/system/vorliq-backend.service</code>. Use the environment file when possible so the token is not copied into documentation or shell history.</p>
+        <p>Operators can use this token privately with the protected dashboard at <code>https://vorliq.org/admin</code> and the incident API described in the incident response guide.</p>
       </section>
 
       <section>
