@@ -7,14 +7,30 @@ function Footer() {
   }
 
   const links = [
-    { label: "Network Status", href: "https://status.vorliq.org" },
-    { label: "Transparency", href: "/transparency", internal: true },
-    { label: "Developer API", href: "https://vorliq.github.io/Vorliq/api.html" },
-    { label: "Privacy", href: "https://vorliq.github.io/Vorliq/privacy.html" },
-    { label: "Terms", href: "https://vorliq.github.io/Vorliq/terms.html" },
-    { label: "Risk Notice", href: "https://vorliq.github.io/Vorliq/terms.html#risk-notice" },
-    { label: "Become an Ambassador", href: "/ambassador", internal: true },
-    { label: "Achievements", href: "/achievements", internal: true },
+    {
+      title: "Network",
+      items: [
+        { label: "Network Status", href: "https://status.vorliq.org" },
+        { label: "Developer API", href: "https://vorliq.github.io/Vorliq/api.html" },
+        { label: "Transparency", href: "/transparency", internal: true },
+      ],
+    },
+    {
+      title: "Community",
+      items: [
+        { label: "Forum", href: "/forum", internal: true },
+        { label: "Become an Ambassador", href: "/ambassador", internal: true },
+        { label: "Achievements", href: "/achievements", internal: true },
+      ],
+    },
+    {
+      title: "Trust",
+      items: [
+        { label: "Privacy", href: "https://vorliq.github.io/Vorliq/privacy.html" },
+        { label: "Terms", href: "https://vorliq.github.io/Vorliq/terms.html" },
+        { label: "Risk Notice", href: "https://vorliq.github.io/Vorliq/terms.html#risk-notice" },
+      ],
+    },
   ];
 
   return (
@@ -27,10 +43,15 @@ function Footer() {
         </div>
 
         <div className="footer-links">
-          {links.map((link) => (
-            <a key={link.href} href={link.href} target={link.internal ? undefined : "_blank"} rel={link.internal ? undefined : "noreferrer"}>
-              {link.label}
-            </a>
+          {links.map((group) => (
+            <div className="footer-link-group" key={group.title}>
+              <h3>{group.title}</h3>
+              {group.items.map((link) => (
+                <a key={link.href} href={link.href} target={link.internal ? undefined : "_blank"} rel={link.internal ? undefined : "noreferrer"}>
+                  {link.label}
+                </a>
+              ))}
+            </div>
           ))}
           <button className="footer-help-link" type="button" onClick={reopenHelp}>
             Help

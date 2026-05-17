@@ -124,7 +124,7 @@ function Dashboard() {
         <h1>Vorliq Dashboard</h1>
         <p className="subtitle">
           Vorliq is experimental open-source community blockchain software for wallets, mining,
-          governance, community coordination, and transparent public records.
+          lending, exchange, governance, and transparent public records.
         </p>
         <div className="hero-actions">
           <Link className="button brand-button" to="/login">Create Wallet</Link>

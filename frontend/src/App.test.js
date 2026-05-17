@@ -249,6 +249,30 @@ test("mobile hamburger announces expanded state when opened", async () => {
   expect(hamburger).toHaveAttribute("aria-controls", "mobile-navigation");
 });
 
+test("More menu opens, exposes grouped links, and closes with Escape", async () => {
+  window.localStorage.setItem(ONBOARDING_KEY, "true");
+
+  render(<App />);
+
+  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
+  const moreButton = screen.getByRole("button", { name: /^more/i });
+
+  expect(moreButton).toHaveAttribute("aria-haspopup", "menu");
+  expect(moreButton).toHaveAttribute("aria-expanded", "false");
+
+  await userEvent.click(moreButton);
+
+  expect(moreButton).toHaveAttribute("aria-expanded", "true");
+  const moreMenu = screen.getByRole("menu", { name: /more navigation/i });
+  expect(moreMenu).toHaveClass("open");
+  expect(within(moreMenu).getByRole("menuitem", { name: /chat/i })).toHaveAttribute("href", "/chat");
+  expect(within(moreMenu).getByRole("menuitem", { name: /whitepaper/i })).toHaveAttribute("href", "/whitepaper");
+
+  fireEvent.keyDown(document, { key: "Escape" });
+
+  expect(moreButton).toHaveAttribute("aria-expanded", "false");
+});
+
 test("Footer renders one social link group", async () => {
   window.localStorage.setItem(ONBOARDING_KEY, "true");
 

@@ -11,7 +11,7 @@
     <style>
       :root { --bg:#020817; --card:rgba(8,14,28,.62); --card2:rgba(8,14,28,.78); --accent:#18d7c9; --blue:#1479ff; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.26); --green:#86e33b; --gold:#ffd166; }
       * { box-sizing:border-box; }
-      body { margin:0; min-height:100vh; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 10% 15%,rgba(134,227,59,.2),transparent 28rem),radial-gradient(circle at 88% 24%,rgba(20,121,255,.28),transparent 32rem),linear-gradient(180deg,#020817,#061326); color:var(--text); overflow:hidden; }
+      body { margin:0; min-height:100vh; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 10% 15%,rgba(134,227,59,.18),transparent 28rem),radial-gradient(circle at 88% 24%,rgba(20,121,255,.24),transparent 32rem),radial-gradient(ellipse at 50% 100%,rgba(24,215,201,.16),transparent 42%),linear-gradient(180deg,#020817,#061326); color:var(--text); overflow:hidden; }
       body:before, body:after { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; }
       body:before { background-image:radial-gradient(circle,rgba(24,215,201,.34) 1px,transparent 1.9px); background-size:22px 22px; opacity:.14; mask-image:radial-gradient(circle at 0 52%,#000 0 42%,transparent 70%); }
       body:after { background:linear-gradient(120deg,transparent 0 18%,rgba(24,215,201,.12) 18.2%,transparent 18.7% 44%,rgba(134,227,59,.08) 44.2%,transparent 44.8% 74%,rgba(20,121,255,.1) 74.2%,transparent 74.8%); animation:deckDrift 18s linear infinite alternate; }
@@ -40,6 +40,7 @@
       @keyframes deckDrift { from { transform:translateX(-2rem); opacity:.55; } to { transform:translateX(2rem); opacity:.9; } }
       .counter { color:var(--muted); font-weight:900; }
       @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+      @media (prefers-reduced-motion:reduce) { *, *:before, *:after { animation:none !important; scroll-behavior:auto !important; } }
       @media (max-width:840px) { body { overflow:auto; } .slide { min-height:calc(100dvh - 92px); } .grid, .components, .links { grid-template-columns:1fr; } .link-button { min-height:58px; } }
     </style>
   </head>

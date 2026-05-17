@@ -47,6 +47,7 @@ const primaryLinks = [
 ];
 
 const moreLinks = [
+  { to: "/chat", label: "Chat" },
   { to: "/lending", label: "Lending" },
   { to: "/exchange", label: "Exchange" },
   { to: "/governance", label: "Governance" },
@@ -121,7 +122,7 @@ function App() {
 
 function AppShell() {
   const { isLoggedIn, logout, wallet } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { glowMode, theme, toggleTheme } = useTheme();
   const { unreadCount } = useNotifications();
   const [backendOnline, setBackendOnline] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -233,7 +234,12 @@ function AppShell() {
                   More
                   <span aria-hidden="true">+</span>
                 </button>
-                <div className={`more-dropdown ${moreOpen ? "open" : ""}`} id="more-navigation" role="menu">
+                <div
+                  className={`more-dropdown ${moreOpen ? "open" : ""}`}
+                  id="more-navigation"
+                  role="menu"
+                  aria-label="More navigation"
+                >
                   {moreLinks.map((link) => (
                     <NavLink
                       className="more-link"
@@ -254,10 +260,10 @@ function AppShell() {
                 className="icon-button"
                 type="button"
                 onClick={toggleTheme}
-                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                aria-label={glowMode === "full" ? "Reduce background glow" : "Restore full background glow"}
+                title={glowMode === "full" ? "Reduce background glow" : "Restore full background glow"}
               >
-                {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+                {glowMode === "full" ? <GlowIcon /> : <MoonIcon />}
               </button>
               <button
                 className="icon-button notification-bell"
@@ -327,10 +333,10 @@ function AppShell() {
                 className="icon-button"
                 type="button"
                 onClick={toggleTheme}
-                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                aria-label={glowMode === "full" ? "Reduce background glow" : "Restore full background glow"}
+                title={glowMode === "full" ? "Reduce background glow" : "Restore full background glow"}
               >
-                {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+                {glowMode === "full" ? <GlowIcon /> : <MoonIcon />}
               </button>
               <button
                 className="icon-button notification-bell"
@@ -428,7 +434,7 @@ function AppShell() {
 
 export { mobileNavSections as navSections, moreLinks, primaryLinks };
 
-function SunIcon() {
+function GlowIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="12" r="4" />

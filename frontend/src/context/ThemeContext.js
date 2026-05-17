@@ -1,33 +1,36 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const ThemeContext = createContext(null);
-const STORAGE_KEY = "vorliq_theme";
+const STORAGE_KEY = "vorliq_motion";
 
-function getInitialTheme() {
-  const savedTheme = window.localStorage.getItem(STORAGE_KEY);
-  const theme = savedTheme === "light" ? "light" : "dark";
-  document.documentElement.setAttribute("data-theme", theme);
-  return theme;
+function getInitialGlowMode() {
+  const savedMode = window.localStorage.getItem(STORAGE_KEY);
+  const mode = savedMode === "reduced" ? "reduced" : "full";
+  document.documentElement.setAttribute("data-theme", "dark");
+  document.documentElement.setAttribute("data-glow", mode);
+  return mode;
 }
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(getInitialTheme);
+  const [glowMode, setGlowMode] = useState(getInitialGlowMode);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem(STORAGE_KEY, theme);
-  }, [theme]);
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.setAttribute("data-glow", glowMode);
+    window.localStorage.setItem(STORAGE_KEY, glowMode);
+  }, [glowMode]);
 
   function toggleTheme() {
-    setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"));
+    setGlowMode((currentMode) => (currentMode === "full" ? "reduced" : "full"));
   }
 
   const value = useMemo(
     () => ({
-      theme,
+      theme: "dark",
+      glowMode,
       toggleTheme,
     }),
-    [theme]
+    [glowMode]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
