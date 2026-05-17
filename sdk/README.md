@@ -104,6 +104,29 @@ async function main() {
 main().catch(console.error);
 ```
 
+Community lending records now expose a lifecycle from `pending_vote` through issuance, active repayment tracking, and confirmed `repaid` status. Approval does not mean funds are confirmed; applications should link users to the issuance transaction and wait for mining confirmation before treating a loan as active.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const summary = await vorliq.getLendingSummary();
+  const activeLoans = await vorliq.getLoans({ status: "active", limit: 10 });
+
+  if (activeLoans[0]) {
+    const loan = await vorliq.getLoan(activeLoans[0].loan_id);
+    const myLoans = await vorliq.getMyLoans(loan.requester_address);
+
+    console.log("Lending summary:", summary);
+    console.log("Loan status:", loan.status);
+    console.log("Borrowed loans:", myLoans.borrowed.length);
+  }
+}
+
+main().catch(console.error);
+```
+
 To get a wallet balance, create a client and pass the wallet address to `getBalance`. This complete example prints the balance as a number.
 
 ```js

@@ -1,0 +1,101 @@
+const request = require("supertest");
+const axios = require("axios");
+
+jest.mock("axios");
+
+const app = require("../index");
+const { clearCache } = require("../cache");
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  clearCache();
+});
+
+describe("lending routes", () => {
+  test("forwards lending summary route", async () => {
+    axios.get.mockResolvedValue({
+      status: 200,
+      data: { success: true, summary: { active_count: 2, pending_vote_count: 1 } },
+    });
+
+    const response = await request(app).get("/api/lending/summary");
+
+    expect(response.status).toBe(200);
+    expect(response.body.summary.active_count).toBe(2);
+    expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/lending/summary");
+  });
+
+  test("forwards my loans route with address validation", async () => {
+    axios.get.mockResolvedValue({
+      status: 200,
+      data: { success: true, borrowed: [], voted: [], loans: [] },
+    });
+
+    const response = await request(app).get("/api/lending/my?address=VLQ_MEMBER");
+
+    expect(response.status).toBe(200);
+    expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/lending/my", {
+      params: { address: "VLQ_MEMBER" },
+    });
+  });
+
+  test("rejects invalid lending filters before proxying", async () => {
+    const response = await request(app).get("/api/lending/loans?status=approved&limit=5");
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(axios.get).not.toHaveBeenCalled();
+  });
+
+  test("forwards valid lending filters", async () => {
+    axios.get.mockResolvedValue({
+      status: 200,
+      data: { success: true, loans: [], total: 0 },
+    });
+
+    const response = await request(app).get("/api/lending/loans?status=active&address=VLQ_A&limit=10&offset=5");
+
+    expect(response.status).toBe(200);
+    expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/lending/loans", {
+      params: { limit: 10, offset: 5, status: "active", address: "VLQ_A" },
+    });
+  });
+
+  test("forwards loan detail route", async () => {
+    axios.get.mockResolvedValue({
+      status: 200,
+      data: { success: true, loan: { loan_id: "loan-1", status: "active" } },
+    });
+
+    const response = await request(app).get("/api/lending/loan?loan_id=loan-1");
+
+    expect(response.status).toBe(200);
+    expect(response.body.loan.status).toBe("active");
+    expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/lending/loan", {
+      params: { loan_id: "loan-1" },
+    });
+  });
+
+  test("repay route returns tx id safely", async () => {
+    axios.post.mockResolvedValue({
+      status: 200,
+      data: {
+        success: true,
+        repayment_tx_id: "tx-123",
+        repayment_amount: 55,
+        loan: { loan_id: "loan-1", status: "repayment_pending" },
+      },
+    });
+
+    const response = await request(app)
+      .post("/api/lending/repay")
+      .send({ loan_id: "loan-1", repayer_address: "VLQ_BORROWER" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.repayment_tx_id).toBe("tx-123");
+    expect(axios.post).toHaveBeenCalledWith("http://localhost:5001/lending/repay", {
+      loan_id: "loan-1",
+      repayer_address: "VLQ_BORROWER",
+    });
+  });
+});

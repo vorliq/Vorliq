@@ -193,6 +193,16 @@ def _profile_dependencies() -> dict:
     }
 
 
+def _sync_lending_pool(save: bool = True) -> bool:
+    changed = lending_pool.sync_loan_statuses(node.blockchain)
+    if changed and save:
+        storage.save_lending_pool(lending_pool)
+    return changed
+
+
+_sync_lending_pool(save=True)
+
+
 def _is_private_hostname(hostname: str) -> bool:
     host = hostname.lower()
     if host in {"localhost", "::1"} or host.endswith(".local"):
@@ -412,6 +422,7 @@ def mine_block():
         miner_address = _require_text(data.get("miner_address") or data.get("minerAddress"), "miner address", 160)
         raw_block = node.mine_new_block(miner_address)
         block = node.blockchain.get_block_detail(str(raw_block["index"])) or raw_block
+        _sync_lending_pool(save=False)
         storage.save_chain(node.blockchain)
         storage.save_pending(node.blockchain.pending_transactions)
         storage.save_lending_pool(lending_pool)
@@ -545,7 +556,8 @@ def _weekly_report_stats():
             [
                 loan
                 for loan in lending_pool.loan_requests.values()
-                if loan.get("status") == "approved" and float(loan.get("timestamp", 0)) >= cutoff
+                if loan.get("status") in {"approved_pending_issue", "active", "repayment_pending", "overdue", "repaid"}
+                and float(loan.get("approved_at") or loan.get("timestamp") or 0) >= cutoff
             ]
         ),
         "new_exchange_offers": len([offer for offer in exchange.offers.values() if float(offer.get("timestamp", 0)) >= cutoff]),
@@ -855,13 +867,17 @@ def receive_block():
 
         if valid_previous_hash and valid_proof and node.blockchain.add_block(received_block):
             node.blockchain.prune_pending_transactions(drop_system_rewards=False)
+            _sync_lending_pool(save=False)
             storage.save_chain(node.blockchain)
             storage.save_pending(node.blockchain.pending_transactions)
+            storage.save_lending_pool(lending_pool)
             return jsonify({"success": True, "message": "Block accepted"}), 201
 
         updated = network.sync_chain(node.blockchain)
         if updated:
+            _sync_lending_pool(save=False)
             storage.save_chain(node.blockchain)
+            storage.save_lending_pool(lending_pool)
         return jsonify(
             {
                 "success": False,
@@ -872,7 +888,9 @@ def receive_block():
     except Exception as exc:
         updated = network.sync_chain(node.blockchain)
         if updated:
+            _sync_lending_pool(save=False)
             storage.save_chain(node.blockchain)
+            storage.save_lending_pool(lending_pool)
         vorliq_logger.error("Receive block endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc), "chain_updated": updated}), 400
 
@@ -881,7 +899,9 @@ def receive_block():
 def sync_peers():
     updated = network.sync_chain(node.blockchain)
     if updated:
+        _sync_lending_pool(save=False)
         storage.save_chain(node.blockchain)
+        storage.save_lending_pool(lending_pool)
     peer_statuses = network.check_peer_statuses()
     return jsonify(
         {
@@ -949,7 +969,11 @@ def create_lending_request():
 def get_lending_loans():
     try:
         limit, offset = _pagination()
-        loans, total, has_more = _page(lending_pool.get_all_loans(), limit, offset)
+        status = request.args.get("status")
+        address = request.args.get("address")
+        _sync_lending_pool(save=True)
+        filtered_loans = lending_pool.get_all_loans(status=status, address=address)
+        loans, total, has_more = _page(filtered_loans, limit, offset)
         return jsonify({"success": True, "loans": loans, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
@@ -957,11 +981,32 @@ def get_lending_loans():
 
 @app.get("/lending/loan")
 def get_lending_loan():
-    loan_id = request.args.get("loan_id", "")
-    loan = lending_pool.get_loan(loan_id)
-    if not loan:
-        return jsonify({"success": False, "error": "loan does not exist"}), 404
-    return jsonify({"success": True, "loan": loan})
+    try:
+        loan_id = _require_text(request.args.get("loan_id") or request.args.get("loanId"), "loan ID", 128)
+        _sync_lending_pool(save=True)
+        loan = lending_pool.get_loan(loan_id)
+        if not loan:
+            return jsonify({"success": False, "error": "loan does not exist"}), 404
+        return jsonify({"success": True, "loan": loan})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/lending/my")
+def get_my_lending_loans():
+    try:
+        address = _require_text(request.args.get("address"), "address", 160)
+        _sync_lending_pool(save=True)
+        loans = lending_pool.get_my_loans(address)
+        return jsonify({"success": True, **loans})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/lending/summary")
+def get_lending_summary():
+    _sync_lending_pool(save=True)
+    return jsonify({"success": True, "summary": lending_pool.get_summary()})
 
 
 @app.post("/lending/vote")
@@ -989,7 +1034,12 @@ def vote_on_lending_loan():
         storage.save_lending_pool(lending_pool)
         storage.save_pending(node.blockchain.pending_transactions)
         storage.save_achievements(achievements)
-        return jsonify({"success": True, "loan": loan})
+        return jsonify({
+            "success": True,
+            "loan": loan,
+            "issuance_tx_id": loan.get("issuance_tx_id"),
+            "message": "Vote recorded. If approved, issuance remains pending until mined.",
+        })
     except Exception as exc:
         vorliq_logger.error("Lending vote endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
@@ -1009,7 +1059,9 @@ def repay_lending_loan():
         return jsonify(
             {
                 "success": True,
+                "message": "Repayment transaction submitted and waiting for mining confirmation.",
                 "repayment_amount": loan["repayment_amount"],
+                "repayment_tx_id": loan.get("repayment_tx_id"),
                 "loan": loan,
             }
         )

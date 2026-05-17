@@ -7,7 +7,7 @@ import { apiErrorMessage } from "../helpers/errors";
 
 function Stats() {
   const [summary, setSummary] = useState(null);
-  const [loans, setLoans] = useState([]);
+  const [lendingSummary, setLendingSummary] = useState(null);
   const [leaderboard, setLeaderboard] = useState({ holders: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -19,13 +19,13 @@ function Stats() {
       try {
         const [summaryResponse, loansResponse, leaderboardResponse] = await Promise.all([
           api.get("/chain/summary"),
-          api.get("/lending/loans", { params: { limit: 200 } }),
+          api.get("/lending/summary"),
           api.get("/leaderboard", { params: { limit: 10 } }),
         ]);
 
         if (mounted) {
           setSummary(summaryResponse.data.summary || {});
-          setLoans(loansResponse.data.loans || []);
+          setLendingSummary(loansResponse.data.summary || {});
           setLeaderboard(leaderboardResponse.data || { holders: [] });
         }
       } catch (requestError) {
@@ -53,11 +53,6 @@ function Stats() {
       Math.floor(currentHeight / halvingInterval) * halvingInterval + halvingInterval;
     const blocksUntilHalving = Math.max(nextHalvingBlock - currentHeight, 0);
 
-    const approvedLoans = loans.filter((loan) => loan.status === "approved");
-    const rejectedLoans = loans.filter((loan) => loan.status === "rejected");
-    const repaidLoans = loans.filter((loan) => loan.status === "repaid");
-    const everApprovedLoans = loans.filter((loan) => ["approved", "repaid"].includes(loan.status));
-
     return {
       totalBlocks: summary?.total_blocks ?? 0,
       totalTransactions: summary?.total_transactions ?? 0,
@@ -65,15 +60,18 @@ function Stats() {
       currentReward: summary?.current_mining_reward ?? 50,
       nextHalvingBlock,
       blocksUntilHalving,
-      totalLoans: loans.length,
-      approvedLoans: approvedLoans.length,
-      rejectedLoans: rejectedLoans.length,
-      repaidLoans: repaidLoans.length,
-      totalLent: everApprovedLoans.reduce((sum, loan) => sum + Number(loan.amount || 0), 0),
-      totalRepaid: repaidLoans.reduce((sum, loan) => sum + Number(loan.repayment_amount || 0), 0),
+      totalLoans: lendingSummary?.total_loans ?? 0,
+      pendingVotes: lendingSummary?.pending_vote_count ?? 0,
+      approvedPendingIssue: lendingSummary?.approved_pending_issue_count ?? 0,
+      activeLoans: lendingSummary?.active_count ?? 0,
+      overdueLoans: lendingSummary?.overdue_count ?? 0,
+      rejectedLoans: lendingSummary?.rejected_count ?? 0,
+      repaidLoans: lendingSummary?.repaid_count ?? 0,
+      totalLent: lendingSummary?.total_vlq_active ?? 0,
+      totalRepaid: lendingSummary?.total_vlq_repaid ?? 0,
       topAddresses: leaderboard.holders || [],
     };
-  }, [leaderboard, loans, summary]);
+  }, [leaderboard, lendingSummary, summary]);
 
   if (loading) {
     return (
@@ -117,11 +115,14 @@ function Stats() {
         title="Lending Statistics"
         items={[
           ["Total Loan Requests", stats.totalLoans],
-          ["Approved Loans", stats.approvedLoans],
+          ["Pending Votes", stats.pendingVotes],
+          ["Approved Pending Issue", stats.approvedPendingIssue],
+          ["Active Loans", stats.activeLoans],
+          ["Overdue Loans", stats.overdueLoans],
           ["Rejected Loans", stats.rejectedLoans],
           ["Repaid Loans", stats.repaidLoans],
-          ["Total VLQ Lent Out", `${stats.totalLent} VLQ`],
-          ["Total VLQ Repaid", `${stats.totalRepaid} VLQ`],
+          ["Active VLQ", `${formatNumber(stats.totalLent)} VLQ`],
+          ["Repaid VLQ", `${formatNumber(stats.totalRepaid)} VLQ`],
         ]}
       />
 

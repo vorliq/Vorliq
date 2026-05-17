@@ -32,6 +32,16 @@ function transactionQuery(params = {}) {
   return value ? `?${value}` : "";
 }
 
+function lendingQuery(params = {}) {
+  const query = new URLSearchParams();
+  if (params.limit !== undefined) query.set("limit", String(params.limit));
+  if (params.offset !== undefined) query.set("offset", String(params.offset));
+  if (params.status) query.set("status", String(params.status));
+  if (params.address) query.set("address", String(params.address));
+  const value = query.toString();
+  return value ? `?${value}` : "";
+}
+
 class VorliqSDK {
   /**
    * Creates a Vorliq SDK client.
@@ -278,9 +288,56 @@ class VorliqSDK {
    *
    * @returns {Promise<Array<object>>} All loan request objects.
    */
-  async getLoans() {
-    const data = await this.request("/api/lending/loans");
+  async getLoans(params = {}) {
+    const data = await this.request(`/api/lending/loans${lendingQuery(params)}`);
     return data.loans || [];
+  }
+
+  /**
+   * Gets one community loan lifecycle record by loan ID.
+   *
+   * @param {string} loanId - Loan identifier returned by the lending API.
+   * @returns {Promise<object>} Loan record with lifecycle status and transaction links.
+   */
+  async getLoan(loanId) {
+    const query = new URLSearchParams({ loan_id: loanId });
+    const data = await this.request(`/api/lending/loan?${query.toString()}`);
+    return data.loan || data;
+  }
+
+  /**
+   * Gets loans where an address is borrower or voter.
+   *
+   * @param {string} address - Wallet address to inspect.
+   * @returns {Promise<object>} Borrowed, voted, and combined loan lists.
+   */
+  async getMyLoans(address) {
+    const query = new URLSearchParams({ address });
+    return this.request(`/api/lending/my?${query.toString()}`);
+  }
+
+  /**
+   * Gets aggregate lending lifecycle counts and VLQ totals.
+   *
+   * @returns {Promise<object>} Lending summary fields.
+   */
+  async getLendingSummary() {
+    const data = await this.request("/api/lending/summary");
+    return data.summary || data;
+  }
+
+  /**
+   * Submits a loan repayment transaction to the pending pool.
+   *
+   * @param {string} loanId - Loan to repay.
+   * @param {string} repayerAddress - Borrower wallet address.
+   * @returns {Promise<object>} Repayment response including repayment_tx_id.
+   */
+  async repayLoan(loanId, repayerAddress) {
+    return this.request("/api/lending/repay", {
+      method: "POST",
+      body: JSON.stringify({ loan_id: loanId, repayer_address: repayerAddress }),
+    });
   }
 
   /**

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
+import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
 import ProfileAvatar from "../components/ProfileAvatar";
 import ProfileBadge from "../components/ProfileBadge";
@@ -47,7 +48,7 @@ function Account() {
         const [balanceResponse, transactionResponse, loansResponse, earnedResponse, allAchievementsResponse, profileResponse] = await Promise.all([
           api.get("/wallet/balance", { params: { address: wallet.address } }),
           api.get("/chain/address", { params: { address: wallet.address, limit: 100 } }),
-          api.get("/lending/loans", { params: { limit: 200 } }),
+          api.get("/lending/my", { params: { address: wallet.address } }),
           api.get("/achievements", { params: { address: wallet.address } }),
           api.get("/achievements/all"),
           profileRequest,
@@ -100,6 +101,11 @@ function Account() {
 
   const myLoans = useMemo(
     () => loans.filter((loan) => loan.requester_address === wallet.address),
+    [loans, wallet.address]
+  );
+
+  const votedLoans = useMemo(
+    () => loans.filter((loan) => loan.requester_address !== wallet.address && loan.votes?.[wallet.address]),
     [loans, wallet.address]
   );
 
@@ -242,7 +248,7 @@ function Account() {
         current.map((loan) => (loan.loan_id === loanId ? response.data.loan : loan))
       );
       setErrorMessage("");
-      toast.success(`Loan repaid. Amount: ${response.data.repayment_amount} VLQ.`);
+      toast.success("Repayment submitted. Mining confirmation will mark the loan repaid.");
     } catch (error) {
       const message = apiErrorMessage(error, "Unable to repay loan.");
       setErrorMessage(message);
@@ -488,7 +494,7 @@ function Account() {
         <h2>My Active Loans</h2>
         {loading && <Spinner label="Loading loans..." />}
 
-        {!loading && myLoans.length === 0 && <div className="empty-state">No loans yet.</div>}
+        {!loading && myLoans.length === 0 && votedLoans.length === 0 && <div className="empty-state">No loans yet.</div>}
 
         <div className="loan-grid">
           {myLoans.map((loan) => (
@@ -505,7 +511,26 @@ function Account() {
                 <span className="meta-label">Repayment Amount</span>
                 <span className="meta-value">{loan.repayment_amount} VLQ</span>
               </div>
-              {loan.status === "approved" && (
+              <div className="meta-item">
+                <span className="meta-label">Due Block</span>
+                <span className="meta-value">
+                  {loan.due_block ?? "Not set"}
+                  {loan.blocks_until_due !== null && loan.blocks_until_due !== undefined ? ` (${loan.blocks_until_due} blocks)` : ""}
+                </span>
+              </div>
+              <div className="button-row">
+                {loan.issuance_tx_id && (
+                  <Link className="button secondary small-button" to={`/tx/${loan.issuance_tx_id}`}>
+                    Issuance Tx
+                  </Link>
+                )}
+                {loan.repayment_tx_id && (
+                  <Link className="button secondary small-button" to={`/tx/${loan.repayment_tx_id}`}>
+                    Repayment Tx
+                  </Link>
+                )}
+              </div>
+              {["active", "overdue"].includes(loan.status) && !loan.repayment_tx_id && (
                 <button
                   className="button"
                   type="button"
@@ -515,6 +540,38 @@ function Account() {
                   {repayingLoanId === loan.loan_id ? "Repaying..." : "Repay"}
                 </button>
               )}
+            </article>
+          ))}
+          {votedLoans.map((loan) => (
+            <article className="loan-card" key={`voted-${loan.loan_id}`}>
+              <div className="section-title">
+                <h3>Voted Loan {loan.loan_id.slice(0, 12)}</h3>
+                <span className={`status-badge ${loan.status}`}>{loan.status}</span>
+              </div>
+              <div className="meta-item">
+                <span className="meta-label">Borrower</span>
+                <span className="meta-value"><AddressIdentity address={loan.requester_address} compact /></span>
+              </div>
+              <div className="meta-item">
+                <span className="meta-label">Amount</span>
+                <span className="meta-value">{loan.amount} VLQ</span>
+              </div>
+              <div className="meta-item">
+                <span className="meta-label">Vote Weights</span>
+                <span className="meta-value">Yes {loan.yes_vote_weight} / No {loan.no_vote_weight}</span>
+              </div>
+              <div className="button-row">
+                {loan.issuance_tx_id && (
+                  <Link className="button secondary small-button" to={`/tx/${loan.issuance_tx_id}`}>
+                    Issuance Tx
+                  </Link>
+                )}
+                {loan.repayment_tx_id && (
+                  <Link className="button secondary small-button" to={`/tx/${loan.repayment_tx_id}`}>
+                    Repayment Tx
+                  </Link>
+                )}
+              </div>
             </article>
           ))}
         </div>

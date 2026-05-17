@@ -162,6 +162,20 @@ function validateBody(req, res, next) {
     requireText(req, res, body, ["reason"], "reason", 1000);
   }
 
+  if (path === "/api/lending/vote") {
+    requireText(req, res, body, ["loan_id", "loanId"], "loan ID", 128);
+    if (res.headersSent) return;
+    validateAddress(req, res, body, ["voter_address", "voterAddress"], "voter address");
+    if (res.headersSent) return;
+    requireEnum(req, res, body, ["vote"], "vote", new Set(["yes", "no"]));
+  }
+
+  if (path === "/api/lending/repay") {
+    requireText(req, res, body, ["loan_id", "loanId"], "loan ID", 128);
+    if (res.headersSent) return;
+    validateAddress(req, res, body, ["repayer_address", "repayerAddress"], "repayer address");
+  }
+
   if (path === "/api/exchange/offer") {
     validateAddress(req, res, body, ["creator_address", "creatorAddress"], "creator address");
     if (res.headersSent) return;

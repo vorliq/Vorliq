@@ -42,7 +42,7 @@ class StorageTests(unittest.TestCase):
 
             restored = storage.load_lending_pool()
 
-            self.assertEqual(restored.get_loan(loan_id)["status"], "approved")
+            self.assertEqual(restored.get_loan(loan_id)["status"], "approved_pending_issue")
 
     def test_saving_and_loading_peers_restores_peer_urls(self):
         with tempfile.TemporaryDirectory() as temp_dir:

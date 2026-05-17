@@ -1,4 +1,9 @@
 import unittest
+import os
+import tempfile
+
+_TEST_DATA_DIR = tempfile.TemporaryDirectory()
+os.environ["VORLIQ_DATA_DIR"] = _TEST_DATA_DIR.name
 
 from app import app
 

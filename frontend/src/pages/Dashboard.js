@@ -64,6 +64,7 @@ const getStartedSteps = [
 
 function Dashboard() {
   const [summary, setSummary] = useState(null);
+  const [lendingSummary, setLendingSummary] = useState(null);
   const [featuredPosts, setFeaturedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -74,13 +75,15 @@ function Dashboard() {
 
     async function loadDashboard() {
       try {
-        const [summaryResponse, featuredResponse] = await Promise.all([
+        const [summaryResponse, featuredResponse, lendingResponse] = await Promise.all([
           api.get("/chain/summary"),
           api.get("/forum/featured", { params: { limit: 3 } }),
+          api.get("/lending/summary"),
         ]);
         if (mounted) {
           setErrorMessage("");
           setSummary(summaryResponse.data.summary || {});
+          setLendingSummary(lendingResponse.data.summary || {});
           setFeaturedPosts((featuredResponse.data.posts || []).slice(0, 3));
           setLastUpdated(new Date());
         }
@@ -110,8 +113,10 @@ function Dashboard() {
       blockHeight: summary?.block_height ?? 0,
       totalIssued: summary?.total_issued ?? 0,
       valid: Boolean(summary?.chain_valid),
+      pendingVotes: lendingSummary?.pending_vote_count ?? 0,
+      activeLoans: (lendingSummary?.active_count ?? 0) + (lendingSummary?.overdue_count ?? 0) + (lendingSummary?.repayment_pending_count ?? 0),
     };
-  }, [summary]);
+  }, [lendingSummary, summary]);
 
   return (
     <div className="page">
@@ -197,6 +202,14 @@ function Dashboard() {
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Total VLQ Issued</span>
               <span className="stat-value">{stats.totalIssued} VLQ</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Pending Loan Votes</span>
+              <span className="stat-value">{stats.pendingVotes}</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Active Loans</span>
+              <span className="stat-value">{stats.activeLoans}</span>
             </div>
           </div>
         </section>

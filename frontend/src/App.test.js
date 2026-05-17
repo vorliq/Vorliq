@@ -12,6 +12,7 @@ import api from "./helpers/api";
 import Account from "./pages/Account";
 import AddressIdentity from "./components/AddressIdentity";
 import Login from "./pages/Login";
+import Lending from "./pages/Lending";
 import Mine from "./pages/Mine";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
@@ -146,6 +147,57 @@ function defaultApiGet(path) {
 
   if (path === "/leaderboard") {
     return Promise.resolve({ data: { success: true, holders: [], miners: [], lenders: [] } });
+  }
+
+  if (path === "/lending/summary") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        summary: {
+          total_loans: 1,
+          pending_vote_count: 1,
+          approved_pending_issue_count: 0,
+          active_count: 0,
+          repayment_pending_count: 0,
+          repaid_count: 0,
+          overdue_count: 0,
+          rejected_count: 0,
+          total_vlq_active: 0,
+          total_vlq_repaid: 0,
+        },
+      },
+    });
+  }
+
+  if (path === "/lending/loans") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        loans: [
+          {
+            loan_id: "loan-test-1",
+            requester_address: "VLQ_BORROWER",
+            amount: 100,
+            repayment_amount: 110,
+            reason: "Build a community tool",
+            status: "pending_vote",
+            created_at: 1715791000,
+            timestamp: 1715791000,
+            due_block: 1000,
+            blocks_until_due: 1000,
+            yes_vote_weight: 10,
+            no_vote_weight: 0,
+            votes: {},
+            status_history: [{ status: "pending_vote", message: "Opened for voting." }],
+          },
+        ],
+        total: 1,
+      },
+    });
+  }
+
+  if (path === "/lending/my") {
+    return Promise.resolve({ data: { success: true, borrowed: [], voted: [], loans: [] } });
   }
 
   if (path === "/economics") {
@@ -564,6 +616,93 @@ test("Leaderboard includes a Top Reputation tab", async () => {
 
   expect(screen.getByRole("heading", { name: /top reputation/i })).toBeInTheDocument();
   expect(await screen.findByText(/top member/i)).toBeInTheDocument();
+});
+
+test("Lending page renders lifecycle tabs and active vote cards", async () => {
+  renderWithProviders(<Lending />, "/lending");
+
+  expect(await screen.findByRole("button", { name: /active votes/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /active loans/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /my loans/i })).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole("button", { name: /active votes/i }));
+
+  expect(await screen.findByText(/build a community tool/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/pending vote/i).length).toBeGreaterThan(0);
+  expect(screen.getByRole("button", { name: /vote yes/i })).toBeInTheDocument();
+});
+
+test("Lending My Loans can use an entered wallet address", async () => {
+  renderWithProviders(<Lending />, "/lending");
+
+  await userEvent.click(await screen.findByRole("button", { name: /my loans/i }));
+  fireEvent.change(screen.getByLabelText(/wallet address/i), { target: { value: "VLQ_ME" } });
+  await userEvent.click(screen.getByRole("button", { name: /^load$/i }));
+
+  await waitFor(() => {
+    expect(api.get).toHaveBeenCalledWith("/lending/my", { params: { address: "VLQ_ME" } });
+  });
+  expect(await screen.findByText(/no borrowed or voted loans/i)).toBeInTheDocument();
+});
+
+test("Account loan section handles active lifecycle statuses", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/lending/my") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          borrowed: [
+            {
+              loan_id: "loan-active-1",
+              requester_address: "VLQ_ME",
+              amount: 25,
+              repayment_amount: 27.5,
+              status: "active",
+              due_block: 1005,
+              blocks_until_due: 995,
+              issuance_tx_id: "issue-tx",
+              votes: {},
+            },
+          ],
+          voted: [],
+          loans: [
+            {
+              loan_id: "loan-active-1",
+              requester_address: "VLQ_ME",
+              amount: 25,
+              repayment_amount: 27.5,
+              status: "active",
+              due_block: 1005,
+              blocks_until_due: 995,
+              issuance_tx_id: "issue-tx",
+              votes: {},
+            },
+          ],
+        },
+      });
+    }
+    if (path === "/profiles/profile") {
+      return Promise.reject({ response: { status: 404 } });
+    }
+    return defaultApiGet(path);
+  });
+
+  render(
+    <ThemeProvider>
+      <NotificationProvider>
+        <AuthContext.Provider value={{ wallet: { address: "VLQ_ME" }, isLoggedIn: true }}>
+          <MemoryRouter initialEntries={["/account"]}>
+            <Account />
+          </MemoryRouter>
+        </AuthContext.Provider>
+      </NotificationProvider>
+    </ThemeProvider>
+  );
+
+  expect(await screen.findByRole("heading", { name: /my active loans/i })).toBeInTheDocument();
+  expect(await screen.findByText(/loan-active-/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /issuance tx/i })).toHaveAttribute("href", "/tx/issue-tx");
+  expect(screen.getByRole("button", { name: /^repay$/i })).toBeInTheDocument();
 });
 
 test("wallet backup import rejects invalid JSON", async () => {

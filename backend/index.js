@@ -150,6 +150,8 @@ app.use(
     "/api/forum/feature",
     "/api/price/signal",
     "/api/lending/request",
+    "/api/lending/vote",
+    "/api/lending/repay",
     "/api/exchange/offer",
     "/api/profiles/profile",
   ],
