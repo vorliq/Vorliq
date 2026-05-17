@@ -5,14 +5,18 @@ import App from "./App";
 import IncidentBanner from "./components/IncidentBanner";
 import { ONBOARDING_KEY } from "./components/Onboarding";
 import { AuthProvider } from "./context/AuthContext";
+import { AuthContext } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import api from "./helpers/api";
 import Account from "./pages/Account";
+import AddressIdentity from "./components/AddressIdentity";
 import Login from "./pages/Login";
 import Mine from "./pages/Mine";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
+import Leaderboard from "./pages/Leaderboard";
+import Profile from "./pages/Profile";
 import Send from "./pages/Send";
 import Transparency from "./pages/Transparency";
 import Wallet from "./pages/Wallet";
@@ -95,6 +99,14 @@ function defaultApiGet(path) {
 
   if (path === "/forum/featured") {
     return Promise.resolve({ data: { success: true, posts: [] } });
+  }
+
+  if (path === "/profiles/top") {
+    return Promise.resolve({ data: { success: true, profiles: [] } });
+  }
+
+  if (path === "/profiles/profile") {
+    return Promise.reject({ response: { status: 404, data: { success: false, message: "profile not found" } } });
   }
 
   if (path === "/network/manifest") {
@@ -326,6 +338,102 @@ test("Footer exposes a public Risk Notice link", async () => {
     "href",
     "https://vorliq.github.io/Vorliq/terms.html#risk-notice"
   );
+});
+
+test("Profile page renders a public member profile", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/profiles/profile") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          profile: {
+            wallet_address: "VLQ_MEMBER",
+            display_name: "Mina VLQ",
+            avatar_style: "cyan",
+            reputation_score: 22,
+            badges: ["Node Runner"],
+            activity_summary: { forum_posts: 1 },
+          },
+        },
+      });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Profile />, "/profile?address=VLQ_MEMBER");
+
+  expect(await screen.findByRole("heading", { name: /mina vlq/i })).toBeInTheDocument();
+  expect(screen.getByText("22")).toBeInTheDocument();
+  expect(screen.getByText(/reputation score/i)).toBeInTheDocument();
+});
+
+test("Profile form validation blocks short display names", async () => {
+  api.get.mockImplementation(defaultApiGet);
+  render(
+    <ThemeProvider>
+      <NotificationProvider>
+        <AuthContext.Provider value={{ wallet: { address: "VLQ_ME" }, isLoggedIn: true }}>
+          <MemoryRouter initialEntries={["/profile?address=VLQ_ME"]}>
+            <Profile />
+          </MemoryRouter>
+        </AuthContext.Provider>
+      </NotificationProvider>
+    </ThemeProvider>
+  );
+
+  expect(await screen.findByRole("heading", { name: /create your public profile/i })).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText(/display name/i), { target: { value: "ab" } });
+  await userEvent.click(screen.getByRole("button", { name: /save profile/i }));
+
+  expect(await screen.findByText(/display name must be 3 to 32 characters/i)).toBeInTheDocument();
+  expect(api.post).not.toHaveBeenCalledWith("/profiles/profile", expect.anything());
+});
+
+test("AddressIdentity falls back to a shortened address when no profile exists", async () => {
+  api.get.mockRejectedValueOnce({ response: { status: 404 } });
+
+  renderWithProviders(<AddressIdentity address="VLQ_LONG_ADDRESS_123456789" />);
+
+  expect(await screen.findByText(/VLQ_LONG_ADD/i)).toBeInTheDocument();
+});
+
+test("AddressIdentity shows profile display name when a profile exists", async () => {
+  api.get.mockResolvedValueOnce({
+    data: { success: true, profile: { wallet_address: "VLQ_MEMBER", display_name: "Profile Name", avatar_style: "green" } },
+  });
+
+  renderWithProviders(<AddressIdentity address="VLQ_MEMBER" />);
+
+  expect(await screen.findByText(/profile name/i)).toBeInTheDocument();
+});
+
+test("Leaderboard includes a Top Reputation tab", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/leaderboard") {
+      return Promise.resolve({ data: { success: true, holders: [], miners: [], lenders: [] } });
+    }
+    if (path === "/profiles/top") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          profiles: [{ wallet_address: "VLQ_TOP", display_name: "Top Member", avatar_style: "blue", reputation_score: 55, badges: [] }],
+        },
+      });
+    }
+    if (path === "/profiles/profile") {
+      return Promise.resolve({
+        data: { success: true, profile: { wallet_address: "VLQ_TOP", display_name: "Top Member", avatar_style: "blue" } },
+      });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Leaderboard />, "/leaderboard");
+
+  await userEvent.click(await screen.findByRole("button", { name: /top reputation/i }));
+
+  expect(screen.getByRole("heading", { name: /top reputation/i })).toBeInTheDocument();
+  expect(await screen.findByText(/top member/i)).toBeInTheDocument();
 });
 
 test("wallet backup import rejects invalid JSON", async () => {

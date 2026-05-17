@@ -3,7 +3,7 @@ import { createContext, useContext, useState } from "react";
 import api from "../helpers/api";
 import { loadWallet, saveWallet } from "../helpers/storage";
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [wallet, setWallet] = useState(null);

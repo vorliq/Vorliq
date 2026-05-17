@@ -56,6 +56,29 @@ async function main() {
 main().catch(console.error);
 ```
 
+Public member profiles are linked to wallet addresses. They are not verified legal identities, and applications should treat every profile field as public community content. Do not store private keys, wallet passwords, recovery phrases, or secrets in profile fields.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const profile = await vorliq.saveProfile({
+    wallet_address: "VLQ_ADDRESS_HERE",
+    display_name: "Community Miner",
+    bio: "Running a Vorliq node and helping new members.",
+    avatar_style: "cyan",
+    website: "https://example.com"
+  });
+  const topProfiles = await vorliq.getTopProfiles(10);
+
+  console.log("Saved profile:", profile.display_name);
+  console.log("Top reputation:", topProfiles);
+}
+
+main().catch(console.error);
+```
+
 To get a wallet balance, create a client and pass the wallet address to `getBalance`. This complete example prints the balance as a number.
 
 ```js

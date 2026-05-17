@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
+import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
@@ -60,11 +61,6 @@ const getStartedSteps = [
     ],
   },
 ];
-
-function shortAddress(address) {
-  if (!address) return "Unknown";
-  return address.length > 12 ? `${address.slice(0, 12)}...` : address;
-}
 
 function Dashboard() {
   const [summary, setSummary] = useState(null);
@@ -242,7 +238,7 @@ function Dashboard() {
                   <span className="featured-star" aria-label="Featured post">&#9733;</span>
                   {post.title}
                 </strong>
-                <span>By {shortAddress(post.author_address)}</span>
+                <span>By <AddressIdentity address={post.author_address} compact /></span>
                 <span>{post.feature_vote_count || 0} feature votes</span>
                 <Link className="text-button" to="/forum">Read More</Link>
               </article>

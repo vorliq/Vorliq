@@ -16,6 +16,7 @@ const forumRoutes = require("./routes/forum");
 const governanceRoutes = require("./routes/governance");
 const treasuryRoutes = require("./routes/treasury");
 const priceRoutes = require("./routes/price");
+const profilesRoutes = require("./routes/profiles");
 const achievementsRoutes = require("./routes/achievements");
 const backupRoutes = require("./routes/backup");
 const deploymentRoutes = require("./routes/deployment");
@@ -149,6 +150,7 @@ app.use(
     "/api/price/signal",
     "/api/lending/request",
     "/api/exchange/offer",
+    "/api/profiles/profile",
   ],
   writeLimiter
 );
@@ -180,6 +182,7 @@ app.use(forumRoutes);
 app.use(governanceRoutes);
 app.use(treasuryRoutes);
 app.use(priceRoutes);
+app.use(profilesRoutes);
 app.use(achievementsRoutes);
 app.use(backupRoutes);
 app.use(deploymentRoutes);

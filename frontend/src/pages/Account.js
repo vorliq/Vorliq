@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import ProfileAvatar from "../components/ProfileAvatar";
+import ProfileBadge from "../components/ProfileBadge";
 import Spinner from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
@@ -18,6 +21,7 @@ function Account() {
   const [loans, setLoans] = useState([]);
   const [earnedAchievements, setEarnedAchievements] = useState([]);
   const [allAchievements, setAllAchievements] = useState([]);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [repayingLoanId, setRepayingLoanId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -33,12 +37,19 @@ function Account() {
 
     async function loadAccount() {
       try {
-        const [balanceResponse, transactionResponse, loansResponse, earnedResponse, allAchievementsResponse] = await Promise.all([
+        const profileRequest = api
+          .get("/profiles/profile", { params: { address: wallet.address } })
+          .catch((error) => {
+            if (error.response?.status === 404) return { data: { profile: null } };
+            throw error;
+          });
+        const [balanceResponse, transactionResponse, loansResponse, earnedResponse, allAchievementsResponse, profileResponse] = await Promise.all([
           api.get("/wallet/balance", { params: { address: wallet.address } }),
           api.get("/chain/address", { params: { address: wallet.address, limit: 100 } }),
           api.get("/lending/loans", { params: { limit: 200 } }),
           api.get("/achievements", { params: { address: wallet.address } }),
           api.get("/achievements/all"),
+          profileRequest,
         ]);
 
         if (mounted) {
@@ -47,6 +58,7 @@ function Account() {
           setLoans(loansResponse.data.loans || []);
           setEarnedAchievements(earnedResponse.data.achievements || []);
           setAllAchievements(allAchievementsResponse.data.achievements || []);
+          setProfile(profileResponse.data.profile || null);
           setErrorMessage("");
         }
       } catch (error) {
@@ -265,6 +277,36 @@ function Account() {
       </section>
 
       <ErrorMessage message={errorMessage} />
+
+      <section className="card card-pad account-profile-section">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">My Profile</span>
+            <h2>Public Member Identity</h2>
+          </div>
+          <Link className="button secondary small-button" to={`/profile?address=${wallet.address}`}>
+            {profile ? "Edit Profile" : "Create Profile"}
+          </Link>
+        </div>
+        {profile ? (
+          <div className="account-profile-preview">
+            <ProfileAvatar profile={profile} address={wallet.address} size="large" />
+            <div>
+              <h3>{profile.display_name}</h3>
+              <p>{profile.reputation_score || 0} reputation</p>
+              <div className="profile-badge-row">
+                {(profile.badges || []).slice(0, 4).map((badge, index) => (
+                  <ProfileBadge badge={badge} key={`${badge.id || badge}-${index}`} />
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">
+            Create your public profile so members see a display name, avatar, and reputation instead of only a wallet address.
+          </div>
+        )}
+      </section>
 
       <section className="card card-pad stack">
         <div className="section-title">

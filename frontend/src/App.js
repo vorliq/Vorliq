@@ -22,6 +22,7 @@ import Stats from "./pages/Stats";
 import Registry from "./pages/Registry";
 import Login from "./pages/Login";
 import Account from "./pages/Account";
+import Profile from "./pages/Profile";
 import Health from "./pages/Health";
 import Exchange from "./pages/Exchange";
 import Governance from "./pages/Governance";
@@ -48,6 +49,7 @@ const primaryLinks = [
 
 const moreLinks = [
   { to: "/chat", label: "Chat" },
+  { to: "/profile", label: "Profiles" },
   { to: "/lending", label: "Lending" },
   { to: "/exchange", label: "Exchange" },
   { to: "/governance", label: "Governance" },
@@ -78,6 +80,7 @@ const mobileNavSections = [
     links: [
       { to: "/forum", label: "Forum" },
       { to: "/chat", label: "Chat" },
+      { to: "/profile", label: "Profiles" },
       { to: "/lending", label: "Lending" },
       { to: "/exchange", label: "Exchange" },
       { to: "/governance", label: "Governance" },
@@ -405,6 +408,7 @@ function AppShell() {
           <Route path="/health" element={<Health />} />
           <Route path="/transparency" element={<Transparency />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/profile" element={<Profile />} />
           <Route
             path="/account"
             element={

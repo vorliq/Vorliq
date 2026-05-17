@@ -13,6 +13,7 @@ from governance import Governance
 from lending import LendingPool
 from logger import vorliq_logger
 from price import PriceDiscovery
+from profiles import Profiles
 from registry import NodeRegistry
 from transaction import Transaction
 from treasury import Treasury
@@ -30,6 +31,7 @@ class Storage:
         self.governance_file = self.data_dir / "governance.json"
         self.treasury_file = self.data_dir / "treasury.json"
         self.price_file = self.data_dir / "price.json"
+        self.profiles_file = self.data_dir / "profiles.json"
         self.achievements_file = self.data_dir / "achievements.json"
         self.peers_file = self.data_dir / "peers.json"
         self.registry_file = self.data_dir / "registry.json"
@@ -225,6 +227,25 @@ class Storage:
         price_discovery.expire_old_signals()
         vorliq_logger.info("Loaded price discovery with %s signal records", len(price_discovery.signals))
         return price_discovery
+
+    def save_profiles(self, profiles: Profiles) -> None:
+        self._write_json(self.profiles_file, {"profiles": profiles.profiles})
+        vorliq_logger.info("Saved profiles with %s records", len(profiles.profiles))
+
+    def load_profiles(self) -> Profiles:
+        profiles = Profiles()
+        if not self.profiles_file.exists():
+            vorliq_logger.info("No saved profiles found on disk")
+            return profiles
+
+        data = self._read_json(self.profiles_file)
+        profile_records = data.get("profiles", {})
+        if not isinstance(profile_records, dict):
+            raise ValueError("profiles data must contain a profiles object")
+
+        profiles.profiles = profile_records
+        vorliq_logger.info("Loaded profiles with %s records", len(profile_records))
+        return profiles
 
     def save_achievements(self, achievements: Achievements) -> None:
         self._write_json(self.achievements_file, {"earned": achievements.earned})

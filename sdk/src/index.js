@@ -243,6 +243,62 @@ class VorliqSDK {
   }
 
   /**
+   * Gets one public member profile by wallet address.
+   *
+   * @param {string} address - Wallet address to inspect.
+   * @returns {Promise<object>} Public profile object with reputation and badges.
+   */
+  async getProfile(address) {
+    const query = new URLSearchParams({ address });
+    const data = await this.request(`/api/profiles/profile?${query.toString()}`);
+    return data.profile || data;
+  }
+
+  /**
+   * Creates or updates a public member profile.
+   *
+   * @param {object} profileData - Profile fields including wallet_address and display_name.
+   * @returns {Promise<object>} Saved public profile.
+   */
+  async saveProfile(profileData) {
+    const data = await this.request("/api/profiles/profile", {
+      method: "POST",
+      body: JSON.stringify(profileData),
+    });
+    return data.profile || data;
+  }
+
+  /**
+   * Searches public member profiles.
+   *
+   * @param {string} query - Search query matching name, location, country, or wallet address.
+   * @param {object} [options] - Pagination options.
+   * @param {number} [options.limit=50] - Maximum profile rows to return.
+   * @param {number} [options.offset=0] - Number of matching profiles to skip.
+   * @returns {Promise<Array<object>>} Matching public profiles.
+   */
+  async searchProfiles(query, options = {}) {
+    const params = new URLSearchParams({
+      q: query,
+      limit: String(options.limit ?? 50),
+      offset: String(options.offset ?? 0),
+    });
+    const data = await this.request(`/api/profiles/search?${params.toString()}`);
+    return data.profiles || [];
+  }
+
+  /**
+   * Gets top public profiles by transparent reputation score.
+   *
+   * @param {number} [limit=20] - Maximum profiles to return.
+   * @returns {Promise<Array<object>>} Top public profiles.
+   */
+  async getTopProfiles(limit = 20) {
+    const data = await this.request(`/api/profiles/top?limit=${encodeURIComponent(limit)}`);
+    return data.profiles || [];
+  }
+
+  /**
    * Subscribes to newly mined blocks by polling the chain every 30 seconds.
    *
    * @param {Function} callback - Function called with each new block when chain height increases.

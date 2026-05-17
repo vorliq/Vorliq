@@ -13,6 +13,7 @@ function Footer() {
         { label: "Network Status", href: "https://status.vorliq.org" },
         { label: "Developer API", href: "https://vorliq.github.io/Vorliq/api.html" },
         { label: "Transparency", href: "/transparency", internal: true },
+        { label: "Profiles", href: "/profile", internal: true },
       ],
     },
     {

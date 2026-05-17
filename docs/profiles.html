@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Profiles and Reputation</title>
+    <meta name="description" content="How Vorliq public member profiles and reputation work." />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      :root { --bg:#020817; --card:rgba(8,14,28,.62); --green:#86e33b; --cyan:#18d7c9; --blue:#1479ff; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.26); }
+      * { box-sizing:border-box; }
+      body { margin:0; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 10% 15%,rgba(134,227,59,.18),transparent 28rem),radial-gradient(circle at 88% 24%,rgba(20,121,255,.24),transparent 32rem),radial-gradient(ellipse at 50% 100%,rgba(24,215,201,.16),transparent 42%),linear-gradient(180deg,#020817,#061326); color:var(--text); }
+      main { width:min(920px,calc(100% - 32px)); margin:0 auto; padding:56px 0; }
+      a { color:var(--cyan); font-weight:900; }
+      h1 { font-size:clamp(2.6rem,9vw,5.6rem); line-height:.92; margin:18px 0; }
+      h2 { margin:28px 0 10px; }
+      p, li { color:var(--muted); line-height:1.8; }
+      .card { border:1px solid var(--border); border-radius:18px; background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015)),var(--card); box-shadow:0 24px 70px rgba(0,0,0,.24); backdrop-filter:blur(18px); padding:24px; }
+      .eyebrow { color:var(--green); font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a href="index.html">Back to Vorliq</a>
+      <span class="eyebrow">Public Community Identity</span>
+      <h1>Profiles and Reputation</h1>
+      <div class="card">
+        <h2>What profiles are</h2>
+        <p>Vorliq profiles are public community profiles linked to wallet addresses. They help members see a display name, avatar style, bio, public links, badges, and reputation instead of only a raw wallet address.</p>
+
+        <h2>How profiles are linked</h2>
+        <p>Each profile is keyed by one Vorliq wallet address. A profile does not prove a legal identity and should not be treated as a verified real-world identity.</p>
+
+        <h2>What is public</h2>
+        <p>If a user creates a profile, the wallet address, display name, bio, location, country, avatar style, website, X link, Telegram link, Discord name, reputation score, ambassador flag, badges, and activity summary are public.</p>
+
+        <h2>What is not stored</h2>
+        <p>Vorliq profiles must not store private keys, wallet passwords, email passwords, admin tokens, recovery phrases, or secrets. Do not paste sensitive information into profile fields.</p>
+
+        <h2>Reputation calculation</h2>
+        <ul>
+          <li>+10 for having a profile</li>
+          <li>+5 for each earned achievement</li>
+          <li>+2 for each forum post</li>
+          <li>+1 for each forum reply</li>
+          <li>+3 for each completed exchange trade involving the address</li>
+          <li>+3 for each repaid loan</li>
+          <li>+2 for each governance vote</li>
+          <li>+2 for each treasury vote</li>
+          <li>+1 for each mined block</li>
+        </ul>
+        <p>The display score is capped at 1000. Reputation is a transparent community activity score, not proof of trustworthiness, creditworthiness, identity, or financial reliability.</p>
+
+        <h2>How to edit</h2>
+        <p>Open the Vorliq app, log in with your wallet, then visit Profiles or Account and choose Create Profile or Edit Profile.</p>
+
+        <h2>Safety reminder</h2>
+        <p>Profiles are public. Do not post private information, addresses where you live, private contact details, documents, seed phrases, passwords, or anything you would not want copied outside Vorliq.</p>
+      </div>
+    </main>
+  </body>
+</html>

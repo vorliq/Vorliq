@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
+import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
@@ -14,11 +15,6 @@ const initialOfferForm = {
   price: "",
   description: "",
 };
-
-function shortAddress(address) {
-  if (!address) return "None";
-  return address.length > 12 ? `${address.slice(0, 12)}...` : address;
-}
 
 function formatTime(timestamp) {
   return new Date(timestamp * 1000).toLocaleString();
@@ -389,7 +385,7 @@ function OfferDetails({ offer, showStatus = false }) {
       </div>
       <div className="meta-item">
         <span className="meta-label">Creator</span>
-        <span className="meta-value">{shortAddress(offer.creator_address)}</span>
+        <span className="meta-value"><AddressIdentity address={offer.creator_address} compact /></span>
       </div>
       <div className="meta-item">
         <span className="meta-label">Posted</span>
@@ -434,7 +430,7 @@ function AllTradesTable({ offers, sortBy, sortConfig }) {
               <td>{offer.amount} VLQ</td>
               <td>{offer.price}</td>
               <td>{offer.status}</td>
-              <td>{shortAddress(offer.creator_address)}</td>
+              <td><AddressIdentity address={offer.creator_address} compact /></td>
               <td>{formatTime(offer.timestamp)}</td>
             </tr>
           ))}

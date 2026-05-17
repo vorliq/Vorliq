@@ -16,6 +16,7 @@ from logger import vorliq_logger
 from network import Network
 from node import Node
 from price import PriceDiscovery
+from profiles import Profiles
 from registry import NodeRegistry
 from storage import Storage
 from transaction import SYSTEM_ADDRESSES, TREASURY_ADDRESS, Transaction
@@ -95,6 +96,8 @@ treasury.blockchain = node.blockchain
 vorliq_logger.info("Flask startup restored %s treasury proposals", len(treasury.proposals))
 price_discovery = storage.load_price_discovery()
 vorliq_logger.info("Flask startup restored %s price signals", len(price_discovery.signals))
+profiles = storage.load_profiles()
+vorliq_logger.info("Flask startup restored %s member profiles", len(profiles.profiles))
 achievements = storage.load_achievements()
 vorliq_logger.info("Flask startup restored achievements for %s wallets", len(achievements.earned))
 _imports_ready = (
@@ -108,6 +111,7 @@ _imports_ready = (
     Governance,
     Treasury,
     PriceDiscovery,
+    Profiles,
 )
 
 if network.peers:
@@ -170,6 +174,18 @@ def _page(items: list, limit: int, offset: int) -> tuple[list, int, bool]:
     total = len(items)
     page_items = items[offset : offset + limit]
     return page_items, total, offset + limit < total
+
+
+def _profile_dependencies() -> dict:
+    return {
+        "blockchain": node.blockchain,
+        "lending_pool": lending_pool,
+        "exchange": exchange,
+        "governance": governance,
+        "treasury": treasury,
+        "forum": forum,
+        "achievements": achievements,
+    }
 
 
 def _is_private_hostname(hostname: str) -> bool:
@@ -612,6 +628,93 @@ def get_wallet_achievements():
 @app.get("/achievements/all")
 def get_all_achievements():
     return jsonify({"success": True, "achievements": achievements.get_all_achievements()})
+
+
+@app.post("/profiles/profile")
+def create_or_update_profile():
+    try:
+        data = _json_body()
+        wallet_address = _require_text(data.get("wallet_address") or data.get("walletAddress"), "wallet address", 160)
+        profile = profiles.create_or_update_profile(wallet_address, data)
+        reputation = profiles.calculate_reputation(wallet_address, **_profile_dependencies())
+        storage.save_profiles(profiles)
+        public_profile = profiles.get_public_profile(wallet_address, _profile_dependencies())
+        return jsonify(
+            {
+                "success": True,
+                "profile": public_profile or profile,
+                "reputation_score": reputation["reputation_score"],
+            }
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/profiles/profile")
+def get_profile():
+    try:
+        address = _require_text(request.args.get("address"), "address", 160)
+        profile = profiles.get_public_profile(address, _profile_dependencies())
+        if not profile:
+            return jsonify({"success": False, "message": "profile not found"}), 404
+        return jsonify({"success": True, "profile": profile})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/profiles")
+def get_profiles():
+    try:
+        limit, offset = _pagination()
+        profile_rows = [
+            profiles.get_public_profile(profile["wallet_address"], _profile_dependencies()) or profile
+            for profile in profiles.get_profiles(limit, offset)
+        ]
+        total = len(profiles.profiles)
+        return jsonify(
+            {
+                "success": True,
+                "profiles": profile_rows,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+                "has_more": offset + limit < total,
+            }
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/profiles/search")
+def search_profiles():
+    try:
+        query = _require_text(request.args.get("q"), "query", 80)
+        limit, offset = _pagination()
+        matches = [
+            profiles.get_public_profile(profile["wallet_address"], _profile_dependencies()) or profile
+            for profile in profiles.search_profiles(query, limit, offset)
+        ]
+        return jsonify(
+            {
+                "success": True,
+                "profiles": matches,
+                "limit": limit,
+                "offset": offset,
+                "has_more": len(matches) == limit,
+            }
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/profiles/top")
+def get_top_profiles():
+    try:
+        raw_limit = int(request.args.get("limit", 20))
+        limit = max(1, min(raw_limit, 100))
+        return jsonify({"success": True, "profiles": profiles.get_top_profiles(limit, _profile_dependencies())})
+    except (TypeError, ValueError) as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.post("/peers/register")

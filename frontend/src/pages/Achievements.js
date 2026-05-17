@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 
+import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
@@ -68,20 +69,26 @@ function Achievements() {
       {loading && <Spinner label="Loading achievements..." />}
 
       {searched && !loading && (
-        <section className="achievement-grid">
-          {allAchievements.map((achievement) => {
-            const unlocked = earnedIds.has(achievement.id);
-            return (
-              <article
-                className={`achievement-badge ${unlocked ? "earned" : "locked"} achievement-${achievement.badge_color}`}
-                key={achievement.id}
-              >
-                <strong>{achievement.title}</strong>
-                <p>{achievement.description}</p>
-                <span>{unlocked ? "Earned" : "Locked"}</span>
-              </article>
-            );
-          })}
+        <section className="card card-pad stack">
+          <div className="section-title">
+            <h2>Achievement Lookup</h2>
+            <AddressIdentity address={address.trim()} />
+          </div>
+          <div className="achievement-grid">
+            {allAchievements.map((achievement) => {
+              const unlocked = earnedIds.has(achievement.id);
+              return (
+                <article
+                  className={`achievement-badge ${unlocked ? "earned" : "locked"} achievement-${achievement.badge_color}`}
+                  key={achievement.id}
+                >
+                  <strong>{achievement.title}</strong>
+                  <p>{achievement.description}</p>
+                  <span>{unlocked ? "Earned" : "Locked"}</span>
+                </article>
+              );
+            })}
+          </div>
         </section>
       )}
     </div>

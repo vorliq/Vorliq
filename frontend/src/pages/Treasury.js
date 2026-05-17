@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
+import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
@@ -242,7 +243,7 @@ function Treasury() {
                 <span className="eyebrow">{titleCase(proposal.category)}</span>
                 <h2>{proposal.title}</h2>
                 <p>{proposal.description}</p>
-                <strong>{formatNumber(proposal.requested_amount)} VLQ sent to {shortAddress(proposal.recipient_address)}</strong>
+                <strong>{formatNumber(proposal.requested_amount)} VLQ sent to <AddressIdentity address={proposal.recipient_address} compact /></strong>
               </article>
             ))
           )}
@@ -267,11 +268,11 @@ function TreasuryProposalCard({ proposal, voteInput, onShowVote, onVoteAddressCh
       <p>{proposal.description}</p>
       <div className="block-meta">
         <div className="meta-item"><span className="meta-label">Amount</span><span className="meta-value">{formatNumber(proposal.requested_amount)} VLQ</span></div>
-        <div className="meta-item"><span className="meta-label">Recipient</span><span className="meta-value">{shortAddress(proposal.recipient_address)}</span></div>
+        <div className="meta-item"><span className="meta-label">Recipient</span><span className="meta-value"><AddressIdentity address={proposal.recipient_address} compact /></span></div>
         <div className="meta-item"><span className="meta-label">Deadline</span><span className="meta-value">{new Date(proposal.voting_deadline * 1000).toLocaleString()}</span></div>
       </div>
       <div className="vote-bar"><span style={{ width: `${yesPercent}%` }} /></div>
-      <p>Yes {formatNumber(yes)} VLQ · No {formatNumber(no)} VLQ · Quorum {total >= proposal.quorum ? "met" : `${formatNumber(total)} / ${proposal.quorum} VLQ`}</p>
+      <p>Yes {formatNumber(yes)} VLQ / No {formatNumber(no)} VLQ / Quorum {total >= proposal.quorum ? "met" : `${formatNumber(total)} / ${proposal.quorum} VLQ`}</p>
       <div className="actions">
         <button className="button" type="button" onClick={() => onShowVote(proposal.proposal_id, "yes")}>Vote Yes</button>
         <button className="button secondary" type="button" onClick={() => onShowVote(proposal.proposal_id, "no")}>Vote No</button>
@@ -284,11 +285,6 @@ function TreasuryProposalCard({ proposal, voteInput, onShowVote, onVoteAddressCh
       )}
     </article>
   );
-}
-
-function shortAddress(address) {
-  if (!address) return "Unknown";
-  return address.length > 12 ? `${address.slice(0, 12)}...` : address;
 }
 
 function titleCase(value) {

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 
+import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
+import ProfileBadge from "../components/ProfileBadge";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
@@ -9,11 +11,12 @@ const tabs = [
   { id: "holders", label: "Top Holders" },
   { id: "miners", label: "Top Miners" },
   { id: "lenders", label: "Top Lenders" },
+  { id: "reputation", label: "Top Reputation" },
 ];
 
 function Leaderboard() {
   const [activeTab, setActiveTab] = useState("holders");
-  const [leaderboard, setLeaderboard] = useState({ holders: [], miners: [], lenders: [] });
+  const [leaderboard, setLeaderboard] = useState({ holders: [], miners: [], lenders: [], reputation: [] });
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -22,13 +25,17 @@ function Leaderboard() {
 
     async function loadLeaderboard() {
       try {
-        const response = await api.get("/leaderboard", { params: { limit: 20 } });
+        const [leaderboardResponse, reputationResponse] = await Promise.all([
+          api.get("/leaderboard", { params: { limit: 20 } }),
+          api.get("/profiles/top", { params: { limit: 20 } }),
+        ]);
 
         if (mounted) {
           setLeaderboard({
-            holders: response.data.holders || [],
-            miners: response.data.miners || [],
-            lenders: response.data.lenders || [],
+            holders: leaderboardResponse.data.holders || [],
+            miners: leaderboardResponse.data.miners || [],
+            lenders: leaderboardResponse.data.lenders || [],
+            reputation: reputationResponse.data.profiles || [],
           });
           setErrorMessage("");
         }
@@ -65,6 +72,7 @@ function Leaderboard() {
         <h1>Leaderboard</h1>
         <p className="subtitle">
           See the leading VLQ holders, miners, and members who have repaid community loans.
+          Reputation ranks public profile activity across achievements, forum, exchange, governance, treasury, and mining.
         </p>
       </section>
 
@@ -106,6 +114,9 @@ function Leaderboard() {
             valueLabel="Loans Repaid"
           />
         )}
+        {activeTab === "reputation" && (
+          <ReputationTable rows={leaderboard.reputation} />
+        )}
       </section>
     </div>
   );
@@ -131,7 +142,7 @@ function LeaderboardTable({ rows, title, valueLabel, valueSuffix = "" }) {
               {rows.map((row, index) => (
                 <tr key={row.address}>
                   <td>{index + 1}</td>
-                  <td>{shorten(row.address)}</td>
+                  <td><AddressIdentity address={row.address} compact /></td>
                   <td>
                     {formatNumber(row.value)} {valueSuffix}
                   </td>
@@ -145,8 +156,48 @@ function LeaderboardTable({ rows, title, valueLabel, valueSuffix = "" }) {
   );
 }
 
-function shorten(address) {
-  return address.length > 12 ? `${address.slice(0, 12)}...` : address;
+function ReputationTable({ rows }) {
+  return (
+    <>
+      <h2>Top Reputation</h2>
+      {rows.length === 0 ? (
+        <div className="empty-state">No public profiles have reputation yet.</div>
+      ) : (
+        <div className="table-wrap">
+          <table className="stats-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Member</th>
+                <th>Reputation</th>
+                <th>Badges</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((profile, index) => (
+                <tr key={profile.wallet_address}>
+                  <td>{index + 1}</td>
+                  <td>
+                    <div className="leaderboard-profile-cell">
+                      <AddressIdentity address={profile.wallet_address} profile={profile} compact />
+                    </div>
+                  </td>
+                  <td>{profile.reputation_score || 0}</td>
+                  <td>
+                    <div className="profile-badge-row">
+                      {(profile.badges || []).slice(0, 3).map((badge, badgeIndex) => (
+                        <ProfileBadge badge={badge} key={`${profile.wallet_address}-${badgeIndex}`} />
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
 }
 
 function formatNumber(value) {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
+import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
@@ -442,19 +443,30 @@ function Forum() {
                   }`}
                   key={post.post_id}
                 >
-                  <button className="forum-open-button" type="button" onClick={() => loadPost(post.post_id)}>
+                  <div
+                    className="forum-open-button"
+                    role="button"
+                    tabIndex="0"
+                    onClick={() => loadPost(post.post_id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        loadPost(post.post_id);
+                      }
+                    }}
+                  >
                     <strong>
                       {post.featured && <span className="featured-star" aria-label="Featured post">&#9733;</span>}
                       {post.title}
                     </strong>
                     <span className="badge forum-category">{post.category || "general"}</span>
-                    <span>By {shortAddress(post.author_address)}</span>
+                    <span>By <AddressIdentity address={post.author_address} compact /></span>
                     <span>
                       {post.vote_count} votes - {post.feature_vote_count || 0} feature votes - {post.replies?.length || 0} replies - {post.tips?.length || 0} tips
                     </span>
                     {post.image_data && <img className="forum-thumb" src={post.image_data} alt="Forum attachment" />}
                     <small>{formatTime(post.timestamp)}</small>
-                  </button>
+                  </div>
                   <button className="button secondary small-button" type="button" onClick={() => toggleTipForm(`post:${post.post_id}`)}>
                     Tip
                   </button>
@@ -574,7 +586,7 @@ function Forum() {
               <div className="block-meta">
                 <div className="meta-item">
                   <span className="meta-label">Author</span>
-                  <span className="meta-value">{shortAddress(selectedPost.author_address)}</span>
+                  <span className="meta-value"><AddressIdentity address={selectedPost.author_address} compact /></span>
                 </div>
                 <div className="meta-item">
                   <span className="meta-label">Votes</span>
@@ -622,7 +634,7 @@ function Forum() {
                       <p>{reply.body}</p>
                       {reply.image_data && <img className="forum-image" src={reply.image_data} alt="Reply attachment" />}
                       <span>
-                        {shortAddress(reply.author_address)} - {reply.vote_count} votes - {reply.tips?.length || 0} tips -{" "}
+                        <AddressIdentity address={reply.author_address} compact /> - {reply.vote_count} votes - {reply.tips?.length || 0} tips -{" "}
                         {formatTime(reply.timestamp)}
                       </span>
                       <button className="button secondary small-button" type="button" onClick={() => toggleTipForm(`reply:${reply.reply_id}`)}>

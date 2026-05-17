@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
+import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
@@ -23,11 +24,6 @@ const initialForm = {
   parameter: "",
   description: "",
 };
-
-function shortAddress(address) {
-  if (!address) return "";
-  return address.length > 12 ? `${address.slice(0, 12)}...` : address;
-}
 
 function categoryLabel(category) {
   return categories.find(([value]) => value === category)?.[1] || category;
@@ -337,7 +333,7 @@ function ProposalCard({
       )}
       <div className="meta-item">
         <span className="meta-label">Proposer</span>
-        <span className="meta-value">{shortAddress(proposal.proposer_address)}</span>
+        <span className="meta-value"><AddressIdentity address={proposal.proposer_address} compact /></span>
       </div>
       <div className="meta-item">
         <span className="meta-label">Voting Deadline</span>
