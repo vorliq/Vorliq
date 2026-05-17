@@ -159,7 +159,7 @@ test("App renders without crashing inside its providers", async () => {
 
   render(<App />);
 
-  expect(await screen.findByRole("heading", { name: /welcome to vorliq/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: /vorliq/i })).toBeInTheDocument();
   expect(screen.getByRole("navigation")).toBeInTheDocument();
 });
 
@@ -238,7 +238,7 @@ test("mobile hamburger announces expanded state when opened", async () => {
 
   render(<App />);
 
-  await screen.findByRole("heading", { name: /welcome to vorliq/i });
+  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
   const hamburger = screen.getByRole("button", { name: /open navigation menu/i });
 
   expect(hamburger).toHaveAttribute("aria-expanded", "false");
@@ -259,6 +259,8 @@ test("wallet safety confirmation blocks wallet creation until checked", async ()
   api.post.mockResolvedValueOnce({ data: walletResponse });
   renderWithProviders(<Wallet />, "/wallet");
 
+  expect(screen.getByLabelText(/risk notice/i)).toHaveTextContent(/vlq has no guaranteed market value/i);
+
   const createButton = screen.getByRole("button", { name: /create new wallet/i });
   expect(createButton).toBeDisabled();
 
@@ -273,6 +275,17 @@ test("wallet safety confirmation blocks wallet creation until checked", async ()
   await waitFor(() => {
     expect(api.post).toHaveBeenCalledWith("/wallet/create");
   });
+});
+
+test("Footer exposes a public Risk Notice link", async () => {
+  window.localStorage.setItem(ONBOARDING_KEY, "true");
+
+  render(<App />);
+
+  expect(await screen.findByRole("link", { name: /risk notice/i })).toHaveAttribute(
+    "href",
+    "https://vorliq.github.io/Vorliq/terms.html#risk-notice"
+  );
 });
 
 test("wallet backup import rejects invalid JSON", async () => {

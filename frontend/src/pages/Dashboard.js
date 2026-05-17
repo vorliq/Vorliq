@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import SocialLinks from "../components/SocialLinks";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
@@ -120,13 +121,24 @@ function Dashboard() {
 
   return (
     <div className="page">
-      <section className="hero">
-        <span className="eyebrow">VLQ Community Chain</span>
-        <h1>Welcome to Vorliq</h1>
+      <section className="hero dashboard-brand-hero">
+        <img className="hero-logo" src={logo} alt="Vorliq logo" />
+        <span className="eyebrow brand-pill">Community Blockchain Platform</span>
+        <h1>
+          Vorliq
+          <span> Save, send, lend, trade and govern with <em>VLQ</em></span>
+        </h1>
         <p className="subtitle">
-          Vorliq is a community savings bank running on its own blockchain, built for people
-          who want to save, lend, and keep shared records together.
+          Vorliq is experimental open-source community blockchain software for wallets,
+          mining, community lending, exchange offers, governance, and transparent public records.
         </p>
+        <div className="hero-actions">
+          <Link className="button" to="/login">Create Wallet</Link>
+          <Link className="button secondary" to="/mine">Mine VLQ</Link>
+          <Link className="button secondary" to="/forum">Explore Forum</Link>
+          <Link className="button secondary" to="/transparency">View Transparency</Link>
+        </div>
+        <SocialLinks compact />
       </section>
 
       <ErrorMessage message={errorMessage} />
@@ -221,10 +233,10 @@ function Dashboard() {
         <span className="eyebrow">About Vorliq</span>
         <h2>About Vorliq</h2>
         <p>
-          Vorliq is a self contained community savings bank that runs on its own blockchain,
-          giving communities a shared place to save, lend, and track value together. VLQ is
-          the native coin used inside the Vorliq network. Every VLQ transaction is signed with
-          cryptographic keys and recorded by the chain after it is mined into a block.
+          Vorliq uses the phrase community savings bank as a plain-English metaphor for shared
+          community software. Vorliq is not a licensed bank or financial institution. VLQ is the
+          native coin used inside the experimental Vorliq network, has no guaranteed market value,
+          and every user remains responsible for their own keys, choices, and local rules.
         </p>
         <p>Deployed automatically via GitHub Actions.</p>
       </section>

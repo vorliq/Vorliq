@@ -3,30 +3,63 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Vorliq Terms</title>
+    <title>Vorliq Terms and Risk Notice</title>
+    <meta name="description" content="Plain-English terms, risk notice, and responsible-use information for Vorliq experimental community blockchain software." />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet" />
     <style>
-      body { margin:0; font-family:Inter,Arial,sans-serif; background:#0f0f1a; color:#fff; }
-      main { width:min(860px,calc(100% - 32px)); margin:0 auto; padding:56px 0; }
-      a { color:#6c63ff; } h1 { font-size:clamp(2.4rem,8vw,4.5rem); margin:0 0 20px; } h2 { margin-top:34px; }
-      p { color:#c7c7d4; line-height:1.8; } .card { background:#1a1a2e; border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:24px; }
+      :root { --bg:#020817; --card:rgba(8,22,43,.78); --accent:#18d7c9; --blue:#1479ff; --green:#86e33b; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.24); }
+      * { box-sizing:border-box; }
+      body { margin:0; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 10% 15%,rgba(134,227,59,.14),transparent 26rem),radial-gradient(circle at 90% 25%,rgba(20,121,255,.2),transparent 30rem),var(--bg); color:var(--text); }
+      main { width:min(920px,calc(100% - 32px)); margin:0 auto; padding:56px 0; }
+      a { color:var(--accent); font-weight:800; }
+      a:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+      h1 { font-size:clamp(2.4rem,8vw,4.8rem); margin:18px 0 14px; }
+      h2 { margin:34px 0 10px; }
+      p { color:var(--muted); line-height:1.8; }
+      .card { background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02)),var(--card); border:1px solid var(--border); border-radius:18px; box-shadow:0 28px 90px rgba(0,0,0,.32); padding:24px; }
+      .pill { display:inline-flex; border:1px solid var(--border); border-radius:999px; color:var(--green); font-size:.82rem; font-weight:900; letter-spacing:.08em; padding:10px 14px; text-transform:uppercase; }
     </style>
   </head>
   <body>
     <main>
       <a href="index.html">Back to Vorliq</a>
+      <span class="pill" id="risk-notice">Risk Notice</span>
       <h1>Terms of Use</h1>
       <div class="card">
-        <p>Vorliq is open source community software. Users run, connect, and use Vorliq at their own responsibility. VLQ is the native coin of the Vorliq community blockchain and is not a promise of profit, a bank deposit, or a claim against any company.</p>
-        <h2>Wallet Responsibility</h2>
-        <p>Users are responsible for protecting their private keys. Lost private keys cannot be recovered by Vorliq, the community, or the project maintainers. Users should test small amounts first and keep backups safely.</p>
-        <h2>Self-Custody</h2>
-        <p>Vorliq is a self-custody blockchain application. A private key controls the wallet address connected to it. Anyone who obtains a user's private key can spend funds or act as that wallet. Vorliq does not custody user wallets, does not know wallet passwords, and cannot reverse transactions because a key was lost, stolen, copied, or entered into an unsafe website.</p>
-        <p>Users must keep encrypted wallet backups, private keys, and passwords safe. Users should verify they are using the official site at <a href="https://vorliq.org">https://vorliq.org</a> or their own trusted local node before entering sensitive wallet information.</p>
-        <h2>Community Features</h2>
-        <p>Lending, exchange, forum, governance, treasury, chat, and registry features are community tools. Users should behave lawfully, respectfully, and carefully when making proposals, offers, votes, posts, or trades.</p>
-        <h2>No Warranty</h2>
-        <p>The software is provided under the MIT License without warranty. Public nodes may be offline, data may change, and community rules may evolve through governance and software updates.</p>
+        <p>This page is a plain-English risk and terms summary for Vorliq. It is not legal advice. Vorliq is experimental open-source community blockchain software. People who use Vorliq should make their own decisions, check their local laws, protect their keys, and avoid treating VLQ or any Vorliq feature as a guaranteed financial product.</p>
+
+        <h2>Experimental Software</h2>
+        <p>Vorliq is live software, but it is still experimental. Features can contain bugs, public nodes can go offline, governance can change supported rules, and user interfaces can change as the project evolves. Use small test amounts first and do not rely on Vorliq for essential financial needs.</p>
+
+        <h2>No Financial Advice</h2>
+        <p>Vorliq does not provide financial, investment, tax, legal, or accounting advice. Nothing in the app, documentation, SDK, whitepaper, forum, chat, pitch materials, or social posts should be treated as advice to buy, sell, hold, mine, lend, borrow, trade, or vote in a particular way.</p>
+
+        <h2>No Guaranteed Value</h2>
+        <p>VLQ has no guaranteed market value, is not listed on public exchanges by the Vorliq project, and should not be treated as an investment promise. Mining rewards, treasury rewards, tips, exchange offers, lending activity, governance rewards, and any other economic activity are experimental software features and may change through governance or software updates.</p>
+
+        <h2>Self Custody</h2>
+        <p>Vorliq does not custody user wallets. A private key controls its wallet address. Lost keys cannot be recovered by Vorliq, the community, or project maintainers. Anyone who obtains a private key can control that wallet. Users are responsible for storing keys, passwords, encrypted backups, and devices safely.</p>
+
+        <h2>Community Exchange Risks</h2>
+        <p>The exchange feature is a community message board for buy and sell offers. It is not a licensed exchange, broker, dealer, escrow service, or marketplace operator. Users are responsible for evaluating counterparties, local rules, delivery, payment, taxes, disputes, and whether an offer is lawful or appropriate.</p>
+
+        <h2>Lending Risks</h2>
+        <p>The lending feature is an experimental community voting and record-keeping tool. Vorliq is not a licensed lender, bank, credit provider, or debt collector. Loan approvals, repayments, and community votes do not guarantee repayment, enforceability, credit quality, or legal rights.</p>
+
+        <h2>Mining Risks</h2>
+        <p>Mining is an experimental proof-of-work feature used to add blocks to the Vorliq chain. Rewards are not a guaranteed income source. Mining rules, cooldowns, treasury splits, difficulty, and reward parameters can change through governance or software updates.</p>
+
+        <h2>Governance Risks</h2>
+        <p>Governance lets VLQ holders vote on supported settings. Votes can produce outcomes other users disagree with, and governance logic can have limitations or bugs. Users should read proposals carefully and understand that approved proposals may change how the network behaves.</p>
+
+        <h2>Availability and Data Risks</h2>
+        <p>The public node is a convenience gateway, not a guarantee of uptime or decentralization. Data may be delayed, incomplete, corrupted by bugs, or unavailable during maintenance or incidents. Decentralization improves only when independent operators run and verify their own nodes.</p>
+
+        <h2>User Responsibility</h2>
+        <p>Users are responsible for their own actions, keys, wallet backups, posts, offers, votes, local laws, taxes, and risk decisions. Do not post private information in public fields, do not share private keys, and do not use Vorliq in a way that violates laws or harms other community members.</p>
+
+        <h2>No Regulated Financial Institution</h2>
+        <p>Vorliq is not a licensed bank, broker, exchange, lender, investment adviser, money transmitter, custodian, or financial institution. The phrase community savings bank is used only as a metaphor for community-owned record keeping and coordination software, not as a claim that Vorliq is a regulated bank.</p>
       </div>
     </main>
   </body>

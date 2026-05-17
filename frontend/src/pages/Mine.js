@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
 import { useNotifications } from "../context/NotificationContext";
 import api from "../helpers/api";
@@ -76,6 +77,7 @@ function Mine() {
       </section>
 
       <ErrorMessage message={errorMessage} />
+      <RiskNotice />
 
       <div className="grid two-column">
         <section className="card card-pad">

@@ -4,12 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Vorliq Privacy Policy</title>
+    <meta name="description" content="Privacy information for Vorliq public blockchain data, community content, local wallet storage, and third-party form handling." />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet" />
     <style>
-      body { margin:0; font-family:Inter,Arial,sans-serif; background:#0f0f1a; color:#fff; }
-      main { width:min(860px,calc(100% - 32px)); margin:0 auto; padding:56px 0; }
-      a { color:#6c63ff; } h1 { font-size:clamp(2.4rem,8vw,4.5rem); margin:0 0 20px; } h2 { margin-top:34px; }
-      p { color:#c7c7d4; line-height:1.8; } .card { background:#1a1a2e; border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:24px; }
+      :root { --bg:#020817; --card:rgba(8,22,43,.78); --accent:#18d7c9; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.24); }
+      * { box-sizing:border-box; }
+      body { margin:0; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 12% 14%,rgba(134,227,59,.14),transparent 26rem),radial-gradient(circle at 88% 22%,rgba(20,121,255,.2),transparent 30rem),var(--bg); color:var(--text); }
+      main { width:min(920px,calc(100% - 32px)); margin:0 auto; padding:56px 0; }
+      a { color:var(--accent); font-weight:800; }
+      a:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+      h1 { font-size:clamp(2.4rem,8vw,4.8rem); margin:18px 0 14px; }
+      h2 { margin:34px 0 10px; }
+      p { color:var(--muted); line-height:1.8; }
+      .card { background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02)),var(--card); border:1px solid var(--border); border-radius:18px; box-shadow:0 28px 90px rgba(0,0,0,.32); padding:24px; }
     </style>
   </head>
   <body>
@@ -17,15 +24,26 @@
       <a href="index.html">Back to Vorliq</a>
       <h1>Privacy Policy</h1>
       <div class="card">
-        <p>Vorliq is designed to keep wallet keys under the user's control. Vorliq servers do not store user private keys, wallet passwords, encrypted wallet backup passwords, or recovery phrases. If a user loses a private key or wallet password, Vorliq cannot recover it.</p>
-        <h2>Blockchain Data</h2>
-        <p>The server stores public blockchain and community data needed to run the network. This includes blocks, pending and confirmed transactions, public wallet addresses involved in transactions, forum posts and replies, lending requests, exchange offers, governance proposals and votes, treasury proposals, price signals, achievements, public node registry entries, diagnostics, reports, and operational logs.</p>
-        <p>Transactions, blocks, forum posts, lending proposals, exchange offers, governance votes, treasury proposals, and public node registry entries are public community data. Users should not post private information in public blockchain or community features.</p>
+        <p>Vorliq is designed around self-custody. Vorliq servers do not store user private keys, wallet passwords, encrypted wallet backup passwords, or recovery phrases. If a user loses a private key or wallet password, Vorliq cannot recover it.</p>
+
+        <h2>Public by Design</h2>
+        <p>Blockchain data and public community content are public by design. Blocks, confirmed transactions, public wallet addresses involved in transactions, forum posts, replies, governance proposals and votes, exchange offers, price signals, treasury proposals, public node registry entries, and visible wallet activity may be stored, displayed, copied, indexed, cached, or shared by nodes and users.</p>
+
+        <h2>Community Content</h2>
+        <p>Forum posts, chat messages, images, screenshots, governance proposals, exchange offers, price signals, lending requests, registry entries, ambassador-related public content, and similar submissions should be treated as public unless the interface clearly says otherwise. Users should not post private information, private keys, passwords, personal documents, financial details, or sensitive identity information in public fields.</p>
+
+        <h2>Third-Party Services</h2>
+        <p>Newsletter signup and ambassador application forms use Formspree. When a user submits an email address, name, location, or application text through those forms, Formspree processes that submission and may transmit it to Vorliq's email account. Users should review Formspree's privacy practices before submitting personal information.</p>
+
         <h2>Local Wallet Storage</h2>
-        <p>The web app may store encrypted wallet data in the user's browser localStorage. That local record contains the public wallet address, public key, encrypted private key, encryption salt, initialization vector, and encryption settings. The password used to decrypt it is not stored by Vorliq. The mobile app stores wallet data locally on the user's device.</p>
-        <p>Users should be careful on shared, borrowed, public, or work-managed devices. Anyone with access to the device, browser profile, device backups, malware, or screen recording tools may be able to attack wallet data or see sensitive information if the user reveals a private key.</p>
-        <h2>Newsletter and Forms</h2>
-        <p>Newsletter and ambassador forms are handled through Formspree. When a user submits an email address or application, Formspree processes that submission and forwards it to Vorliq. Users should review Formspree's privacy practices before submitting personal information.</p>
+        <p>The web app may store encrypted wallet data in the user's browser localStorage. That local record can include a public wallet address, public key, encrypted private key, encryption salt, initialization vector, and encryption settings. The password used to decrypt it is not stored by Vorliq. The mobile app stores wallet data locally on the user's device.</p>
+
+        <h2>Operational Data</h2>
+        <p>Vorliq infrastructure can produce logs for service health, diagnostics, errors, deployment status, rate limiting, and security monitoring. Logs are intended to operate the public node and may include IP addresses, request paths, timestamps, and technical metadata.</p>
+
+        <h2>User Caution</h2>
+        <p>Users should be careful on shared, borrowed, public, or work-managed devices. Anyone with access to a device, browser profile, backup, malware, screen recording tool, or private key can create serious wallet risk.</p>
+
         <h2>Contact</h2>
         <p>Questions can be sent through the community channels listed on the Vorliq website or through GitHub at <a href="https://github.com/vorliq/Vorliq">https://github.com/vorliq/Vorliq</a>.</p>
       </div>

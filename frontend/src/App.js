@@ -3,6 +3,7 @@ import { BrowserRouter, NavLink, Route, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+import AnimatedBrandBackground from "./components/AnimatedBrandBackground";
 import NotificationPanel from "./components/NotificationPanel";
 import Onboarding from "./components/Onboarding";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -178,6 +179,7 @@ function AppShell() {
 
   return (
     <div className="app-shell">
+      <AnimatedBrandBackground />
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>

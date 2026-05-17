@@ -123,7 +123,10 @@ export default function HomeScreen() {
 
       <View style={styles.logoWrap}>
         <Image source={logo} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.welcome}>Welcome to your community savings bank on its own blockchain.</Text>
+        <Text style={styles.welcome}>
+          Welcome to experimental open-source community blockchain software. Vorliq is not a
+          licensed bank, and VLQ has no guaranteed market value.
+        </Text>
       </View>
 
       {loading ? (

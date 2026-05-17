@@ -2,6 +2,12 @@
 
 The Vorliq SDK is the official JavaScript library for building applications on the Vorliq blockchain network. It gives developers a small, practical client for creating wallets, checking VLQ balances, signing transactions locally with SECP256K1, mining blocks, reading lending and exchange data, watching for new blocks, and creating payment URLs that can be turned into QR codes.
 
+## Responsible Use
+
+Vorliq is experimental open-source community blockchain software. VLQ has no guaranteed market value and should not be represented as a guaranteed-value asset, investment product, bank deposit, or promised source of income. Applications built with this SDK should clearly disclose the experimental status of the network, the self-custody model, and the fact that users are responsible for their own keys, actions, local laws, and risk decisions.
+
+Developers should not collect or store users private keys unless they fully understand custody risk and have a strong security model. In most cases, applications should sign locally on the user's device, avoid logging private keys, avoid sending keys to servers, and give users plain warnings before they create transactions, exchange offers, lending requests, mining actions, governance votes, or treasury votes.
+
 Install the SDK from the `sdk` folder in this repository while it is being developed locally. From the project root, run `cd sdk`, then run `npm install`, and then run `npm run build`. Applications can import the built SDK from `dist/vorliq-sdk.js`. The default node is `https://vorliq.org`, but you can pass any compatible Vorliq node URL when you create the client.
 
 ```js

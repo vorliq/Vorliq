@@ -4,14 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Vorliq | Community Blockchain and VLQ Coin</title>
-    <meta name="description" content="Vorliq is a community savings bank built on its own blockchain with the VLQ coin." />
+    <meta name="description" content="Vorliq is experimental open-source community blockchain software with the VLQ coin." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
     <style>
-      :root { --bg:#0f0f1a; --card:#1a1a2e; --card2:#20203a; --accent:#6c63ff; --text:#fff; --muted:#c7c7d4; --border:rgba(255,255,255,.12); --green:#35d07f; --orange:#ffab4a; }
+      :root { --bg:#020817; --card:rgba(8,22,43,.78); --card2:#07152b; --accent:#18d7c9; --blue:#1479ff; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.24); --green:#86e33b; --orange:#ffab4a; }
       * { box-sizing:border-box; }
-      body { margin:0; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at top left,rgba(108,99,255,.2),transparent 34rem),var(--bg); color:var(--text); }
+      body { margin:0; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 10% 15%,rgba(134,227,59,.18),transparent 28rem),radial-gradient(circle at 88% 24%,rgba(20,121,255,.25),transparent 32rem),linear-gradient(180deg,#020817,#061326 56%,#020817); color:var(--text); }
+      body:before { content:""; position:fixed; inset:0; pointer-events:none; background-image:radial-gradient(circle,rgba(24,215,201,.34) 1px,transparent 1.8px); background-size:22px 22px; opacity:.12; mask-image:radial-gradient(circle at 0 58%,#000 0 38%,transparent 66%); }
       a { color:inherit; }
       a:focus-visible, button:focus-visible, input:focus-visible { outline:3px solid var(--accent); outline-offset:3px; box-shadow:0 0 0 5px rgba(108,99,255,.22); }
       .wrap { width:min(1120px,calc(100% - 32px)); margin:0 auto; }
@@ -20,8 +21,8 @@
       .brand { display:flex; align-items:center; gap:12px; font-weight:900; text-decoration:none; font-size:1.15rem; }
       .brand img { width:42px; height:42px; object-fit:contain; }
       .links { display:flex; gap:12px; flex-wrap:wrap; }
-      .links a, .button { border:1px solid var(--border); border-radius:10px; padding:11px 14px; text-decoration:none; color:var(--muted); font-weight:800; background:rgba(255,255,255,.04); }
-      .button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+      .links a, .button { border:1px solid var(--border); border-radius:999px; padding:11px 14px; text-decoration:none; color:var(--muted); font-weight:800; background:rgba(255,255,255,.04); }
+      .button.primary { background:linear-gradient(90deg,var(--green),var(--accent),var(--blue)); color:#fff; border-color:transparent; }
       .hero { min-height:72vh; display:grid; align-items:center; padding:64px 0; }
       .hero-inner { display:grid; justify-items:center; text-align:center; gap:20px; }
       .logo { width:120px; height:120px; object-fit:contain; }
@@ -34,11 +35,13 @@
       .actions { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
       section { padding:56px 0; }
       .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
-      .card { background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.025)); border:1px solid var(--border); border-radius:12px; padding:22px; box-shadow:0 24px 70px rgba(0,0,0,.22); }
+      .card { background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02)),var(--card); border:1px solid var(--border); border-radius:18px; padding:22px; box-shadow:0 24px 70px rgba(0,0,0,.26),0 0 34px rgba(24,215,201,.08); backdrop-filter:blur(14px); }
       .coin { display:grid; grid-template-columns:minmax(0,1fr) minmax(260px,.6fr); gap:18px; align-items:stretch; }
       .stat { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px; }
       .stat strong { display:block; color:var(--accent); font-size:2rem; margin-bottom:8px; }
       .community { display:flex; gap:12px; flex-wrap:wrap; }
+      .social-button { display:inline-flex; align-items:center; gap:8px; }
+      .social-button svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
       .newsletter { background:linear-gradient(180deg,rgba(108,99,255,.15),rgba(255,255,255,.025)); border:1px solid var(--border); border-radius:16px; padding:28px; text-align:center; }
       .newsletter p { max-width:740px; margin:0 auto 20px; }
       .newsletter-form { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin-top:20px; }
@@ -70,6 +73,7 @@
           <a href="incidents.html">Incident Response</a>
           <a href="privacy.html">Privacy</a>
           <a href="terms.html">Terms</a>
+          <a href="brand.html">Brand Guide</a>
           <a href="https://github.com/vorliq/Vorliq">GitHub</a>
         </div>
       </nav>
@@ -81,7 +85,7 @@
           <img class="logo" src="logo.png" alt="Vorliq logo" />
           <div class="eyebrow">Version 1.0 is live</div>
           <h1>Vorliq</h1>
-          <p class="subtitle">Your Community Your Coin. Vorliq is a self-contained community savings, lending, exchange, and governance platform powered by its own blockchain and the VLQ coin.</p>
+          <p class="subtitle">Your Community Your Coin. Vorliq is experimental open-source community blockchain software powered by its own lightweight chain and the native VLQ coin.</p>
           <div class="actions">
             <a class="button primary" href="https://github.com/vorliq/Vorliq">Download Vorliq</a>
             <a class="button" href="whitepaper.html">Read the Whitepaper</a>
@@ -96,6 +100,7 @@
             <a class="button" href="recovery.html">Recovery Guide</a>
             <a class="button" href="wallet-safety.html">Wallet Safety</a>
             <a class="button" href="incidents.html">Incident Response</a>
+            <a class="button" href="brand.html">Brand Guide</a>
           </div>
         </div>
       </section>
@@ -105,8 +110,8 @@
           <h2>Complete Platform</h2>
           <div class="grid">
             <article class="card"><h3>Own Blockchain</h3><p>Vorliq runs on its own proof of work blockchain with signed transactions, mined blocks, persistent storage, and automatic validation. It does not depend on any external cryptocurrency network.</p></article>
-            <article class="card"><h3>Community Lending</h3><p>Members can request VLQ loans and the community can approve or reject them with balance-weighted voting. Approved loans are issued through the Vorliq system.</p></article>
-            <article class="card"><h3>Decentralized Exchange</h3><p>Community members can post buy and sell offers for VLQ with flexible real-world pricing such as money, goods, services, or time.</p></article>
+            <article class="card"><h3>Community Lending</h3><p>Members can request VLQ support and the community can approve or reject requests with balance-weighted voting. This is experimental software, not a licensed lending service.</p></article>
+            <article class="card"><h3>Decentralized Exchange</h3><p>Community members can post buy and sell offers for VLQ with flexible real-world pricing. This is an experimental offer board, not a licensed exchange.</p></article>
             <article class="card"><h3>Governance</h3><p>VLQ holders can propose and vote on network rule changes. Approved proposals can automatically update supported settings such as mining reward and difficulty.</p></article>
             <article class="card"><h3>Mobile App</h3><p>The React Native Expo mobile app brings wallet, sending, lending, exchange, governance, settings, and notifications to Android and iOS phones.</p></article>
             <article class="card"><h3>Peer Network</h3><p>Vorliq nodes can register peers, discover other nodes, broadcast transactions and blocks, synchronize chains, and monitor network health.</p></article>
@@ -118,7 +123,7 @@
         <div class="wrap coin">
           <div class="card">
             <h2>The VLQ Coin</h2>
-            <p>VLQ is the native coin of Vorliq. It has a maximum supply of 21 million VLQ, a starting mining reward of 50 VLQ per block, and a halving schedule every 210000 blocks. The community can vote through governance to change supported network parameters over time.</p>
+            <p>VLQ is the native coin of Vorliq. It has a maximum supply of 21 million VLQ, a starting mining reward of 50 VLQ per block, and a halving schedule every 210000 blocks. VLQ has no guaranteed market value, and the community can vote through governance to change supported network parameters over time.</p>
           </div>
           <div class="stat"><strong>21,000,000</strong><p>Maximum VLQ supply</p></div>
           <div class="stat"><strong>50 VLQ</strong><p>Starting mining reward</p></div>
@@ -129,13 +134,13 @@
       <section>
         <div class="wrap">
           <h2>Live Network</h2>
-          <p>Vorliq is ready for community members to run nodes, create wallets, mine blocks, connect peers, test lending, post exchange offers, and vote on governance proposals. Download the project from GitHub, follow the setup guide, and join the public channels to help grow the network.</p>
+          <p>Vorliq is ready for community members to run nodes, create wallets, mine blocks, connect peers, test lending-style features, post exchange offers, and vote on governance proposals. Vorliq is not a licensed bank, broker, exchange, lender, or investment adviser. Download the project from GitHub, follow the setup guide, and join the public channels to help test and improve the network.</p>
           <div class="community">
-            <a class="button" href="https://discord.gg/qpX5sHD4pC">Discord</a>
-            <a class="button" href="https://t.me/Vorliq">Telegram</a>
-            <a class="button" href="https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS">Reddit</a>
-            <a class="button" href="https://github.com/vorliq/Vorliq">GitHub</a>
-            <a class="button" href="https://x.com/vorliq">X</a>
+            <a class="button social-button" href="https://discord.gg/qpX5sHD4pC"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.3 8.7c2.4-.7 5-.7 7.4 0"/><path d="M9.1 15.2c2 .7 3.8.7 5.8 0"/><path d="M8.8 12.9h.01"/><path d="M15.2 12.9h.01"/><path d="M7.4 5.5c3-1.2 6.2-1.2 9.2 0 1.7 2.4 2.6 5.2 2.7 8.4-2.1 1.6-4.1 2.5-6.1 2.8l-.8-1.4"/><path d="M11.6 15.3l-.8 1.4c-2-.3-4-1.2-6.1-2.8.1-3.2 1-6 2.7-8.4"/></svg>Discord</a>
+            <a class="button social-button" href="https://t.me/Vorliq"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4 3 11.2l6.9 2.2L17 8.2l-5.4 6.6.2 5.2 3.1-3.4 3.9 2.9L21 4Z"/></svg>Telegram</a>
+            <a class="button social-button" href="https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.4 14.6c1.9 1.2 5.3 1.2 7.2 0"/><path d="M9.2 12.2h.01"/><path d="M14.8 12.2h.01"/><path d="M12 7.8c4.1 0 7.4 2.2 7.4 4.9s-3.3 4.9-7.4 4.9-7.4-2.2-7.4-4.9S7.9 7.8 12 7.8Z"/></svg>Reddit</a>
+            <a class="button social-button" href="https://github.com/vorliq/Vorliq"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4 1.3-4-2-5.6-2.4"/><path d="M15 22v-3.5c0-1 .1-1.6-.5-2.2 2.8-.3 5.8-1.4 5.8-6A4.7 4.7 0 0 0 19 7.1c.1-.3.6-1.6-.1-3.1 0 0-1.1-.3-3.5 1.3a12.2 12.2 0 0 0-6.4 0C6.6 3.7 5.5 4 5.5 4c-.7 1.5-.2 2.8-.1 3.1a4.7 4.7 0 0 0-1.3 3.2c0 4.6 3 5.7 5.8 6-.6.6-.6 1.3-.5 2.2V22"/></svg>GitHub</a>
+            <a class="button social-button" href="https://x.com/vorliq"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l16 16"/><path d="M20 4 4 20"/></svg>X</a>
           </div>
         </div>
       </section>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
@@ -165,6 +166,7 @@ function Governance() {
       </section>
 
       <ErrorMessage message={errorMessage} />
+      <RiskNotice />
 
       <div className="tab-list">
         <button className={`tab-button ${activeTab === "active" ? "active" : ""}`} type="button" onClick={() => setActiveTab("active")}>

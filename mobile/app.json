@@ -3,7 +3,7 @@
     "name": "Vorliq",
     "slug": "vorliq",
     "version": "1.0.0",
-    "description": "Your community savings bank on the blockchain",
+    "description": "Experimental open-source community blockchain software with the VLQ coin",
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "dark",

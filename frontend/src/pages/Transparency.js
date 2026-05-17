@@ -112,6 +112,17 @@ function Transparency() {
       </section>
 
       <section className="card card-pad health-section">
+        <h2>Risk and Limitations</h2>
+        <p>
+          Vorliq is not a licensed bank, broker, exchange, lender, investment adviser, or
+          financial institution. The public node at vorliq.org is a convenience gateway for
+          visitors, not a guarantee that the network is fully decentralized. Decentralization
+          improves only as more independent operators run nodes, keep their own backups, and
+          verify the chain for themselves.
+        </p>
+      </section>
+
+      <section className="card card-pad health-section">
         <h2>Open Source Proof</h2>
         <div className="whitepaper-links">
           <a href="https://github.com/vorliq/Vorliq" target="_blank" rel="noreferrer">

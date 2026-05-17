@@ -6,7 +6,7 @@ const steps = [
   {
     title: "Welcome to Vorliq",
     body:
-      "Vorliq is a community savings bank running on its own lightweight blockchain. The coin inside the network is called VLQ, and the system runs independently without depending on Ethereum, Bitcoin, or any outside cryptocurrency network.",
+      "Vorliq is experimental community blockchain software running on its own lightweight chain. The coin inside the network is called VLQ, and the system runs independently without depending on Ethereum, Bitcoin, or any outside cryptocurrency network.",
   },
   {
     title: "Create Your Wallet",

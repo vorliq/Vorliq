@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
 import QRPayment from "../components/QRPayment";
+import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
@@ -73,6 +74,7 @@ function Wallet() {
       </section>
 
       <ErrorMessage message={errorMessage} />
+      <RiskNotice />
 
       <div className="grid two-column">
         <section className="card card-pad stack">

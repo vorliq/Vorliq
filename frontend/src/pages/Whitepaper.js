@@ -11,10 +11,10 @@ function Whitepaper() {
     <div className="page">
       <section className="hero">
         <span className="eyebrow">Vorliq Whitepaper</span>
-        <h1>Community savings on an independent blockchain</h1>
+        <h1>Community blockchain software on an independent chain</h1>
         <p className="subtitle">
-          Vorliq is designed to give communities a simple, transparent, and self contained
-          way to save, send, and eventually lend value using VLQ.
+          Vorliq is experimental open-source software for communities that want to test
+          transparent wallets, signed transactions, community requests, and governance using VLQ.
         </p>
       </section>
 
@@ -23,7 +23,7 @@ function Whitepaper() {
           <h2>Introduction</h2>
           <p>
             Vorliq is a self contained community blockchain platform where ordinary people can
-            save, send, and lend VLQ without depending on any external cryptocurrency network.
+            test saving-style coordination, sending, and lending-style requests with VLQ without depending on any external cryptocurrency network.
             The platform is built around the idea that a community should be able to keep its
             own ledger, operate its own coin, and use that shared record without relying on
             Ethereum, Bitcoin, Solana, or any other outside chain.
@@ -33,7 +33,7 @@ function Whitepaper() {
             involve high fees, technical complexity, and dependence on infrastructure that the
             community does not control. Vorliq solves this by keeping the blockchain, wallet
             system, transaction layer, and user application inside one focused network built
-            for practical savings and lending use.
+            for practical community coordination use.
           </p>
         </section>
 
@@ -41,15 +41,16 @@ function Whitepaper() {
           <h2>The VLQ Coin</h2>
           <p>
             VLQ is the native coin of the Vorliq network. It is the unit of value used for
-            transactions, mining rewards, balances, and future community lending activity.
+            transactions, mining rewards, balances, and community voting activity.
             Vorliq uses a maximum supply of 21 million VLQ, mirroring the scarcity model made
             familiar by Bitcoin while keeping the network independent and community focused.
           </p>
           <p>
             The initial mining reward is 50 VLQ per block, and this reward halves every 210000
             blocks. No VLQ can be created outside of mining rewards and the genesis allocation,
-            which means supply growth is transparent, predictable, and controlled by the rules
-            of the chain rather than by a central operator.
+            which means supply growth is transparent and controlled by the rules of the chain
+            rather than by a central operator. VLQ has no guaranteed market value and should
+            not be treated as an investment promise.
           </p>
         </section>
 
@@ -72,16 +73,14 @@ function Whitepaper() {
         <section>
           <h2>Community Governance</h2>
           <p>
-            Vorliq is designed to be governed by its community. In future versions, members
-            will be able to vote on changes to mining rewards, difficulty, and lending rules
-            using their VLQ balance as voting weight. The goal is to make the people using the
-            system the people who guide its direction.
+            Vorliq is designed to explore community governance. Members can vote on supported
+            changes to mining rewards, difficulty, and lending-style rules using their VLQ
+            balance as voting weight. The goal is to make the people using the system the
+            people who guide its direction.
           </p>
           <p>
-            This approach is intended to give economic power back to communities instead of
-            outside investors or developers. Vorliq should grow as a shared tool where rules
-            are visible, decisions are accountable, and participation is tied to real use of
-            the network.
+            This approach is intended to make rules visible and decisions accountable. It does
+            not guarantee adoption, returns, repayment, or economic value.
           </p>
         </section>
 
@@ -106,6 +105,15 @@ function Whitepaper() {
             Phase four is mobile application support. The goal of this phase is to make Vorliq
             easier to use for everyday members who need wallet access, balance checks, transfers,
             loan participation, and community updates from their phones.
+          </p>
+        </section>
+
+        <section>
+          <h2>Responsible Use</h2>
+          <p>
+            Vorliq is not a licensed bank, broker, exchange, lender, investment adviser,
+            custodian, or financial institution. Users are responsible for their own keys,
+            actions, local laws, counterparties, and risk decisions.
           </p>
         </section>
 

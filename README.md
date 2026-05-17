@@ -13,14 +13,14 @@ Live website: https://vorliq.github.io/Vorliq
 What is Vorliq
 --------------
 
-Vorliq is a complete community savings and lending platform built on its own lightweight blockchain. It does not depend on Ethereum, Bitcoin, Solana, or any outside cryptocurrency network. The native coin is called VLQ, and the application includes a Python proof of work blockchain core, a Node.js backend API, a React web application, and a React Native mobile application.
+Vorliq is experimental open-source community blockchain software built on its own lightweight blockchain. It does not depend on Ethereum, Bitcoin, Solana, or any outside cryptocurrency network. The native coin is called VLQ, and the application includes a Python proof of work blockchain core, a Node.js backend API, a React web application, and a React Native mobile application.
 
-Vorliq is designed for real communities that want to save, send, lend, trade, and govern value together. Members can create wallets, mine blocks, send signed VLQ transactions, request community loans, vote on loans with VLQ balance as voting weight, post buy and sell offers on the decentralized exchange, connect peer nodes, monitor network health, and vote on governance proposals that can change network rules.
+Vorliq uses the phrase community savings bank as a plain-English metaphor for community coordination and record keeping. It is not a licensed bank, broker, exchange, lender, investment adviser, custodian, or financial institution. Members can create wallets, mine blocks, send signed VLQ transactions, request community support, vote on requests with VLQ balance as voting weight, post buy and sell offers, connect peer nodes, monitor network health, and vote on governance proposals that can change supported network rules.
 
 What is VLQ
 -----------
 
-VLQ is the native coin of the Vorliq network. The maximum supply is 21 million VLQ. The starting mining reward is 50 VLQ per block, and the scheduled reward halves every 210000 blocks. Mining rewards are created by the Vorliq blockchain itself and normal transactions are signed with SECP256K1 cryptographic keys.
+VLQ is the native coin of the Vorliq network. The maximum supply is 21 million VLQ. The starting mining reward is 50 VLQ per block, and the scheduled reward halves every 210000 blocks. Mining rewards are created by the Vorliq blockchain itself and normal transactions are signed with SECP256K1 cryptographic keys. VLQ has no guaranteed market value, is not listed on public exchanges by the project, and should not be treated as an investment promise.
 
 Vorliq also includes community governance, so VLQ holders can vote on proposals that change network parameters. That means the community can vote to change the mining reward, block difficulty, loan rules, exchange limits, and other supported settings instead of relying on a central operator.
 
@@ -29,9 +29,9 @@ Features
 
 Vorliq includes a complete proof of work blockchain written in Python. Blocks contain signed transactions, link to the previous block by hash, and are mined with a proof of work target. Wallets use real SECP256K1 keys and addresses derived from public key hashing.
 
-The community savings and lending system lets members request VLQ loans and lets other members vote to approve or reject them using VLQ balance as voting weight. Approved loans are issued through the blockchain and repayments are tracked by the lending system.
+The community lending-style system lets members request VLQ support and lets other members vote to approve or reject those requests using VLQ balance as voting weight. Approved requests are issued through the blockchain and repayments are tracked by the lending system. This feature is experimental software and is not a licensed lending service.
 
-The decentralized VLQ exchange lets community members post buy and sell offers directly inside Vorliq. Offers can describe any community-agreed price, such as money, goods, services, or time, so local communities can trade in the way that makes sense to them.
+The decentralized VLQ exchange lets community members post buy and sell offers directly inside Vorliq. Offers can describe any community-agreed price, such as money, goods, services, or time, so local communities can coordinate in the way that makes sense to them. This is an experimental offer board, not a licensed exchange, broker, dealer, or escrow service.
 
 The peer to peer network lets Vorliq nodes register peers, broadcast transactions and blocks, discover other peers, and synchronize to the longest valid chain. The network has been tested with multi node stress tests covering synchronization, network partition recovery, and double spend prevention.
 
@@ -44,7 +44,7 @@ Vorliq includes encrypted browser wallet storage, local key storage on mobile, d
 Transparency and Safety
 -----------------------
 
-Vorliq is live software, but it is still an early cryptocurrency-style network. VLQ is not listed on exchanges, has no guaranteed market value, and should not be treated as a guaranteed investment. The public transparency page explains what is live today, what is experimental, what operational protections exist, and what limitations remain: https://vorliq.github.io/Vorliq/transparency.html.
+Vorliq is live software, but it is still an early cryptocurrency-style network. Mining rewards, treasury rewards, tips, exchange offers, lending activity, price signals, and governance votes are experimental software features and may change over time. The public transparency page explains what is live today, what is experimental, what operational protections exist, and what limitations remain: https://vorliq.github.io/Vorliq/transparency.html.
 
 Vorliq is self-custody. The server stores public blockchain data, forum posts, governance activity, exchange offers, lending records, and operational state, but it does not store user private keys or wallet passwords. Lost private keys cannot be recovered by Vorliq, so users should read the wallet safety guide before using real wallets: https://vorliq.github.io/Vorliq/wallet-safety.html.
 
