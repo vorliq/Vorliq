@@ -346,105 +346,106 @@ function AppShell() {
             </div>
           </div>
 
-          <div
-            className={`mobile-drawer-backdrop ${mobileNavOpen ? "nav-open" : ""}`}
-            aria-hidden="true"
-            onClick={() => {
-              setMobileNavOpen(false);
-              hamburgerRef.current?.focus();
-            }}
-          />
-
-          <div
-            className={`mobile-drawer ${mobileNavOpen ? "nav-open" : ""}`}
-            id="mobile-navigation"
-            ref={mobileDrawerRef}
-            role={mobileNavOpen ? "dialog" : undefined}
-            aria-modal={mobileNavOpen ? "true" : undefined}
-            aria-label={mobileNavOpen ? "Navigation menu" : undefined}
-            aria-hidden={!mobileNavOpen}
-          >
-            {mobileNavSections.map((section) => (
-              <div className="nav-section" key={section.title}>
-                <span className="nav-section-title">{section.title}</span>
-                {section.links.map((link) =>
-                  link.to ? (
-                    <NavLink
-                      className="nav-link"
-                      to={link.to}
-                      end={link.end}
-                      key={link.to}
-                      onClick={() => setMobileNavOpen(false)}
-                    >
-                      {link.label}
-                    </NavLink>
-                  ) : (
-                    <a
-                      className="nav-link"
-                      href={link.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      key={link.href}
-                      onClick={() => setMobileNavOpen(false)}
-                    >
-                      {link.label}
-                    </a>
-                  )
-                )}
-              </div>
-            ))}
-
-            <div className="mobile-drawer-tools">
-              <button
-                className="icon-button"
-                type="button"
-                onClick={toggleTheme}
-                aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-                aria-pressed={theme === "light"}
-                title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-              >
-                {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-              </button>
-              <button
-                className="icon-button notification-bell"
-                type="button"
-                onClick={() => setNotificationsOpen((open) => !open)}
-                aria-label={notificationsOpen ? "Close notifications" : "Open notifications"}
-                aria-expanded={notificationsOpen}
-                aria-controls="notification-panel"
-                title="Notifications"
-              >
-                <BellIcon />
-                {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
-              </button>
-            </div>
-
-            <div className="mobile-auth-actions">
-              {isLoggedIn ? (
-                <>
-                  <NavLink className="wallet-chip" to="/account" onClick={() => setMobileNavOpen(false)}>
-                    {wallet.address.slice(0, 12)}
-                  </NavLink>
-                  <button
-                    className="button secondary nav-button"
-                    type="button"
-                    onClick={() => {
-                      logout();
-                      setMobileNavOpen(false);
-                    }}
-                  >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <NavLink className="button nav-button" to="/login" onClick={() => setMobileNavOpen(false)}>
-                  Login
-                </NavLink>
-              )}
-            </div>
-          </div>
         </div>
       </nav>
+
+      <div
+        className={`mobile-drawer-backdrop ${mobileNavOpen ? "nav-open" : ""}`}
+        aria-hidden="true"
+        onClick={() => {
+          setMobileNavOpen(false);
+          hamburgerRef.current?.focus();
+        }}
+      />
+
+      <div
+        className={`mobile-drawer ${mobileNavOpen ? "nav-open" : ""}`}
+        id="mobile-navigation"
+        ref={mobileDrawerRef}
+        role={mobileNavOpen ? "dialog" : undefined}
+        aria-modal={mobileNavOpen ? "true" : undefined}
+        aria-label={mobileNavOpen ? "Navigation menu" : undefined}
+        aria-hidden={!mobileNavOpen}
+      >
+        {mobileNavSections.map((section) => (
+          <div className="nav-section" key={section.title}>
+            <span className="nav-section-title">{section.title}</span>
+            {section.links.map((link) =>
+              link.to ? (
+                <NavLink
+                  className="nav-link"
+                  to={link.to}
+                  end={link.end}
+                  key={link.to}
+                  onClick={() => setMobileNavOpen(false)}
+                >
+                  {link.label}
+                </NavLink>
+              ) : (
+                <a
+                  className="nav-link"
+                  href={link.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  key={link.href}
+                  onClick={() => setMobileNavOpen(false)}
+                >
+                  {link.label}
+                </a>
+              )
+            )}
+          </div>
+        ))}
+
+        <div className="mobile-drawer-tools">
+          <button
+            className="icon-button"
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            aria-pressed={theme === "light"}
+            title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          >
+            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+          </button>
+          <button
+            className="icon-button notification-bell"
+            type="button"
+            onClick={() => setNotificationsOpen((open) => !open)}
+            aria-label={notificationsOpen ? "Close notifications" : "Open notifications"}
+            aria-expanded={notificationsOpen}
+            aria-controls="notification-panel"
+            title="Notifications"
+          >
+            <BellIcon />
+            {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+          </button>
+        </div>
+
+        <div className="mobile-auth-actions">
+          {isLoggedIn ? (
+            <>
+              <NavLink className="wallet-chip" to="/account" onClick={() => setMobileNavOpen(false)}>
+                {wallet.address.slice(0, 12)}
+              </NavLink>
+              <button
+                className="button secondary nav-button"
+                type="button"
+                onClick={() => {
+                  logout();
+                  setMobileNavOpen(false);
+                }}
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <NavLink className="button nav-button" to="/login" onClick={() => setMobileNavOpen(false)}>
+              Login
+            </NavLink>
+          )}
+        </div>
+      </div>
 
       <IncidentBanner />
 

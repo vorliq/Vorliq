@@ -166,9 +166,13 @@ strong {
   flex-direction: column;
   min-height: 100vh;
   overflow-x: clip;
+  isolation: isolate;
+  background: transparent;
 }
 
 #main-content {
+  position: relative;
+  z-index: 2;
   flex: 1 0 auto;
 }
 
@@ -197,7 +201,7 @@ strong {
 .brand-background {
   position: fixed;
   inset: 0;
-  z-index: -2;
+  z-index: 0;
   pointer-events: none;
   overflow: hidden;
   background:
@@ -376,7 +380,7 @@ html[data-glow="reduced"] .brand-network {
 .navbar {
   position: sticky;
   top: 0;
-  z-index: 80;
+  z-index: 1000;
   border-bottom: 1px solid rgba(24, 215, 201, 0.2);
   background: rgba(2, 8, 23, 0.78);
   backdrop-filter: blur(20px);
@@ -1606,7 +1610,7 @@ select.input {
 
 .incident-banner {
   position: relative;
-  z-index: 10;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2263,9 +2267,9 @@ html[data-theme="dark"] {
   --bg: #020711;
   --bg-deep: #00040b;
   --bg-soft: rgba(6, 16, 34, 0.7);
-  --surface-glass: rgba(5, 12, 26, 0.34);
-  --surface-glass-strong: rgba(5, 12, 26, 0.74);
-  --surface-glass-solid: rgba(4, 10, 22, 0.97);
+  --surface-glass: rgba(5, 12, 26, 0.24);
+  --surface-glass-strong: rgba(5, 12, 26, 0.62);
+  --surface-glass-solid: rgba(4, 10, 22, 0.82);
   --surface-field: rgba(4, 12, 26, 0.72);
   --surface-muted: rgba(255, 255, 255, 0.05);
   --text: #f8fbff;
@@ -2359,18 +2363,12 @@ html[data-theme="light"] {
 }
 
 body {
-  background:
-    radial-gradient(circle at 17% 10%, var(--glow-green), transparent 28rem),
-    radial-gradient(circle at 82% 12%, var(--glow-blue), transparent 32rem),
-    linear-gradient(180deg, var(--bg-deep), var(--bg) 48%, var(--bg-deep));
+  background: var(--bg-deep);
   color: var(--text-secondary);
 }
 
 html[data-theme="light"] body {
-  background:
-    radial-gradient(circle at 14% 10%, rgba(113, 232, 130, 0.3), transparent 28rem),
-    radial-gradient(circle at 84% 14%, rgba(81, 160, 255, 0.28), transparent 32rem),
-    linear-gradient(180deg, #eaf8ff 0%, #f8fdff 48%, #eaf5ff 100%);
+  background: var(--bg-deep);
 }
 
 .brand-background {
@@ -2390,19 +2388,19 @@ html[data-theme="light"] .brand-background {
 }
 
 .brand-background::before {
-  opacity: 0.62;
+  opacity: 0.46;
   background:
     linear-gradient(115deg, transparent 0 17%, color-mix(in srgb, var(--accent-cyan) 16%, transparent) 17.2%, transparent 17.65% 45%, color-mix(in srgb, var(--accent-green) 14%, transparent) 45.2%, transparent 45.7% 72%, color-mix(in srgb, var(--accent-blue) 15%, transparent) 72.2%, transparent 72.7%),
-    radial-gradient(circle at 50% 40%, transparent, color-mix(in srgb, var(--bg-deep) 38%, transparent) 64%);
+    radial-gradient(circle at 50% 40%, transparent, color-mix(in srgb, var(--bg-deep) 22%, transparent) 68%);
 }
 
 .brand-network {
-  opacity: 0.58;
+  opacity: 0.56;
 }
 
 .brand-network path {
   stroke-width: 0.11;
-  opacity: 0.58;
+  opacity: 0.5;
 }
 
 .brand-network circle {
@@ -2410,12 +2408,12 @@ html[data-theme="light"] .brand-background {
 }
 
 .brand-dots {
-  opacity: 0.2;
+  opacity: 0.24;
 }
 
 .brand-horizon {
   bottom: -17rem;
-  opacity: 0.7;
+  opacity: 0.76;
 }
 
 html[data-theme="light"] .brand-horizon {
@@ -2423,9 +2421,9 @@ html[data-theme="light"] .brand-horizon {
 }
 
 .navbar {
-  z-index: 100;
+  z-index: 1000;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface-glass-solid) 86%, transparent);
+  background: color-mix(in srgb, var(--surface-glass-solid) 72%, transparent);
   box-shadow: 0 14px 46px color-mix(in srgb, var(--bg-deep) 28%, transparent);
 }
 
@@ -2713,9 +2711,11 @@ a:focus-visible {
 }
 
 .site-footer {
+  position: relative;
+  z-index: 2;
   margin-top: clamp(46px, 9vw, 96px);
   border-top: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface-glass-solid) 72%, transparent);
+  background: color-mix(in srgb, var(--surface-glass-solid) 54%, transparent);
 }
 
 .footer-inner {
@@ -2813,7 +2813,7 @@ th {
     border-radius: 0;
     background: var(--menu-bg);
     padding: 16px;
-    z-index: 310;
+    z-index: 1002;
   }
 
   .mobile-drawer.nav-open {
@@ -2825,10 +2825,10 @@ th {
   .mobile-drawer-backdrop.nav-open {
     position: fixed;
     inset: var(--nav-height) 0 0;
-    z-index: 300;
+    z-index: 1001;
     display: block;
-    background: rgba(0, 5, 14, 0.44);
-    backdrop-filter: blur(3px);
+    background: rgba(0, 5, 14, 0.28);
+    backdrop-filter: blur(1px);
   }
 
   .mobile-drawer .nav-link {

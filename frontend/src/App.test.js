@@ -290,6 +290,7 @@ test("mobile drawer traps focus and closes from outside click", async () => {
 
   const drawer = screen.getByRole("dialog", { name: /navigation menu/i });
   expect(drawer).toHaveAttribute("aria-modal", "true");
+  expect(drawer.closest("nav")).toBeNull();
   await waitFor(() => {
     expect(within(drawer).getByRole("link", { name: /dashboard/i })).toHaveFocus();
   });
