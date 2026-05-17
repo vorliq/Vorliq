@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
     <style>
-      :root { --bg:#020817; --card:rgba(8,14,28,.62); --card2:rgba(8,14,28,.78); --accent:#18d7c9; --blue:#1479ff; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.26); --green:#86e33b; --gold:#ffd166; }
+      :root { --bg:#020817; --card:rgba(8,14,28,.36); --card2:rgba(8,14,28,.86); --accent:#18d7c9; --blue:#1479ff; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.26); --green:#86e33b; --gold:#ffd166; }
       * { box-sizing:border-box; }
       body { margin:0; min-height:100vh; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 10% 15%,rgba(134,227,59,.18),transparent 28rem),radial-gradient(circle at 88% 24%,rgba(20,121,255,.24),transparent 32rem),radial-gradient(ellipse at 50% 100%,rgba(24,215,201,.16),transparent 42%),linear-gradient(180deg,#020817,#061326); color:var(--text); overflow:hidden; }
       body:before, body:after { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; }
@@ -22,19 +22,20 @@
       .slide.active { display:grid; }
       .content { width:min(1080px,100%); margin:0 auto; display:grid; gap:22px; }
       .center { justify-items:center; text-align:center; }
-      .logo { width:clamp(92px,14vw,150px); height:auto; }
+      .logo { width:clamp(78px,12vw,124px); height:auto; }
       .eyebrow { color:var(--green); font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
-      h1 { margin:0; font-size:clamp(3.6rem,12vw,8rem); line-height:.9; letter-spacing:0; }
-      h2 { margin:0; font-size:clamp(2.2rem,7vw,5.2rem); line-height:.95; letter-spacing:0; }
-      p { margin:0; max-width:900px; color:var(--muted); font-size:clamp(1rem,2.2vw,1.32rem); line-height:1.7; }
-      .subtitle { color:#fff; font-size:clamp(1.15rem,2.5vw,1.65rem); font-weight:800; }
-      .tagline { color:var(--gold); font-size:clamp(1.35rem,3vw,2rem); font-weight:900; }
+      h1 { margin:0; font-size:clamp(2.8rem,10vw,5.4rem); line-height:.98; letter-spacing:0; }
+      h2 { margin:0; font-size:clamp(2rem,6vw,4rem); line-height:1; letter-spacing:0; }
+      p { margin:0; max-width:900px; color:var(--muted); font-size:clamp(1rem,1.8vw,1.18rem); line-height:1.65; }
+      .subtitle { color:#fff; font-size:clamp(1.08rem,2.1vw,1.38rem); font-weight:800; }
+      .tagline { color:var(--gold); font-size:clamp(1.18rem,2.4vw,1.65rem); font-weight:900; }
       .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
-      .fact, .component, .phase { border:1px solid var(--border); border-radius:14px; background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018)),var(--card); box-shadow:0 18px 52px rgba(0,0,0,.22),0 0 30px rgba(24,215,201,.08); backdrop-filter:blur(16px); padding:18px; color:var(--muted); line-height:1.6; }
+      .fact, .component, .phase { border:1px solid var(--border); border-radius:14px; background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012)),var(--card); box-shadow:0 12px 38px rgba(0,0,0,.18),0 0 24px rgba(24,215,201,.06); backdrop-filter:blur(10px); padding:18px; color:var(--muted); line-height:1.6; }
       .fact strong, .component strong, .phase strong { color:var(--text); display:block; margin-bottom:8px; }
       .components { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
       .links { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px; width:100%; max-width:980px; }
-      .link-button { display:grid; place-items:center; min-height:72px; border:1px solid var(--border); border-radius:999px; background:linear-gradient(90deg,var(--green),var(--accent),var(--blue)); color:#fff; font-weight:900; text-decoration:none; box-shadow:0 16px 44px rgba(24,215,201,.2); }
+      .link-button { display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:52px; border:1px solid var(--border); border-radius:999px; background:linear-gradient(90deg,var(--green),var(--accent),var(--blue)); color:#03101b; font-weight:900; text-decoration:none; box-shadow:0 12px 34px rgba(24,215,201,.18); padding:10px 14px; }
+      .link-button svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
       .controls { display:flex; align-items:center; justify-content:space-between; gap:18px; border-top:1px solid rgba(24,215,201,.18); background:rgba(8,14,28,.68); backdrop-filter:blur(18px); padding:18px clamp(18px,4vw,44px); }
       .nav-button { width:54px; height:54px; border:1px solid var(--border); border-radius:999px; background:var(--card2); color:#fff; cursor:pointer; font-size:1.7rem; font-weight:900; }
       @keyframes deckDrift { from { transform:translateX(-2rem); opacity:.55; } to { transform:translateX(2rem); opacity:.9; } }
@@ -147,11 +148,11 @@
           <p>Vorliq is open-source and community-run by design. Developers, node operators, testers, writers, and local community organizers can help improve the network, report issues, write documentation, and invite more independent nodes to join.</p>
           <p>Responsible use matters. Vorliq is not a licensed bank, broker, exchange, lender, investment adviser, custodian, or financial institution. VLQ has no guaranteed market value. Users are responsible for their own keys, local laws, counterparties, posts, votes, offers, and risk decisions.</p>
           <div class="links">
-            <a class="link-button" href="https://discord.gg/qpX5sHD4pC" target="_blank" rel="noopener noreferrer">Discord</a>
-            <a class="link-button" href="https://t.me/Vorliq" target="_blank" rel="noopener noreferrer">Telegram</a>
-            <a class="link-button" href="https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS" target="_blank" rel="noopener noreferrer">Reddit</a>
-            <a class="link-button" href="https://github.com/vorliq/Vorliq" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a class="link-button" href="https://x.com/vorliq" target="_blank" rel="noopener noreferrer">X</a>
+            <a class="link-button" href="https://discord.gg/qpX5sHD4pC" target="_blank" rel="noopener noreferrer" aria-label="Open Vorliq on Discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.3 8.7c2.4-.7 5-.7 7.4 0M9.1 15.2c2 .7 3.8 .7 5.8 0M8.8 12.9h.01M15.2 12.9h.01M7.4 5.5c3-1.2 6.2-1.2 9.2 0 1.7 2.4 2.6 5.2 2.7 8.4-2.1 1.6-4.1 2.5-6.1 2.8l-.8-1.4M11.6 15.3l-.8 1.4c-2-.3-4-1.2-6.1-2.8.1-3.2 1-6 2.7-8.4"/></svg><span>Discord</span></a>
+            <a class="link-button" href="https://t.me/Vorliq" target="_blank" rel="noopener noreferrer" aria-label="Open Vorliq on Telegram"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4 3 11.2l6.9 2.2L17 8.2l-5.4 6.6.2 5.2 3.1-3.4 3.9 2.9L21 4Z"/></svg><span>Telegram</span></a>
+            <a class="link-button" href="https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS" target="_blank" rel="noopener noreferrer" aria-label="Open Vorliq on Reddit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16.6c2.9 0 5.2-1.6 5.2-3.6s-2.3-3.6-5.2-3.6S6.8 11 6.8 13s2.3 3.6 5.2 3.6ZM9.7 12.5h.01M14.3 12.5h.01M10 14.5c1.2.7 2.8.7 4 0M17 9.8l1.8-1.7M7 9.8 5.2 8.1M13 6.3l1-3.1 3.4.8"/></svg><span>Reddit</span></a>
+            <a class="link-button" href="https://github.com/vorliq/Vorliq" target="_blank" rel="noopener noreferrer" aria-label="Open Vorliq on GitHub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4 1.2-4-2-5.6-2.4M15 22v-3.5c0-1 .3-1.7.8-2.2 2.8-.3 5.7-1.4 5.7-6.2 0-1.4-.5-2.6-1.3-3.5.1-.3.6-1.8-.1-3.5 0 0-1.1-.3-3.6 1.3a12.4 12.4 0 0 0-6.5 0C7.5 2.8 6.4 3.1 6.4 3.1c-.7 1.7-.2 3.2-.1 3.5A5 5 0 0 0 5 10.1c0 4.8 2.9 5.9 5.7 6.2.4.4.7 1 .7 1.8V22"/></svg><span>GitHub</span></a>
+            <a class="link-button" href="https://x.com/vorliq" target="_blank" rel="noopener noreferrer" aria-label="Open Vorliq on X"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 11.7 16H20L8.3 4H4Zm16 0-7.2 8.2M11.2 15.8 4 20"/></svg><span>X</span></a>
           </div>
           <div class="tagline">Your Community Your Coin</div>
         </div>

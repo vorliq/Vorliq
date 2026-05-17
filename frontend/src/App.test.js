@@ -176,6 +176,24 @@ test("App renders without crashing inside its providers", async () => {
   expect(screen.getByRole("button", { name: /^more/i })).toBeInTheDocument();
 });
 
+test("Theme toggle switches between readable dark and light theme states", async () => {
+  window.localStorage.setItem(ONBOARDING_KEY, "true");
+
+  render(<App />);
+
+  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
+  expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+
+  await userEvent.click(screen.getAllByRole("button", { name: /switch to light theme/i })[0]);
+
+  expect(document.documentElement).toHaveAttribute("data-theme", "light");
+  expect(window.localStorage.getItem("vorliq_theme")).toBe("light");
+
+  await userEvent.click(screen.getAllByRole("button", { name: /switch to dark theme/i })[0]);
+
+  expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+});
+
 test("onboarding appears for a first-time visitor and can be skipped", async () => {
   render(<App />);
 

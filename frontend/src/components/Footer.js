@@ -1,4 +1,5 @@
 import SocialLinks from "./SocialLinks";
+import logo from "../assets/logo.png";
 
 function Footer() {
   function reopenHelp() {
@@ -38,7 +39,10 @@ function Footer() {
     <footer className="site-footer">
       <div className="footer-inner">
         <div className="footer-brand">
-          <h2>Vorliq</h2>
+          <div className="footer-wordmark">
+            <img src={logo} alt="" aria-hidden="true" />
+            <h2>Vorliq</h2>
+          </div>
           <p>Your Community Your Coin</p>
           <SocialLinks compact />
         </div>

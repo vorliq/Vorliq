@@ -125,7 +125,7 @@ function App() {
 
 function AppShell() {
   const { isLoggedIn, logout, wallet } = useAuth();
-  const { glowMode, theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const { unreadCount } = useNotifications();
   const [backendOnline, setBackendOnline] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -263,10 +263,11 @@ function AppShell() {
                 className="icon-button"
                 type="button"
                 onClick={toggleTheme}
-                aria-label={glowMode === "full" ? "Reduce background glow" : "Restore full background glow"}
-                title={glowMode === "full" ? "Reduce background glow" : "Restore full background glow"}
+                aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+                aria-pressed={theme === "light"}
+                title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
               >
-                {glowMode === "full" ? <GlowIcon /> : <MoonIcon />}
+                {theme === "dark" ? <SunIcon /> : <MoonIcon />}
               </button>
               <button
                 className="icon-button notification-bell"
@@ -336,10 +337,11 @@ function AppShell() {
                 className="icon-button"
                 type="button"
                 onClick={toggleTheme}
-                aria-label={glowMode === "full" ? "Reduce background glow" : "Restore full background glow"}
-                title={glowMode === "full" ? "Reduce background glow" : "Restore full background glow"}
+                aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+                aria-pressed={theme === "light"}
+                title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
               >
-                {glowMode === "full" ? <GlowIcon /> : <MoonIcon />}
+                {theme === "dark" ? <SunIcon /> : <MoonIcon />}
               </button>
               <button
                 className="icon-button notification-bell"
@@ -438,7 +440,7 @@ function AppShell() {
 
 export { mobileNavSections as navSections, moreLinks, primaryLinks };
 
-function GlowIcon() {
+function SunIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="12" r="4" />
