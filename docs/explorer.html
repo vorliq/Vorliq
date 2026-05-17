@@ -49,9 +49,13 @@
       .invalid { background:rgba(255,91,110,.15); color:var(--red); }
       .empty, .error { border:1px dashed var(--border); border-radius:12px; color:var(--muted); padding:20px; text-align:center; }
       .error { border-color:rgba(255,91,110,.45); color:#ffb9c1; }
+      .guide-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:20px 0 30px; }
+      .guide-card { border:1px solid var(--border); border-radius:14px; background:rgba(8,14,28,.42); padding:18px; }
+      .guide-card strong { display:block; margin-bottom:8px; color:#fff; }
+      .guide-card code { overflow-wrap:anywhere; color:var(--green); }
       footer { border-top:1px solid var(--border); color:var(--muted); padding:28px 0; }
-      @media (max-width:900px) { .stats { grid-template-columns:1fr 1fr; } .block-summary { grid-template-columns:1fr; } .details-grid { grid-template-columns:1fr; } }
-      @media (max-width:560px) { .stats { grid-template-columns:1fr; } .toolbar .button { width:100%; } }
+      @media (max-width:900px) { .stats, .guide-grid { grid-template-columns:1fr 1fr; } .block-summary { grid-template-columns:1fr; } .details-grid { grid-template-columns:1fr; } }
+      @media (max-width:560px) { .stats, .guide-grid { grid-template-columns:1fr; } .toolbar .button { width:100%; } }
     </style>
   </head>
   <body>
@@ -70,13 +74,19 @@
     <main class="wrap">
       <section class="hero">
         <h1>Block Explorer</h1>
-        <p class="subtitle">Explore the live Vorliq blockchain, inspect blocks, search wallet activity, and follow public VLQ network statistics.</p>
+        <p class="subtitle">Explore the live Vorliq blockchain, inspect blocks, search wallet activity, and understand the difference between pending and confirmed VLQ transactions.</p>
+      </section>
+
+      <section class="guide-grid" aria-label="Explorer guide">
+        <article class="guide-card"><strong>Pending vs confirmed</strong><p>Pending transactions are accepted into the pool but are not final. They become confirmed when a miner includes them in a valid block.</p></article>
+        <article class="guide-card"><strong>Confirmations</strong><p>A confirmed transaction gains confirmations as newer blocks are mined after its block. More confirmations mean deeper chain history.</p></article>
+        <article class="guide-card"><strong>Lookup tools</strong><p>The app explorer supports direct routes such as <code>/tx/TX_ID</code> and <code>/block/BLOCK_HASH</code> for transaction and block detail pages.</p></article>
       </section>
 
       <section class="stats" id="stats"></section>
 
       <section class="toolbar">
-        <input id="searchInput" type="search" placeholder="Search by block number or wallet address" />
+        <input id="searchInput" type="search" placeholder="Search by block number, transaction ID, or wallet address" />
         <button class="button primary" id="searchButton" type="button">Search</button>
         <button class="button" id="clearButton" type="button">Clear</button>
       </section>
@@ -105,13 +115,16 @@
       }
 
       function transactionSignatureStatus(transaction) {
+        if (transaction.status === "pending") {
+          return { label: "Pending", valid: true };
+        }
+        if (transaction.status === "confirmed") {
+          return { label: `${transaction.confirmations || 0} confirmations`, valid: true };
+        }
         if (transaction.sender_address === "SYSTEM" || transaction.sender_address === "LENDING_POOL") {
-          return { label: "Valid system transaction", valid: true };
+          return { label: "System transaction", valid: true };
         }
-        if (transaction.signature && transaction.sender_public_key) {
-          return { label: "Valid signed transaction", valid: true };
-        }
-        return { label: "Invalid or missing signature", valid: false };
+        return { label: transaction.signature_present ? "Signature present" : "Signature not available", valid: Boolean(transaction.signature_present) };
       }
 
       async function loadExplorer() {
@@ -300,6 +313,7 @@
         const status = transactionSignatureStatus(transaction);
         return `
           <div class="tx">
+            <div><strong>Transaction:</strong> ${transaction.tx_id ? `<a href="https://vorliq.org/tx/${transaction.tx_id}">${shortHash(transaction.tx_id, 24)}</a>` : "Unknown"}</div>
             <div><strong>Sender:</strong> ${transaction.sender_address}</div>
             <div><strong>Receiver:</strong> ${transaction.receiver_address}</div>
             <div><strong>Amount:</strong> ${transaction.amount} VLQ</div>
@@ -315,6 +329,8 @@
             document.getElementById("status").className = "error";
             document.getElementById("status").textContent = error.message;
           });
+        } else if (activeSearch && activeSearch.length >= 32) {
+          window.location.href = `https://vorliq.org/tx/${encodeURIComponent(activeSearch)}`;
         } else if (activeSearch) {
           searchAddress(activeSearch).catch((error) => {
             document.getElementById("status").className = "error";

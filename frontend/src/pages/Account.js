@@ -18,6 +18,7 @@ function Account() {
   const previousIncomingCountRef = useRef(null);
   const [balance, setBalance] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [addressHistory, setAddressHistory] = useState(null);
   const [loans, setLoans] = useState([]);
   const [earnedAchievements, setEarnedAchievements] = useState([]);
   const [allAchievements, setAllAchievements] = useState([]);
@@ -55,6 +56,7 @@ function Account() {
         if (mounted) {
           setBalance(balanceResponse.data.balance);
           setTransactions(transactionResponse.data.transactions || []);
+          setAddressHistory(transactionResponse.data || null);
           setLoans(loansResponse.data.loans || []);
           setEarnedAchievements(earnedResponse.data.achievements || []);
           setAllAchievements(allAchievementsResponse.data.achievements || []);
@@ -89,6 +91,9 @@ function Account() {
         otherParty,
         amount: transaction.amount,
         timestamp: transaction.block_timestamp || transaction.timestamp,
+        txId: transaction.tx_id,
+        status: transaction.status || "confirmed",
+        confirmations: transaction.confirmations ?? 0,
       };
     });
   }, [transactions, wallet.address]);
@@ -132,6 +137,15 @@ function Account() {
       toast.success("address copied");
     } catch (error) {
       toast.error("Unable to copy address.");
+    }
+  }
+
+  async function copyText(value, label) {
+    try {
+      await navigator.clipboard.writeText(String(value || ""));
+      toast.success(`${label} copied.`);
+    } catch (error) {
+      toast.error(`Unable to copy ${label.toLowerCase()}.`);
     }
   }
 
@@ -337,8 +351,20 @@ function Account() {
             <div className="value-box">{wallet.address}</div>
           </div>
           <div className="field">
-            <label>Current VLQ Balance</label>
-            <div className="value-box">{loading ? "Loading balance..." : `${balance ?? 0} VLQ`}</div>
+            <label>Confirmed VLQ Balance</label>
+            <div className="value-box">{loading ? "Loading balance..." : `${addressHistory?.confirmed_balance ?? balance ?? 0} VLQ`}</div>
+          </div>
+          <div className="field">
+            <label>Current Balance With Pending Pool</label>
+            <div className="value-box">{loading ? "Loading..." : `${balance ?? 0} VLQ`}</div>
+          </div>
+          <div className="field">
+            <label>Pending Incoming</label>
+            <div className="value-box">{loading ? "Loading..." : `${addressHistory?.pending_incoming_total ?? 0} VLQ`}</div>
+          </div>
+          <div className="field">
+            <label>Pending Outgoing</label>
+            <div className="value-box">{loading ? "Loading..." : `${addressHistory?.pending_outgoing_total ?? 0} VLQ`}</div>
           </div>
         </div>
 
@@ -429,13 +455,30 @@ function Account() {
 
         <div className="history-list">
           {myTransactions.map((transaction, index) => (
-            <div className="history-row" key={`${transaction.blockIndex}-${index}`}>
+          <div className="history-row" key={`${transaction.blockIndex}-${index}`}>
+              <span className={`status-badge ${transaction.status}`}>
+                {transaction.status}
+              </span>
               <span className={`direction ${transaction.direction.toLowerCase()}`}>
                 {transaction.direction}
               </span>
               <span>{shorten(transaction.otherParty)}</span>
               <span>{transaction.amount} VLQ</span>
-              <span>Block #{transaction.blockIndex}</span>
+              {transaction.status === "confirmed" ? (
+                <Link to={`/block/${transaction.blockIndex}`}>Block #{transaction.blockIndex}</Link>
+              ) : (
+                <span>Pending</span>
+              )}
+              {transaction.txId && (
+                <div className="button-row">
+                  <Link className="button secondary small-button" to={`/tx/${transaction.txId}`}>
+                    View Tx
+                  </Link>
+                  <button className="button secondary small-button" type="button" onClick={() => copyText(transaction.txId, "Transaction ID")}>
+                    Copy Tx
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

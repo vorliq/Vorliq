@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+import tempfile
+import time
 
 from blockchain import Blockchain
 from lending import LendingPool
@@ -11,6 +12,12 @@ from storage import Storage
 from transaction import SYSTEM_ADDRESS, Transaction
 
 
+def age_latest_block(blockchain: Blockchain) -> None:
+    latest = blockchain.get_latest_block()
+    latest.timestamp = time.time() - blockchain.BLOCK_TIME_MINIMUM - 1
+    latest.proof_of_work(blockchain.difficulty)
+
+
 def print_result(name: str, passed: bool) -> None:
     status = "PASS" if passed else "FAIL"
     print(f"{status}: {name}")
@@ -18,14 +25,15 @@ def print_result(name: str, passed: bool) -> None:
 
 def main() -> None:
     vorliq_logger.info("Starting persistence test")
-    storage = Storage()
-
-    for json_file in Path(storage.data_dir).glob("*.json"):
-        json_file.unlink()
+    Blockchain.BLOCK_TIME_MINIMUM = 0
+    temp_dir = tempfile.TemporaryDirectory()
+    storage = Storage(temp_dir.name)
 
     blockchain = Blockchain()
+    age_latest_block(blockchain)
     blockchain.mine_pending_transactions("miner-address")
-    blockchain.mine_pending_transactions("miner-address")
+    age_latest_block(blockchain)
+    blockchain.mine_pending_transactions("second-miner-address")
 
     pending_transaction = Transaction(
         sender_address=SYSTEM_ADDRESS,
@@ -86,6 +94,7 @@ def main() -> None:
     print()
     print("Restored chain JSON:")
     print(json.dumps(restored_blockchain.to_dict(), indent=2, sort_keys=True))
+    temp_dir.cleanup()
     vorliq_logger.info("Persistence test completed")
 
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
@@ -125,10 +126,17 @@ function Mine() {
                 <label>Block Hash</label>
                 <div className="value-box">{minedBlock.hash}</div>
               </div>
-              <p className="green">You will receive 50 VLQ as a reward in the next block.</p>
+              <div className="field">
+                <label>Included Transactions</label>
+                <div className="value-box">{minedBlock.transaction_count ?? minedBlock.transactions?.length ?? 0}</div>
+              </div>
+              <Link className="button secondary small-button" to={`/block/${minedBlock.hash || minedBlock.index}`}>
+                View Block
+              </Link>
+              <p className="green">Your miner reward is queued as a pending transaction for the next block.</p>
               <p>
-                The 50 VLQ reward will appear in your balance after the next block is mined
-                because the reward is added as a pending transaction first.
+                The reward appears in confirmed balance after the next block includes that
+                pending reward transaction.
               </p>
             </div>
           ) : (

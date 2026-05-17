@@ -244,13 +244,13 @@ class Blockchain:
             )
 
     def get_pending_transactions(self) -> list[dict[str, Any]]:
-        return [transaction.to_dict() for transaction in self.pending_transactions]
+        return [self.safe_transaction_record(transaction, status="pending") for transaction in self.pending_transactions]
 
     def get_chain_data(self) -> list[dict[str, Any]]:
         return [block.to_dict() for block in self.chain]
 
     def get_blocks_page(self, limit: int, offset: int) -> tuple[list[dict[str, Any]], int, bool]:
-        blocks = [block.to_dict() for block in reversed(self.chain)]
+        blocks = [self.safe_block_record(block, include_transactions=True) for block in reversed(self.chain)]
         total = len(blocks)
         page = blocks[offset : offset + limit]
         return page, total, offset + limit < total
@@ -273,26 +273,240 @@ class Blockchain:
         if not address:
             raise ValueError("address is required")
 
-        matches: list[dict[str, Any]] = []
-        for block in reversed(self.chain):
-            for index, transaction in enumerate(block.transactions or []):
-                if isinstance(transaction, dict):
-                    transaction = Transaction.from_dict(transaction)
-                if transaction.sender_address == address or transaction.receiver_address == address:
-                    transaction_data = transaction.to_dict()
-                    transaction_data.update(
-                        {
-                            "block_index": block.index,
-                            "block_hash": block.hash,
-                            "block_timestamp": block.timestamp,
-                            "transaction_index": index,
-                        }
-                    )
-                    matches.append(transaction_data)
+        matches = self._confirmed_transaction_records(address=address)
 
         total = len(matches)
         page = matches[offset : offset + limit]
         return page, total, offset + limit < total
+
+    def _coerce_transaction(self, transaction: Any) -> Transaction:
+        if isinstance(transaction, Transaction):
+            return transaction
+        if isinstance(transaction, dict):
+            return Transaction.from_dict(transaction)
+        raise ValueError("invalid transaction")
+
+    def _safe_metadata(self, metadata: Any) -> Any:
+        if not isinstance(metadata, dict):
+            return {}
+        safe: dict[str, Any] = {}
+        blocked_fragments = ("private", "password", "secret", "token", "key")
+        for key, value in metadata.items():
+            key_text = str(key)
+            lowered = key_text.lower()
+            if any(fragment in lowered for fragment in blocked_fragments):
+                continue
+            if isinstance(value, (str, int, float, bool)) or value is None:
+                safe[key_text] = value
+            elif isinstance(value, list):
+                safe[key_text] = [
+                    item for item in value
+                    if isinstance(item, (str, int, float, bool)) or item is None
+                ][:20]
+            elif isinstance(value, dict):
+                safe[key_text] = self._safe_metadata(value)
+        return safe
+
+    def _transaction_matches_address(self, transaction: Transaction, address: str | None) -> bool:
+        return not address or transaction.sender_address == address or transaction.receiver_address == address
+
+    def _transaction_matches_type(self, transaction: Transaction, tx_type: str | None) -> bool:
+        if not tx_type:
+            return True
+        lowered = tx_type.lower()
+        return lowered in {
+            str(getattr(transaction, "transaction_type", "")).lower(),
+            str(getattr(transaction, "category", "")).lower(),
+        }
+
+    def safe_transaction_record(
+        self,
+        transaction: Any,
+        status: str,
+        block: Block | None = None,
+        transaction_index: int | None = None,
+    ) -> dict[str, Any]:
+        tx = self._coerce_transaction(transaction)
+        block_index = block.index if block else None
+        block_hash = block.hash if block else None
+        confirmations = max(self.get_block_height() - block.index + 1, 0) if block else 0
+        tx_id = tx.tx_id or tx.calculate_tx_id()
+        metadata = self._safe_metadata(getattr(tx, "metadata", {}))
+        message = metadata.get("message") if isinstance(metadata.get("message"), str) else None
+        return {
+            "tx_id": tx_id,
+            "status": status,
+            "block_index": block_index,
+            "block_hash": block_hash,
+            "block_timestamp": block.timestamp if block else None,
+            "confirmations": confirmations,
+            "timestamp": tx.timestamp,
+            "sender": tx.sender_address,
+            "sender_address": tx.sender_address,
+            "recipient": tx.receiver_address,
+            "receiver_address": tx.receiver_address,
+            "amount": tx.amount,
+            "type": getattr(tx, "transaction_type", None) or getattr(tx, "category", None) or "transfer",
+            "category": getattr(tx, "category", None) or getattr(tx, "transaction_type", None) or "transfer",
+            "message": message,
+            "metadata": metadata,
+            "signature_present": bool(tx.signature),
+            "public_key_present": bool(tx.sender_public_key),
+            "transaction_index": transaction_index,
+        }
+
+    def _pending_transaction_records(
+        self,
+        address: str | None = None,
+        tx_type: str | None = None,
+    ) -> list[dict[str, Any]]:
+        records = []
+        for index, transaction in enumerate(self.pending_transactions or []):
+            tx = self._coerce_transaction(transaction)
+            if self._transaction_matches_address(tx, address) and self._transaction_matches_type(tx, tx_type):
+                records.append(self.safe_transaction_record(tx, status="pending", transaction_index=index))
+        return sorted(records, key=lambda item: float(item.get("timestamp") or 0), reverse=True)
+
+    def _confirmed_transaction_records(
+        self,
+        address: str | None = None,
+        tx_type: str | None = None,
+    ) -> list[dict[str, Any]]:
+        records: list[dict[str, Any]] = []
+        for block in reversed(self.chain):
+            for index, transaction in enumerate(block.transactions or []):
+                tx = self._coerce_transaction(transaction)
+                if self._transaction_matches_address(tx, address) and self._transaction_matches_type(tx, tx_type):
+                    records.append(
+                        self.safe_transaction_record(
+                            tx,
+                            status="confirmed",
+                            block=block,
+                            transaction_index=index,
+                        )
+                    )
+        return sorted(records, key=lambda item: float(item.get("timestamp") or 0), reverse=True)
+
+    def get_pending_transaction_records(
+        self,
+        limit: int,
+        offset: int,
+        address: str | None = None,
+    ) -> tuple[list[dict[str, Any]], int, bool]:
+        records = self._pending_transaction_records(address=address)
+        total = len(records)
+        return records[offset : offset + limit], total, offset + limit < total
+
+    def get_transaction_records(
+        self,
+        limit: int,
+        offset: int,
+        address: str | None = None,
+        tx_type: str | None = None,
+        status: str = "all",
+    ) -> tuple[list[dict[str, Any]], int, bool]:
+        if status not in {"pending", "confirmed", "all"}:
+            raise ValueError("status must be pending, confirmed, or all")
+        records: list[dict[str, Any]] = []
+        if status in {"pending", "all"}:
+            records.extend(self._pending_transaction_records(address=address, tx_type=tx_type))
+        if status in {"confirmed", "all"}:
+            records.extend(self._confirmed_transaction_records(address=address, tx_type=tx_type))
+        records.sort(key=lambda item: float(item.get("timestamp") or 0), reverse=True)
+        total = len(records)
+        return records[offset : offset + limit], total, offset + limit < total
+
+    def get_transaction_detail(self, tx_id: str) -> dict[str, Any] | None:
+        if not tx_id:
+            raise ValueError("transaction ID is required")
+        for record in self._pending_transaction_records():
+            if record["tx_id"] == tx_id:
+                return record
+        for record in self._confirmed_transaction_records():
+            if record["tx_id"] == tx_id:
+                return record
+        return None
+
+    def safe_block_record(self, block: Block, include_transactions: bool = False) -> dict[str, Any]:
+        transactions = [
+            self.safe_transaction_record(transaction, status="confirmed", block=block, transaction_index=index)
+            for index, transaction in enumerate(block.transactions or [])
+        ]
+        record: dict[str, Any] = {
+            "index": block.index,
+            "hash": block.hash,
+            "previous_hash": block.previous_hash,
+            "timestamp": block.timestamp,
+            "nonce": block.nonce,
+            "difficulty": getattr(block, "difficulty", None),
+            "miner_address": getattr(block, "miner_address", None),
+            "transaction_count": len(transactions),
+            "mining_reward_transactions": [
+                transaction for transaction in transactions if transaction["sender_address"] == SYSTEM_ADDRESS
+            ],
+            "confirmations": max(self.get_block_height() - block.index + 1, 0),
+        }
+        if include_transactions:
+            record["transactions"] = transactions
+        return record
+
+    def get_block_detail(self, index_or_hash: str) -> dict[str, Any] | None:
+        if index_or_hash is None or str(index_or_hash).strip() == "":
+            raise ValueError("block index or hash is required")
+        term = str(index_or_hash).strip()
+        target_index: int | None = None
+        if term.isdigit():
+            target_index = int(term)
+        for block in self.chain:
+            if (target_index is not None and block.index == target_index) or block.hash == term:
+                return self.safe_block_record(block, include_transactions=True)
+        return None
+
+    def get_address_history(self, address: str, limit: int, offset: int) -> dict[str, Any]:
+        if not address:
+            raise ValueError("address is required")
+        confirmed = self._confirmed_transaction_records(address=address)
+        pending = self._pending_transaction_records(address=address)
+        confirmed_incoming = [tx for tx in confirmed if tx["receiver_address"] == address]
+        confirmed_outgoing = [tx for tx in confirmed if tx["sender_address"] == address]
+        pending_incoming = [tx for tx in pending if tx["receiver_address"] == address]
+        pending_outgoing = [tx for tx in pending if tx["sender_address"] == address]
+        mined_rewards = [
+            tx for tx in confirmed_incoming
+            if tx["sender_address"] == SYSTEM_ADDRESS and tx["type"] in {"mining_reward", "treasury_reward"}
+        ]
+        all_records = sorted(
+            [*pending, *confirmed],
+            key=lambda item: float(item.get("timestamp") or 0),
+            reverse=True,
+        )
+        page = all_records[offset : offset + limit]
+        confirmed_balance = 0.0
+        for transaction in confirmed:
+            if transaction["receiver_address"] == address:
+                confirmed_balance += float(transaction["amount"])
+            if transaction["sender_address"] == address:
+                confirmed_balance -= float(transaction["amount"])
+        return {
+            "address": address,
+            "balance": self.get_balance(address),
+            "confirmed_balance": confirmed_balance,
+            "pending_incoming": pending_incoming,
+            "pending_outgoing": pending_outgoing,
+            "confirmed_incoming": confirmed_incoming,
+            "confirmed_outgoing": confirmed_outgoing,
+            "mined_rewards": mined_rewards,
+            "total_sent": sum(float(tx["amount"]) for tx in confirmed_outgoing),
+            "total_received": sum(float(tx["amount"]) for tx in confirmed_incoming),
+            "pending_incoming_total": sum(float(tx["amount"]) for tx in pending_incoming),
+            "pending_outgoing_total": sum(float(tx["amount"]) for tx in pending_outgoing),
+            "transaction_count": len(all_records),
+            "transactions": page,
+            "total": len(all_records),
+            "limit": limit,
+            "offset": offset,
+            "has_more": offset + limit < len(all_records),
+        }
 
     def get_block_height(self) -> int:
         return len(self.chain) - 1

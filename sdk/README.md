@@ -16,7 +16,7 @@ const { VorliqSDK } = require("./dist/vorliq-sdk");
 const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
 ```
 
-Production applications should prefer the lightweight and paginated methods when they do not need the entire blockchain. The `getChain` method remains available for compatibility and local tooling, but it downloads the full chain and can become expensive as the network grows. For dashboards, explorers, and account history, use `getChainSummary`, `getBlocks`, `getAddressTransactions`, and `getLeaderboard`.
+Production applications should prefer the lightweight and paginated methods when they do not need the entire blockchain. The `getChain` method remains available for compatibility and local tooling, but it downloads the full chain and can become expensive as the network grows. For dashboards, explorers, and account history, use `getChainSummary`, `getBlocks`, `getTransactions`, `getPendingTransactions`, `getTransaction`, `getBlock`, `getAddressHistory`, and `getLeaderboard`.
 
 ```js
 const { VorliqSDK } = require("./dist/vorliq-sdk");
@@ -25,13 +25,38 @@ async function main() {
   const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
   const summary = await vorliq.getChainSummary();
   const firstPage = await vorliq.getBlocks(25, 0);
-  const walletHistory = await vorliq.getAddressTransactions("VLQ_ADDRESS_HERE", 25, 0);
+  const walletHistory = await vorliq.getAddressHistory("VLQ_ADDRESS_HERE", { limit: 25 });
+  const pending = await vorliq.getPendingTransactions({ limit: 10 });
   const leaderboard = await vorliq.getLeaderboard(10, 0);
 
   console.log("Height:", summary.block_height);
   console.log("Newest blocks:", firstPage.blocks.length);
   console.log("Wallet transactions:", walletHistory.transactions.length);
+  console.log("Pending transactions:", pending.transactions.length);
   console.log("Top holders:", leaderboard.holders);
+}
+
+main().catch(console.error);
+```
+
+The transaction lifecycle APIs distinguish pending transactions from confirmed transactions. A send result should be treated as pending until a block includes it.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const transactions = await vorliq.getTransactions({ status: "all", limit: 20 });
+  const pending = await vorliq.getPendingTransactions({ limit: 10 });
+
+  if (transactions.transactions[0]) {
+    const tx = await vorliq.getTransaction(transactions.transactions[0].tx_id);
+    console.log("Transaction status:", tx.status);
+  }
+
+  const genesis = await vorliq.getBlock(0);
+  console.log("Genesis hash:", genesis.hash);
+  console.log("Pending count:", pending.transactions.length);
 }
 
 main().catch(console.error);

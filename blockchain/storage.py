@@ -310,12 +310,7 @@ class Storage:
         return json.loads(path.read_text(encoding="utf-8"))
 
     def _block_from_dict(self, data: dict[str, Any]) -> Block:
-        block = Block.from_dict(data)
-        block.transactions = [
-            Transaction.from_dict(transaction) if isinstance(transaction, dict) else transaction
-            for transaction in block.transactions
-        ]
-        return block
+        return Block.from_dict(data)
 
     def _transaction_to_dict(self, transaction: Any) -> dict[str, Any]:
         if isinstance(transaction, Transaction):

@@ -1291,6 +1291,7 @@ select.input {
 .exchange-badge.buy,
 .status-badge.open,
 .status-badge.passed,
+.status-badge.confirmed,
 .status-badge.approved,
 .status-badge.repaid,
 .health-icon.online {
@@ -1305,6 +1306,61 @@ select.input {
 .status-badge.minor {
   background: var(--warning);
   color: var(--on-status);
+}
+
+.compact-stat {
+  font-size: clamp(1.2rem, 3vw, 1.75rem);
+  overflow-wrap: anywhere;
+}
+
+.explorer-columns {
+  margin-top: clamp(22px, 4vw, 38px);
+}
+
+.explorer-stats,
+.explorer-search,
+.explorer-detail {
+  margin-bottom: clamp(22px, 4vw, 38px);
+}
+
+.explorer-row-link,
+.explorer-transaction-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.explorer-row-link strong,
+.explorer-transaction-link strong,
+.hash-text {
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+  font-family: "Inter", monospace;
+}
+
+.explorer-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.identity-panel {
+  align-content: start;
+}
+
+.explorer-link-row,
+.transaction-submit-result {
+  display: grid;
+  gap: 12px;
+}
+
+.code-box {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid rgba(24, 215, 201, 0.18);
+  border-radius: var(--radius-md);
+  background: rgba(2, 8, 23, 0.66);
+  color: var(--text-secondary);
+  padding: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .status-badge.cancelled,
@@ -2045,6 +2101,7 @@ select.input {
   .exchange-grid,
   .governance-grid,
   .account-wallet-grid,
+  .explorer-summary-grid,
   .history-row,
   .explorer-result,
   .registry-grid,

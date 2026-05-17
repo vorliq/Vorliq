@@ -86,6 +86,76 @@ describe("scalable chain routes", () => {
     });
   });
 
+  test("forwards block detail lookup", async () => {
+    axios.get.mockResolvedValue({
+      status: 200,
+      data: { success: true, block: { index: 1, hash: "0000abc", transactions: [] } },
+    });
+
+    const response = await request(app).get("/api/chain/block/0000abc");
+
+    expect(response.status).toBe(200);
+    expect(response.body.block.hash).toBe("0000abc");
+    expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/chain/block/0000abc");
+  });
+
+  test("forwards pending transactions with validation", async () => {
+    axios.get.mockResolvedValue({
+      status: 200,
+      data: { success: true, transactions: [{ tx_id: "tx1", status: "pending" }], total: 1 },
+    });
+
+    const response = await request(app).get("/api/transactions/pending?limit=5&offset=0&address=VLQ_TEST");
+
+    expect(response.status).toBe(200);
+    expect(response.body.transactions[0].status).toBe("pending");
+    expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/transactions/pending", {
+      params: { limit: 5, offset: 0, address: "VLQ_TEST" },
+    });
+  });
+
+  test("forwards transaction detail lookup", async () => {
+    axios.get.mockResolvedValue({
+      status: 200,
+      data: { success: true, transaction: { tx_id: "abc123", status: "confirmed" } },
+    });
+
+    const response = await request(app).get("/api/transactions/abc123");
+
+    expect(response.status).toBe(200);
+    expect(response.body.transaction.tx_id).toBe("abc123");
+    expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/transactions/abc123");
+  });
+
+  test("forwards transaction list filters", async () => {
+    axios.get.mockResolvedValue({
+      status: 200,
+      data: { success: true, transactions: [], total: 0 },
+    });
+
+    const response = await request(app).get("/api/transactions?limit=10&offset=2&address=VLQ_TEST&type=transfer&status=confirmed");
+
+    expect(response.status).toBe(200);
+    expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/transactions", {
+      params: { limit: 10, offset: 2, address: "VLQ_TEST", type: "transfer", status: "confirmed" },
+    });
+  });
+
+  test("rejects invalid transaction status before forwarding", async () => {
+    const response = await request(app).get("/api/transactions?status=unknown");
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toMatch(/status/i);
+    expect(axios.get).not.toHaveBeenCalled();
+  });
+
+  test("validates transaction pagination before forwarding", async () => {
+    const response = await request(app).get("/api/transactions/pending?limit=0");
+
+    expect(response.status).toBe(400);
+    expect(axios.get).not.toHaveBeenCalled();
+  });
+
   test("returns leaderboard route from the blockchain service", async () => {
     axios.get.mockResolvedValue({
       status: 200,

@@ -36,6 +36,8 @@ import Achievements from "./pages/Achievements";
 import Transparency from "./pages/Transparency";
 import Admin from "./pages/Admin";
 import Notifications from "./pages/Notifications";
+import TransactionDetail from "./pages/TransactionDetail";
+import BlockDetail from "./pages/BlockDetail";
 import Footer from "./components/Footer";
 import IncidentBanner from "./components/IncidentBanner";
 import api from "./helpers/api";
@@ -461,6 +463,8 @@ function AppShell() {
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/send" element={<Send />} />
           <Route path="/blockchain" element={<Blockchain />} />
+          <Route path="/tx/:txId" element={<TransactionDetail />} />
+          <Route path="/block/:blockId" element={<BlockDetail />} />
           <Route path="/mine" element={<Mine />} />
           <Route path="/whitepaper" element={<Whitepaper />} />
           <Route path="/network" element={<Network />} />

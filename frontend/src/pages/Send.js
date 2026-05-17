@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
@@ -24,6 +25,7 @@ function Send() {
   const [sending, setSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [submittedTransaction, setSubmittedTransaction] = useState(null);
 
   useEffect(() => {
     if (isLoggedIn && wallet?.address) {
@@ -85,6 +87,7 @@ function Send() {
         throw new Error(response.data.error || "Transaction was rejected.");
       }
 
+      setSubmittedTransaction(response.data.transaction || { tx_id: response.data.tx_id, status: "pending" });
       toast.success("Transaction signed and sent to the pending pool.");
       setErrorMessage("");
       setWalletPassword("");
@@ -234,6 +237,22 @@ function Send() {
             only when you are not logged in.
           </p>
         </form>
+
+        {submittedTransaction?.tx_id && (
+          <div className="success-box transaction-submit-result">
+            <strong>Transaction submitted to the pending pool</strong>
+            <p>
+              Transaction ID: <span className="hash-text">{submittedTransaction.tx_id}</span>
+            </p>
+            <p>
+              Status is pending until a miner includes it in a valid block. Mining confirms
+              pending transactions.
+            </p>
+            <Link className="button secondary small-button" to={`/tx/${submittedTransaction.tx_id}`}>
+              View Transaction
+            </Link>
+          </div>
+        )}
       </section>
     </div>
   );

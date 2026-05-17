@@ -7,6 +7,21 @@ const { paginationParams } = require("../pagination");
 const router = express.Router();
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
 
+function safePathText(value, label, maxLength = 160) {
+  const normalized = String(value || "").replace(/\u0000/g, "").trim();
+  if (!normalized) {
+    const error = new Error(`${label} is required`);
+    error.status = 400;
+    throw error;
+  }
+  if (normalized.length > maxLength) {
+    const error = new Error(`${label} must be ${maxLength} characters or fewer`);
+    error.status = 400;
+    throw error;
+  }
+  return normalized;
+}
+
 router.get("/api/chain", async (req, res, next) => {
   try {
     const response = await axios.get(`${flaskUrl}/chain`);
@@ -62,6 +77,19 @@ router.get("/api/chain/address", async (req, res) => {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     return handleRouteError(res, error, "GET /api/chain/address", "Unable to load address transactions.");
+  }
+});
+
+router.get("/api/chain/block/:index_or_hash", async (req, res) => {
+  try {
+    const blockId = safePathText(req.params.index_or_hash, "block index or hash");
+    const response = await axios.get(`${flaskUrl}/chain/block/${encodeURIComponent(blockId)}`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
+    return handleRouteError(res, error, "GET /api/chain/block/:index_or_hash", "Unable to load block detail.");
   }
 });
 

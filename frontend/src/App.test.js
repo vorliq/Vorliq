@@ -21,6 +21,9 @@ import Send from "./pages/Send";
 import Transparency from "./pages/Transparency";
 import Wallet from "./pages/Wallet";
 import Admin from "./pages/Admin";
+import TransactionDetail from "./pages/TransactionDetail";
+import BlockDetail from "./pages/BlockDetail";
+import Blockchain from "./pages/Blockchain";
 
 jest.mock("./helpers/api", () => ({
   get: jest.fn(),
@@ -79,8 +82,66 @@ function defaultApiGet(path) {
     return Promise.resolve({ data: { success: true, blocks: [], total_blocks: 0, has_more: false } });
   }
 
+  if (path.startsWith("/chain/block/")) {
+    return Promise.resolve({
+      data: {
+        success: true,
+        block: {
+          index: 0,
+          hash: "genesis-hash",
+          previous_hash: "0",
+          timestamp: 1715791000,
+          nonce: 0,
+          transaction_count: 0,
+          transactions: [],
+          confirmations: 1,
+        },
+      },
+    });
+  }
+
   if (path === "/chain/address") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        transactions: [],
+        total: 0,
+        has_more: false,
+        pending_incoming_total: 0,
+        pending_outgoing_total: 0,
+      },
+    });
+  }
+
+  if (path === "/transactions/pending") {
     return Promise.resolve({ data: { success: true, transactions: [], total: 0, has_more: false } });
+  }
+
+  if (path === "/transactions") {
+    return Promise.resolve({ data: { success: true, transactions: [], total: 0, has_more: false } });
+  }
+
+  if (path.startsWith("/transactions/")) {
+    return Promise.resolve({
+      data: {
+        success: true,
+        transaction: {
+          tx_id: "tx-test-123",
+          status: "confirmed",
+          sender_address: "VLQ_SENDER",
+          receiver_address: "VLQ_RECEIVER",
+          amount: 4,
+          type: "transfer",
+          timestamp: 1715791000,
+          block_index: 1,
+          block_hash: "0000abc",
+          confirmations: 2,
+          signature_present: true,
+          public_key_present: true,
+          metadata: {},
+        },
+      },
+    });
   }
 
   if (path === "/leaderboard") {
@@ -598,6 +659,66 @@ test("Mine page displays a cooldown message when the API returns a mining cooldo
   await userEvent.click(screen.getByRole("button", { name: /mine block/i }));
 
   expect(await screen.findByText(/cooling down\. ready to mine in 12 seconds/i)).toBeInTheDocument();
+});
+
+test("Transaction detail page renders status and block link", async () => {
+  renderWithProviders(<TransactionDetail />, "/tx/tx-test-123");
+
+  expect(await screen.findByRole("heading", { name: /transaction detail/i })).toBeInTheDocument();
+  expect(await screen.findByText(/confirmed/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /view block/i })).toHaveAttribute("href", "/block/0000abc");
+  expect(screen.queryByText(/private key/i)).not.toBeInTheDocument();
+});
+
+test("Block detail page renders transactions with tx links", async () => {
+  api.get.mockImplementation((path) => {
+    if (path.startsWith("/chain/block/")) {
+      return Promise.resolve({
+        data: {
+          success: true,
+          block: {
+            index: 2,
+            hash: "0000block",
+            previous_hash: "0000prev",
+            timestamp: 1715791000,
+            nonce: 42,
+            difficulty: 4,
+            transaction_count: 1,
+            confirmations: 1,
+            transactions: [{ tx_id: "tx-one", status: "confirmed", amount: 3, type: "transfer" }],
+          },
+        },
+      });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<BlockDetail />, "/block/0000block");
+
+  expect(await screen.findByRole("heading", { name: /block detail/i })).toBeInTheDocument();
+  expect(screen.getByText(/block #2/i)).toBeInTheDocument();
+  expect(await screen.findByText(/tx-one/i)).toBeInTheDocument();
+  expect(screen.getByText(/tx-one/i).closest("a")).toHaveAttribute("href", "/tx/tx-one");
+});
+
+test("Blockchain explorer loads pending transactions and links to tx details", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/transactions/pending") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          transactions: [{ tx_id: "pending-tx", status: "pending", sender_address: "VLQ_A", amount: 2 }],
+        },
+      });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Blockchain />, "/blockchain");
+
+  expect(await screen.findByRole("heading", { name: /pending transactions/i })).toBeInTheDocument();
+  expect(await screen.findByText(/pending-tx/i)).toBeInTheDocument();
+  expect(screen.getByText(/pending-tx/i).closest("a")).toHaveAttribute("href", "/tx/pending-tx");
 });
 
 test("IncidentBanner does not render when no active incidents are returned", async () => {

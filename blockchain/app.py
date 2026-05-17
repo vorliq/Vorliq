@@ -170,6 +170,11 @@ def _pagination(default_limit: int = DEFAULT_PAGE_LIMIT) -> tuple[int, int]:
     return min(limit, MAX_PAGE_LIMIT), offset
 
 
+def _transaction_pagination(default_limit: int = 25) -> tuple[int, int]:
+    limit, offset = _pagination(default_limit)
+    return min(limit, 100), offset
+
+
 def _page(items: list, limit: int, offset: int) -> tuple[list, int, bool]:
     total = len(items)
     page_items = items[offset : offset + limit]
@@ -265,12 +270,48 @@ def get_chain_summary():
 def get_chain_address():
     try:
         address = _require_text(request.args.get("address"), "address", 160)
-        limit, offset = _pagination()
-        transactions, total, has_more = node.blockchain.get_address_transactions(address, limit, offset)
+        limit, offset = _transaction_pagination()
+        history = node.blockchain.get_address_history(address, limit, offset)
         return jsonify(
             {
                 "success": True,
                 "address": address,
+                **history,
+                "limit": limit,
+                "offset": offset,
+            }
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/chain/block/<path:index_or_hash>")
+def get_chain_block_detail(index_or_hash):
+    try:
+        block = node.blockchain.get_block_detail(index_or_hash)
+        if not block:
+            return jsonify({"success": False, "message": "Block not found"}), 404
+        return jsonify({"success": True, "block": block})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/pending")
+def get_pending_transactions():
+    return jsonify({"pending_transactions": node.get_pending_transactions()})
+
+
+@app.get("/transactions/pending")
+def get_pending_transaction_records():
+    try:
+        limit, offset = _transaction_pagination()
+        address = request.args.get("address")
+        if address:
+            address = _require_text(address, "address", 160)
+        transactions, total, has_more = node.blockchain.get_pending_transaction_records(limit, offset, address)
+        return jsonify(
+            {
+                "success": True,
                 "transactions": transactions,
                 "total": total,
                 "limit": limit,
@@ -282,9 +323,47 @@ def get_chain_address():
         return jsonify({"success": False, "message": str(exc)}), 400
 
 
-@app.get("/pending")
-def get_pending_transactions():
-    return jsonify({"pending_transactions": node.get_pending_transactions()})
+@app.get("/transactions/<tx_id>")
+def get_transaction_detail(tx_id):
+    try:
+        transaction = node.blockchain.get_transaction_detail(_require_text(tx_id, "transaction ID", 128))
+        if not transaction:
+            return jsonify({"success": False, "message": "Transaction not found"}), 404
+        return jsonify({"success": True, "transaction": transaction})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/transactions")
+def get_transactions():
+    try:
+        limit, offset = _transaction_pagination()
+        address = request.args.get("address")
+        tx_type = request.args.get("type")
+        status = (request.args.get("status") or "all").lower()
+        if address:
+            address = _require_text(address, "address", 160)
+        if tx_type:
+            tx_type = _require_text(tx_type, "type", 80).lower()
+        transactions, total, has_more = node.blockchain.get_transaction_records(
+            limit,
+            offset,
+            address=address,
+            tx_type=tx_type,
+            status=status,
+        )
+        return jsonify(
+            {
+                "success": True,
+                "transactions": transactions,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+                "has_more": has_more,
+            }
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.post("/transaction")
@@ -313,7 +392,14 @@ def create_transaction():
         storage.save_achievements(achievements)
         if not data.get("_broadcasted"):
             network.broadcast_transaction({**transaction.to_dict(), "_broadcasted": True})
-        return jsonify({"success": True, "message": "Transaction added to pending pool"}), 201
+        return jsonify(
+            {
+                "success": True,
+                "message": "Transaction added to pending pool",
+                "transaction": node.blockchain.safe_transaction_record(transaction, status="pending"),
+                "tx_id": transaction.tx_id,
+            }
+        ), 201
     except Exception as exc:
         vorliq_logger.error("Transaction endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
@@ -324,14 +410,15 @@ def mine_block():
     try:
         data = _json_body()
         miner_address = _require_text(data.get("miner_address") or data.get("minerAddress"), "miner address", 160)
-        block = node.mine_new_block(miner_address)
+        raw_block = node.mine_new_block(miner_address)
+        block = node.blockchain.get_block_detail(str(raw_block["index"])) or raw_block
         storage.save_chain(node.blockchain)
         storage.save_pending(node.blockchain.pending_transactions)
         storage.save_lending_pool(lending_pool)
         achievements.check_and_award(miner_address, "first_mine", node.blockchain)
         achievements.check_and_award(miner_address, "ten_blocks", node.blockchain)
         storage.save_achievements(achievements)
-        network.broadcast_block(block)
+        network.broadcast_block(raw_block)
         return jsonify({"success": True, "block": block}), 201
     except MiningCooldownError as exc:
         vorliq_logger.warning("Mine endpoint rejected request during cooldown: %s", exc)

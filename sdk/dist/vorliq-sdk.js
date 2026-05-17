@@ -21,6 +21,17 @@ function paginationQuery(limit, offset) {
   return query ? `?${query}` : "";
 }
 
+function transactionQuery(params = {}) {
+  const query = new URLSearchParams();
+  if (params.limit !== undefined) query.set("limit", String(params.limit));
+  if (params.offset !== undefined) query.set("offset", String(params.offset));
+  if (params.address) query.set("address", String(params.address));
+  if (params.type) query.set("type", String(params.type));
+  if (params.status) query.set("status", String(params.status));
+  const value = query.toString();
+  return value ? `?${value}` : "";
+}
+
 class VorliqSDK {
   /**
    * Creates a Vorliq SDK client.
@@ -102,6 +113,66 @@ class VorliqSDK {
   async getAddressTransactions(address, limit = 50, offset = 0) {
     const query = new URLSearchParams({ address, limit: String(limit), offset: String(offset) });
     return this.request(`/api/chain/address?${query.toString()}`);
+  }
+
+  /**
+   * Gets wallet history with pending and confirmed transaction breakdowns.
+   *
+   * @param {string} address - Wallet address to inspect.
+   * @param {object} [params] - Pagination options.
+   * @param {number} [params.limit=25] - Maximum transactions to return.
+   * @param {number} [params.offset=0] - Number of transactions to skip.
+   * @returns {Promise<object>} Address history with pending totals, confirmed totals, balance, and transactions.
+   */
+  async getAddressHistory(address, params = {}) {
+    const query = new URLSearchParams({
+      address,
+      limit: String(params.limit ?? 25),
+      offset: String(params.offset ?? 0),
+    });
+    return this.request(`/api/chain/address?${query.toString()}`);
+  }
+
+  /**
+   * Gets paginated pending and confirmed transactions.
+   *
+   * @param {object} [params] - Filters for limit, offset, address, type, and status.
+   * @returns {Promise<object>} Paginated transactions response.
+   */
+  async getTransactions(params = {}) {
+    return this.request(`/api/transactions${transactionQuery(params)}`);
+  }
+
+  /**
+   * Gets pending transactions waiting to be mined.
+   *
+   * @param {object} [params] - Filters for limit, offset, and optional address.
+   * @returns {Promise<object>} Paginated pending transactions response.
+   */
+  async getPendingTransactions(params = {}) {
+    return this.request(`/api/transactions/pending${transactionQuery(params)}`);
+  }
+
+  /**
+   * Gets one transaction by transaction ID.
+   *
+   * @param {string} txId - Stable transaction ID.
+   * @returns {Promise<object>} Safe transaction detail.
+   */
+  async getTransaction(txId) {
+    const data = await this.request(`/api/transactions/${encodeURIComponent(txId)}`);
+    return data.transaction || data;
+  }
+
+  /**
+   * Gets one block by numeric index or block hash.
+   *
+   * @param {string|number} blockId - Block index or hash.
+   * @returns {Promise<object>} Safe block detail with transactions.
+   */
+  async getBlock(blockId) {
+    const data = await this.request(`/api/chain/block/${encodeURIComponent(blockId)}`);
+    return data.block || data;
   }
 
   /**
