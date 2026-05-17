@@ -132,6 +132,8 @@ function AppShell() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreMenuRef = useRef(null);
+  const mobileDrawerRef = useRef(null);
+  const hamburgerRef = useRef(null);
 
   useEffect(() => {
     document.body.classList.toggle("mobile-nav-open", mobileNavOpen);
@@ -139,18 +141,60 @@ function AppShell() {
   }, [mobileNavOpen]);
 
   useEffect(() => {
-    function closeOnEscape(event) {
+    function getDrawerFocusTargets() {
+      if (!mobileDrawerRef.current) return [];
+      return Array.from(
+        mobileDrawerRef.current.querySelectorAll(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+    }
+
+    function closeOnKeyboard(event) {
       if (event.key === "Escape") {
         setMobileNavOpen(false);
         setMoreOpen(false);
+        if (mobileNavOpen && hamburgerRef.current) {
+          hamburgerRef.current.focus();
+        }
+        return;
+      }
+
+      if (event.key === "Tab" && mobileNavOpen) {
+        const focusTargets = getDrawerFocusTargets();
+        if (!focusTargets.length) return;
+
+        const firstTarget = focusTargets[0];
+        const lastTarget = focusTargets[focusTargets.length - 1];
+
+        if (event.shiftKey && document.activeElement === firstTarget) {
+          event.preventDefault();
+          lastTarget.focus();
+        } else if (!event.shiftKey && document.activeElement === lastTarget) {
+          event.preventDefault();
+          firstTarget.focus();
+        }
       }
     }
 
-    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("keydown", closeOnKeyboard);
     return () => {
-      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("keydown", closeOnKeyboard);
     };
-  }, []);
+  }, [mobileNavOpen]);
+
+  useEffect(() => {
+    if (!mobileNavOpen || !mobileDrawerRef.current) return undefined;
+
+    const focusTarget = mobileDrawerRef.current.querySelector("a, button");
+    const focusTimer = window.setTimeout(() => {
+      if (focusTarget) {
+        focusTarget.focus();
+      }
+    }, 0);
+
+    return () => window.clearTimeout(focusTimer);
+  }, [mobileNavOpen]);
 
   useEffect(() => {
     function closeMoreOnOutsideClick(event) {
@@ -208,6 +252,7 @@ function AppShell() {
           <button
             className={`hamburger ${mobileNavOpen ? "is-open" : ""}`}
             type="button"
+            ref={hamburgerRef}
             aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={mobileNavOpen}
             aria-controls="mobile-navigation"
@@ -301,7 +346,24 @@ function AppShell() {
             </div>
           </div>
 
-          <div className={`mobile-drawer ${mobileNavOpen ? "nav-open" : ""}`} id="mobile-navigation">
+          <div
+            className={`mobile-drawer-backdrop ${mobileNavOpen ? "nav-open" : ""}`}
+            aria-hidden="true"
+            onClick={() => {
+              setMobileNavOpen(false);
+              hamburgerRef.current?.focus();
+            }}
+          />
+
+          <div
+            className={`mobile-drawer ${mobileNavOpen ? "nav-open" : ""}`}
+            id="mobile-navigation"
+            ref={mobileDrawerRef}
+            role={mobileNavOpen ? "dialog" : undefined}
+            aria-modal={mobileNavOpen ? "true" : undefined}
+            aria-label={mobileNavOpen ? "Navigation menu" : undefined}
+            aria-hidden={!mobileNavOpen}
+          >
             {mobileNavSections.map((section) => (
               <div className="nav-section" key={section.title}>
                 <span className="nav-section-title">{section.title}</span>

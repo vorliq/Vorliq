@@ -582,6 +582,10 @@ html[data-glow="reduced"] .brand-network {
   display: none;
 }
 
+.mobile-drawer-backdrop {
+  display: none;
+}
+
 .icon-button {
   position: relative;
   display: inline-grid;
@@ -2809,12 +2813,22 @@ th {
     border-radius: 0;
     background: var(--menu-bg);
     padding: 16px;
+    z-index: 310;
   }
 
   .mobile-drawer.nav-open {
     display: grid;
     align-content: start;
     gap: 14px;
+  }
+
+  .mobile-drawer-backdrop.nav-open {
+    position: fixed;
+    inset: var(--nav-height) 0 0;
+    z-index: 300;
+    display: block;
+    background: rgba(0, 5, 14, 0.44);
+    backdrop-filter: blur(3px);
   }
 
   .mobile-drawer .nav-link {

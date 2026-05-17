@@ -57,3 +57,7 @@ if (!navigator.clipboard) {
     configurable: true,
   });
 }
+
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = jest.fn();
+}

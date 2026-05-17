@@ -279,7 +279,36 @@ test("mobile hamburger announces expanded state when opened", async () => {
   expect(hamburger).toHaveAttribute("aria-controls", "mobile-navigation");
 });
 
-test("More menu opens, exposes grouped links, and closes with Escape", async () => {
+test("mobile drawer traps focus and closes from outside click", async () => {
+  window.localStorage.setItem(ONBOARDING_KEY, "true");
+
+  render(<App />);
+
+  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
+  const hamburger = screen.getByRole("button", { name: /open navigation menu/i });
+  await userEvent.click(hamburger);
+
+  const drawer = screen.getByRole("dialog", { name: /navigation menu/i });
+  expect(drawer).toHaveAttribute("aria-modal", "true");
+  await waitFor(() => {
+    expect(within(drawer).getByRole("link", { name: /dashboard/i })).toHaveFocus();
+  });
+
+  const focusTargets = drawer.querySelectorAll("a, button");
+  focusTargets[focusTargets.length - 1].focus();
+  fireEvent.keyDown(document, { key: "Tab" });
+  expect(focusTargets[0]).toHaveFocus();
+
+  focusTargets[0].focus();
+  fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+  expect(focusTargets[focusTargets.length - 1]).toHaveFocus();
+
+  fireEvent.click(document.querySelector(".mobile-drawer-backdrop"));
+  expect(hamburger).toHaveAttribute("aria-expanded", "false");
+  expect(document.body).not.toHaveClass("mobile-nav-open");
+});
+
+test("More menu opens, exposes grouped links, and closes accessibly", async () => {
   window.localStorage.setItem(ONBOARDING_KEY, "true");
 
   render(<App />);
@@ -300,6 +329,15 @@ test("More menu opens, exposes grouped links, and closes with Escape", async () 
 
   fireEvent.keyDown(document, { key: "Escape" });
 
+  expect(moreButton).toHaveAttribute("aria-expanded", "false");
+
+  await userEvent.click(moreButton);
+  expect(moreButton).toHaveAttribute("aria-expanded", "true");
+  fireEvent.pointerDown(document.body);
+  expect(moreButton).toHaveAttribute("aria-expanded", "false");
+
+  await userEvent.click(moreButton);
+  await userEvent.click(within(moreMenu).getByRole("menuitem", { name: /chat/i }));
   expect(moreButton).toHaveAttribute("aria-expanded", "false");
 });
 

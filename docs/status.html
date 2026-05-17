@@ -16,15 +16,15 @@
     />
     <style>
       :root {
-        --bg: #0f0f1a;
-        --card: #1a1a2e;
-        --card-strong: #20203a;
-        --accent: #6c63ff;
+        --bg: #020817;
+        --card: rgba(8, 14, 28, 0.38);
+        --card-strong: rgba(8, 14, 28, 0.74);
+        --accent: #18d7c9;
         --text: #ffffff;
-        --muted: #c7c7d4;
-        --muted-2: #9292a6;
-        --border: rgba(255, 255, 255, 0.12);
-        --green: #35d07f;
+        --muted: #c7d2e4;
+        --muted-2: #91a0b7;
+        --border: rgba(24, 215, 201, 0.24);
+        --green: #86e33b;
         --red: #ff5d6c;
         --yellow: #ffd166;
       }
@@ -38,8 +38,10 @@
         min-width: 320px;
         font-family: Inter, Arial, sans-serif;
         background:
-          radial-gradient(circle at top left, rgba(108, 99, 255, 0.2), transparent 34rem),
-          var(--bg);
+          radial-gradient(circle at 12% 10%, rgba(134, 227, 59, 0.18), transparent 30rem),
+          radial-gradient(circle at 88% 20%, rgba(20, 121, 255, 0.22), transparent 34rem),
+          radial-gradient(ellipse at 50% 100%, rgba(24, 215, 201, 0.13), transparent 42%),
+          linear-gradient(180deg, #020817, #061326 58%, #020817);
         color: var(--text);
       }
 
@@ -52,7 +54,7 @@
       input:focus-visible {
         outline: 3px solid var(--accent);
         outline-offset: 3px;
-        box-shadow: 0 0 0 5px rgba(108, 99, 255, 0.22);
+        box-shadow: 0 0 0 5px rgba(24, 215, 201, 0.18);
       }
 
       .wrap {
@@ -99,8 +101,8 @@
         justify-content: center;
         min-height: 46px;
         border: 1px solid var(--border);
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.04);
+        border-radius: 999px;
+        background: rgba(8, 14, 28, 0.34);
         color: var(--muted);
         font-weight: 800;
         padding: 11px 14px;
@@ -109,8 +111,8 @@
 
       .button.primary {
         border-color: var(--accent);
-        background: var(--accent);
-        color: #fff;
+        background: linear-gradient(90deg, var(--green), var(--accent), #1479ff);
+        color: #03101b;
       }
 
       main {
@@ -163,9 +165,10 @@
 
       .card {
         border: 1px solid var(--border);
-        border-radius: 12px;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent), var(--card);
-        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+        border-radius: 14px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012)), var(--card);
+        box-shadow: 0 14px 42px rgba(0, 0, 0, 0.18);
+        backdrop-filter: blur(8px);
         padding: 22px;
       }
 
