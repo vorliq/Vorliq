@@ -123,22 +123,21 @@ function Dashboard() {
     <div className="page">
       <section className="hero dashboard-brand-hero">
         <img className="hero-logo" src={logo} alt="Vorliq logo" />
-        <span className="eyebrow brand-pill">Community Blockchain Platform</span>
+        <span className="eyebrow brand-pill">Dashboard</span>
         <h1>
-          Vorliq
-          <span> Save, send, lend, trade and govern with <em>VLQ</em></span>
+          Vorliq Dashboard
+          <span>Start safely, then explore the live network.</span>
         </h1>
         <p className="subtitle">
           Vorliq is experimental open-source community blockchain software for wallets,
           mining, community lending, exchange offers, governance, and transparent public records.
         </p>
         <div className="hero-actions">
-          <Link className="button" to="/login">Create Wallet</Link>
+          <Link className="button" to="/login">Create or Import Wallet</Link>
           <Link className="button secondary" to="/mine">Mine VLQ</Link>
           <Link className="button secondary" to="/forum">Explore Forum</Link>
           <Link className="button secondary" to="/transparency">View Transparency</Link>
         </div>
-        <SocialLinks compact />
       </section>
 
       <ErrorMessage message={errorMessage} />
@@ -229,7 +228,6 @@ function Dashboard() {
       </section>
 
       <section className="card card-pad about-card">
-        <img className="section-logo" src={logo} alt="Vorliq logo" />
         <span className="eyebrow">About Vorliq</span>
         <h2>About Vorliq</h2>
         <p>
@@ -265,6 +263,20 @@ function Dashboard() {
         ) : (
           <div className="empty-state">No featured posts yet. Be the first to feature a great post.</div>
         )}
+      </section>
+
+      <section className="card card-pad community-links-card">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">Community</span>
+            <h2>Join the Conversation</h2>
+          </div>
+        </div>
+        <p>
+          Follow official Vorliq channels for project updates, support discussions, network
+          announcements, and community feedback.
+        </p>
+        <SocialLinks compact />
       </section>
     </div>
   );
