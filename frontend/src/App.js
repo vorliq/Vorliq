@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BrowserRouter, NavLink, Route, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -38,7 +38,31 @@ import IncidentBanner from "./components/IncidentBanner";
 import api from "./helpers/api";
 import logo from "./assets/logo.png";
 
-const navSections = [
+const primaryLinks = [
+  { to: "/", label: "Dashboard", end: true },
+  { to: "/wallet", label: "Wallet" },
+  { to: "/send", label: "Send" },
+  { to: "/mine", label: "Mine" },
+  { to: "/forum", label: "Forum" },
+];
+
+const moreLinks = [
+  { to: "/lending", label: "Lending" },
+  { to: "/exchange", label: "Exchange" },
+  { to: "/governance", label: "Governance" },
+  { to: "/treasury", label: "Treasury" },
+  { to: "/price", label: "Price" },
+  { to: "/leaderboard", label: "Leaderboard" },
+  { to: "/registry", label: "Registry" },
+  { to: "/blockchain", label: "Blockchain" },
+  { to: "/network", label: "Network" },
+  { to: "/stats", label: "Stats" },
+  { to: "/health", label: "Health" },
+  { to: "/transparency", label: "Transparency" },
+  { to: "/whitepaper", label: "Whitepaper" },
+];
+
+const mobileNavSections = [
   {
     title: "Core",
     links: [
@@ -51,15 +75,12 @@ const navSections = [
   {
     title: "Community",
     links: [
+      { to: "/forum", label: "Forum" },
+      { to: "/chat", label: "Chat" },
       { to: "/lending", label: "Lending" },
       { to: "/exchange", label: "Exchange" },
       { to: "/governance", label: "Governance" },
       { to: "/treasury", label: "Treasury" },
-      { to: "/price", label: "Price" },
-      { to: "/forum", label: "Forum" },
-      { to: "/chat", label: "Chat" },
-      { to: "/leaderboard", label: "Leaderboard" },
-      { to: "/registry", label: "Registry" },
     ],
   },
   {
@@ -67,10 +88,19 @@ const navSections = [
     links: [
       { to: "/blockchain", label: "Blockchain" },
       { to: "/network", label: "Network" },
+      { to: "/registry", label: "Registry" },
       { to: "/stats", label: "Stats" },
+      { to: "/leaderboard", label: "Leaderboard" },
       { to: "/health", label: "Health" },
+    ],
+  },
+  {
+    title: "Trust",
+    links: [
       { to: "/transparency", label: "Transparency" },
       { to: "/whitepaper", label: "Whitepaper" },
+      { href: "https://vorliq.github.io/Vorliq/wallet-safety.html", label: "Wallet Safety" },
+      { href: "https://vorliq.github.io/Vorliq/terms.html#risk-notice", label: "Risk Notice" },
     ],
   },
 ];
@@ -95,62 +125,38 @@ function AppShell() {
   const { unreadCount } = useNotifications();
   const [backendOnline, setBackendOnline] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreMenuRef = useRef(null);
 
   useEffect(() => {
-    const hamburger = document.querySelector(".hamburger");
-    const navMenu = document.querySelector(".nav-links");
+    document.body.classList.toggle("mobile-nav-open", mobileNavOpen);
+    return () => document.body.classList.remove("mobile-nav-open");
+  }, [mobileNavOpen]);
 
-    function toggleMenu() {
-      navMenu?.classList.toggle("nav-open");
-      hamburger?.classList.toggle("is-open");
-      const isOpen = navMenu?.classList.contains("nav-open") || false;
-      hamburger?.setAttribute("aria-expanded", String(isOpen));
-      hamburger?.setAttribute("aria-label", isOpen ? "Close navigation menu" : "Open navigation menu");
-      document.body.classList.toggle("mobile-nav-open", isOpen);
-    }
-
-    function closeMobileMenu() {
-      navMenu?.classList.remove("nav-open");
-      hamburger?.classList.remove("is-open");
-      hamburger?.setAttribute("aria-expanded", "false");
-      hamburger?.setAttribute("aria-label", "Open navigation menu");
-      document.body.classList.remove("mobile-nav-open");
-    }
-
-    function closeMenu(event) {
-      if (event.target.closest("a") || event.target.closest(".nav-button")) {
-        closeMobileMenu();
-      }
-    }
-
-    function closeOnOutsideClick(event) {
-      if (!navMenu?.classList.contains("nav-open")) {
-        return;
-      }
-
-      if (!event.target.closest(".navbar-inner")) {
-        closeMobileMenu();
-      }
-    }
-
+  useEffect(() => {
     function closeOnEscape(event) {
       if (event.key === "Escape") {
-        closeMobileMenu();
+        setMobileNavOpen(false);
+        setMoreOpen(false);
       }
     }
 
-    hamburger?.addEventListener("click", toggleMenu);
-    navMenu?.addEventListener("click", closeMenu);
-    document.addEventListener("click", closeOnOutsideClick);
     document.addEventListener("keydown", closeOnEscape);
-
     return () => {
-      hamburger?.removeEventListener("click", toggleMenu);
-      navMenu?.removeEventListener("click", closeMenu);
-      document.removeEventListener("click", closeOnOutsideClick);
       document.removeEventListener("keydown", closeOnEscape);
-      document.body.classList.remove("mobile-nav-open");
     };
+  }, []);
+
+  useEffect(() => {
+    function closeMoreOnOutsideClick(event) {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
+        setMoreOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", closeMoreOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeMoreOnOutsideClick);
   }, []);
 
   useEffect(() => {
@@ -196,28 +202,52 @@ function AppShell() {
           </NavLink>
 
           <button
-            className="hamburger"
+            className={`hamburger ${mobileNavOpen ? "is-open" : ""}`}
             type="button"
-            aria-label="Open navigation menu"
-            aria-expanded="false"
-            aria-controls="primary-navigation"
+            aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={mobileNavOpen}
+            aria-controls="mobile-navigation"
+            onClick={() => setMobileNavOpen((open) => !open)}
           >
             <span />
             <span />
             <span />
           </button>
 
-          <div className="nav-links" id="primary-navigation">
-            {navSections.map((section) => (
-              <div className="nav-section" key={section.title}>
-                <span className="nav-section-title">{section.title}</span>
-                {section.links.map((link) => (
-                  <NavLink className="nav-link" to={link.to} end={link.end} key={link.to}>
-                    {link.label}
-                  </NavLink>
-                ))}
+          <div className="desktop-navigation" id="primary-navigation">
+            <div className="primary-links" aria-label="Primary navigation">
+              {primaryLinks.map((link) => (
+                <NavLink className="nav-link" to={link.to} end={link.end} key={link.to}>
+                  {link.label}
+                </NavLink>
+              ))}
+              <div className="more-menu" ref={moreMenuRef}>
+                <button
+                  className={`nav-link more-trigger ${moreOpen ? "active" : ""}`}
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={moreOpen}
+                  aria-controls="more-navigation"
+                  onClick={() => setMoreOpen((open) => !open)}
+                >
+                  More
+                  <span aria-hidden="true">+</span>
+                </button>
+                <div className={`more-dropdown ${moreOpen ? "open" : ""}`} id="more-navigation" role="menu">
+                  {moreLinks.map((link) => (
+                    <NavLink
+                      className="more-link"
+                      to={link.to}
+                      role="menuitem"
+                      key={link.to}
+                      onClick={() => setMoreOpen(false)}
+                    >
+                      {link.label}
+                    </NavLink>
+                  ))}
+                </div>
               </div>
-            ))}
+            </div>
 
             <div className="nav-tools">
               <button
@@ -255,6 +285,86 @@ function AppShell() {
                 </>
               ) : (
                 <NavLink className="button nav-button" to="/login">
+                  Login
+                </NavLink>
+              )}
+            </div>
+          </div>
+
+          <div className={`mobile-drawer ${mobileNavOpen ? "nav-open" : ""}`} id="mobile-navigation">
+            {mobileNavSections.map((section) => (
+              <div className="nav-section" key={section.title}>
+                <span className="nav-section-title">{section.title}</span>
+                {section.links.map((link) =>
+                  link.to ? (
+                    <NavLink
+                      className="nav-link"
+                      to={link.to}
+                      end={link.end}
+                      key={link.to}
+                      onClick={() => setMobileNavOpen(false)}
+                    >
+                      {link.label}
+                    </NavLink>
+                  ) : (
+                    <a
+                      className="nav-link"
+                      href={link.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      key={link.href}
+                      onClick={() => setMobileNavOpen(false)}
+                    >
+                      {link.label}
+                    </a>
+                  )
+                )}
+              </div>
+            ))}
+
+            <div className="mobile-drawer-tools">
+              <button
+                className="icon-button"
+                type="button"
+                onClick={toggleTheme}
+                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+              </button>
+              <button
+                className="icon-button notification-bell"
+                type="button"
+                onClick={() => setNotificationsOpen((open) => !open)}
+                aria-label={notificationsOpen ? "Close notifications" : "Open notifications"}
+                aria-expanded={notificationsOpen}
+                aria-controls="notification-panel"
+                title="Notifications"
+              >
+                <BellIcon />
+                {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+              </button>
+            </div>
+
+            <div className="mobile-auth-actions">
+              {isLoggedIn ? (
+                <>
+                  <NavLink className="wallet-chip" to="/account" onClick={() => setMobileNavOpen(false)}>
+                    {wallet.address.slice(0, 12)}
+                  </NavLink>
+                  <button
+                    className="button secondary nav-button"
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      setMobileNavOpen(false);
+                    }}
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <NavLink className="button nav-button" to="/login" onClick={() => setMobileNavOpen(false)}>
                   Login
                 </NavLink>
               )}
@@ -316,7 +426,7 @@ function AppShell() {
   );
 }
 
-export { navSections };
+export { mobileNavSections as navSections, moreLinks, primaryLinks };
 
 function SunIcon() {
   return (

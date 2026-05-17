@@ -161,6 +161,7 @@ test("App renders without crashing inside its providers", async () => {
 
   expect(await screen.findByRole("heading", { level: 1, name: /vorliq/i })).toBeInTheDocument();
   expect(screen.getByRole("navigation")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /^more/i })).toBeInTheDocument();
 });
 
 test("onboarding appears for a first-time visitor and can be skipped", async () => {
@@ -224,6 +225,7 @@ test("onboarding supports keyboard next, previous, and escape close", async () =
 test("Dashboard shows a first-user Get Started section with core actions", async () => {
   renderWithProviders(<Dashboard />);
 
+  expect(screen.queryByRole("img", { name: /vorliq logo/i })).not.toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: /get started with vorliq/i })).toBeInTheDocument();
   const getStarted = screen.getByRole("heading", { name: /get started with vorliq/i }).closest("section");
 
@@ -244,7 +246,18 @@ test("mobile hamburger announces expanded state when opened", async () => {
   expect(hamburger).toHaveAttribute("aria-expanded", "false");
   await userEvent.click(hamburger);
   expect(hamburger).toHaveAttribute("aria-expanded", "true");
-  expect(hamburger).toHaveAttribute("aria-controls", "primary-navigation");
+  expect(hamburger).toHaveAttribute("aria-controls", "mobile-navigation");
+});
+
+test("Footer renders one social link group", async () => {
+  window.localStorage.setItem(ONBOARDING_KEY, "true");
+
+  render(<App />);
+
+  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
+  const footer = document.querySelector("footer");
+
+  expect(footer.querySelectorAll(".social-links")).toHaveLength(1);
 });
 
 test("Login page shows wallet creation when no wallet is stored", () => {
@@ -282,7 +295,10 @@ test("Footer exposes a public Risk Notice link", async () => {
 
   render(<App />);
 
-  expect(await screen.findByRole("link", { name: /risk notice/i })).toHaveAttribute(
+  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
+  const footer = document.querySelector("footer");
+
+  expect(within(footer).getByRole("link", { name: /risk notice/i })).toHaveAttribute(
     "href",
     "https://vorliq.github.io/Vorliq/terms.html#risk-notice"
   );

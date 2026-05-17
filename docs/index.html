@@ -9,72 +9,69 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
     <style>
-      :root { --bg:#020817; --card:rgba(8,22,43,.78); --card2:#07152b; --accent:#18d7c9; --blue:#1479ff; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.24); --green:#86e33b; --orange:#ffab4a; }
+      :root { --bg:#020817; --glass:rgba(8,14,28,.62); --glass-strong:rgba(8,14,28,.78); --green:#86e33b; --cyan:#18d7c9; --blue:#1479ff; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.26); --gold:#ffd166; }
       * { box-sizing:border-box; }
-      body { margin:0; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 10% 15%,rgba(134,227,59,.18),transparent 28rem),radial-gradient(circle at 88% 24%,rgba(20,121,255,.25),transparent 32rem),linear-gradient(180deg,#020817,#061326 56%,#020817); color:var(--text); }
-      body:before { content:""; position:fixed; inset:0; pointer-events:none; background-image:radial-gradient(circle,rgba(24,215,201,.34) 1px,transparent 1.8px); background-size:22px 22px; opacity:.12; mask-image:radial-gradient(circle at 0 58%,#000 0 38%,transparent 66%); }
+      html { background:var(--bg); }
+      body { margin:0; min-width:320px; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 10% 18%,rgba(134,227,59,.2),transparent 27rem),radial-gradient(circle at 88% 24%,rgba(20,121,255,.28),transparent 32rem),linear-gradient(180deg,#020817,#061326 58%,#020817); color:var(--text); overflow-x:hidden; }
+      body:before, body:after { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; }
+      body:before { background-image:radial-gradient(circle,rgba(24,215,201,.38) 1px,transparent 1.9px); background-size:22px 22px; opacity:.15; mask-image:radial-gradient(circle at 0 52%,#000 0 42%,transparent 70%); }
+      body:after { background:linear-gradient(120deg,transparent 0 18%,rgba(24,215,201,.12) 18.2%,transparent 18.6% 44%,rgba(134,227,59,.08) 44.2%,transparent 44.7% 74%,rgba(20,121,255,.1) 74.2%,transparent 74.7%); animation:drift 18s linear infinite alternate; }
       a { color:inherit; }
-      a:focus-visible, button:focus-visible, input:focus-visible { outline:3px solid var(--accent); outline-offset:3px; box-shadow:0 0 0 5px rgba(108,99,255,.22); }
+      a:focus-visible, button:focus-visible, input:focus-visible { outline:3px solid var(--cyan); outline-offset:3px; box-shadow:0 0 0 5px rgba(24,215,201,.18); }
       .wrap { width:min(1120px,calc(100% - 32px)); margin:0 auto; }
-      header { padding:28px 0; border-bottom:1px solid var(--border); }
-      nav { display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; }
-      .brand { display:flex; align-items:center; gap:12px; font-weight:900; text-decoration:none; font-size:1.15rem; }
-      .brand img { width:42px; height:42px; object-fit:contain; }
-      .links { display:flex; gap:12px; flex-wrap:wrap; }
-      .links a, .button { border:1px solid var(--border); border-radius:999px; padding:11px 14px; text-decoration:none; color:var(--muted); font-weight:800; background:rgba(255,255,255,.04); }
-      .button.primary { background:linear-gradient(90deg,var(--green),var(--accent),var(--blue)); color:#fff; border-color:transparent; }
-      .hero { min-height:72vh; display:grid; align-items:center; padding:64px 0; }
-      .hero-inner { display:grid; justify-items:center; text-align:center; gap:20px; }
-      .logo { width:120px; height:120px; object-fit:contain; }
-      .eyebrow { color:var(--green); font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
-      h1 { margin:0; font-size:clamp(3rem,10vw,6.7rem); line-height:.92; }
-      h2 { font-size:clamp(1.8rem,4vw,2.8rem); margin:0 0 18px; }
-      h3 { margin:0 0 10px; font-size:1.15rem; }
-      p { color:var(--muted); line-height:1.75; font-size:1.02rem; }
-      .subtitle { max-width:760px; font-size:1.18rem; }
-      .actions { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
-      section { padding:56px 0; }
-      .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
-      .card { background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02)),var(--card); border:1px solid var(--border); border-radius:18px; padding:22px; box-shadow:0 24px 70px rgba(0,0,0,.26),0 0 34px rgba(24,215,201,.08); backdrop-filter:blur(14px); }
-      .coin { display:grid; grid-template-columns:minmax(0,1fr) minmax(260px,.6fr); gap:18px; align-items:stretch; }
-      .stat { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px; }
-      .stat strong { display:block; color:var(--accent); font-size:2rem; margin-bottom:8px; }
-      .community { display:flex; gap:12px; flex-wrap:wrap; }
-      .social-button { display:inline-flex; align-items:center; gap:8px; }
-      .social-button svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
-      .newsletter { background:linear-gradient(180deg,rgba(108,99,255,.15),rgba(255,255,255,.025)); border:1px solid var(--border); border-radius:16px; padding:28px; text-align:center; }
-      .newsletter p { max-width:740px; margin:0 auto 20px; }
-      .newsletter-form { display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin-top:20px; }
-      .newsletter-form input { width:min(420px,100%); min-height:50px; border:1px solid var(--border); border-radius:10px; background:#0f0f1a; color:#fff; font:inherit; padding:0 14px; outline:none; }
-      .newsletter-form input:focus { border-color:var(--accent); box-shadow:0 0 0 4px rgba(108,99,255,.18); }
-      .newsletter-form button { min-height:50px; cursor:pointer; }
-      .newsletter-success { display:none; margin:18px auto 0; max-width:680px; border:1px solid rgba(53,208,127,.42); border-radius:12px; background:rgba(53,208,127,.12); color:#bff7d7; padding:14px 16px; font-weight:800; }
+      header { position:sticky; top:0; z-index:5; border-bottom:1px solid rgba(24,215,201,.18); background:rgba(8,14,28,.58); backdrop-filter:blur(18px); }
+      nav { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:14px 0; }
+      .brand { font-size:1.05rem; font-weight:900; text-decoration:none; }
+      .top-links { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+      .pill, .button { border:1px solid var(--border); border-radius:999px; background:rgba(8,14,28,.5); color:var(--muted); display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:10px 14px; text-decoration:none; font-weight:900; }
+      .button.primary { border-color:transparent; background:linear-gradient(90deg,var(--green),var(--cyan),var(--blue)); color:#fff; box-shadow:0 16px 44px rgba(24,215,201,.2); }
+      .hero { min-height:min(620px,calc(100dvh - 82px)); display:grid; align-items:center; padding:clamp(38px,7vw,78px) 0; }
+      .hero-inner { display:grid; justify-items:start; gap:18px; max-width:900px; }
+      .logo { width:clamp(72px,10vw,116px); height:auto; filter:drop-shadow(0 0 28px rgba(24,215,201,.26)); }
+      .eyebrow { color:transparent; background:linear-gradient(90deg,var(--green),var(--cyan),var(--blue)); background-clip:text; font-size:.78rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+      h1, h2, h3 { margin:0; letter-spacing:0; }
+      h1 { font-size:clamp(3rem,10vw,7rem); line-height:.9; }
+      h2 { font-size:clamp(1.6rem,4vw,2.6rem); line-height:1; }
+      h3 { font-size:1.08rem; }
+      p { color:var(--muted); line-height:1.75; margin:0; }
+      .subtitle { max-width:760px; font-size:clamp(1rem,2vw,1.2rem); }
+      .actions, .link-grid, .feature-grid, .socials { display:flex; gap:12px; flex-wrap:wrap; }
+      section { padding:clamp(34px,6vw,68px) 0; }
+      .section-head { display:grid; gap:8px; margin-bottom:18px; }
+      .glass { position:relative; overflow:hidden; border:1px solid var(--border); border-radius:20px; background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018)),var(--glass); box-shadow:0 24px 72px rgba(0,0,0,.24),0 0 36px rgba(24,215,201,.1); backdrop-filter:blur(18px); }
+      .glass:before { content:""; position:absolute; inset:0; pointer-events:none; background:radial-gradient(circle at 90% 0,rgba(20,121,255,.14),transparent 17rem),linear-gradient(115deg,rgba(134,227,59,.08),transparent 28%); }
+      .glass > * { position:relative; }
+      .card { display:grid; gap:10px; padding:22px; }
+      .feature-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+      .coin-grid { display:grid; grid-template-columns:1.2fr repeat(3,minmax(0,.6fr)); gap:18px; align-items:stretch; }
+      .stat strong { color:var(--cyan); display:block; font-size:clamp(1.7rem,4vw,2.35rem); margin-bottom:8px; }
+      .link-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+      .link-card { align-content:start; min-height:116px; text-decoration:none; transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease; }
+      .link-card:hover { border-color:rgba(24,215,201,.58); box-shadow:0 0 44px rgba(24,215,201,.16); transform:translateY(-2px); }
+      .newsletter { text-align:left; padding:26px; display:grid; gap:16px; }
+      .newsletter-form { display:flex; gap:12px; flex-wrap:wrap; }
+      .newsletter-form input { flex:1 1 280px; min-height:48px; border:1px solid var(--border); border-radius:12px; background:rgba(8,14,28,.58); color:#fff; font:inherit; padding:0 14px; }
+      .newsletter-success { display:none; border:1px solid rgba(53,208,127,.42); border-radius:12px; background:rgba(53,208,127,.12); color:#bff7d7; padding:14px 16px; font-weight:800; }
       .newsletter-success.visible { display:block; }
-      footer { padding:28px 0; border-top:1px solid var(--border); color:var(--muted); }
-      @media (max-width:800px) { .grid,.coin { grid-template-columns:1fr; } .hero { min-height:auto; } .newsletter { padding:22px 16px; } .newsletter-form button { width:100%; } }
+      footer { border-top:1px solid rgba(24,215,201,.18); background:rgba(8,14,28,.42); backdrop-filter:blur(18px); padding:30px 0; color:var(--muted); }
+      .footer-inner { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:24px; align-items:start; }
+      .socials { justify-content:flex-end; }
+      .social-button svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+      @keyframes drift { from { transform:translateX(-2rem); opacity:.52; } to { transform:translateX(2rem); opacity:.9; } }
+      @media (max-width:900px) { nav, .footer-inner { align-items:flex-start; flex-direction:column; display:flex; } .top-links, .socials { justify-content:flex-start; } .feature-grid, .coin-grid, .link-grid { grid-template-columns:1fr; } .hero { min-height:auto; } }
+      @media (max-width:560px) { .wrap { width:min(100% - 22px,1120px); } .actions .button, .top-links a, .newsletter-form button, .socials a { width:100%; } .newsletter { padding:20px 16px; } }
     </style>
   </head>
   <body>
     <header>
       <nav class="wrap">
         <a class="brand" href="index.html">Vorliq</a>
-        <div class="links">
-          <a href="whitepaper.html">Whitepaper</a>
-          <a href="setup.html">How to Run</a>
-          <a href="deploy.html">Run a Public Node</a>
-          <a href="status.html">Network Status</a>
-          <a href="explorer.html">Block Explorer</a>
-          <a href="api.html">Developer API</a>
-          <a href="transparency.html">Transparency</a>
-          <a href="network-manifest.html">Network Manifest</a>
-          <a href="pitch.html">Pitch Deck</a>
-          <a href="recovery.html">Recovery Guide</a>
-          <a href="wallet-safety.html">Wallet Safety</a>
-          <a href="incidents.html">Incident Response</a>
-          <a href="privacy.html">Privacy</a>
-          <a href="terms.html">Terms</a>
-          <a href="brand.html">Brand Guide</a>
-          <a href="https://github.com/vorliq/Vorliq">GitHub</a>
+        <div class="top-links">
+          <a class="pill" href="https://vorliq.org">Open App</a>
+          <a class="pill" href="whitepaper.html">Whitepaper</a>
+          <a class="pill" href="transparency.html">Transparency</a>
+          <a class="pill" href="status.html">Status</a>
+          <a class="pill" href="brand.html">Brand Guide</a>
         </div>
       </nav>
     </header>
@@ -90,82 +87,93 @@
             <a class="button primary" href="https://vorliq.org">Open App</a>
             <a class="button primary" href="https://github.com/vorliq/Vorliq">Download Vorliq</a>
             <a class="button" href="whitepaper.html">Read the Whitepaper</a>
-            <a class="button" href="setup.html">How to Run Vorliq</a>
-            <a class="button" href="deploy.html">Run a Public Node</a>
-            <a class="button" href="status.html">Network Status</a>
-            <a class="button" href="explorer.html">Block Explorer</a>
             <a class="button" href="api.html">Developer API</a>
-            <a class="button" href="transparency.html">Transparency</a>
-            <a class="button" href="network-manifest.html">Network Manifest</a>
-            <a class="button" href="pitch.html">View Pitch Deck</a>
-            <a class="button" href="recovery.html">Recovery Guide</a>
-            <a class="button" href="wallet-safety.html">Wallet Safety</a>
-            <a class="button" href="incidents.html">Incident Response</a>
-            <a class="button" href="brand.html">Brand Guide</a>
           </div>
         </div>
       </section>
 
       <section>
         <div class="wrap">
-          <h2>Complete Platform</h2>
-          <div class="grid">
-            <article class="card"><h3>Own Blockchain</h3><p>Vorliq runs on its own proof of work blockchain with signed transactions, mined blocks, persistent storage, and automatic validation. It does not depend on any external cryptocurrency network.</p></article>
-            <article class="card"><h3>Community Lending</h3><p>Members can request VLQ support and the community can approve or reject requests with balance-weighted voting. This is experimental software, not a licensed lending service.</p></article>
-            <article class="card"><h3>Decentralized Exchange</h3><p>Community members can post buy and sell offers for VLQ with flexible real-world pricing. This is an experimental offer board, not a licensed exchange.</p></article>
-            <article class="card"><h3>Governance</h3><p>VLQ holders can propose and vote on network rule changes. Approved proposals can automatically update supported settings such as mining reward and difficulty.</p></article>
-            <article class="card"><h3>Mobile App</h3><p>The React Native Expo mobile app brings wallet, sending, lending, exchange, governance, settings, and notifications to Android and iOS phones.</p></article>
-            <article class="card"><h3>Peer Network</h3><p>Vorliq nodes can register peers, discover other nodes, broadcast transactions and blocks, synchronize chains, and monitor network health.</p></article>
+          <div class="section-head">
+            <span class="eyebrow">Complete Platform</span>
+            <h2>Open tools for an experimental community chain</h2>
+          </div>
+          <div class="feature-grid">
+            <article class="glass card"><h3>Own Blockchain</h3><p>Vorliq runs on its own proof of work blockchain with signed transactions, mined blocks, persistent storage, and automatic validation. It does not depend on any external cryptocurrency network.</p></article>
+            <article class="glass card"><h3>Community Lending</h3><p>Members can request VLQ support and the community can approve or reject requests with balance-weighted voting. This is experimental software, not a licensed lending service.</p></article>
+            <article class="glass card"><h3>Decentralized Exchange</h3><p>Community members can post buy and sell offers for VLQ with flexible real-world pricing. This is an experimental offer board, not a licensed exchange.</p></article>
+            <article class="glass card"><h3>Governance</h3><p>VLQ holders can propose and vote on network rule changes. Approved proposals can automatically update supported settings such as mining reward and difficulty.</p></article>
+            <article class="glass card"><h3>Mobile App</h3><p>The React Native Expo mobile app brings wallet, sending, lending, exchange, governance, settings, and notifications to Android and iOS phones.</p></article>
+            <article class="glass card"><h3>Peer Network</h3><p>Vorliq nodes can register peers, discover other nodes, broadcast transactions and blocks, synchronize chains, and monitor network health.</p></article>
           </div>
         </div>
       </section>
 
       <section>
-        <div class="wrap coin">
-          <div class="card">
-            <h2>The VLQ Coin</h2>
+        <div class="wrap coin-grid">
+          <div class="glass card">
+            <span class="eyebrow">The VLQ Coin</span>
+            <h2>Native to Vorliq</h2>
             <p>VLQ is the native coin of Vorliq. It has a maximum supply of 21 million VLQ, a starting mining reward of 50 VLQ per block, and a halving schedule every 210000 blocks. VLQ has no guaranteed market value, and the community can vote through governance to change supported network parameters over time.</p>
           </div>
-          <div class="stat"><strong>21,000,000</strong><p>Maximum VLQ supply</p></div>
-          <div class="stat"><strong>50 VLQ</strong><p>Starting mining reward</p></div>
-          <div class="stat"><strong>210,000</strong><p>Blocks per scheduled halving</p></div>
+          <div class="glass card stat"><strong>21,000,000</strong><p>Maximum VLQ supply</p></div>
+          <div class="glass card stat"><strong>50 VLQ</strong><p>Starting mining reward</p></div>
+          <div class="glass card stat"><strong>210,000</strong><p>Blocks per scheduled halving</p></div>
         </div>
       </section>
 
       <section>
         <div class="wrap">
-          <h2>Live Network</h2>
-          <p>Vorliq is ready for community members to run nodes, create wallets, mine blocks, connect peers, test lending-style features, post exchange offers, and vote on governance proposals. Vorliq is not a licensed bank, broker, exchange, lender, or investment adviser. Download the project from GitHub, follow the setup guide, and join the public channels from the footer to help test and improve the network.</p>
+          <div class="section-head">
+            <span class="eyebrow">Explore</span>
+            <h2>Public resources</h2>
+          </div>
+          <div class="link-grid">
+            <a class="glass card link-card" href="https://vorliq.org"><h3>App</h3><p>Open the live Vorliq web application.</p></a>
+            <a class="glass card link-card" href="whitepaper.html"><h3>Whitepaper</h3><p>Read the core project explanation.</p></a>
+            <a class="glass card link-card" href="api.html"><h3>API</h3><p>Inspect public developer endpoints.</p></a>
+            <a class="glass card link-card" href="pitch.html"><h3>Pitch</h3><p>View the community pitch deck.</p></a>
+            <a class="glass card link-card" href="transparency.html"><h3>Transparency</h3><p>Verify live status and risk limits.</p></a>
+            <a class="glass card link-card" href="status.html"><h3>Status</h3><p>Check uptime and incident state.</p></a>
+            <a class="glass card link-card" href="wallet-safety.html"><h3>Wallet Safety</h3><p>Understand self-custody before using VLQ.</p></a>
+            <a class="glass card link-card" href="recovery.html"><h3>Recovery</h3><p>Read backup and restore guidance.</p></a>
+            <a class="glass card link-card" href="brand.html"><h3>Brand Guide</h3><p>Use the Vorliq visual system consistently.</p></a>
+            <a class="glass card link-card" href="network-manifest.html"><h3>Network Manifest</h3><p>See public deployment and network proof.</p></a>
+            <a class="glass card link-card" href="explorer.html"><h3>Explorer</h3><p>Browse public blocks and transactions.</p></a>
+            <a class="glass card link-card" href="deploy.html"><h3>Run a Node</h3><p>Join the network as an operator.</p></a>
+          </div>
         </div>
       </section>
 
       <section>
-        <div class="wrap">
-          <div class="newsletter">
-            <h2>Stay Updated</h2>
-            <p>Join the Vorliq community and be the first to hear about new features, network updates, and VLQ news.</p>
-            <form class="newsletter-form" action="https://formspree.io/f/mzdoladl" method="POST">
-              <input type="email" name="email" aria-label="Email address" placeholder="Enter your email address" required />
-              <button class="button primary" type="submit">Subscribe</button>
-            </form>
-            <div id="newsletterThanks" class="newsletter-success" role="status" aria-live="polite">
-              Thank you for subscribing. We will keep you updated on Vorliq news.
-            </div>
+        <div class="wrap glass newsletter">
+          <span class="eyebrow">Stay Updated</span>
+          <h2>Follow Vorliq network updates</h2>
+          <p>Join the Vorliq community and be the first to hear about new features, network updates, and VLQ news.</p>
+          <form class="newsletter-form" action="https://formspree.io/f/mzdoladl" method="POST">
+            <input type="email" name="email" aria-label="Email address" placeholder="Enter your email address" required />
+            <button class="button primary" type="submit">Subscribe</button>
+          </form>
+          <div id="newsletterThanks" class="newsletter-success" role="status" aria-live="polite">
+            Thank you for subscribing. We will keep you updated on Vorliq news.
           </div>
         </div>
       </section>
     </main>
 
     <footer>
-      <div class="wrap">
-        <div class="community" aria-label="Official Vorliq social links">
-          <a class="button social-button" href="https://discord.gg/qpX5sHD4pC" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.3 8.7c2.4-.7 5-.7 7.4 0"/><path d="M9.1 15.2c2 .7 3.8.7 5.8 0"/><path d="M8.8 12.9h.01"/><path d="M15.2 12.9h.01"/><path d="M7.4 5.5c3-1.2 6.2-1.2 9.2 0 1.7 2.4 2.6 5.2 2.7 8.4-2.1 1.6-4.1 2.5-6.1 2.8l-.8-1.4"/><path d="M11.6 15.3l-.8 1.4c-2-.3-4-1.2-6.1-2.8.1-3.2 1-6 2.7-8.4"/></svg>Discord</a>
-          <a class="button social-button" href="https://t.me/Vorliq" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4 3 11.2l6.9 2.2L17 8.2l-5.4 6.6.2 5.2 3.1-3.4 3.9 2.9L21 4Z"/></svg>Telegram</a>
-          <a class="button social-button" href="https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.4 14.6c1.9 1.2 5.3 1.2 7.2 0"/><path d="M9.2 12.2h.01"/><path d="M14.8 12.2h.01"/><path d="M12 7.8c4.1 0 7.4 2.2 7.4 4.9s-3.3 4.9-7.4 4.9-7.4-2.2-7.4-4.9S7.9 7.8 12 7.8Z"/></svg>Reddit</a>
-          <a class="button social-button" href="https://github.com/vorliq/Vorliq" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4 1.3-4-2-5.6-2.4"/><path d="M15 22v-3.5c0-1 .1-1.6-.5-2.2 2.8-.3 5.8-1.4 5.8-6A4.7 4.7 0 0 0 19 7.1c.1-.3.6-1.6-.1-3.1 0 0-1.1-.3-3.5 1.3a12.2 12.2 0 0 0-6.4 0C6.6 3.7 5.5 4 5.5 4c-.7 1.5-.2 2.8-.1 3.1a4.7 4.7 0 0 0-1.3 3.2c0 4.6 3 5.7 5.8 6-.6.6-.6 1.3-.5 2.2V22"/></svg>GitHub</a>
-          <a class="button social-button" href="https://x.com/vorliq" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l16 16"/><path d="M20 4 4 20"/></svg>X</a>
+      <div class="wrap footer-inner">
+        <div>
+          <strong>Vorliq</strong>
+          <p>2026 Vorliq. Experimental open-source community blockchain software. All rights reserved.</p>
         </div>
-        <p>2026 Vorliq. All rights reserved.</p>
+        <div class="socials" aria-label="Official Vorliq social links">
+          <a class="button social-button" href="https://discord.gg/qpX5sHD4pC" target="_blank" rel="noopener noreferrer">Discord</a>
+          <a class="button social-button" href="https://t.me/Vorliq" target="_blank" rel="noopener noreferrer">Telegram</a>
+          <a class="button social-button" href="https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS" target="_blank" rel="noopener noreferrer">Reddit</a>
+          <a class="button social-button" href="https://github.com/vorliq/Vorliq" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a class="button social-button" href="https://x.com/vorliq" target="_blank" rel="noopener noreferrer">X</a>
+        </div>
       </div>
     </footer>
     <script>
@@ -173,9 +181,7 @@
         var params = new URLSearchParams(window.location.search);
         if (params.has("thanks")) {
           var message = document.getElementById("newsletterThanks");
-          if (message) {
-            message.classList.add("visible");
-          }
+          if (message) message.classList.add("visible");
         }
       })();
     </script>

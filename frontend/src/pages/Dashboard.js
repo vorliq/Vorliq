@@ -3,11 +3,9 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
-import SocialLinks from "../components/SocialLinks";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
-import logo from "../assets/logo.png";
 
 const quickLinks = [
   { to: "/wallet", label: "Wallet", detail: "Create and check your VLQ wallet" },
@@ -121,31 +119,27 @@ function Dashboard() {
 
   return (
     <div className="page">
-      <section className="hero dashboard-brand-hero">
-        <img className="hero-logo" src={logo} alt="Vorliq logo" />
-        <span className="eyebrow brand-pill">Dashboard</span>
-        <h1>
-          Vorliq Dashboard
-          <span>Start safely, then explore the live network.</span>
-        </h1>
+      <section className="hero dashboard-brand-hero glass-section">
+        <span className="section-eyebrow brand-pill">Live Network Console</span>
+        <h1>Vorliq Dashboard</h1>
         <p className="subtitle">
-          Vorliq is experimental open-source community blockchain software for wallets,
-          mining, community lending, exchange offers, governance, and transparent public records.
+          Vorliq is experimental open-source community blockchain software for wallets, mining,
+          governance, community coordination, and transparent public records.
         </p>
         <div className="hero-actions">
-          <Link className="button" to="/login">Create or Import Wallet</Link>
-          <Link className="button secondary" to="/mine">Mine VLQ</Link>
-          <Link className="button secondary" to="/forum">Explore Forum</Link>
-          <Link className="button secondary" to="/transparency">View Transparency</Link>
+          <Link className="button brand-button" to="/login">Create Wallet</Link>
+          <Link className="button secondary brand-button-secondary" to="/mine">Mine VLQ</Link>
+          <Link className="button secondary brand-button-secondary" to="/forum">Explore Forum</Link>
+          <Link className="button secondary brand-button-secondary" to="/transparency">View Transparency</Link>
         </div>
       </section>
 
       <ErrorMessage message={errorMessage} />
 
-      <section className="card card-pad get-started-card" aria-labelledby="get-started-title">
+      <section className="card card-pad glass-section get-started-card" aria-labelledby="get-started-title">
         <div className="section-title">
           <div>
-            <span className="eyebrow">First time here?</span>
+            <span className="section-eyebrow">First time here?</span>
             <h2 id="get-started-title">Get Started With Vorliq</h2>
           </div>
         </div>
@@ -176,32 +170,38 @@ function Dashboard() {
       {loading ? (
         <Spinner label="Loading dashboard data..." />
       ) : (
-        <section className="grid stats-grid">
-          <div className="card card-pad stat-card">
-            <span className="stat-label">Total Blocks</span>
-            <span className="stat-value">{stats.blocks}</span>
+        <section className="dashboard-section" aria-labelledby="network-summary-title">
+          <div className="section-heading">
+            <span className="section-eyebrow">Network Summary</span>
+            <h2 id="network-summary-title">Live Chain Snapshot</h2>
           </div>
-          <div className="card card-pad stat-card">
-            <span className="stat-label">Total Transactions</span>
-            <span className="stat-value">{stats.transactions}</span>
-          </div>
-          <div className="card card-pad stat-card">
-            <span className="stat-label">Mining Reward</span>
-            <span className="stat-value">{stats.reward} VLQ</span>
-          </div>
-          <div className="card card-pad stat-card">
-            <span className="stat-label">Chain Status</span>
-            <span className={`stat-value ${stats.valid ? "green" : "red"}`}>
-              {stats.valid ? "Chain Valid" : "Chain Invalid"}
-            </span>
-          </div>
-          <div className="card card-pad stat-card">
-            <span className="stat-label">Current Block Height</span>
-            <span className="stat-value">{stats.blockHeight}</span>
-          </div>
-          <div className="card card-pad stat-card">
-            <span className="stat-label">Total VLQ Issued</span>
-            <span className="stat-value">{stats.totalIssued} VLQ</span>
+          <div className="grid stats-grid">
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Total Blocks</span>
+              <span className="stat-value">{stats.blocks}</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Total Transactions</span>
+              <span className="stat-value">{stats.transactions}</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Mining Reward</span>
+              <span className="stat-value">{stats.reward} VLQ</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Chain Status</span>
+              <span className={`stat-value ${stats.valid ? "green" : "red"}`}>
+                {stats.valid ? "Chain Valid" : "Chain Invalid"}
+              </span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Current Block Height</span>
+              <span className="stat-value">{stats.blockHeight}</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Total VLQ Issued</span>
+              <span className="stat-value">{stats.totalIssued} VLQ</span>
+            </div>
           </div>
         </section>
       )}
@@ -210,11 +210,11 @@ function Dashboard() {
         <p className="last-updated">Last updated {lastUpdated.toLocaleString()}</p>
       )}
 
-      <section className="card card-pad quick-links-card">
+      <section className="card card-pad glass-section quick-links-card">
         <div className="section-title">
           <div>
-            <span className="eyebrow">Quick Access</span>
-            <h2>Important Links</h2>
+            <span className="section-eyebrow">Quick Access</span>
+            <h2>Network Tools</h2>
           </div>
         </div>
         <div className="quick-link-grid">
@@ -227,22 +227,10 @@ function Dashboard() {
         </div>
       </section>
 
-      <section className="card card-pad about-card">
-        <span className="eyebrow">About Vorliq</span>
-        <h2>About Vorliq</h2>
-        <p>
-          Vorliq uses the phrase community savings bank as a plain-English metaphor for shared
-          community software. Vorliq is not a licensed bank or financial institution. VLQ is the
-          native coin used inside the experimental Vorliq network, has no guaranteed market value,
-          and every user remains responsible for their own keys, choices, and local rules.
-        </p>
-        <p>Deployed automatically via GitHub Actions.</p>
-      </section>
-
-      <section className="card card-pad featured-community-card">
+      <section className="card card-pad glass-section featured-community-card">
         <div className="section-title">
           <div>
-            <span className="eyebrow">Community Signal</span>
+            <span className="section-eyebrow">Community Signal</span>
             <h2>Featured Community Posts</h2>
           </div>
         </div>
@@ -265,10 +253,10 @@ function Dashboard() {
         )}
       </section>
 
-      <section className="card card-pad community-links-card">
+      <section className="card card-pad glass-section community-links-card">
         <div className="section-title">
           <div>
-            <span className="eyebrow">Community</span>
+            <span className="section-eyebrow">Community</span>
             <h2>Join the Conversation</h2>
           </div>
         </div>
@@ -276,7 +264,10 @@ function Dashboard() {
           Follow official Vorliq channels for project updates, support discussions, network
           announcements, and community feedback.
         </p>
-        <SocialLinks compact />
+        <div className="button-row">
+          <Link className="button secondary brand-button-secondary" to="/forum">Open Forum</Link>
+          <Link className="button secondary brand-button-secondary" to="/chat">Open Chat</Link>
+        </div>
       </section>
     </div>
   );

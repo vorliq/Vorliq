@@ -9,9 +9,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
     <style>
-      :root { --bg:#020817; --card:#08162b; --card2:#07152b; --accent:#18d7c9; --blue:#1479ff; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.24); --green:#86e33b; --gold:#ffd166; }
+      :root { --bg:#020817; --card:rgba(8,14,28,.62); --card2:rgba(8,14,28,.78); --accent:#18d7c9; --blue:#1479ff; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.26); --green:#86e33b; --gold:#ffd166; }
       * { box-sizing:border-box; }
-      body { margin:0; min-height:100vh; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 10% 15%,rgba(134,227,59,.18),transparent 28rem),radial-gradient(circle at 88% 24%,rgba(20,121,255,.25),transparent 32rem),linear-gradient(180deg,#020817,#061326); color:var(--text); overflow:hidden; }
+      body { margin:0; min-height:100vh; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 10% 15%,rgba(134,227,59,.2),transparent 28rem),radial-gradient(circle at 88% 24%,rgba(20,121,255,.28),transparent 32rem),linear-gradient(180deg,#020817,#061326); color:var(--text); overflow:hidden; }
+      body:before, body:after { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; }
+      body:before { background-image:radial-gradient(circle,rgba(24,215,201,.34) 1px,transparent 1.9px); background-size:22px 22px; opacity:.14; mask-image:radial-gradient(circle at 0 52%,#000 0 42%,transparent 70%); }
+      body:after { background:linear-gradient(120deg,transparent 0 18%,rgba(24,215,201,.12) 18.2%,transparent 18.7% 44%,rgba(134,227,59,.08) 44.2%,transparent 44.8% 74%,rgba(20,121,255,.1) 74.2%,transparent 74.8%); animation:deckDrift 18s linear infinite alternate; }
       a { color:inherit; }
       a:focus-visible, button:focus-visible { outline:3px solid var(--accent); outline-offset:3px; box-shadow:0 0 0 5px rgba(108,99,255,.22); }
       .deck { min-height:100vh; display:grid; grid-template-rows:1fr auto; }
@@ -27,13 +30,14 @@
       .subtitle { color:#fff; font-size:clamp(1.15rem,2.5vw,1.65rem); font-weight:800; }
       .tagline { color:var(--gold); font-size:clamp(1.35rem,3vw,2rem); font-weight:900; }
       .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
-      .fact, .component, .phase { border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,.045); padding:18px; color:var(--muted); line-height:1.6; }
+      .fact, .component, .phase { border:1px solid var(--border); border-radius:14px; background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018)),var(--card); box-shadow:0 18px 52px rgba(0,0,0,.22),0 0 30px rgba(24,215,201,.08); backdrop-filter:blur(16px); padding:18px; color:var(--muted); line-height:1.6; }
       .fact strong, .component strong, .phase strong { color:var(--text); display:block; margin-bottom:8px; }
       .components { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
       .links { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px; width:100%; max-width:980px; }
-      .link-button { display:grid; place-items:center; min-height:72px; border:1px solid var(--border); border-radius:8px; background:var(--accent); color:#fff; font-weight:900; text-decoration:none; }
-      .controls { display:flex; align-items:center; justify-content:space-between; gap:18px; border-top:1px solid var(--border); background:rgba(15,15,26,.9); padding:18px clamp(18px,4vw,44px); }
-      .nav-button { width:54px; height:54px; border:1px solid var(--border); border-radius:8px; background:var(--card2); color:#fff; cursor:pointer; font-size:1.7rem; font-weight:900; }
+      .link-button { display:grid; place-items:center; min-height:72px; border:1px solid var(--border); border-radius:999px; background:linear-gradient(90deg,var(--green),var(--accent),var(--blue)); color:#fff; font-weight:900; text-decoration:none; box-shadow:0 16px 44px rgba(24,215,201,.2); }
+      .controls { display:flex; align-items:center; justify-content:space-between; gap:18px; border-top:1px solid rgba(24,215,201,.18); background:rgba(8,14,28,.68); backdrop-filter:blur(18px); padding:18px clamp(18px,4vw,44px); }
+      .nav-button { width:54px; height:54px; border:1px solid var(--border); border-radius:999px; background:var(--card2); color:#fff; cursor:pointer; font-size:1.7rem; font-weight:900; }
+      @keyframes deckDrift { from { transform:translateX(-2rem); opacity:.55; } to { transform:translateX(2rem); opacity:.9; } }
       .counter { color:var(--muted); font-weight:900; }
       @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
       @media (max-width:840px) { body { overflow:auto; } .slide { min-height:calc(100dvh - 92px); } .grid, .components, .links { grid-template-columns:1fr; } .link-button { min-height:58px; } }
