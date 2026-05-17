@@ -228,8 +228,31 @@ function validateBody(req, res, next) {
     if (category === "general") {
       requireText(req, res, body, ["parameter"], "parameter value", 500);
     } else {
-      requireNumber(req, res, body, ["parameter"], "parameter value", { min: 0, max: 21_000_000 });
+      const value = Number(get(body, "parameter"));
+      if (!Number.isFinite(value)) return reject(req, res, "parameter value must be a valid number.");
+      if (category === "mining_reward" && (value <= 0 || value > 1000)) {
+        return reject(req, res, "mining reward must be greater than 0 and no more than 1000 VLQ.");
+      }
+      if (category === "difficulty" && (!Number.isInteger(value) || value < 2 || value > 8)) {
+        return reject(req, res, "difficulty must be an integer between 2 and 8.");
+      }
+      if (category === "loan_limit" && (value <= 0 || value > 1_000_000)) {
+        return reject(req, res, "loan limit must be greater than 0 and no more than 1000000 VLQ.");
+      }
+      if (category === "loan_interest" && (value < 0 || value > 100)) {
+        return reject(req, res, "loan interest must be between 0 and 100 percent.");
+      }
+      if (category === "exchange_limit" && (!Number.isInteger(value) || value <= 0 || value > 1000)) {
+        return reject(req, res, "exchange limit must be between 1 and 1000.");
+      }
+      body.parameter = value;
     }
+  }
+
+  if (path === "/api/governance/cancel") {
+    requireText(req, res, body, ["proposal_id", "proposalId"], "proposal ID", 128);
+    if (res.headersSent) return;
+    validateAddress(req, res, body, ["proposer_address", "proposerAddress"], "proposer address");
   }
 
   if (path === "/api/treasury/propose") {

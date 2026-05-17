@@ -14,6 +14,7 @@ import AddressIdentity from "./components/AddressIdentity";
 import Login from "./pages/Login";
 import Lending from "./pages/Lending";
 import Exchange from "./pages/Exchange";
+import Governance from "./pages/Governance";
 import Mine from "./pages/Mine";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
@@ -257,6 +258,139 @@ function defaultApiGet(path) {
 
   if (path === "/exchange/my") {
     return Promise.resolve({ data: { success: true, created: [], accepted: [], offers: [] } });
+  }
+
+  if (path === "/governance/summary") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        summary: {
+          active_count: 1,
+          passed_pending_execution_count: 0,
+          executed_count: 1,
+          rejected_count: 0,
+          expired_count: 0,
+          total_proposals: 2,
+          total_votes: 1,
+          latest_executed_rule_change: { category: "mining_reward" },
+          current_governable_settings: {},
+        },
+      },
+    });
+  }
+
+  if (path === "/governance/proposals") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        proposals: [
+          {
+            proposal_id: "proposal-active-1",
+            proposer_address: "VLQ_GOVERNOR",
+            title: "Adjust mining reward",
+            description: "A serious proposal to adjust the reward within the allowed range.",
+            category: "mining_reward",
+            parameter: 25,
+            current_value: 50,
+            status: "active",
+            created_at: 1715791000,
+            voting_deadline: 2715791000,
+            votes: {},
+            yes_vote_weight: 100,
+            no_vote_weight: 0,
+            quorum: 500,
+            approval_threshold: 0.6,
+            status_history: [{ status: "active", timestamp: 1715791000, note: "Proposal opened." }],
+          },
+        ],
+        total: 1,
+      },
+    });
+  }
+
+  if (path === "/governance/all") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        proposals: [
+          {
+            proposal_id: "proposal-active-1",
+            proposer_address: "VLQ_GOVERNOR",
+            title: "Adjust mining reward",
+            description: "A serious proposal to adjust the reward within the allowed range.",
+            category: "mining_reward",
+            parameter: 25,
+            current_value: 50,
+            status: "active",
+            created_at: 1715791000,
+            voting_deadline: 2715791000,
+            votes: {},
+            yes_vote_weight: 100,
+            no_vote_weight: 0,
+            quorum: 500,
+            approval_threshold: 0.6,
+            status_history: [{ status: "active", timestamp: 1715791000, note: "Proposal opened." }],
+          },
+          {
+            proposal_id: "proposal-rule-1",
+            proposer_address: "VLQ_GOVERNOR",
+            title: "Executed reward change",
+            description: "A completed proposal that changed a supported setting.",
+            category: "mining_reward",
+            parameter: 25,
+            current_value: 50,
+            status: "executed",
+            created_at: 1715790000,
+            voting_deadline: 2715791000,
+            votes: { VLQ_VOTER: { vote: "yes", weight: 600 } },
+            yes_vote_weight: 600,
+            no_vote_weight: 0,
+            quorum: 500,
+            approval_threshold: 0.6,
+            rule_change_id: "rule-1",
+            execution_result: { message: "mining_reward changed from 50 to 25." },
+            status_history: [{ status: "executed", timestamp: 1715791000, note: "Proposal executed." }],
+          },
+        ],
+        total: 2,
+      },
+    });
+  }
+
+  if (path === "/governance/settings") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        settings: {
+          mining_reward: { default: 50, current: 25, changed: true },
+          difficulty: { default: 4, current: 4, changed: false },
+        },
+      },
+    });
+  }
+
+  if (path === "/governance/rule-changes") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        rule_changes: [
+          {
+            rule_change_id: "rule-1",
+            proposal_id: "proposal-rule-1",
+            category: "mining_reward",
+            old_value: 50,
+            new_value: 25,
+            applied_at: 1715791000,
+            applied_block_height: 3,
+            status: "executed",
+          },
+        ],
+      },
+    });
+  }
+
+  if (path === "/governance/my") {
+    return Promise.resolve({ data: { success: true, created: [], voted: [], proposals: [] } });
   }
 
   if (path === "/economics") {
@@ -832,6 +966,107 @@ test("Exchange My Trades state renders record tx form for active trade", async (
   expect(await screen.findByText(/active exchange trade/i)).toBeInTheDocument();
   expect(await screen.findByRole("button", { name: /record vlq transaction/i })).toBeInTheDocument();
   expect(screen.getByLabelText(/vlq transaction id/i)).toBeInTheDocument();
+});
+
+test("Governance lifecycle tabs render active proposal cards", async () => {
+  renderWithProviders(<Governance />, "/governance");
+
+  expect(await screen.findByRole("button", { name: /active proposals/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /propose change/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /my governance/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /rule changes/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /all history/i })).toBeInTheDocument();
+  expect(await screen.findByText(/adjust mining reward/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/active/i).length).toBeGreaterThan(0);
+});
+
+test("Governance rule changes timeline renders", async () => {
+  renderWithProviders(<Governance />, "/governance");
+
+  await userEvent.click(await screen.findByRole("button", { name: /rule changes/i }));
+
+  expect(await screen.findByRole("heading", { name: /executed settings timeline/i })).toBeInTheDocument();
+  expect(await screen.findByText(/50 to 25/i)).toBeInTheDocument();
+  expect(screen.getByText(/proposal-rule-1/i)).toBeInTheDocument();
+});
+
+test("Governance propose form shows validation guidance", async () => {
+  renderWithProviders(<Governance />, "/governance");
+
+  await userEvent.click(await screen.findByRole("button", { name: /propose change/i }));
+
+  expect(await screen.findByText(/mining reward must be greater than 0/i)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText(/category/i), { target: { value: "general" } });
+  expect(await screen.findByText(/general proposals are advisory/i)).toBeInTheDocument();
+});
+
+test("Governance My Governance state renders", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/governance/my") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          created: [],
+          voted: [
+            {
+              proposal_id: "proposal-my-1",
+              proposer_address: "VLQ_OTHER",
+              title: "My voted proposal",
+              description: "A proposal this wallet voted on.",
+              category: "general",
+              parameter: "Advisory",
+              current_value: "advisory",
+              status: "executed",
+              created_at: 1715791000,
+              voting_deadline: 2715791000,
+              votes: { VLQ_ME: { vote: "yes", weight: 20 } },
+              yes_vote_weight: 20,
+              no_vote_weight: 0,
+              quorum: 500,
+              status_history: [{ status: "executed", timestamp: 1715791000, note: "Recorded." }],
+            },
+          ],
+          proposals: [
+            {
+              proposal_id: "proposal-my-1",
+              proposer_address: "VLQ_OTHER",
+              title: "My voted proposal",
+              description: "A proposal this wallet voted on.",
+              category: "general",
+              parameter: "Advisory",
+              current_value: "advisory",
+              status: "executed",
+              created_at: 1715791000,
+              voting_deadline: 2715791000,
+              votes: { VLQ_ME: { vote: "yes", weight: 20 } },
+              yes_vote_weight: 20,
+              no_vote_weight: 0,
+              quorum: 500,
+              status_history: [{ status: "executed", timestamp: 1715791000, note: "Recorded." }],
+            },
+          ],
+        },
+      });
+    }
+    return defaultApiGet(path);
+  });
+
+  render(
+    <ThemeProvider>
+      <NotificationProvider>
+        <AuthContext.Provider value={{ wallet: { address: "VLQ_ME" }, isLoggedIn: true }}>
+          <MemoryRouter initialEntries={["/governance"]}>
+            <Governance />
+          </MemoryRouter>
+        </AuthContext.Provider>
+      </NotificationProvider>
+    </ThemeProvider>
+  );
+
+  await userEvent.click(await screen.findByRole("button", { name: /my governance/i }));
+
+  expect(await screen.findByText(/my voted proposal/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/executed/i).length).toBeGreaterThan(0);
 });
 
 test("wallet backup import rejects invalid JSON", async () => {

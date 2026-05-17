@@ -153,6 +153,32 @@ async function main() {
 main().catch(console.error);
 ```
 
+Governance records now separate voting from execution. A proposal can become `passed_pending_execution` before the supported rule change is applied, and every successful network-setting change creates a public rule-change record. General proposals are advisory and do not execute code or change settings automatically.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const summary = await vorliq.getGovernanceSummary();
+  const ruleChanges = await vorliq.getRuleChanges({ limit: 10 });
+
+  if (ruleChanges[0]) {
+    const proposal = await vorliq.getGovernanceProposal(ruleChanges[0].proposal_id);
+    const mine = await vorliq.getMyGovernance(proposal.proposer_address);
+
+    console.log("Governance summary:", summary);
+    console.log("Rule changed:", ruleChanges[0].category);
+    console.log("Proposer records:", mine.proposals.length);
+  }
+
+  // Active proposals can be cancelled by their proposer only before any votes are cast:
+  // await vorliq.cancelGovernanceProposal("PROPOSAL_ID", "VLQ_PROPOSER");
+}
+
+main().catch(console.error);
+```
+
 To get a wallet balance, create a client and pass the wallet address to `getBalance`. This complete example prints the balance as a number.
 
 ```js

@@ -9,6 +9,7 @@ function Stats() {
   const [summary, setSummary] = useState(null);
   const [lendingSummary, setLendingSummary] = useState(null);
   const [exchangeSummary, setExchangeSummary] = useState(null);
+  const [governanceSummary, setGovernanceSummary] = useState(null);
   const [leaderboard, setLeaderboard] = useState({ holders: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -18,10 +19,11 @@ function Stats() {
 
     async function loadStats() {
       try {
-        const [summaryResponse, loansResponse, exchangeResponse, leaderboardResponse] = await Promise.all([
+        const [summaryResponse, loansResponse, exchangeResponse, governanceResponse, leaderboardResponse] = await Promise.all([
           api.get("/chain/summary"),
           api.get("/lending/summary"),
           api.get("/exchange/summary"),
+          api.get("/governance/summary"),
           api.get("/leaderboard", { params: { limit: 10 } }),
         ]);
 
@@ -29,6 +31,7 @@ function Stats() {
           setSummary(summaryResponse.data.summary || {});
           setLendingSummary(loansResponse.data.summary || {});
           setExchangeSummary(exchangeResponse.data.summary || {});
+          setGovernanceSummary(governanceResponse.data.summary || {});
           setLeaderboard(leaderboardResponse.data || { holders: [] });
         }
       } catch (requestError) {
@@ -76,9 +79,13 @@ function Stats() {
       activeTrades: exchangeSummary?.active_trades_count ?? 0,
       completedTrades: exchangeSummary?.completed_count ?? 0,
       disputedTrades: exchangeSummary?.disputed_count ?? 0,
+      activeProposals: governanceSummary?.active_count ?? 0,
+      pendingExecution: governanceSummary?.passed_pending_execution_count ?? 0,
+      executedRuleChanges: governanceSummary?.executed_count ?? 0,
+      latestRuleChange: governanceSummary?.latest_executed_rule_change?.category || "None",
       topAddresses: leaderboard.holders || [],
     };
-  }, [exchangeSummary, leaderboard, lendingSummary, summary]);
+  }, [exchangeSummary, governanceSummary, leaderboard, lendingSummary, summary]);
 
   if (loading) {
     return (
@@ -140,6 +147,16 @@ function Stats() {
           ["Active Trades", stats.activeTrades],
           ["Completed Trades", stats.completedTrades],
           ["Disputed Trades", stats.disputedTrades],
+        ]}
+      />
+
+      <StatsSection
+        title="Governance Statistics"
+        items={[
+          ["Active Proposals", stats.activeProposals],
+          ["Pending Execution", stats.pendingExecution],
+          ["Executed Rule Changes", stats.executedRuleChanges],
+          ["Latest Rule Change", stats.latestRuleChange],
         ]}
       />
 

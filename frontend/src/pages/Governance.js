@@ -5,6 +5,7 @@ import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
+import { useAuth } from "../context/AuthContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
@@ -17,6 +18,23 @@ const categories = [
   ["general", "General Proposal"],
 ];
 
+const tabs = [
+  ["active", "Active Proposals"],
+  ["propose", "Propose Change"],
+  ["mine", "My Governance"],
+  ["rules", "Rule Changes"],
+  ["history", "All History"],
+];
+
+const categoryGuidance = {
+  mining_reward: "Mining reward must be greater than 0 and no more than 1000 VLQ.",
+  difficulty: "Difficulty must be an integer between 2 and 8.",
+  loan_limit: "Loan limit must be greater than 0 and no more than 1000000 VLQ.",
+  loan_interest: "Loan interest must be between 0 and 100 percent. Existing decimal-style values are still accepted.",
+  exchange_limit: "Exchange offer limit must be between 1 and 1000.",
+  general: "General proposals are advisory. They can pass, but they do not automatically execute settings.",
+};
+
 const initialForm = {
   proposerAddress: "",
   title: "",
@@ -26,35 +44,53 @@ const initialForm = {
 };
 
 function categoryLabel(category) {
-  return categories.find(([value]) => value === category)?.[1] || category;
+  return categories.find(([value]) => value === category)?.[1] || String(category || "").replace(/_/g, " ");
 }
 
 function formatDate(timestamp) {
-  return new Date(timestamp * 1000).toLocaleString();
+  if (!timestamp) return "Not recorded";
+  return new Date(Number(timestamp) * 1000).toLocaleString();
+}
+
+function formatValue(value) {
+  if (value === null || value === undefined || value === "") return "Not set";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
 }
 
 function Governance() {
+  const { wallet } = useAuth();
   const [activeTab, setActiveTab] = useState("active");
   const [activeProposals, setActiveProposals] = useState([]);
   const [allProposals, setAllProposals] = useState([]);
   const [settings, setSettings] = useState({});
-  const [form, setForm] = useState(initialForm);
+  const [ruleChanges, setRuleChanges] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [myAddress, setMyAddress] = useState(wallet?.address || "");
+  const [myGovernance, setMyGovernance] = useState({ created: [], voted: [], proposals: [] });
+  const [form, setForm] = useState({ ...initialForm, proposerAddress: wallet?.address || "" });
   const [voteInputs, setVoteInputs] = useState({});
   const [expanded, setExpanded] = useState({});
   const [loading, setLoading] = useState(true);
+  const [myLoading, setMyLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [cancellingId, setCancellingId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
   async function loadGovernance() {
     try {
-      const [activeResponse, allResponse, settingsResponse] = await Promise.all([
-        api.get("/governance/proposals"),
-        api.get("/governance/all"),
+      const [activeResponse, allResponse, settingsResponse, ruleChangesResponse, summaryResponse] = await Promise.all([
+        api.get("/governance/proposals", { params: { status: "active", limit: 100 } }),
+        api.get("/governance/all", { params: { limit: 200 } }),
         api.get("/governance/settings"),
+        api.get("/governance/rule-changes", { params: { limit: 50 } }),
+        api.get("/governance/summary"),
       ]);
       setActiveProposals(activeResponse.data.proposals || []);
       setAllProposals(allResponse.data.proposals || []);
       setSettings(settingsResponse.data.settings || {});
+      setRuleChanges(ruleChangesResponse.data.rule_changes || []);
+      setSummary(summaryResponse.data.summary || null);
       setErrorMessage("");
     } catch (error) {
       const message = apiErrorMessage(error, "Unable to load governance data.");
@@ -69,6 +105,43 @@ function Governance() {
     loadGovernance();
   }, []);
 
+  useEffect(() => {
+    if (wallet?.address) {
+      setMyAddress(wallet.address);
+      setForm((current) => ({ ...current, proposerAddress: current.proposerAddress || wallet.address }));
+    }
+  }, [wallet?.address]);
+
+  async function loadMyGovernance(address = myAddress) {
+    if (!address.trim()) {
+      toast.error("Enter a wallet address.");
+      return;
+    }
+    setMyLoading(true);
+    try {
+      const response = await api.get("/governance/my", { params: { address: address.trim() } });
+      setMyGovernance({
+        created: response.data.created || [],
+        voted: response.data.voted || [],
+        proposals: response.data.proposals || [],
+      });
+      setErrorMessage("");
+    } catch (error) {
+      const message = apiErrorMessage(error, "Unable to load governance activity.");
+      setErrorMessage(message);
+      toast.error(message);
+    } finally {
+      setMyLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === "mine" && myAddress) {
+      loadMyGovernance(myAddress);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   function updateForm(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
   }
@@ -79,7 +152,7 @@ function Governance() {
     if (
       !form.proposerAddress.trim() ||
       !form.title.trim() ||
-      !form.parameter ||
+      !String(form.parameter).trim() ||
       form.description.trim().length < 50
     ) {
       toast.error("Fill in every field. The description must be at least 50 characters.");
@@ -96,7 +169,7 @@ function Governance() {
         parameter: form.parameter,
       });
       toast.success(`Proposal created: ${response.data.proposal_id}`);
-      setForm(initialForm);
+      setForm({ ...initialForm, proposerAddress: wallet?.address || "" });
       await loadGovernance();
       setActiveTab("active");
     } catch (error) {
@@ -113,7 +186,7 @@ function Governance() {
       ...current,
       [proposalId]: {
         vote,
-        address: current[proposalId]?.address || "",
+        address: current[proposalId]?.address || wallet?.address || "",
       },
     }));
   }
@@ -135,6 +208,9 @@ function Governance() {
       toast.success("Vote cast successfully.");
       setVoteInputs((current) => ({ ...current, [proposalId]: undefined }));
       await loadGovernance();
+      if (activeTab === "mine") {
+        await loadMyGovernance();
+      }
     } catch (error) {
       const message = apiErrorMessage(error, "Unable to cast vote.");
       setErrorMessage(message);
@@ -142,13 +218,32 @@ function Governance() {
     }
   }
 
-  const passedProposals = useMemo(
-    () => allProposals.filter((proposal) => proposal.status === "passed"),
-    [allProposals]
-  );
+  async function cancelProposal(proposalId, proposerAddress) {
+    setCancellingId(proposalId);
+    try {
+      await api.post("/governance/cancel", {
+        proposal_id: proposalId,
+        proposer_address: proposerAddress,
+      });
+      toast.success("Proposal cancelled.");
+      await loadGovernance();
+      await loadMyGovernance(proposerAddress);
+    } catch (error) {
+      const message = apiErrorMessage(error, "Unable to cancel proposal.");
+      setErrorMessage(message);
+      toast.error(message);
+    } finally {
+      setCancellingId("");
+    }
+  }
 
   const selectedSetting = settings[form.category];
   const placeholder = selectedSetting ? `Current value: ${selectedSetting.current}` : "Current value";
+
+  const historyProposals = useMemo(
+    () => allProposals.filter((proposal) => proposal.status !== "active"),
+    [allProposals]
+  );
 
   return (
     <div className="page">
@@ -156,33 +251,35 @@ function Governance() {
         <span className="eyebrow">Community Governance</span>
         <h1>Governance</h1>
         <p className="subtitle">
-          VLQ holders can propose network changes, vote with balance-weighted power, and apply
-          approved changes automatically.
+          VLQ holders can propose supported network rule changes, vote with VLQ weight, and see exactly
+          which software settings were executed.
         </p>
       </section>
 
       <ErrorMessage message={errorMessage} />
       <RiskNotice />
 
+      {summary && (
+        <section className="grid stats-grid">
+          <SummaryCard label="Active Proposals" value={summary.active_count || 0} />
+          <SummaryCard label="Pending Execution" value={summary.passed_pending_execution_count || 0} />
+          <SummaryCard label="Executed Rule Changes" value={summary.executed_count || 0} />
+          <SummaryCard label="Total Votes" value={summary.total_votes || 0} />
+        </section>
+      )}
+
       <div className="tab-list">
-        <button className={`tab-button ${activeTab === "active" ? "active" : ""}`} type="button" onClick={() => setActiveTab("active")}>
-          Active Proposals
-        </button>
-        <button className={`tab-button ${activeTab === "propose" ? "active" : ""}`} type="button" onClick={() => setActiveTab("propose")}>
-          Propose a Change
-        </button>
-        <button className={`tab-button ${activeTab === "passed" ? "active" : ""}`} type="button" onClick={() => setActiveTab("passed")}>
-          Passed Changes
-        </button>
-        <button className={`tab-button ${activeTab === "settings" ? "active" : ""}`} type="button" onClick={() => setActiveTab("settings")}>
-          Current Settings
-        </button>
+        {tabs.map(([value, label]) => (
+          <button className={`tab-button ${activeTab === value ? "active" : ""}`} type="button" onClick={() => setActiveTab(value)} key={value}>
+            {label}
+          </button>
+        ))}
       </div>
 
       {loading && <Spinner label="Loading governance..." />}
 
       {!loading && activeTab === "active" && (
-        <section className="governance-grid">
+        <section className="governance-grid" aria-label="Active proposals">
           {activeProposals.length === 0 ? (
             <div className="empty-state">No active proposals are open for voting.</div>
           ) : (
@@ -191,21 +288,13 @@ function Governance() {
                 key={proposal.proposal_id}
                 proposal={proposal}
                 expanded={Boolean(expanded[proposal.proposal_id])}
-                onToggle={() =>
-                  setExpanded((current) => ({
-                    ...current,
-                    [proposal.proposal_id]: !current[proposal.proposal_id],
-                  }))
-                }
+                onToggle={() => setExpanded((current) => ({ ...current, [proposal.proposal_id]: !current[proposal.proposal_id] }))}
                 voteInput={voteInputs[proposal.proposal_id]}
                 onShowVote={showVoteInput}
                 onVoteAddressChange={(value) =>
                   setVoteInputs((current) => ({
                     ...current,
-                    [proposal.proposal_id]: {
-                      ...current[proposal.proposal_id],
-                      address: value,
-                    },
+                    [proposal.proposal_id]: { ...current[proposal.proposal_id], address: value },
                   }))
                 }
                 onSubmitVote={submitVote}
@@ -217,7 +306,16 @@ function Governance() {
 
       {!loading && activeTab === "propose" && (
         <section className="card card-pad stack">
-          <h2>Propose a Change</h2>
+          <div className="section-title">
+            <div>
+              <span className="eyebrow">Governable Settings</span>
+              <h2>Propose Change</h2>
+            </div>
+          </div>
+          <div className="risk-box">
+            <strong>Validation guidance</strong>
+            <p>{categoryGuidance[form.category]}</p>
+          </div>
           <form className="form" onSubmit={submitProposal}>
             <div className="field">
               <label htmlFor="governance-proposer">Proposer Wallet Address</label>
@@ -225,7 +323,7 @@ function Governance() {
             </div>
             <div className="field">
               <label htmlFor="governance-title">Title</label>
-              <input id="governance-title" className="input" maxLength={100} value={form.title} onChange={(event) => updateForm("title", event.target.value)} />
+              <input id="governance-title" className="input" maxLength={160} value={form.title} onChange={(event) => updateForm("title", event.target.value)} />
             </div>
             <div className="field">
               <label htmlFor="governance-category">Category</label>
@@ -250,124 +348,229 @@ function Governance() {
         </section>
       )}
 
-      {!loading && activeTab === "passed" && (
+      {!loading && activeTab === "mine" && (
         <section className="card card-pad stack">
-          <h2>Passed Changes</h2>
-          {passedProposals.length === 0 ? (
-            <div className="empty-state">No proposals have passed yet.</div>
-          ) : (
-            <div className="governance-timeline">
-              {passedProposals.map((proposal) => (
-                <article className="timeline-entry" key={proposal.proposal_id}>
-                  <h3>{proposal.title}</h3>
-                  <span className={`governance-badge ${proposal.category}`}>{categoryLabel(proposal.category)}</span>
-                  <p>Old value: {String(proposal.current_value)}</p>
-                  <p>New value: {String(proposal.parameter)}</p>
-                  <p className="muted-text">Passed {formatDate(proposal.passed_timestamp || proposal.timestamp)}</p>
-                </article>
-              ))}
+          <div className="section-title">
+            <div>
+              <span className="eyebrow">My Governance</span>
+              <h2>Created Proposals and Votes</h2>
             </div>
-          )}
+          </div>
+          <div className="inline-form">
+            <input className="input" aria-label="Governance wallet address" value={myAddress} onChange={(event) => setMyAddress(event.target.value)} placeholder="Wallet address" />
+            <button className="button" type="button" onClick={() => loadMyGovernance()}>
+              Load Activity
+            </button>
+          </div>
+          {myLoading && <Spinner label="Loading governance activity..." />}
+          {!myLoading && myGovernance.proposals.length === 0 && <div className="empty-state">No proposals or votes found for this wallet.</div>}
+          <div className="governance-grid">
+            {myGovernance.proposals.map((proposal) => (
+              <ProposalCard
+                key={`my-${proposal.proposal_id}`}
+                proposal={proposal}
+                compact
+                canCancel={
+                  proposal.status === "active" &&
+                  proposal.proposer_address === myAddress &&
+                  Object.keys(proposal.votes || {}).length === 0
+                }
+                cancelling={cancellingId === proposal.proposal_id}
+                onCancel={() => cancelProposal(proposal.proposal_id, proposal.proposer_address)}
+              />
+            ))}
+          </div>
         </section>
       )}
 
-      {!loading && activeTab === "settings" && (
+      {!loading && activeTab === "rules" && (
+        <RuleChanges ruleChanges={ruleChanges} />
+      )}
+
+      {!loading && activeTab === "history" && (
         <section className="card card-pad stack">
-          <h2>Current Settings</h2>
-          <div className="table-wrap">
-            <table className="stats-table">
-              <thead>
-                <tr>
-                  <th>Parameter</th>
-                  <th>Default Value</th>
-                  <th>Current Value</th>
-                  <th>Changed</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(settings).map(([key, value]) => (
-                  <tr key={key} className={value.changed ? "changed-row" : ""}>
-                    <td>{categoryLabel(key)}</td>
-                    <td>{String(value.default)}</td>
-                    <td>{String(value.current)}</td>
-                    <td>{value.changed ? "Yes" : "No"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="section-title">
+            <div>
+              <span className="eyebrow">Proposal History</span>
+              <h2>All Lifecycle Records</h2>
+            </div>
           </div>
+          {historyProposals.length === 0 ? (
+            <div className="empty-state">No completed governance history yet.</div>
+          ) : (
+            <div className="governance-grid">
+              {historyProposals.map((proposal) => (
+                <ProposalCard key={`history-${proposal.proposal_id}`} proposal={proposal} compact />
+              ))}
+            </div>
+          )}
         </section>
       )}
     </div>
   );
 }
 
+function SummaryCard({ label, value }) {
+  return (
+    <div className="card card-pad stat-card compact-stat">
+      <span className="stat-label">{label}</span>
+      <span className="stat-value">{value}</span>
+    </div>
+  );
+}
+
 function ProposalCard({
   proposal,
-  expanded,
+  expanded = false,
   onToggle,
   voteInput,
   onShowVote,
   onVoteAddressChange,
   onSubmitVote,
+  compact = false,
+  canCancel = false,
+  cancelling = false,
+  onCancel,
 }) {
-  const totalWeight = Number(proposal.yes_vote_weight) + Number(proposal.no_vote_weight);
-  const yesPercent = totalWeight > 0 ? (Number(proposal.yes_vote_weight) / totalWeight) * 100 : 0;
+  const votes = proposal.votes || {};
+  const totalWeight = Number(proposal.yes_vote_weight || 0) + Number(proposal.no_vote_weight || 0);
+  const quorum = Number(proposal.quorum || 0);
+  const yesPercent = totalWeight > 0 ? (Number(proposal.yes_vote_weight || 0) / totalWeight) * 100 : 0;
   const noPercent = totalWeight > 0 ? 100 - yesPercent : 0;
+  const quorumPercent = quorum > 0 ? Math.min((totalWeight / quorum) * 100, 100) : 0;
   const description =
-    expanded || proposal.description.length <= 200
+    expanded || compact || proposal.description.length <= 220
       ? proposal.description
-      : `${proposal.description.slice(0, 200)}...`;
+      : `${proposal.description.slice(0, 220)}...`;
 
   return (
     <article className="governance-card">
       <div className="section-title">
-        <h2>{proposal.title}</h2>
+        <div>
+          <h2>{proposal.title}</h2>
+          <span className={`status-badge ${proposal.status}`}>{String(proposal.status).replace(/_/g, " ")}</span>
+        </div>
         <span className={`governance-badge ${proposal.category}`}>{categoryLabel(proposal.category)}</span>
       </div>
       <p>{description}</p>
-      {proposal.description.length > 200 && (
+      {!compact && proposal.description.length > 220 && onToggle && (
         <button className="text-button" type="button" onClick={onToggle}>
           {expanded ? "Show Less" : "Read More"}
         </button>
       )}
       <div className="meta-item">
+        <span className="meta-label">Proposal ID</span>
+        <span className="meta-value mono-wrap">{proposal.proposal_id}</span>
+      </div>
+      <div className="meta-item">
         <span className="meta-label">Proposer</span>
         <span className="meta-value"><AddressIdentity address={proposal.proposer_address} compact /></span>
       </div>
       <div className="meta-item">
-        <span className="meta-label">Voting Deadline</span>
+        <span className="meta-label">Deadline</span>
         <span className="meta-value">{formatDate(proposal.voting_deadline)}</span>
       </div>
+      <div className="meta-item">
+        <span className="meta-label">Current Value</span>
+        <span className="meta-value">{formatValue(proposal.current_value)}</span>
+      </div>
+      <div className="meta-item">
+        <span className="meta-label">Proposed Value</span>
+        <span className="meta-value">{formatValue(proposal.parameter)}</span>
+      </div>
+      {proposal.execution_result && (
+        <div className="risk-box">
+          <strong>Execution status</strong>
+          <p>{proposal.execution_result.message || "Proposal executed."}</p>
+        </div>
+      )}
+      {proposal.execution_error && (
+        <div className="error-message">Execution error: {proposal.execution_error}</div>
+      )}
       <div className="vote-bar-wrap">
-        <div className="vote-bar">
+        <div className="vote-bar" aria-label="Vote split">
           <span className="vote-yes" style={{ width: `${yesPercent}%` }} />
           <span className="vote-no" style={{ width: `${noPercent}%` }} />
         </div>
         <div className="vote-weights">
-          <span>Yes: {proposal.yes_vote_weight} VLQ</span>
-          <span>No: {proposal.no_vote_weight} VLQ</span>
+          <span>Yes: {proposal.yes_vote_weight || 0} VLQ</span>
+          <span>No: {proposal.no_vote_weight || 0} VLQ</span>
         </div>
+        <p className="muted-text">Quorum progress: {quorumPercent.toFixed(0)}% ({totalWeight} / {quorum} VLQ)</p>
       </div>
-      <p className="muted-text">Total voting weight: {totalWeight} VLQ. Quorum: {proposal.quorum} VLQ.</p>
-      <span className={`status-badge ${proposal.status}`}>{proposal.status}</span>
-      <div className="button-row">
-        <button className="button" type="button" onClick={() => onShowVote(proposal.proposal_id, "yes")}>
-          Vote Yes
+      {proposal.rule_change_id && (
+        <p className="muted-text">Rule change: <span className="mono-wrap">{proposal.rule_change_id}</span></p>
+      )}
+      {proposal.status_history?.length > 0 && (
+        <details>
+          <summary>Status history</summary>
+          <div className="governance-timeline">
+            {proposal.status_history.map((entry, index) => (
+              <article className="timeline-entry" key={`${proposal.proposal_id}-history-${index}`}>
+                <strong>{String(entry.status).replace(/_/g, " ")}</strong>
+                <p>{entry.note}</p>
+                <span className="muted-text">{formatDate(entry.timestamp)}</span>
+              </article>
+            ))}
+          </div>
+        </details>
+      )}
+      {!compact && proposal.status === "active" && (
+        <>
+          <div className="button-row">
+            <button className="button" type="button" onClick={() => onShowVote(proposal.proposal_id, "yes")}>
+              Vote Yes
+            </button>
+            <button className="button secondary" type="button" onClick={() => onShowVote(proposal.proposal_id, "no")}>
+              Vote No
+            </button>
+          </div>
+          {voteInput && (
+            <div className="inline-form">
+              <input className="input" aria-label="Voter wallet address" value={voteInput.address || ""} onChange={(event) => onVoteAddressChange(event.target.value)} placeholder="Voter wallet address" />
+              <button className="button" type="button" onClick={() => onSubmitVote(proposal.proposal_id)}>
+                Submit {voteInput.vote}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+      {canCancel && (
+        <button className="button secondary" type="button" disabled={cancelling} onClick={onCancel}>
+          {cancelling ? "Cancelling..." : "Cancel Proposal"}
         </button>
-        <button className="button secondary" type="button" onClick={() => onShowVote(proposal.proposal_id, "no")}>
-          Vote No
-        </button>
-      </div>
-      {voteInput && (
-        <div className="inline-form">
-          <input className="input" aria-label="Voter wallet address" value={voteInput.address || ""} onChange={(event) => onVoteAddressChange(event.target.value)} placeholder="Voter wallet address" />
-          <button className="button" type="button" onClick={() => onSubmitVote(proposal.proposal_id)}>
-            Submit {voteInput.vote}
-          </button>
-        </div>
+      )}
+      {Object.keys(votes).length > 0 && compact && (
+        <p className="muted-text">{Object.keys(votes).length} vote record(s)</p>
       )}
     </article>
+  );
+}
+
+function RuleChanges({ ruleChanges }) {
+  return (
+    <section className="card card-pad stack">
+      <div className="section-title">
+        <div>
+          <span className="eyebrow">Rule Changes</span>
+          <h2>Executed Settings Timeline</h2>
+        </div>
+      </div>
+      {ruleChanges.length === 0 ? (
+        <div className="empty-state">No executed rule changes have been recorded yet.</div>
+      ) : (
+        <div className="governance-timeline">
+          {ruleChanges.map((change) => (
+            <article className="timeline-entry" key={change.rule_change_id}>
+              <h3>{categoryLabel(change.category)}</h3>
+              <p>{formatValue(change.old_value)} to {formatValue(change.new_value)}</p>
+              <p className="muted-text">Proposal <span className="mono-wrap">{change.proposal_id}</span></p>
+              <p className="muted-text">Applied {formatDate(change.applied_at)} at block {change.applied_block_height}</p>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

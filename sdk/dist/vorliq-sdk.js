@@ -42,6 +42,17 @@ function lendingQuery(params = {}) {
   return value ? `?${value}` : "";
 }
 
+function governanceQuery(params = {}) {
+  const query = new URLSearchParams();
+  if (params.limit !== undefined) query.set("limit", String(params.limit));
+  if (params.offset !== undefined) query.set("offset", String(params.offset));
+  if (params.status) query.set("status", String(params.status));
+  if (params.category) query.set("category", String(params.category));
+  if (params.address) query.set("address", String(params.address));
+  const value = query.toString();
+  return value ? `?${value}` : "";
+}
+
 class VorliqSDK {
   /**
    * Creates a Vorliq SDK client.
@@ -425,6 +436,75 @@ class VorliqSDK {
       method: "POST",
       body: JSON.stringify({ offer_id: offerId, caller_address: callerAddress, reason }),
     });
+  }
+
+  /**
+   * Gets aggregate governance lifecycle counts and current governable settings.
+   *
+   * @returns {Promise<object>} Governance summary fields.
+   */
+  async getGovernanceSummary() {
+    const data = await this.request("/api/governance/summary");
+    return data.summary || data;
+  }
+
+  /**
+   * Gets one governance proposal lifecycle record.
+   *
+   * @param {string} proposalId - Governance proposal ID.
+   * @returns {Promise<object>} Proposal record.
+   */
+  async getGovernanceProposal(proposalId) {
+    const query = new URLSearchParams({ proposal_id: proposalId });
+    const data = await this.request(`/api/governance/proposal?${query.toString()}`);
+    return data.proposal || data;
+  }
+
+  /**
+   * Gets proposals created by or voted on by an address.
+   *
+   * @param {string} address - Wallet address to inspect.
+   * @returns {Promise<object>} Created, voted, and combined proposal lists.
+   */
+  async getMyGovernance(address) {
+    const query = new URLSearchParams({ address });
+    return this.request(`/api/governance/my?${query.toString()}`);
+  }
+
+  /**
+   * Cancels an active proposal before votes are cast.
+   *
+   * @param {string} proposalId - Governance proposal ID.
+   * @param {string} proposerAddress - Proposal creator address.
+   * @returns {Promise<object>} Updated proposal response.
+   */
+  async cancelGovernanceProposal(proposalId, proposerAddress) {
+    return this.request("/api/governance/cancel", {
+      method: "POST",
+      body: JSON.stringify({ proposal_id: proposalId, proposer_address: proposerAddress }),
+    });
+  }
+
+  /**
+   * Gets executed governance rule changes.
+   *
+   * @param {object} [params] - Optional pagination filters.
+   * @returns {Promise<Array<object>>} Rule change records.
+   */
+  async getRuleChanges(params = {}) {
+    const data = await this.request(`/api/governance/rule-changes${governanceQuery(params)}`);
+    return data.rule_changes || [];
+  }
+
+  /**
+   * Gets settings history derived from governance rule changes.
+   *
+   * @param {object} [params] - Optional pagination filters.
+   * @returns {Promise<Array<object>>} Governance settings history records.
+   */
+  async getGovernanceSettingsHistory(params = {}) {
+    const data = await this.request(`/api/governance/settings/history${governanceQuery(params)}`);
+    return data.history || data.rule_changes || [];
   }
 
   /**

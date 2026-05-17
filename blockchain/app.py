@@ -1478,7 +1478,7 @@ def create_governance_proposal():
         if category == "general":
             parameter_value = _require_text(data.get("parameter"), "parameter value", MAX_TEXT_LENGTHS["proposal_parameter"])
         else:
-            parameter_value = _require_number(data.get("parameter"), "parameter value", 21_000_000)
+            parameter_value = data.get("parameter")
         proposal_id = governance.create_proposal(
             proposer_address=_require_text(data.get("proposer_address") or data.get("proposerAddress"), "proposer address", 160),
             title=_require_text(data.get("title"), "title", MAX_TEXT_LENGTHS["proposal_title"]),
@@ -1499,7 +1499,14 @@ def get_active_governance_proposals():
     _expire_governance_if_needed()
     try:
         limit, offset = _pagination()
-        proposals, total, has_more = _page(governance.get_active_proposals(), limit, offset)
+        status = request.args.get("status")
+        category = request.args.get("category")
+        address = request.args.get("address")
+        if status or category or address:
+            proposal_records = governance.get_proposals(status=status, category=category, address=address)
+        else:
+            proposal_records = governance.get_active_proposals()
+        proposals, total, has_more = _page(proposal_records, limit, offset)
         return jsonify({"success": True, "proposals": proposals, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
@@ -1510,7 +1517,11 @@ def get_all_governance_proposals():
     _expire_governance_if_needed()
     try:
         limit, offset = _pagination()
-        proposals, total, has_more = _page(governance.get_all_proposals(), limit, offset)
+        status = request.args.get("status")
+        category = request.args.get("category")
+        address = request.args.get("address")
+        proposal_records = governance.get_proposals(status=status, category=category, address=address)
+        proposals, total, has_more = _page(proposal_records, limit, offset)
         return jsonify({"success": True, "proposals": proposals, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
@@ -1524,6 +1535,23 @@ def get_governance_proposal():
     if not proposal:
         return jsonify({"success": False, "error": "proposal does not exist"}), 404
     return jsonify({"success": True, "proposal": proposal})
+
+
+@app.get("/governance/my")
+def get_my_governance():
+    _expire_governance_if_needed()
+    try:
+        address = _require_text(request.args.get("address"), "address", 160)
+        return jsonify({"success": True, **governance.get_my_governance(address)})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/governance/summary")
+def get_governance_summary():
+    _expire_governance_if_needed()
+    _current_governance_settings()
+    return jsonify({"success": True, "summary": governance.get_summary()})
 
 
 @app.post("/governance/vote")
@@ -1557,9 +1585,46 @@ def vote_on_governance_proposal():
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
+@app.post("/governance/cancel")
+def cancel_governance_proposal():
+    try:
+        data = _json_body()
+        proposal = governance.cancel_proposal(
+            proposal_id=data.get("proposal_id") or data.get("proposalId"),
+            proposer_address=data.get("proposer_address") or data.get("proposerAddress"),
+        )
+        storage.save_governance(governance)
+        return jsonify({"success": True, "proposal": proposal})
+    except Exception as exc:
+        vorliq_logger.error("Governance cancel endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
 @app.get("/governance/settings")
 def get_governance_settings():
     return jsonify({"success": True, "settings": _current_governance_settings()})
+
+
+@app.get("/governance/rule-changes")
+def get_governance_rule_changes():
+    try:
+        limit, offset = _pagination(default_limit=25)
+        records = governance.get_rule_changes()
+        rule_changes, total, has_more = _page(records, limit, offset)
+        return jsonify({"success": True, "rule_changes": rule_changes, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/governance/settings/history")
+def get_governance_settings_history():
+    try:
+        limit, offset = _pagination(default_limit=25)
+        records = governance.get_settings_history()
+        history, total, has_more = _page(records, limit, offset)
+        return jsonify({"success": True, "history": history, "rule_changes": history, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.get("/leaderboard")

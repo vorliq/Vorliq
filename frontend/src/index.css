@@ -1092,6 +1092,24 @@ select.input {
   padding: 14px 16px;
 }
 
+.mono-wrap {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+details {
+  border-top: 1px solid var(--border-soft);
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+summary {
+  cursor: pointer;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
 .checkbox-row {
   display: flex;
   align-items: flex-start;

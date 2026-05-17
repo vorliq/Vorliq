@@ -22,6 +22,7 @@ function Account() {
   const [addressHistory, setAddressHistory] = useState(null);
   const [loans, setLoans] = useState([]);
   const [exchangeTrades, setExchangeTrades] = useState([]);
+  const [governanceActivity, setGovernanceActivity] = useState({ created: [], voted: [], proposals: [] });
   const [earnedAchievements, setEarnedAchievements] = useState([]);
   const [allAchievements, setAllAchievements] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -46,11 +47,12 @@ function Account() {
             if (error.response?.status === 404) return { data: { profile: null } };
             throw error;
           });
-        const [balanceResponse, transactionResponse, loansResponse, exchangeResponse, earnedResponse, allAchievementsResponse, profileResponse] = await Promise.all([
+        const [balanceResponse, transactionResponse, loansResponse, exchangeResponse, governanceResponse, earnedResponse, allAchievementsResponse, profileResponse] = await Promise.all([
           api.get("/wallet/balance", { params: { address: wallet.address } }),
           api.get("/chain/address", { params: { address: wallet.address, limit: 100 } }),
           api.get("/lending/my", { params: { address: wallet.address } }),
           api.get("/exchange/my", { params: { address: wallet.address } }),
+          api.get("/governance/my", { params: { address: wallet.address } }),
           api.get("/achievements", { params: { address: wallet.address } }),
           api.get("/achievements/all"),
           profileRequest,
@@ -62,6 +64,11 @@ function Account() {
           setAddressHistory(transactionResponse.data || null);
           setLoans(loansResponse.data.loans || []);
           setExchangeTrades(exchangeResponse.data.offers || []);
+          setGovernanceActivity({
+            created: governanceResponse.data.created || [],
+            voted: governanceResponse.data.voted || [],
+            proposals: governanceResponse.data.proposals || [],
+          });
           setEarnedAchievements(earnedResponse.data.achievements || []);
           setAllAchievements(allAchievementsResponse.data.achievements || []);
           setProfile(profileResponse.data.profile || null);
@@ -619,6 +626,51 @@ function Account() {
                     </Link>
                   </div>
                 )}
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="card card-pad account-section">
+        <h2>My Governance Activity</h2>
+        {loading && <Spinner label="Loading governance activity..." />}
+
+        {!loading && governanceActivity.proposals.length === 0 && <div className="empty-state">No governance proposals or votes yet.</div>}
+
+        <div className="governance-grid">
+          {governanceActivity.proposals.slice(0, 6).map((proposal) => {
+            const voteRecord = proposal.votes?.[wallet.address];
+            const role = proposal.proposer_address === wallet.address ? "Proposer" : "Voter";
+            return (
+              <article className="governance-card" key={proposal.proposal_id}>
+                <div className="section-title">
+                  <h3>{proposal.title}</h3>
+                  <span className={`status-badge ${proposal.status}`}>{String(proposal.status).replace(/_/g, " ")}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Role</span>
+                  <span className="meta-value">{role}</span>
+                </div>
+                {voteRecord && (
+                  <div className="meta-item">
+                    <span className="meta-label">Vote</span>
+                    <span className="meta-value">{voteRecord.vote || voteRecord}</span>
+                  </div>
+                )}
+                <div className="meta-item">
+                  <span className="meta-label">Vote Weight</span>
+                  <span className="meta-value">Yes {proposal.yes_vote_weight || 0} / No {proposal.no_vote_weight || 0}</span>
+                </div>
+                {proposal.rule_change_id && (
+                  <div className="meta-item">
+                    <span className="meta-label">Rule Change</span>
+                    <span className="meta-value mono-wrap">{proposal.rule_change_id}</span>
+                  </div>
+                )}
+                <Link className="button secondary small-button" to="/governance">
+                  Open Governance
+                </Link>
               </article>
             );
           })}

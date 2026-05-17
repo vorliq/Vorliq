@@ -166,6 +166,7 @@ class Storage:
             {
                 "proposals": governance.proposals,
                 "governance_settings": governance.governance_settings,
+                "rule_changes": governance.rule_changes,
             },
         )
         vorliq_logger.info("Saved governance with %s proposal records", len(governance.proposals))
@@ -180,14 +181,18 @@ class Storage:
         data = self._read_json(self.governance_file)
         proposals = data.get("proposals", {})
         settings = data.get("governance_settings", {})
+        rule_changes = data.get("rule_changes", [])
 
         if not isinstance(proposals, dict):
             raise ValueError("governance data must contain a proposals object")
         if settings and not isinstance(settings, dict):
             raise ValueError("governance settings data must be an object")
+        if rule_changes and not isinstance(rule_changes, list):
+            raise ValueError("governance rule change data must be a list")
 
         governance.proposals = proposals
         governance.governance_settings.update(settings)
+        governance.rule_changes = rule_changes
         vorliq_logger.info("Loaded governance with %s proposal records", len(proposals))
         return governance
 

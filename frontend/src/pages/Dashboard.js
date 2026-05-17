@@ -66,6 +66,7 @@ function Dashboard() {
   const [summary, setSummary] = useState(null);
   const [lendingSummary, setLendingSummary] = useState(null);
   const [exchangeSummary, setExchangeSummary] = useState(null);
+  const [governanceSummary, setGovernanceSummary] = useState(null);
   const [featuredPosts, setFeaturedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -76,17 +77,19 @@ function Dashboard() {
 
     async function loadDashboard() {
       try {
-        const [summaryResponse, featuredResponse, lendingResponse, exchangeResponse] = await Promise.all([
+        const [summaryResponse, featuredResponse, lendingResponse, exchangeResponse, governanceResponse] = await Promise.all([
           api.get("/chain/summary"),
           api.get("/forum/featured", { params: { limit: 3 } }),
           api.get("/lending/summary"),
           api.get("/exchange/summary"),
+          api.get("/governance/summary"),
         ]);
         if (mounted) {
           setErrorMessage("");
           setSummary(summaryResponse.data.summary || {});
           setLendingSummary(lendingResponse.data.summary || {});
           setExchangeSummary(exchangeResponse.data.summary || {});
+          setGovernanceSummary(governanceResponse.data.summary || {});
           setFeaturedPosts((featuredResponse.data.posts || []).slice(0, 3));
           setLastUpdated(new Date());
         }
@@ -120,8 +123,11 @@ function Dashboard() {
       activeLoans: (lendingSummary?.active_count ?? 0) + (lendingSummary?.overdue_count ?? 0) + (lendingSummary?.repayment_pending_count ?? 0),
       openOffers: exchangeSummary?.open_count ?? 0,
       activeTrades: exchangeSummary?.active_trades_count ?? 0,
+      activeProposals: governanceSummary?.active_count ?? 0,
+      executedRuleChanges: governanceSummary?.executed_count ?? 0,
+      latestRuleChange: governanceSummary?.latest_executed_rule_change?.category,
     };
-  }, [exchangeSummary, lendingSummary, summary]);
+  }, [exchangeSummary, governanceSummary, lendingSummary, summary]);
 
   return (
     <div className="page">
@@ -223,6 +229,18 @@ function Dashboard() {
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Active Trades</span>
               <span className="stat-value">{stats.activeTrades}</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Active Governance</span>
+              <span className="stat-value">{stats.activeProposals}</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Rule Changes</span>
+              <span className="stat-value">{stats.executedRuleChanges}</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Latest Rule</span>
+              <span className="stat-value">{stats.latestRuleChange || "None"}</span>
             </div>
           </div>
         </section>
