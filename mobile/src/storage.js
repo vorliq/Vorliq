@@ -2,8 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const WALLET_KEY = "vorliq_wallet";
 export const NODE_URL_KEY = "vorliq_node_url";
-// Official Vorliq community node. Users can change this in Settings to point to their own node.
-export const DEFAULT_NODE_URL = "https://node.vorliq.app";
+// Official Vorliq community API. Users can change this in Settings to point to their own node.
+export const DEFAULT_NODE_URL = "https://vorliq.org";
 
 export async function saveWallet(wallet) {
   if (!wallet || !wallet.address || !wallet.public_key || !wallet.private_key) {

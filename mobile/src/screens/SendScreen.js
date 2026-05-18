@@ -104,7 +104,7 @@ async function signVorliqTransaction(wallet, receiverAddress, amount) {
   };
 }
 
-export default function SendScreen() {
+export default function SendScreen({ navigation }) {
   const [wallet, setWallet] = useState(null);
   const [receiver, setReceiver] = useState("");
   const [amount, setAmount] = useState("");
@@ -114,6 +114,7 @@ export default function SendScreen() {
   const [error, setError] = useState("");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
+  const [submittedTx, setSubmittedTx] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -127,6 +128,7 @@ export default function SendScreen() {
   const handleSend = async () => {
     setError("");
     setMessage("");
+    setSubmittedTx(null);
 
     if (!wallet) {
       setError("Create or restore a wallet before sending VLQ.");
@@ -145,7 +147,13 @@ export default function SendScreen() {
       const result = await sendTransaction(transaction);
 
       if (result.success) {
-        setMessage("Transaction signed on this device and submitted to your Vorliq node.");
+        const txId =
+          result.data.tx_id ||
+          result.data.transaction?.tx_id ||
+          result.data.data?.tx_id ||
+          result.data.data?.transaction?.tx_id;
+        setSubmittedTx(txId || null);
+        setMessage("Transaction signed locally and submitted as pending. It is confirmed after mining.");
         setReceiver("");
         setAmount("");
       } else {
@@ -210,6 +218,17 @@ export default function SendScreen() {
 
       {message ? <Text style={sharedStyles.successText}>{message}</Text> : null}
       {error ? <Text style={sharedStyles.errorText}>{error}</Text> : null}
+
+      {submittedTx ? (
+        <View style={sharedStyles.card}>
+          <Text style={sharedStyles.label}>Pending Transaction</Text>
+          <Text style={sharedStyles.codeText}>{submittedTx}</Text>
+          <Text style={sharedStyles.mutedText}>Mining confirms this transaction into a block.</Text>
+          <Pressable style={[sharedStyles.button, styles.scanButton]} onPress={() => navigation.navigate("Transaction", { txId: submittedTx })}>
+            <Text style={sharedStyles.buttonText}>Open Transaction</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <Pressable style={[sharedStyles.button, styles.scanButton]} onPress={scannerOpen ? () => setScannerOpen(false) : openScanner}>
         <Text style={sharedStyles.buttonText}>{scannerOpen ? "Close Scanner" : "Scan QR Code"}</Text>

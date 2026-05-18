@@ -1,66 +1,43 @@
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import {
-  getGovernanceProposals,
-  getGovernanceSettings,
-  voteGovernanceProposal,
-} from "../api";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { getGovernanceProposals, getGovernanceSettings, getGovernanceSummary, getMyGovernance, getRuleChanges, voteGovernanceProposal } from "../api";
 import { loadWallet } from "../storage";
 import theme from "../theme";
+import { formatTimestamp, normalizeStatus, shortText, statusColor } from "../utils/format";
 import sharedStyles from "./sharedStyles";
 
-function normalizeProposals(raw) {
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.proposals)) return raw.proposals;
-  if (Array.isArray(raw?.data)) return raw.data;
-  return [];
-}
-
-function categoryLabel(category) {
-  return String(category || "").replace(/_/g, " ");
-}
+const segments = ["Active", "Vote", "My", "Rule Changes", "Settings"];
 
 export default function GovernanceScreen() {
-  const [activeSegment, setActiveSegment] = useState("Proposals");
+  const [segment, setSegment] = useState("Active");
   const [wallet, setWallet] = useState(null);
+  const [summary, setSummary] = useState(null);
   const [proposals, setProposals] = useState([]);
+  const [myGovernance, setMyGovernance] = useState([]);
+  const [ruleChanges, setRuleChanges] = useState([]);
   const [settings, setSettings] = useState({});
   const [proposalId, setProposalId] = useState("");
-  const [voterAddress, setVoterAddress] = useState("");
   const [vote, setVote] = useState("yes");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const loadData = useCallback(async () => {
-    setError("");
     const savedWallet = await loadWallet();
     setWallet(savedWallet);
-    setVoterAddress(savedWallet?.address || "");
-
-    const [proposalResult, settingsResult] = await Promise.all([
-      getGovernanceProposals(),
+    const [summaryResult, proposalsResult, ruleResult, settingsResult, myResult] = await Promise.all([
+      getGovernanceSummary(),
+      getGovernanceProposals({ limit: 50 }),
+      getRuleChanges(),
       getGovernanceSettings(),
+      savedWallet?.address ? getMyGovernance(savedWallet.address) : Promise.resolve({ success: true, data: { proposals: [] } }),
     ]);
-
-    if (proposalResult.success) {
-      setProposals(normalizeProposals(proposalResult.data));
-    } else {
-      setError(proposalResult.error);
-    }
-
-    if (settingsResult.success) {
-      setSettings(settingsResult.data.settings || {});
-    }
-
+    if (summaryResult.success) setSummary(summaryResult.data.summary || summaryResult.data.data?.summary || summaryResult.data);
+    if (proposalsResult.success) setProposals(proposalsResult.data.proposals || proposalsResult.data.data?.proposals || proposalsResult.data.data || []);
+    if (ruleResult.success) setRuleChanges(ruleResult.data.rule_changes || ruleResult.data.data?.rule_changes || ruleResult.data.data || []);
+    if (settingsResult.success) setSettings(settingsResult.data.settings || settingsResult.data.data?.settings || {});
+    if (myResult.success) setMyGovernance(myResult.data.proposals || myResult.data.votes || myResult.data.data?.proposals || myResult.data.data || []);
+    if (!proposalsResult.success) setError(proposalsResult.error);
     setLoading(false);
   }, []);
 
@@ -71,139 +48,104 @@ export default function GovernanceScreen() {
   const handleVote = async () => {
     setError("");
     setMessage("");
-
-    if (!proposalId.trim() || !voterAddress.trim()) {
-      setError("Enter a proposal ID and voter wallet address.");
-      return;
-    }
-
-    const result = await voteGovernanceProposal({
-      proposal_id: proposalId.trim(),
-      voter_address: voterAddress.trim(),
-      voter_wallet_address: voterAddress.trim(),
-      vote,
-    });
-
+    if (!wallet?.address) return setError("Create a wallet before voting.");
+    if (!proposalId.trim()) return setError("Enter a proposal ID.");
+    const result = await voteGovernanceProposal({ proposal_id: proposalId.trim(), voter_address: wallet.address, voter_wallet_address: wallet.address, vote });
     if (result.success) {
-      setMessage("Vote cast successfully.");
+      setMessage("Vote cast.");
       setProposalId("");
       await loadData();
-      setActiveSegment("Proposals");
     } else {
       setError(result.error);
     }
   };
 
-  const renderProposals = () => {
-    if (proposals.length === 0) {
-      return <Text style={sharedStyles.mutedText}>No active governance proposals right now.</Text>;
-    }
-
-    return proposals.map((proposal) => {
-      const yesWeight = Number(proposal.yes_vote_weight || 0);
-      const noWeight = Number(proposal.no_vote_weight || 0);
-      const total = Math.max(yesWeight + noWeight, 1);
-
-      return (
-        <View style={sharedStyles.card} key={proposal.proposal_id}>
-          <View style={styles.headerRow}>
-            <Text style={styles.proposalTitle}>{proposal.title}</Text>
-            <View style={sharedStyles.badge}>
-              <Text style={sharedStyles.badgeText}>{categoryLabel(proposal.category)}</Text>
-            </View>
-          </View>
-          <Text style={sharedStyles.value}>{proposal.description}</Text>
-          <View style={styles.progressWrap}>
-            <View style={[styles.yesBar, { flex: yesWeight / total }]} />
-            <View style={[styles.noBar, { flex: noWeight / total }]} />
-          </View>
-          <Text style={sharedStyles.mutedText}>Yes {yesWeight} VLQ | No {noWeight} VLQ</Text>
-          <Text style={sharedStyles.mutedText}>
-            Deadline {new Date(proposal.voting_deadline * 1000).toLocaleString()}
-          </Text>
-        </View>
-      );
-    });
-  };
-
-  const renderVote = () => (
-    <View style={sharedStyles.card}>
-      <Text style={sharedStyles.label}>Proposal ID</Text>
-      <TextInput
-        autoCapitalize="none"
-        style={sharedStyles.input}
-        placeholder="Paste proposal ID"
-        placeholderTextColor={theme.textSecondary}
-        value={proposalId}
-        onChangeText={setProposalId}
-      />
-      <Text style={sharedStyles.label}>Voter Wallet Address</Text>
-      <TextInput
-        autoCapitalize="none"
-        style={sharedStyles.input}
-        value={voterAddress}
-        onChangeText={setVoterAddress}
-      />
-      <View style={styles.voteToggle}>
-        {["yes", "no"].map((choice) => (
-          <Pressable
-            key={choice}
-            style={[styles.voteButton, vote === choice && styles.voteButtonActive]}
-            onPress={() => setVote(choice)}
-          >
-            <Text style={[styles.voteText, vote === choice && styles.voteTextActive]}>{choice.toUpperCase()}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <Pressable style={sharedStyles.button} onPress={handleVote}>
-        <Text style={sharedStyles.buttonText}>Cast Vote</Text>
-      </Pressable>
-      {!wallet ? <Text style={[sharedStyles.warningText, styles.marginTop]}>Create a wallet to vote with your VLQ balance.</Text> : null}
-    </View>
-  );
-
-  const renderSettings = () => (
-    <View>
-      {Object.entries(settings).map(([key, value]) => (
-        <View style={sharedStyles.card} key={key}>
-          <Text style={sharedStyles.label}>{categoryLabel(key)}</Text>
-          <Text style={styles.settingValue}>{String(value.current)}</Text>
-          <Text style={sharedStyles.mutedText}>Default: {String(value.default)}</Text>
-        </View>
-      ))}
-    </View>
-  );
-
   return (
     <ScrollView style={sharedStyles.screen} contentContainerStyle={sharedStyles.content}>
       <Text style={sharedStyles.title}>Governance</Text>
-      <Text style={sharedStyles.subtitle}>Vote on Vorliq network rules with your VLQ balance.</Text>
+      <Text style={sharedStyles.subtitle}>
+        Community rule-setting inside Vorliq software. Passed proposals are tracked separately from executed rule changes.
+      </Text>
+
+      <View style={sharedStyles.card}>
+        <Text style={sharedStyles.label}>Summary</Text>
+        <Text style={sharedStyles.value}>Active: {summary?.active_count ?? 0}</Text>
+        <Text style={sharedStyles.value}>Pending execution: {summary?.passed_pending_execution_count ?? 0}</Text>
+        <Text style={sharedStyles.mutedText}>Executed: {summary?.executed_count ?? 0} | Total votes: {summary?.total_votes ?? 0}</Text>
+      </View>
 
       <View style={styles.segmented}>
-        {["Proposals", "Vote", "Settings"].map((segment) => (
-          <Pressable
-            key={segment}
-            style={[styles.segmentButton, activeSegment === segment && styles.segmentButtonActive]}
-            onPress={() => setActiveSegment(segment)}
-          >
-            <Text style={[styles.segmentText, activeSegment === segment && styles.segmentTextActive]}>{segment}</Text>
+        {segments.map((item) => (
+          <Pressable key={item} style={[styles.segmentButton, segment === item && styles.segmentButtonActive]} onPress={() => setSegment(item)}>
+            <Text style={[styles.segmentText, segment === item && styles.segmentTextActive]}>{item}</Text>
           </Pressable>
         ))}
       </View>
 
       {message ? <Text style={sharedStyles.successText}>{message}</Text> : null}
       {error ? <Text style={sharedStyles.errorText}>{error}</Text> : null}
+      {loading ? <ActivityIndicator color={theme.accent} /> : null}
 
-      {loading ? (
-        <ActivityIndicator size="large" color={theme.accent} />
-      ) : (
-        <>
-          {activeSegment === "Proposals" && renderProposals()}
-          {activeSegment === "Vote" && renderVote()}
-          {activeSegment === "Settings" && renderSettings()}
-        </>
-      )}
+      {segment === "Active" ? proposals.filter((proposal) => proposal.status === "active").map((proposal) => <Proposal key={proposal.proposal_id} proposal={proposal} />) : null}
+      {segment === "Vote" ? (
+        <View style={sharedStyles.card}>
+          <Text style={sharedStyles.label}>Vote</Text>
+          <TextInput autoCapitalize="none" style={sharedStyles.input} placeholder="Proposal ID" placeholderTextColor={theme.textSecondary} value={proposalId} onChangeText={setProposalId} />
+          <View style={styles.voteToggle}>
+            {["yes", "no"].map((choice) => (
+              <Pressable key={choice} style={[styles.voteButton, vote === choice && styles.segmentButtonActive]} onPress={() => setVote(choice)}>
+                <Text style={[styles.segmentText, vote === choice && styles.segmentTextActive]}>{choice.toUpperCase()}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable style={sharedStyles.button} onPress={handleVote}>
+            <Text style={sharedStyles.buttonText}>Cast Vote</Text>
+          </Pressable>
+          <Text style={[sharedStyles.mutedText, styles.top]}>Governance votes are weighted by VLQ balance returned by the network.</Text>
+        </View>
+      ) : null}
+      {segment === "My" ? (myGovernance.length ? myGovernance.map((proposal) => <Proposal key={proposal.proposal_id || proposal.vote_id} proposal={proposal} />) : <Text style={sharedStyles.mutedText}>No governance records for this wallet yet.</Text>) : null}
+      {segment === "Rule Changes" ? (
+        ruleChanges.length ? ruleChanges.map((change) => (
+          <View style={sharedStyles.card} key={change.rule_change_id || change.proposal_id}>
+            <Text style={sharedStyles.label}>{change.category}</Text>
+            <Text style={sharedStyles.value}>{String(change.old_value)} -> {String(change.new_value)}</Text>
+            <Text style={sharedStyles.mutedText}>Applied {formatTimestamp(change.applied_at)} at block {change.applied_block_height ?? "unknown"}</Text>
+            <Text style={sharedStyles.mutedText}>Proposal: {shortText(change.proposal_id, 12, 6)}</Text>
+          </View>
+        )) : <Text style={sharedStyles.mutedText}>No rule changes returned by this node.</Text>
+      ) : null}
+      {segment === "Settings" ? Object.entries(settings).map(([key, value]) => (
+        <View style={sharedStyles.card} key={key}>
+          <Text style={sharedStyles.label}>{key.replace(/_/g, " ")}</Text>
+          <Text style={sharedStyles.value}>{String(value.current ?? value)}</Text>
+          {value.default !== undefined ? <Text style={sharedStyles.mutedText}>Default: {String(value.default)}</Text> : null}
+        </View>
+      )) : null}
     </ScrollView>
+  );
+}
+
+function Proposal({ proposal }) {
+  const yes = Number(proposal.yes_vote_weight || 0);
+  const no = Number(proposal.no_vote_weight || 0);
+  const total = Math.max(yes + no, 1);
+  return (
+    <View style={sharedStyles.card}>
+      <View style={[sharedStyles.badge, { backgroundColor: statusColor(proposal.status) }]}>
+        <Text style={sharedStyles.badgeText}>{normalizeStatus(proposal.status)}</Text>
+      </View>
+      <Text style={[sharedStyles.sectionTitle, styles.top]}>{proposal.title || proposal.proposal_id}</Text>
+      <Text style={sharedStyles.value}>{proposal.description}</Text>
+      <Text style={sharedStyles.mutedText}>Proposer: {shortText(proposal.proposer_address, 12, 6)}</Text>
+      <Text style={sharedStyles.mutedText}>Category: {proposal.category || "general"}</Text>
+      <View style={styles.progressWrap}>
+        <View style={[styles.yesBar, { flex: yes / total }]} />
+        <View style={[styles.noBar, { flex: no / total }]} />
+      </View>
+      <Text style={sharedStyles.mutedText}>Yes {yes} | No {no}</Text>
+      <Text style={sharedStyles.mutedText}>Deadline {formatTimestamp(proposal.voting_deadline)}</Text>
+    </View>
   );
 }
 
@@ -214,15 +156,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.xs,
     marginVertical: theme.spacing.md,
     padding: theme.spacing.xs,
   },
   segmentButton: {
     alignItems: "center",
     borderRadius: 10,
-    flex: 1,
-    minHeight: 44,
+    flexGrow: 1,
+    minHeight: 42,
     justifyContent: "center",
+    paddingHorizontal: theme.spacing.sm,
   },
   segmentButtonActive: {
     backgroundColor: theme.accent,
@@ -232,19 +177,24 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   segmentTextActive: {
-    color: theme.text,
+    color: theme.background,
   },
-  headerRow: {
+  voteToggle: {
+    flexDirection: "row",
     gap: theme.spacing.sm,
     marginBottom: theme.spacing.md,
   },
-  proposalTitle: {
-    color: theme.text,
-    fontSize: theme.fonts.heading,
-    fontWeight: "800",
+  voteButton: {
+    alignItems: "center",
+    borderColor: theme.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 46,
+    justifyContent: "center",
   },
   progressWrap: {
-    backgroundColor: "#111122",
+    backgroundColor: theme.input,
     borderRadius: 999,
     flexDirection: "row",
     height: 12,
@@ -257,36 +207,7 @@ const styles = StyleSheet.create({
   noBar: {
     backgroundColor: theme.error,
   },
-  voteToggle: {
-    flexDirection: "row",
-    marginBottom: theme.spacing.md,
-  },
-  voteButton: {
-    alignItems: "center",
-    borderColor: theme.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    flex: 1,
-    marginRight: theme.spacing.sm,
-    minHeight: 50,
-    justifyContent: "center",
-  },
-  voteButtonActive: {
-    backgroundColor: theme.accent,
-  },
-  voteText: {
-    color: theme.textSecondary,
-    fontWeight: "800",
-  },
-  voteTextActive: {
-    color: theme.text,
-  },
-  settingValue: {
-    color: theme.accent,
-    fontSize: theme.fonts.heading,
-    fontWeight: "800",
-  },
-  marginTop: {
+  top: {
     marginTop: theme.spacing.md,
   },
 });

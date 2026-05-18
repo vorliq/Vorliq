@@ -49,7 +49,7 @@ const sharedStyles = StyleSheet.create({
     lineHeight: 24,
   },
   input: {
-    backgroundColor: "#111122",
+    backgroundColor: theme.input,
     borderColor: theme.border,
     borderRadius: 12,
     borderWidth: 1,
@@ -74,9 +74,39 @@ const sharedStyles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
   },
   secondaryButton: {
-    backgroundColor: "transparent",
+    backgroundColor: theme.cardSoft,
     borderColor: theme.border,
     borderWidth: 1,
+  },
+  smallButton: {
+    minHeight: 42,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  row: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+  },
+  wrapRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm,
+  },
+  sectionTitle: {
+    color: theme.text,
+    fontSize: theme.fonts.heading,
+    fontWeight: "800",
+    marginBottom: theme.spacing.sm,
+  },
+  codeText: {
+    color: theme.text,
+    fontSize: theme.fonts.small,
+    lineHeight: 18,
+  },
+  linkText: {
+    color: theme.accentSecondary,
+    fontSize: theme.fonts.body,
+    fontWeight: "800",
   },
   dangerButton: {
     backgroundColor: theme.error,

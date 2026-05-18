@@ -12,13 +12,13 @@ import {
 import * as Clipboard from "expo-clipboard";
 import * as LocalAuthentication from "expo-local-authentication";
 import QRCode from "react-native-qrcode-svg";
-import { createWallet, getBalance } from "../api";
+import { createWallet, getAddressHistory, getBalance, getFaucetSummary } from "../api";
 import { scheduleLocalNotification } from "../notifications";
 import { clearWallet, loadWallet, saveWallet } from "../storage";
 import theme from "../theme";
 import sharedStyles from "./sharedStyles";
 
-export default function WalletScreen() {
+export default function WalletScreen({ navigation }) {
   const [wallet, setWallet] = useState(null);
   const [balance, setBalance] = useState("0");
   const [loading, setLoading] = useState(true);
@@ -28,6 +28,8 @@ export default function WalletScreen() {
   const [privateKeyUnlocked, setPrivateKeyUnlocked] = useState(false);
   const [safetyConfirmed, setSafetyConfirmed] = useState(false);
   const [receiveAmount, setReceiveAmount] = useState("");
+  const [history, setHistory] = useState(null);
+  const [faucetSummary, setFaucetSummary] = useState(null);
   const previousBalanceRef = useRef(null);
 
   const loadSavedWallet = useCallback(async () => {
@@ -52,6 +54,16 @@ export default function WalletScreen() {
 
       previousBalanceRef.current = nextBalance;
       setBalance(String(nextBalance));
+    }
+
+    const historyResult = await getAddressHistory(address, { limit: 10 });
+    if (historyResult.success) {
+      setHistory(historyResult.data.history || historyResult.data.data?.history || historyResult.data);
+    }
+
+    const faucetResult = await getFaucetSummary();
+    if (faucetResult.success) {
+      setFaucetSummary(faucetResult.data.summary || faucetResult.data.data?.summary || faucetResult.data);
     }
   }, []);
 
@@ -215,6 +227,42 @@ export default function WalletScreen() {
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.label}>Balance</Text>
         <Text style={styles.balance}>{balance} VLQ</Text>
+        <Text style={sharedStyles.mutedText}>Pending incoming: {history?.pending_incoming_total ?? history?.pending_incoming ?? 0} VLQ</Text>
+        <Text style={sharedStyles.mutedText}>Pending outgoing: {history?.pending_outgoing_total ?? history?.pending_outgoing ?? 0} VLQ</Text>
+      </View>
+
+      {Number(balance) === 0 ? (
+        <View style={sharedStyles.card}>
+          <Text style={sharedStyles.label}>New Wallet Activation</Text>
+          <Text style={sharedStyles.mutedText}>
+            Need starter VLQ? The faucet can send a small treasury-backed pending transaction when treasury funds are available.
+          </Text>
+          <Text style={sharedStyles.mutedText}>Faucet treasury balance: {faucetSummary?.treasury_balance ?? "Unknown"} VLQ</Text>
+          <Pressable style={[sharedStyles.button, styles.marginTop]} onPress={() => navigation.navigate("Faucet")}>
+            <Text style={sharedStyles.buttonText}>Open Faucet</Text>
+          </Pressable>
+          <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton, styles.marginTop]} onPress={() => navigation.navigate("Mine")}>
+            <Text style={sharedStyles.buttonText}>Open Mining</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      <View style={sharedStyles.card}>
+        <Text style={sharedStyles.label}>Recent Transactions</Text>
+        {(history?.transactions || history?.recent_transactions || []).length ? (
+          (history.transactions || history.recent_transactions).slice(0, 10).map((tx, index) => (
+            <Pressable
+              key={tx.tx_id || index}
+              style={styles.txRow}
+              onPress={() => tx.tx_id && navigation.navigate("Transaction", { txId: tx.tx_id })}
+            >
+              <Text style={sharedStyles.value}>{tx.amount ?? 0} VLQ - {tx.status || "confirmed"}</Text>
+              <Text style={sharedStyles.linkText}>{tx.tx_id ? `${String(tx.tx_id).slice(0, 12)}...` : "No transaction id"}</Text>
+            </Pressable>
+          ))
+        ) : (
+          <Text style={sharedStyles.mutedText}>No transaction history returned yet.</Text>
+        )}
       </View>
 
       <View style={sharedStyles.card}>
@@ -330,5 +378,10 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.55,
+  },
+  txRow: {
+    borderTopColor: theme.border,
+    borderTopWidth: 1,
+    paddingVertical: theme.spacing.sm,
   },
 });

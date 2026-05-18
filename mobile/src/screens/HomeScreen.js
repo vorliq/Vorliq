@@ -10,7 +10,14 @@ import {
   Text,
   View,
 } from "react-native";
-import { getDiagnostics } from "../api";
+import {
+  getActiveIncidents,
+  getChainSummary,
+  getDiagnostics,
+  getMiningStatus,
+  getRegistrySummary,
+  getTreasurySummary,
+} from "../api";
 import { scheduleLocalNotification } from "../notifications";
 import theme from "../theme";
 import sharedStyles from "./sharedStyles";
@@ -18,8 +25,8 @@ import sharedStyles from "./sharedStyles";
 const logo = require("../../assets/logo.png");
 const COMMUNITY_BANNER_KEY = "vorliq_community_node_banner_dismissed";
 
-export default function HomeScreen() {
-  const [diagnostics, setDiagnostics] = useState(null);
+export default function HomeScreen({ navigation }) {
+  const [dashboard, setDashboard] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -29,25 +36,41 @@ export default function HomeScreen() {
 
   const loadDashboard = useCallback(async () => {
     setError("");
-    const result = await getDiagnostics();
+    const [diagnostics, chain, mining, treasury, registry, incidents] = await Promise.all([
+      getDiagnostics(),
+      getChainSummary(),
+      getMiningStatus(),
+      getTreasurySummary(),
+      getRegistrySummary(),
+      getActiveIncidents(),
+    ]);
 
-    if (result.success) {
-      const currentHeight = Number(result.data.current_block_height ?? result.data.block_height ?? 0);
+    if (diagnostics.success || chain.success) {
+      const diagnosticsData = diagnostics.data || {};
+      const chainData = chain.data?.summary || chain.data?.data?.summary || chain.data || {};
+      const miningData = mining.data?.status || mining.data?.data?.status || mining.data || {};
+      const treasuryData = treasury.data?.summary || treasury.data?.data?.summary || treasury.data || {};
+      const registryData = registry.data?.summary || registry.data?.data?.summary || registry.data || {};
+      const incidentsData = incidents.data?.incidents || incidents.data?.data?.incidents || [];
+      const currentHeight = Number(
+        miningData.current_block_height ??
+          chainData.current_block_height ??
+          diagnosticsData.current_block_height ??
+          diagnosticsData.block_height ??
+          0
+      );
 
       if (previousBlockHeightRef.current !== null && currentHeight > previousBlockHeightRef.current) {
-        await scheduleLocalNotification(
-          "New Block Mined",
-          `Block number ${currentHeight} has been added to the Vorliq network.`
-        );
+        await scheduleLocalNotification("New Block Mined", `Block number ${currentHeight} has been added to Vorliq.`);
       }
 
       previousBlockHeightRef.current = currentHeight;
-      setDiagnostics(result.data);
+      setDashboard({ diagnostics: diagnosticsData, chain: chainData, mining: miningData, treasury: treasuryData, registry: registryData, incidents: incidentsData });
       setOnline(true);
     } else {
-      setDiagnostics(null);
+      setDashboard({});
       setOnline(false);
-      setError("Unable to reach your Vorliq node. Check the node URL in Settings and make sure the backend is running.");
+      setError("Unable to reach your Vorliq node. Check the node URL in Settings.");
     }
 
     setLoading(false);
@@ -63,18 +86,8 @@ export default function HomeScreen() {
       const dismissed = await AsyncStorage.getItem(COMMUNITY_BANNER_KEY);
       setShowCommunityBanner(dismissed !== "true");
     }
-
     loadBannerState();
   }, []);
-
-  useEffect(() => {
-    if (loading) {
-      return undefined;
-    }
-
-    const interval = setInterval(loadDashboard, 60000);
-    return () => clearInterval(interval);
-  }, [loading, loadDashboard]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -86,14 +99,31 @@ export default function HomeScreen() {
     setShowCommunityBanner(false);
   };
 
-  const chainStatus =
-    diagnostics?.chain_validity_status ||
-    (diagnostics?.chain_valid === false ? "Invalid" : "Valid");
+  const mining = dashboard.mining || {};
+  const chain = dashboard.chain || {};
+  const diagnostics = dashboard.diagnostics || {};
+  const treasury = dashboard.treasury || {};
+  const registry = dashboard.registry || {};
+  const incidents = dashboard.incidents || [];
+
   const stats = [
-    ["Block Height", diagnostics?.current_block_height ?? diagnostics?.block_height ?? "0"],
-    ["Chain Status", chainStatus],
-    ["VLQ Circulation", `${diagnostics?.total_vlq_in_circulation ?? diagnostics?.total_vlq_issued ?? 0} VLQ`],
-    ["Mining Reward", `${diagnostics?.current_mining_reward ?? 50} VLQ`],
+    ["Block Height", mining.current_block_height ?? chain.current_block_height ?? diagnostics.current_block_height ?? diagnostics.block_height ?? "0"],
+    ["Chain Valid", mining.chain_valid === false || diagnostics.chain_valid === false ? "No" : "Yes"],
+    ["Can Mine", mining.can_mine_now ? "Yes" : "No"],
+    ["Treasury", `${treasury.current_balance ?? treasury.treasury_balance ?? 0} VLQ`],
+    ["Active Nodes", registry.active_node_count ?? registry.active_nodes ?? 0],
+    ["Incidents", incidents.length],
+  ];
+
+  const actions = [
+    ["Wallet", "Wallet"],
+    ["Send", "Send"],
+    ["Mine", "Mine"],
+    ["Faucet", "Faucet"],
+    ["Lending", "Lending"],
+    ["Exchange", "Exchange"],
+    ["Governance", "Governance"],
+    ["Profile", "Profile"],
   ];
 
   return (
@@ -105,7 +135,7 @@ export default function HomeScreen() {
       {showCommunityBanner ? (
         <View style={styles.communityBanner}>
           <Text style={styles.communityBannerText}>
-            Welcome to Vorliq. You are connected to the community node. You can change your node in Settings.
+            Connected to the official Vorliq API by default. You can switch nodes in Settings.
           </Text>
           <Pressable style={styles.dismissButton} onPress={dismissCommunityBanner}>
             <Text style={styles.dismissButtonText}>Dismiss</Text>
@@ -114,19 +144,14 @@ export default function HomeScreen() {
       ) : null}
 
       <View style={sharedStyles.headerRow}>
-        <View>
-          <Text style={sharedStyles.title}>Vorliq</Text>
-          <Text style={sharedStyles.subtitle}>Your Community Your Coin</Text>
+        <View style={styles.brandRow}>
+          <Image source={logo} style={styles.logo} resizeMode="contain" />
+          <View>
+            <Text style={sharedStyles.title}>Vorliq</Text>
+            <Text style={sharedStyles.subtitle}>Mobile community blockchain access</Text>
+          </View>
         </View>
         <View style={[styles.statusDot, { backgroundColor: online ? theme.success : theme.error }]} />
-      </View>
-
-      <View style={styles.logoWrap}>
-        <Image source={logo} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.welcome}>
-          Welcome to experimental open-source community blockchain software. Vorliq is not a
-          licensed bank, and VLQ has no guaranteed market value.
-        </Text>
       </View>
 
       {loading ? (
@@ -140,22 +165,28 @@ export default function HomeScreen() {
           {stats.map(([label, value]) => (
             <View style={styles.statCard} key={label}>
               <Text style={sharedStyles.label}>{label}</Text>
-              <Text
-                style={[
-                  styles.statValue,
-                  label === "Chain Status" && {
-                    color: String(value).toLowerCase() === "valid" ? theme.success : theme.error,
-                  },
-                ]}
-              >
-                {String(value)}
-              </Text>
+              <Text style={styles.statValue}>{String(value)}</Text>
             </View>
           ))}
         </View>
       )}
 
-      <Pressable style={sharedStyles.button} onPress={handleRefresh}>
+      <View style={sharedStyles.card}>
+        <Text style={sharedStyles.label}>Mining Status</Text>
+        <Text style={sharedStyles.value}>{mining.can_mine_now ? "Ready for the next block." : mining.reason_if_not || "Waiting for mining status."}</Text>
+        <Text style={sharedStyles.mutedText}>Pending transactions: {mining.pending_transaction_count ?? 0}</Text>
+      </View>
+
+      <Text style={sharedStyles.sectionTitle}>Quick Actions</Text>
+      <View style={styles.actionGrid}>
+        {actions.map(([label, route]) => (
+          <Pressable key={route} style={styles.actionButton} onPress={() => navigation.navigate(route)}>
+            <Text style={styles.actionText}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <Pressable style={[sharedStyles.button, styles.refresh]} onPress={handleRefresh}>
         <Text style={sharedStyles.buttonText}>Refresh</Text>
       </Pressable>
     </ScrollView>
@@ -167,6 +198,16 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     height: 18,
     width: 18,
+  },
+  brandRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    flex: 1,
+    gap: theme.spacing.md,
+  },
+  logo: {
+    height: 44,
+    width: 44,
   },
   communityBanner: {
     backgroundColor: theme.card,
@@ -192,42 +233,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
   },
   dismissButtonText: {
-    color: theme.text,
+    color: theme.background,
     fontWeight: "800",
-  },
-  logoWrap: {
-    alignItems: "center",
-    marginBottom: theme.spacing.lg,
-  },
-  logo: {
-    height: 104,
-    width: 104,
-  },
-  welcome: {
-    color: theme.textSecondary,
-    fontSize: theme.fonts.body,
-    lineHeight: 24,
-    marginTop: theme.spacing.md,
-    textAlign: "center",
   },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    gap: theme.spacing.sm,
     marginBottom: theme.spacing.md,
   },
   statCard: {
-    backgroundColor: theme.card,
+    backgroundColor: theme.cardSoft,
     borderColor: theme.border,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    marginBottom: theme.spacing.md,
+    flexGrow: 1,
+    minWidth: "46%",
     padding: theme.spacing.md,
-    width: "48%",
   },
   statValue: {
     color: theme.text,
     fontSize: theme.fonts.heading,
     fontWeight: "800",
+  },
+  actionGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm,
+  },
+  actionButton: {
+    alignItems: "center",
+    backgroundColor: theme.card,
+    borderColor: theme.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 48,
+    justifyContent: "center",
+    padding: theme.spacing.sm,
+    width: "48%",
+  },
+  actionText: {
+    color: theme.text,
+    fontWeight: "800",
+  },
+  refresh: {
+    marginTop: theme.spacing.lg,
   },
 });

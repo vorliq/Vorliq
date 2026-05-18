@@ -1,84 +1,40 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { getBalance, getLoans, submitLoan, voteLoan } from "../api";
-import { scheduleLocalNotification } from "../notifications";
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { getBalance, getLendingSummary, getLoans, getMyLoans, submitLoan, voteLoan } from "../api";
 import { loadWallet } from "../storage";
 import theme from "../theme";
+import { normalizeStatus, shortText, statusColor } from "../utils/format";
 import sharedStyles from "./sharedStyles";
 
-function shortAddress(address) {
-  if (!address) return "";
-  return address.length > 12 ? `${address.slice(0, 12)}...` : address;
-}
+const segments = ["Active Votes", "Active Loans", "My Loans", "History", "Request"];
 
-function statusColor(status) {
-  if (status === "approved") return theme.success;
-  if (status === "rejected") return theme.error;
-  if (status === "repaid") return theme.accent;
-  return theme.warning;
-}
-
-function normalizeLoans(raw) {
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.loans)) return raw.loans;
-  if (Array.isArray(raw?.data)) return raw.data;
-  return [];
-}
-
-export default function LendingScreen() {
-  const [activeSegment, setActiveSegment] = useState("Loans");
+export default function LendingScreen({ navigation }) {
+  const [segment, setSegment] = useState("Active Votes");
   const [wallet, setWallet] = useState(null);
+  const [summary, setSummary] = useState(null);
   const [loans, setLoans] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [myLoans, setMyLoans] = useState([]);
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [loanId, setLoanId] = useState("");
   const [vote, setVote] = useState("yes");
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const previousLoanStatusesRef = useRef({});
 
   const loadData = useCallback(async () => {
     setError("");
     const savedWallet = await loadWallet();
     setWallet(savedWallet);
-    const result = await getLoans();
-
-    if (result.success) {
-      const nextLoans = normalizeLoans(result.data);
-      const nextStatuses = { ...previousLoanStatusesRef.current };
-
-      if (savedWallet?.address) {
-        nextLoans
-          .filter((loan) => loan.requester_address === savedWallet.address)
-          .forEach((loan) => {
-            const previousStatus = previousLoanStatusesRef.current[loan.loan_id];
-
-            if (previousStatus === "pending" && loan.status === "approved") {
-              scheduleLocalNotification(
-                "Loan Approved",
-                `Your loan request for ${loan.amount} VLQ has been approved.`
-              );
-            }
-
-            nextStatuses[loan.loan_id] = loan.status;
-          });
-      }
-
-      previousLoanStatusesRef.current = nextStatuses;
-      setLoans(nextLoans);
-    } else {
-      setError(result.error);
-    }
-
+    const [summaryResult, loansResult, myResult] = await Promise.all([
+      getLendingSummary(),
+      getLoans({ limit: 50 }),
+      savedWallet?.address ? getMyLoans(savedWallet.address) : Promise.resolve({ success: true, data: { loans: [] } }),
+    ]);
+    if (summaryResult.success) setSummary(summaryResult.data.summary || summaryResult.data.data?.summary || summaryResult.data);
+    if (loansResult.success) setLoans(loansResult.data.loans || loansResult.data.data?.loans || loansResult.data.data || []);
+    if (myResult.success) setMyLoans(myResult.data.loans || myResult.data.data?.loans || myResult.data.data || []);
+    if (!loansResult.success) setError(loansResult.error);
     setLoading(false);
   }, []);
 
@@ -86,41 +42,18 @@ export default function LendingScreen() {
     loadData();
   }, [loadData]);
 
-  useEffect(() => {
-    if (loading) {
-      return undefined;
-    }
-
-    const interval = setInterval(loadData, 60000);
-    return () => clearInterval(interval);
-  }, [loading, loadData]);
-
   const handleRequestLoan = async () => {
     setError("");
     setMessage("");
-
-    if (!wallet?.address) {
-      setError("Create a wallet before requesting a loan.");
-      return;
-    }
-
-    if (Number(amount) <= 0 || Number(amount) > 10000 || !reason.trim()) {
-      setError("Enter a reason and an amount from 1 to 10000 VLQ.");
-      return;
-    }
-
-    const result = await submitLoan({
-      requester_address: wallet.address,
-      amount: Number(amount),
-      reason: reason.trim(),
-    });
-
+    if (!wallet?.address) return setError("Create a wallet before requesting a loan.");
+    if (Number(amount) <= 0 || !reason.trim()) return setError("Enter a positive amount and a reason.");
+    const result = await submitLoan({ requester_address: wallet.address, amount: Number(amount), reason: reason.trim() });
     if (result.success) {
-      setMessage(`Loan request submitted: ${result.data.loan_id || result.data.loan?.loan_id || "created"}`);
+      setMessage("Loan request submitted for community voting.");
       setAmount("");
       setReason("");
+      setSegment("Active Votes");
       await loadData();
-      setActiveSegment("Loans");
     } else {
       setError(result.error);
     }
@@ -129,144 +62,47 @@ export default function LendingScreen() {
   const handleVote = async () => {
     setError("");
     setMessage("");
-
-    if (!wallet?.address) {
-      setError("Create a wallet before voting on loans.");
-      return;
-    }
-
-    if (!loanId.trim()) {
-      setError("Enter a loan ID.");
-      return;
-    }
-
+    if (!wallet?.address) return setError("Create a wallet before voting.");
+    if (!loanId.trim()) return setError("Enter a loan ID.");
     const balanceResult = await getBalance(wallet.address);
-    if (!balanceResult.success) {
-      setError(balanceResult.error);
-      return;
-    }
-
     const voterBalance = Number(balanceResult.data?.balance ?? balanceResult.data?.data?.balance ?? 0);
-    const result = await voteLoan({
-      loan_id: loanId.trim(),
-      voter_address: wallet.address,
-      voter_wallet_address: wallet.address,
-      voter_balance: voterBalance,
-      vote,
-    });
-
+    const result = await voteLoan({ loan_id: loanId.trim(), voter_address: wallet.address, voter_wallet_address: wallet.address, voter_balance: voterBalance, vote });
     if (result.success) {
-      setMessage("Vote cast successfully.");
+      setMessage("Vote cast.");
       setLoanId("");
       await loadData();
-      setActiveSegment("Loans");
     } else {
       setError(result.error);
     }
   };
 
-  const activeLoans = useMemo(() => loans.filter((loan) => loan.status !== "repaid"), [loans]);
-
-  const renderSegment = () => {
-    if (activeSegment === "Request") {
-      return (
-        <View style={sharedStyles.card}>
-          <Text style={sharedStyles.label}>Amount</Text>
-          <TextInput
-            keyboardType="decimal-pad"
-            maxLength={8}
-            style={sharedStyles.input}
-            placeholder="500"
-            placeholderTextColor={theme.textSecondary}
-            value={amount}
-            onChangeText={setAmount}
-          />
-          <Text style={sharedStyles.label}>Reason</Text>
-          <TextInput
-            multiline
-            style={[sharedStyles.input, sharedStyles.textArea]}
-            placeholder="Tell the community why this loan matters"
-            placeholderTextColor={theme.textSecondary}
-            value={reason}
-            onChangeText={setReason}
-          />
-          <Pressable style={sharedStyles.button} onPress={handleRequestLoan}>
-            <Text style={sharedStyles.buttonText}>Submit</Text>
-          </Pressable>
-        </View>
-      );
-    }
-
-    if (activeSegment === "Vote") {
-      return (
-        <View style={sharedStyles.card}>
-          <Text style={sharedStyles.label}>Loan ID</Text>
-          <TextInput
-            autoCapitalize="none"
-            style={sharedStyles.input}
-            placeholder="Paste loan ID"
-            placeholderTextColor={theme.textSecondary}
-            value={loanId}
-            onChangeText={setLoanId}
-          />
-          <View style={styles.voteToggle}>
-            {["yes", "no"].map((choice) => (
-              <Pressable
-                key={choice}
-                style={[styles.voteButton, vote === choice && styles.voteButtonActive]}
-                onPress={() => setVote(choice)}
-              >
-                <Text style={[styles.voteText, vote === choice && styles.voteTextActive]}>{choice.toUpperCase()}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <Pressable style={sharedStyles.button} onPress={handleVote}>
-            <Text style={sharedStyles.buttonText}>Cast Vote</Text>
-          </Pressable>
-        </View>
-      );
-    }
-
-    return activeLoans.map((loan) => {
-      const yesWeight = Number(loan.yes_vote_weight || 0);
-      const noWeight = Number(loan.no_vote_weight || 0);
-      const total = Math.max(yesWeight + noWeight, 1);
-
-      return (
-        <View style={sharedStyles.card} key={loan.loan_id}>
-          <View style={styles.loanHeader}>
-            <Text style={styles.loanAmount}>{loan.amount} VLQ</Text>
-            <View style={[sharedStyles.badge, { backgroundColor: statusColor(loan.status) }]}>
-              <Text style={sharedStyles.badgeText}>{loan.status}</Text>
-            </View>
-          </View>
-          <Text style={sharedStyles.label}>Requester</Text>
-          <Text style={sharedStyles.value}>{shortAddress(loan.requester_address)}</Text>
-          <Text style={[sharedStyles.label, styles.marginTop]}>Reason</Text>
-          <Text style={sharedStyles.value}>{loan.reason}</Text>
-          <View style={styles.progressWrap}>
-            <View style={[styles.yesBar, { flex: yesWeight / total }]} />
-            <View style={[styles.noBar, { flex: noWeight / total }]} />
-          </View>
-          <Text style={sharedStyles.mutedText}>Yes {yesWeight} VLQ | No {noWeight} VLQ</Text>
-        </View>
-      );
-    });
-  };
+  const visibleLoans =
+    segment === "Active Votes"
+      ? loans.filter((loan) => ["pending_vote", "pending"].includes(loan.status))
+      : segment === "Active Loans"
+        ? loans.filter((loan) => ["active", "approved_pending_issue", "repayment_pending", "overdue"].includes(loan.status))
+        : segment === "My Loans"
+          ? myLoans
+          : loans.filter((loan) => ["repaid", "rejected", "expired"].includes(loan.status));
 
   return (
     <ScrollView style={sharedStyles.screen} contentContainerStyle={sharedStyles.content}>
       <Text style={sharedStyles.title}>Lending</Text>
-      <Text style={sharedStyles.subtitle}>Request community-backed VLQ loans and vote using your wallet balance.</Text>
+      <Text style={sharedStyles.subtitle}>
+        Community-governed loan requests with voting, issuance tracking, repayment state, and overdue visibility.
+      </Text>
+
+      <View style={sharedStyles.card}>
+        <Text style={sharedStyles.label}>Summary</Text>
+        <Text style={sharedStyles.value}>Pending votes: {summary?.pending_vote_count ?? 0}</Text>
+        <Text style={sharedStyles.value}>Active loans: {summary?.active_count ?? 0}</Text>
+        <Text style={sharedStyles.mutedText}>Overdue: {summary?.overdue_count ?? 0} | Repaid: {summary?.repaid_count ?? 0}</Text>
+      </View>
 
       <View style={styles.segmented}>
-        {["Loans", "Request", "Vote"].map((segment) => (
-          <Pressable
-            key={segment}
-            style={[styles.segmentButton, activeSegment === segment && styles.segmentButtonActive]}
-            onPress={() => setActiveSegment(segment)}
-          >
-            <Text style={[styles.segmentText, activeSegment === segment && styles.segmentTextActive]}>{segment}</Text>
+        {segments.map((item) => (
+          <Pressable key={item} style={[styles.segmentButton, segment === item && styles.segmentButtonActive]} onPress={() => setSegment(item)}>
+            <Text style={[styles.segmentText, segment === item && styles.segmentTextActive]}>{item}</Text>
           </Pressable>
         ))}
       </View>
@@ -274,8 +110,68 @@ export default function LendingScreen() {
       {message ? <Text style={sharedStyles.successText}>{message}</Text> : null}
       {error ? <Text style={sharedStyles.errorText}>{error}</Text> : null}
 
-      {loading ? <ActivityIndicator size="large" color={theme.accent} /> : renderSegment()}
+      {loading ? <ActivityIndicator color={theme.accent} /> : null}
+
+      {segment === "Request" ? (
+        <View style={sharedStyles.card}>
+          <Text style={sharedStyles.label}>Amount</Text>
+          <TextInput keyboardType="decimal-pad" style={sharedStyles.input} placeholder="500" placeholderTextColor={theme.textSecondary} value={amount} onChangeText={setAmount} />
+          <Text style={sharedStyles.label}>Reason</Text>
+          <TextInput multiline style={[sharedStyles.input, sharedStyles.textArea]} placeholder="Tell the community why this loan matters" placeholderTextColor={theme.textSecondary} value={reason} onChangeText={setReason} />
+          <Text style={sharedStyles.mutedText}>Approval does not mean instant confirmed funds. Loan issuance is a pending transaction until mined.</Text>
+          <Pressable style={[sharedStyles.button, styles.top]} onPress={handleRequestLoan}>
+            <Text style={sharedStyles.buttonText}>Submit Request</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <>
+          {segment === "Active Votes" ? (
+            <View style={sharedStyles.card}>
+              <Text style={sharedStyles.label}>Cast Vote</Text>
+              <TextInput autoCapitalize="none" style={sharedStyles.input} placeholder="Loan ID" placeholderTextColor={theme.textSecondary} value={loanId} onChangeText={setLoanId} />
+              <View style={styles.voteToggle}>
+                {["yes", "no"].map((choice) => (
+                  <Pressable key={choice} style={[styles.voteButton, vote === choice && styles.segmentButtonActive]} onPress={() => setVote(choice)}>
+                    <Text style={[styles.segmentText, vote === choice && styles.segmentTextActive]}>{choice.toUpperCase()}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Pressable style={sharedStyles.button} onPress={handleVote}>
+                <Text style={sharedStyles.buttonText}>Cast Vote</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {visibleLoans.length ? visibleLoans.map((loan) => <LoanCard key={loan.loan_id} loan={loan} navigation={navigation} />) : <Text style={sharedStyles.mutedText}>No loans returned for this view.</Text>}
+        </>
+      )}
     </ScrollView>
+  );
+}
+
+function LoanCard({ loan, navigation }) {
+  return (
+    <View style={sharedStyles.card}>
+      <View style={[sharedStyles.badge, { backgroundColor: statusColor(loan.status) }]}>
+        <Text style={sharedStyles.badgeText}>{normalizeStatus(loan.status)}</Text>
+      </View>
+      <Text style={[sharedStyles.sectionTitle, styles.top]}>{loan.amount} VLQ</Text>
+      <Text style={sharedStyles.mutedText}>Repayment: {loan.repayment_amount ?? "?"} VLQ</Text>
+      <Text style={sharedStyles.mutedText}>Borrower: {shortText(loan.borrower || loan.requester_address, 12, 6)}</Text>
+      <Text style={sharedStyles.value}>{loan.reason}</Text>
+      <Text style={sharedStyles.mutedText}>Yes {loan.yes_vote_weight || 0} | No {loan.no_vote_weight || 0}</Text>
+      <Text style={sharedStyles.mutedText}>Due block: {loan.due_block ?? "Not active"} | Blocks left: {loan.blocks_until_due ?? "n/a"}</Text>
+      {loan.issuance_tx_id ? <TxButton txId={loan.issuance_tx_id} label="Issuance Tx" navigation={navigation} /> : null}
+      {loan.repayment_tx_id ? <TxButton txId={loan.repayment_tx_id} label="Repayment Tx" navigation={navigation} /> : null}
+      {["active", "overdue"].includes(loan.status) ? <Text style={[sharedStyles.warningText, styles.top]}>Repayment is available on the web app in this mobile release.</Text> : null}
+    </View>
+  );
+}
+
+function TxButton({ txId, label, navigation }) {
+  return (
+    <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton, styles.top]} onPress={() => navigation.navigate("Transaction", { txId })}>
+      <Text style={sharedStyles.buttonText}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -286,15 +182,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.xs,
     marginVertical: theme.spacing.md,
     padding: theme.spacing.xs,
   },
   segmentButton: {
     alignItems: "center",
     borderRadius: 10,
-    flex: 1,
-    minHeight: 44,
+    minHeight: 42,
     justifyContent: "center",
+    paddingHorizontal: theme.spacing.sm,
+    flexGrow: 1,
   },
   segmentButtonActive: {
     backgroundColor: theme.accent,
@@ -304,38 +203,11 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   segmentTextActive: {
-    color: theme.text,
-  },
-  loanHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: theme.spacing.md,
-  },
-  loanAmount: {
-    color: theme.text,
-    fontSize: theme.fonts.heading,
-    fontWeight: "800",
-  },
-  marginTop: {
-    marginTop: theme.spacing.md,
-  },
-  progressWrap: {
-    backgroundColor: "#111122",
-    borderRadius: 999,
-    flexDirection: "row",
-    height: 12,
-    marginTop: theme.spacing.md,
-    overflow: "hidden",
-  },
-  yesBar: {
-    backgroundColor: theme.success,
-  },
-  noBar: {
-    backgroundColor: theme.error,
+    color: theme.background,
   },
   voteToggle: {
     flexDirection: "row",
+    gap: theme.spacing.sm,
     marginBottom: theme.spacing.md,
   },
   voteButton: {
@@ -344,18 +216,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     flex: 1,
-    marginRight: theme.spacing.sm,
-    minHeight: 50,
+    minHeight: 46,
     justifyContent: "center",
   },
-  voteButtonActive: {
-    backgroundColor: theme.accent,
-  },
-  voteText: {
-    color: theme.textSecondary,
-    fontWeight: "800",
-  },
-  voteTextActive: {
-    color: theme.text,
+  top: {
+    marginTop: theme.spacing.md,
   },
 });

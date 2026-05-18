@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createStackNavigator } from "@react-navigation/stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import HomeScreen from "./src/screens/HomeScreen";
@@ -13,6 +14,13 @@ import SettingsScreen from "./src/screens/SettingsScreen";
 import NotificationsScreen from "./src/screens/NotificationsScreen";
 import ExchangeScreen from "./src/screens/ExchangeScreen";
 import GovernanceScreen from "./src/screens/GovernanceScreen";
+import BlockScreen from "./src/screens/BlockScreen";
+import CommunityScreen from "./src/screens/CommunityScreen";
+import FaucetScreen from "./src/screens/FaucetScreen";
+import NetworkScreen from "./src/screens/NetworkScreen";
+import ProfileScreen from "./src/screens/ProfileScreen";
+import TransactionScreen from "./src/screens/TransactionScreen";
+import TreasuryScreen from "./src/screens/TreasuryScreen";
 import { NotificationProvider, useNotifications } from "./src/context/NotificationContext";
 import {
   addNotificationResponseListener,
@@ -23,6 +31,7 @@ import {
 import theme from "./src/theme";
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
 
 function TabIcon({ name, color }) {
   const common = {
@@ -70,24 +79,23 @@ function TabIcon({ name, color }) {
     );
   }
 
-  if (name === "Lending") {
+  if (name === "Community") {
     return (
       <Svg width={24} height={24} viewBox="0 0 24 24">
-        <Path {...common} d="M4 15c3-3 5-3 8 0s5 3 8 0" />
-        <Path {...common} d="M6 9h12" />
-        <Path {...common} d="M8 5h8" />
-        <Path {...common} d="M12 5v14" />
+        <Circle {...common} cx={8} cy={9} r={3} />
+        <Circle {...common} cx={16} cy={9} r={3} />
+        <Path {...common} d="M3 20c1-4 4-6 9-6s8 2 9 6" />
       </Svg>
     );
   }
 
-  if (name === "Exchange") {
+  if (name === "Network") {
     return (
       <Svg width={24} height={24} viewBox="0 0 24 24">
-        <Path {...common} d="M7 7h12" />
-        <Path {...common} d="m16 4 3 3-3 3" />
-        <Path {...common} d="M17 17H5" />
-        <Path {...common} d="m8 14-3 3 3 3" />
+        <Circle {...common} cx={6} cy={7} r={2} />
+        <Circle {...common} cx={18} cy={7} r={2} />
+        <Circle {...common} cx={12} cy={18} r={2} />
+        <Path {...common} d="M8 8l8 0M7 9l4 7M17 9l-4 7" />
       </Svg>
     );
   }
@@ -152,37 +160,31 @@ function VorliqTabs() {
   }, []);
 
   return (
-    <NavigationContainer>
-      <StatusBar style="light" />
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          headerShown: false,
-          tabBarIcon: ({ color }) => <TabIcon name={route.name} color={color} />,
-          tabBarActiveTintColor: theme.accent,
-          tabBarInactiveTintColor: theme.textSecondary,
-          tabBarStyle: {
-            backgroundColor: theme.card,
-            borderTopColor: theme.border,
-            minHeight: 66,
-            paddingBottom: 8,
-            paddingTop: 8,
-          },
-          tabBarLabelStyle: {
-            fontSize: theme.fonts.small,
-            fontWeight: "700",
-          },
-        })}
-      >
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarIcon: ({ color }) => <TabIcon name={route.name} color={color} />,
+        tabBarActiveTintColor: theme.accent,
+        tabBarInactiveTintColor: theme.textSecondary,
+        tabBarStyle: {
+          backgroundColor: theme.card,
+          borderTopColor: theme.border,
+          minHeight: 66,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: theme.fonts.small,
+          fontWeight: "700",
+        },
+      })}
+    >
         <Tab.Screen name="Home" component={HomeScreen} />
         <Tab.Screen name="Wallet" component={WalletScreen} />
         <Tab.Screen name="Send" component={SendScreen} />
-        <Tab.Screen name="Mine" component={MineScreen} />
-        <Tab.Screen name="Lending" component={LendingScreen} />
-        <Tab.Screen name="Exchange" component={ExchangeScreen} />
-        <Tab.Screen name="Governance" component={GovernanceScreen} />
         <Tab.Screen
-          name="Notifications"
-          component={NotificationsScreen}
+          name="Community"
+          component={CommunityScreen}
           options={{
             tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
             tabBarBadgeStyle: {
@@ -192,8 +194,36 @@ function VorliqTabs() {
             },
           }}
         />
+        <Tab.Screen name="Network" component={NetworkScreen} />
         <Tab.Screen name="Settings" component={SettingsScreen} />
       </Tab.Navigator>
+  );
+}
+
+function VorliqNavigator() {
+  return (
+    <NavigationContainer>
+      <StatusBar style="light" />
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: theme.background },
+          headerTintColor: theme.text,
+          headerTitleStyle: { fontWeight: "800" },
+          cardStyle: { backgroundColor: theme.background },
+        }}
+      >
+        <Stack.Screen name="Tabs" component={VorliqTabs} options={{ headerShown: false }} />
+        <Stack.Screen name="Mine" component={MineScreen} />
+        <Stack.Screen name="Faucet" component={FaucetScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="Lending" component={LendingScreen} />
+        <Stack.Screen name="Exchange" component={ExchangeScreen} />
+        <Stack.Screen name="Governance" component={GovernanceScreen} />
+        <Stack.Screen name="Treasury" component={TreasuryScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="Transaction" component={TransactionScreen} />
+        <Stack.Screen name="Block" component={BlockScreen} />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }
@@ -202,7 +232,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <NotificationProvider>
-        <VorliqTabs />
+        <VorliqNavigator />
       </NotificationProvider>
     </SafeAreaProvider>
   );
