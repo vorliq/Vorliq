@@ -163,6 +163,15 @@ jobs:
             done
             echo "${HEALTH_RESPONSE}"
             echo "${HEALTH_RESPONSE}" | grep -q '"success":true'
+            for attempt in 1 2 3 4 5 6 7 8 9 10; do
+              BLOCKCHAIN_RESPONSE="$(curl -s http://localhost:5001/diagnostics || true)"
+              if echo "${BLOCKCHAIN_RESPONSE}" | grep -q '"chain_valid"'; then
+                break
+              fi
+              sleep 3
+            done
+            echo "${BLOCKCHAIN_RESPONSE}"
+            echo "${BLOCKCHAIN_RESPONSE}" | grep -q '"chain_valid"'
             systemctl restart vorliq-heartbeat
             systemctl is-active --quiet vorliq-heartbeat
             if systemctl is-enabled --quiet vorliq-miner.service; then
