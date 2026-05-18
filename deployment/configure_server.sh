@@ -83,9 +83,12 @@ User=vorliq
 Group=vorliq
 WorkingDirectory=/home/vorliq/app/backend
 Environment=NODE_ENV=production
+Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000
 Environment=FLASK_URL=http://127.0.0.1:5001
-Environment=LOCAL_NODE_URL=http://${SERVER_IP}:5001
-Environment=NODE_DISPLAY_NAME=Vorliq Public Node
+Environment=VORLIQ_NODE_URL=https://node.vorliq.org
+Environment=VORLIQ_NODE_NAME=Vorliq Public Node
+Environment=VORLIQ_NODE_REGION=London
+Environment=VORLIQ_NODE_COUNTRY=United Kingdom
 ExecStart=/usr/bin/node heartbeat.js
 Restart=on-failure
 RestartSec=5

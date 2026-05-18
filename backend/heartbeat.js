@@ -1,14 +1,28 @@
 const axios = require("axios");
 require("dotenv").config();
 
-const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
-const localNodeUrl = process.env.VORLIQ_NODE_URL || process.env.LOCAL_NODE_URL || "http://localhost:5001";
-const displayName = process.env.VORLIQ_NODE_NAME || process.env.NODE_DISPLAY_NAME || "Vorliq Public Node";
-const region = process.env.VORLIQ_NODE_REGION || "";
-const country = process.env.VORLIQ_NODE_COUNTRY || "";
+const isProduction = process.env.NODE_ENV === "production";
+const apiUrl = (process.env.HEARTBEAT_API_URL || process.env.BACKEND_URL || "http://127.0.0.1:5000").replace(/\/+$/, "");
+const flaskUrl = (process.env.FLASK_URL || "http://127.0.0.1:5001").replace(/\/+$/, "");
+const localNodeUrl =
+  process.env.VORLIQ_NODE_URL ||
+  process.env.LOCAL_NODE_URL ||
+  (isProduction ? "https://node.vorliq.org" : "http://localhost:5001");
+const displayName =
+  process.env.VORLIQ_NODE_NAME ||
+  process.env.NODE_DISPLAY_NAME ||
+  (isProduction ? "Vorliq Public Node" : "Local Vorliq Node");
+const region = process.env.VORLIQ_NODE_REGION || (isProduction ? "London" : "");
+const country = process.env.VORLIQ_NODE_COUNTRY || (isProduction ? "United Kingdom" : "");
 const operatorWallet = process.env.VORLIQ_OPERATOR_WALLET || "";
-const softwareVersion = process.env.npm_package_version ? `backend-${process.env.npm_package_version}` : "vorliq-node";
-const heartbeatIntervalMs = 5 * 60 * 1000;
+const commit = process.env.GITHUB_SHA || process.env.VORLIQ_COMMIT || "";
+const packageVersion = process.env.npm_package_version || "1.0.0";
+const softwareVersion = process.env.VORLIQ_SOFTWARE_VERSION || (commit ? commit.slice(0, 7) : `backend-${packageVersion}`);
+const heartbeatIntervalMs = Number(process.env.VORLIQ_HEARTBEAT_INTERVAL_MS || 5 * 60 * 1000);
+
+function safeError(error) {
+  return error.response?.data?.message || error.response?.data?.error || error.message;
+}
 
 function basePayload() {
   return {
@@ -22,10 +36,10 @@ function basePayload() {
   };
 }
 
-async function getDiagnostics() {
+async function getDiagnostics({ diagnosticsUrl = `${flaskUrl}/diagnostics` } = {}) {
   try {
     const started = Date.now();
-    const response = await axios.get(`${flaskUrl}/diagnostics`, { timeout: 8000 });
+    const response = await axios.get(diagnosticsUrl, { timeout: 8000 });
     return {
       chain_height: response.data.block_height,
       last_block_hash: response.data.last_block_hash,
@@ -33,7 +47,7 @@ async function getDiagnostics() {
       response_time_ms: Date.now() - started,
     };
   } catch (error) {
-    console.log(`Diagnostics check failed before heartbeat: ${error.response?.data?.error || error.message}`);
+    console.log(`Diagnostics check failed before heartbeat: ${safeError(error)}`);
     return {
       chain_valid: false,
       response_time_ms: null,
@@ -41,25 +55,47 @@ async function getDiagnostics() {
   }
 }
 
-async function registerLocalNode() {
+async function registerLocalNode({ registryApiUrl = apiUrl } = {}) {
   try {
-    await axios.post(`${flaskUrl}/registry/register`, basePayload());
+    const response = await axios.post(`${registryApiUrl}/api/registry/register`, basePayload(), { timeout: 8000 });
     console.log(`Registered ${localNodeUrl} in the Vorliq public node registry.`);
+    return response.data;
   } catch (error) {
-    console.log(`Registry registration failed: ${error.response?.data?.error || error.response?.data?.message || error.message}`);
+    console.log(`Registry registration failed: ${safeError(error)}`);
+    return null;
   }
 }
 
-async function sendHeartbeat() {
+async function postHeartbeat(payload, { registryApiUrl = apiUrl } = {}) {
+  return axios.post(`${registryApiUrl}/api/registry/heartbeat`, payload, { timeout: 8000 });
+}
+
+async function sendHeartbeat(options = {}) {
+  const registryApiUrl = options.registryApiUrl || apiUrl;
   try {
-    const diagnostics = await getDiagnostics();
-    await axios.post(`${flaskUrl}/registry/heartbeat`, {
+    const diagnostics = await getDiagnostics(options);
+    const payload = {
       ...basePayload(),
       ...diagnostics,
-    });
+    };
+    let response;
+    try {
+      response = await postHeartbeat(payload, { registryApiUrl });
+    } catch (error) {
+      const status = error.response?.status;
+      const message = safeError(error);
+      if (status === 404 || /not found/i.test(message)) {
+        await registerLocalNode({ registryApiUrl });
+        response = await postHeartbeat(payload, { registryApiUrl });
+      } else {
+        throw error;
+      }
+    }
     console.log(`Heartbeat sent for ${localNodeUrl} at ${new Date().toLocaleString()}.`);
+    return response.data;
   } catch (error) {
-    console.log(`Heartbeat failed: ${error.response?.data?.error || error.response?.data?.message || error.message}`);
+    console.log(`Heartbeat failed: ${safeError(error)}`);
+    return null;
   }
 }
 
@@ -69,4 +105,14 @@ async function startHeartbeatLoop() {
   setInterval(sendHeartbeat, heartbeatIntervalMs);
 }
 
-startHeartbeatLoop();
+if (require.main === module) {
+  startHeartbeatLoop();
+}
+
+module.exports = {
+  basePayload,
+  getDiagnostics,
+  registerLocalNode,
+  sendHeartbeat,
+  startHeartbeatLoop,
+};

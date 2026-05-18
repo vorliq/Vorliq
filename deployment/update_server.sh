@@ -55,6 +55,31 @@ if ! grep -q '^EnvironmentFile=-/etc/vorliq/backend.env' /etc/systemd/system/vor
   systemctl daemon-reload
 fi
 
+if [[ -f /etc/systemd/system/vorliq-heartbeat.service ]]; then
+  if grep -q '^Environment=LOCAL_NODE_URL=' /etc/systemd/system/vorliq-heartbeat.service; then
+    sed -i '/^Environment=LOCAL_NODE_URL=/d' /etc/systemd/system/vorliq-heartbeat.service
+  fi
+  if grep -q '^Environment=NODE_DISPLAY_NAME=' /etc/systemd/system/vorliq-heartbeat.service; then
+    sed -i '/^Environment=NODE_DISPLAY_NAME=/d' /etc/systemd/system/vorliq-heartbeat.service
+  fi
+  if ! grep -q '^Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000' /etc/systemd/system/vorliq-heartbeat.service; then
+    sed -i '/^Environment=NODE_ENV=production/a Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000' /etc/systemd/system/vorliq-heartbeat.service
+  fi
+  if ! grep -q '^Environment=VORLIQ_NODE_URL=https://node.vorliq.org' /etc/systemd/system/vorliq-heartbeat.service; then
+    sed -i '/^Environment=FLASK_URL=/a Environment=VORLIQ_NODE_URL=https://node.vorliq.org' /etc/systemd/system/vorliq-heartbeat.service
+  fi
+  if ! grep -q '^Environment=VORLIQ_NODE_NAME=Vorliq Public Node' /etc/systemd/system/vorliq-heartbeat.service; then
+    sed -i '/^Environment=VORLIQ_NODE_URL=/a Environment=VORLIQ_NODE_NAME=Vorliq Public Node' /etc/systemd/system/vorliq-heartbeat.service
+  fi
+  if ! grep -q '^Environment=VORLIQ_NODE_REGION=London' /etc/systemd/system/vorliq-heartbeat.service; then
+    sed -i '/^Environment=VORLIQ_NODE_NAME=/a Environment=VORLIQ_NODE_REGION=London' /etc/systemd/system/vorliq-heartbeat.service
+  fi
+  if ! grep -q '^Environment=VORLIQ_NODE_COUNTRY=United Kingdom' /etc/systemd/system/vorliq-heartbeat.service; then
+    sed -i '/^Environment=VORLIQ_NODE_REGION=/a Environment=VORLIQ_NODE_COUNTRY=United Kingdom' /etc/systemd/system/vorliq-heartbeat.service
+  fi
+  systemctl daemon-reload
+fi
+
 mkdir -p /home/vorliq/backups
 chown -R vorliq:vorliq /home/vorliq/backups
 cp /home/vorliq/app/deployment/backup.sh /home/vorliq/backup.sh
