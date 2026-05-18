@@ -56,27 +56,18 @@ if ! grep -q '^EnvironmentFile=-/etc/vorliq/backend.env' /etc/systemd/system/vor
 fi
 
 if [[ -f /etc/systemd/system/vorliq-heartbeat.service ]]; then
-  if grep -q '^Environment=LOCAL_NODE_URL=' /etc/systemd/system/vorliq-heartbeat.service; then
-    sed -i '/^Environment=LOCAL_NODE_URL=/d' /etc/systemd/system/vorliq-heartbeat.service
-  fi
-  if grep -q '^Environment=NODE_DISPLAY_NAME=' /etc/systemd/system/vorliq-heartbeat.service; then
-    sed -i '/^Environment=NODE_DISPLAY_NAME=/d' /etc/systemd/system/vorliq-heartbeat.service
-  fi
-  if ! grep -q '^Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000' /etc/systemd/system/vorliq-heartbeat.service; then
-    sed -i '/^Environment=NODE_ENV=production/a Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000' /etc/systemd/system/vorliq-heartbeat.service
-  fi
-  if ! grep -q '^Environment=VORLIQ_NODE_URL=https://node.vorliq.org' /etc/systemd/system/vorliq-heartbeat.service; then
-    sed -i '/^Environment=FLASK_URL=/a Environment=VORLIQ_NODE_URL=https://node.vorliq.org' /etc/systemd/system/vorliq-heartbeat.service
-  fi
-  if ! grep -q '^Environment=VORLIQ_NODE_NAME=Vorliq Public Node' /etc/systemd/system/vorliq-heartbeat.service; then
-    sed -i '/^Environment=VORLIQ_NODE_URL=/a Environment=VORLIQ_NODE_NAME=Vorliq Public Node' /etc/systemd/system/vorliq-heartbeat.service
-  fi
-  if ! grep -q '^Environment=VORLIQ_NODE_REGION=London' /etc/systemd/system/vorliq-heartbeat.service; then
-    sed -i '/^Environment=VORLIQ_NODE_NAME=/a Environment=VORLIQ_NODE_REGION=London' /etc/systemd/system/vorliq-heartbeat.service
-  fi
-  if ! grep -q '^Environment=VORLIQ_NODE_COUNTRY=United Kingdom' /etc/systemd/system/vorliq-heartbeat.service; then
-    sed -i '/^Environment=VORLIQ_NODE_REGION=/a Environment=VORLIQ_NODE_COUNTRY=United Kingdom' /etc/systemd/system/vorliq-heartbeat.service
-  fi
+  sed -i 's/^After=network-online.target vorliq-blockchain.service.*/After=network-online.target vorliq-blockchain.service vorliq-backend.service/' /etc/systemd/system/vorliq-heartbeat.service
+  sed -i 's/^Requires=vorliq-blockchain.service.*/Requires=vorliq-blockchain.service vorliq-backend.service/' /etc/systemd/system/vorliq-heartbeat.service
+  sed -i '/^Environment=LOCAL_NODE_URL=/d' /etc/systemd/system/vorliq-heartbeat.service
+  sed -i '/^Environment=NODE_DISPLAY_NAME=/d' /etc/systemd/system/vorliq-heartbeat.service
+  sed -i '/^Environment=HEARTBEAT_API_URL=/d' /etc/systemd/system/vorliq-heartbeat.service
+  sed -i '/^Environment=VORLIQ_NODE_URL=/d' /etc/systemd/system/vorliq-heartbeat.service
+  sed -i '/^Environment="VORLIQ_NODE_NAME=/d' /etc/systemd/system/vorliq-heartbeat.service
+  sed -i '/^Environment=VORLIQ_NODE_NAME=/d' /etc/systemd/system/vorliq-heartbeat.service
+  sed -i '/^Environment=VORLIQ_NODE_REGION=/d' /etc/systemd/system/vorliq-heartbeat.service
+  sed -i '/^Environment="VORLIQ_NODE_COUNTRY=/d' /etc/systemd/system/vorliq-heartbeat.service
+  sed -i '/^Environment=VORLIQ_NODE_COUNTRY=/d' /etc/systemd/system/vorliq-heartbeat.service
+  sed -i '/^Environment=NODE_ENV=production/a Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000\nEnvironment=VORLIQ_NODE_URL=https://node.vorliq.org\nEnvironment="VORLIQ_NODE_NAME=Vorliq Public Node"\nEnvironment=VORLIQ_NODE_REGION=London\nEnvironment="VORLIQ_NODE_COUNTRY=United Kingdom"' /etc/systemd/system/vorliq-heartbeat.service
   systemctl daemon-reload
 fi
 
@@ -98,6 +89,12 @@ chmod 644 /etc/cron.d/vorliq-monitor
 
 systemctl restart vorliq-blockchain.service
 systemctl restart vorliq-backend.service
+for attempt in 1 2 3 4 5; do
+  if curl -fsS http://127.0.0.1:5000/api/health >/dev/null 2>&1; then
+    break
+  fi
+  sleep 3
+done
 systemctl restart vorliq-heartbeat.service
 
 if [[ -n "${GENERATED_ADMIN_TOKEN}" ]]; then

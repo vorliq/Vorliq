@@ -106,7 +106,13 @@ async function startHeartbeatLoop() {
 }
 
 if (require.main === module) {
-  startHeartbeatLoop();
+  if (process.argv.includes("--once")) {
+    sendHeartbeat().then((result) => {
+      process.exit(result?.success ? 0 : 1);
+    });
+  } else {
+    startHeartbeatLoop();
+  }
 }
 
 module.exports = {

@@ -73,9 +73,9 @@ SERVICE
 cat >/etc/systemd/system/vorliq-heartbeat.service <<SERVICE
 [Unit]
 Description=Vorliq Public Registry Heartbeat
-After=network-online.target vorliq-blockchain.service
+After=network-online.target vorliq-blockchain.service vorliq-backend.service
 Wants=network-online.target
-Requires=vorliq-blockchain.service
+Requires=vorliq-blockchain.service vorliq-backend.service
 
 [Service]
 Type=simple
@@ -86,9 +86,9 @@ Environment=NODE_ENV=production
 Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000
 Environment=FLASK_URL=http://127.0.0.1:5001
 Environment=VORLIQ_NODE_URL=https://node.vorliq.org
-Environment=VORLIQ_NODE_NAME=Vorliq Public Node
+Environment="VORLIQ_NODE_NAME=Vorliq Public Node"
 Environment=VORLIQ_NODE_REGION=London
-Environment=VORLIQ_NODE_COUNTRY=United Kingdom
+Environment="VORLIQ_NODE_COUNTRY=United Kingdom"
 ExecStart=/usr/bin/node heartbeat.js
 Restart=on-failure
 RestartSec=5
@@ -101,6 +101,12 @@ systemctl daemon-reload
 systemctl enable vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat.service
 systemctl restart vorliq-blockchain.service
 systemctl restart vorliq-backend.service
+for attempt in 1 2 3 4 5; do
+  if curl -fsS http://127.0.0.1:5000/api/health >/dev/null 2>&1; then
+    break
+  fi
+  sleep 3
+done
 systemctl restart vorliq-heartbeat.service
 
 for service in vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat.service; do
