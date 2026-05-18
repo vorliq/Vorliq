@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { CameraView, Camera } from "expo-camera";
+import * as Clipboard from "expo-clipboard";
 import * as Crypto from "expo-crypto";
 import elliptic from "elliptic";
 import { sendTransaction } from "../api";
@@ -104,7 +105,7 @@ async function signVorliqTransaction(wallet, receiverAddress, amount) {
   };
 }
 
-export default function SendScreen({ navigation }) {
+export default function SendScreen({ navigation, route }) {
   const [wallet, setWallet] = useState(null);
   const [receiver, setReceiver] = useState("");
   const [amount, setAmount] = useState("");
@@ -124,6 +125,15 @@ export default function SendScreen({ navigation }) {
 
     load();
   }, []);
+
+  useEffect(() => {
+    if (route?.params?.receiver) {
+      setReceiver(route.params.receiver);
+    }
+    if (route?.params?.amount) {
+      setAmount(String(route.params.amount));
+    }
+  }, [route?.params?.receiver, route?.params?.amount]);
 
   const handleSend = async () => {
     setError("");
@@ -224,9 +234,17 @@ export default function SendScreen({ navigation }) {
           <Text style={sharedStyles.label}>Pending Transaction</Text>
           <Text style={sharedStyles.codeText}>{submittedTx}</Text>
           <Text style={sharedStyles.mutedText}>Mining confirms this transaction into a block.</Text>
+          <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton, styles.scanButton]} onPress={() => Clipboard.setStringAsync(submittedTx)}>
+            <Text style={sharedStyles.buttonText}>Copy Transaction ID</Text>
+          </Pressable>
           <Pressable style={[sharedStyles.button, styles.scanButton]} onPress={() => navigation.navigate("Transaction", { txId: submittedTx })}>
             <Text style={sharedStyles.buttonText}>Open Transaction</Text>
           </Pressable>
+          {route?.params?.returnToExchange ? (
+            <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton, styles.scanButton]} onPress={() => navigation.navigate("Exchange")}>
+              <Text style={sharedStyles.buttonText}>Use for Exchange</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
 

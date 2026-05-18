@@ -111,7 +111,7 @@
       <section class="section card">
         <h2>Mobile Wallets</h2>
         <p>The mobile app stores wallet data locally on the device. In this release, mobile file export/import is not enabled and should not be treated as available. Mobile users should unlock the private key only on a trusted device, save it in a secure password manager or offline backup, and keep their node URL from Settings with their records.</p>
-        <p>Mobile features such as faucet claims, profiles, node registry views, transaction history, and block lookup only need public wallet addresses or public chain data. They should never ask for a private key. Sending VLQ is the exception because the transaction is signed locally on the phone before it is submitted.</p>
+        <p>Mobile features such as faucet claims, profiles, lending repayment, exchange trade records, treasury proposals, treasury voting, node registry views, transaction history, and block lookup use public wallet addresses, public chain data, or local transaction signing. They should never ask you to paste a private key. Sending VLQ is the exception because the transaction is signed locally on the phone before it is submitted, and the private key is not sent to the backend.</p>
       </section>
     </main>
 

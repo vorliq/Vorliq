@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { getBalance, getLendingSummary, getLoans, getMyLoans, submitLoan, voteLoan } from "../api";
+import { getBalance, getLendingSummary, getLoans, getMyLoans, repayLoan, submitLoan, voteLoan } from "../api";
 import { loadWallet } from "../storage";
 import theme from "../theme";
 import { normalizeStatus, shortText, statusColor } from "../utils/format";
@@ -21,6 +21,9 @@ export default function LendingScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [repayTarget, setRepayTarget] = useState(null);
+  const [repaying, setRepaying] = useState(false);
+  const [lastRepaymentTxId, setLastRepaymentTxId] = useState("");
 
   const loadData = useCallback(async () => {
     setError("");
@@ -76,6 +79,28 @@ export default function LendingScreen({ navigation }) {
     }
   };
 
+  const handleRepayLoan = async () => {
+    if (!repayTarget || !wallet?.address) return;
+    setError("");
+    setMessage("");
+    setRepaying(true);
+    const result = await repayLoan({
+      loan_id: repayTarget.loan_id,
+      repayer_address: wallet.address,
+    });
+    if (result.success) {
+      const txId = result.data.repayment_tx_id || result.data.loan?.repayment_tx_id || result.data.data?.repayment_tx_id;
+      setLastRepaymentTxId(txId || "");
+      setMessage(txId ? `Repayment submitted. Transaction ${txId} is pending until mined.` : "Repayment submitted and waiting for mining confirmation.");
+      setRepayTarget(null);
+      await loadData();
+      setSegment("My Loans");
+    } else {
+      setError(result.error);
+    }
+    setRepaying(false);
+  };
+
   const visibleLoans =
     segment === "Active Votes"
       ? loans.filter((loan) => ["pending_vote", "pending"].includes(loan.status))
@@ -109,6 +134,32 @@ export default function LendingScreen({ navigation }) {
 
       {message ? <Text style={sharedStyles.successText}>{message}</Text> : null}
       {error ? <Text style={sharedStyles.errorText}>{error}</Text> : null}
+      {lastRepaymentTxId ? (
+        <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton, styles.top]} onPress={() => navigation.navigate("Transaction", { txId: lastRepaymentTxId })}>
+          <Text style={sharedStyles.buttonText}>Open Repayment Transaction</Text>
+        </Pressable>
+      ) : null}
+
+      {repayTarget ? (
+        <View style={sharedStyles.card}>
+          <Text style={sharedStyles.label}>Confirm Loan Repayment</Text>
+          <Text style={sharedStyles.codeText}>Loan: {shortText(repayTarget.loan_id, 14, 8)}</Text>
+          <Text style={sharedStyles.value}>Repayment amount: {repayTarget.repayment_amount ?? "?"} VLQ</Text>
+          <Text style={sharedStyles.mutedText}>Borrower wallet: {shortText(wallet?.address, 14, 8)}</Text>
+          <Text style={sharedStyles.mutedText}>Current status: {normalizeStatus(repayTarget.status)}</Text>
+          <Text style={sharedStyles.warningText}>
+            Repayment creates a pending blockchain transaction and is only confirmed after mining.
+          </Text>
+          <View style={styles.actionRow}>
+            <Pressable style={[sharedStyles.button, styles.actionButton]} onPress={handleRepayLoan} disabled={repaying}>
+              <Text style={sharedStyles.buttonText}>{repaying ? "Submitting..." : "Submit Repayment"}</Text>
+            </Pressable>
+            <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton, styles.actionButton]} onPress={() => setRepayTarget(null)} disabled={repaying}>
+              <Text style={sharedStyles.buttonText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
 
       {loading ? <ActivityIndicator color={theme.accent} /> : null}
 
@@ -141,14 +192,24 @@ export default function LendingScreen({ navigation }) {
               </Pressable>
             </View>
           ) : null}
-          {visibleLoans.length ? visibleLoans.map((loan) => <LoanCard key={loan.loan_id} loan={loan} navigation={navigation} />) : <Text style={sharedStyles.mutedText}>No loans returned for this view.</Text>}
+          {visibleLoans.length ? visibleLoans.map((loan) => (
+            <LoanCard
+              key={loan.loan_id}
+              loan={loan}
+              navigation={navigation}
+              wallet={wallet}
+              onRepay={() => setRepayTarget(loan)}
+            />
+          )) : <Text style={sharedStyles.mutedText}>No loans returned for this view.</Text>}
         </>
       )}
     </ScrollView>
   );
 }
 
-function LoanCard({ loan, navigation }) {
+function LoanCard({ loan, navigation, wallet, onRepay }) {
+  const borrowerAddress = loan.borrower || loan.requester_address;
+  const canRepay = wallet?.address && wallet.address === borrowerAddress && ["active", "overdue"].includes(loan.status);
   return (
     <View style={sharedStyles.card}>
       <View style={[sharedStyles.badge, { backgroundColor: statusColor(loan.status) }]}>
@@ -162,7 +223,11 @@ function LoanCard({ loan, navigation }) {
       <Text style={sharedStyles.mutedText}>Due block: {loan.due_block ?? "Not active"} | Blocks left: {loan.blocks_until_due ?? "n/a"}</Text>
       {loan.issuance_tx_id ? <TxButton txId={loan.issuance_tx_id} label="Issuance Tx" navigation={navigation} /> : null}
       {loan.repayment_tx_id ? <TxButton txId={loan.repayment_tx_id} label="Repayment Tx" navigation={navigation} /> : null}
-      {["active", "overdue"].includes(loan.status) ? <Text style={[sharedStyles.warningText, styles.top]}>Repayment is available on the web app in this mobile release.</Text> : null}
+      {canRepay ? (
+        <Pressable style={[sharedStyles.button, styles.top]} onPress={onRepay}>
+          <Text style={sharedStyles.buttonText}>Repay Loan</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -221,5 +286,14 @@ const styles = StyleSheet.create({
   },
   top: {
     marginTop: theme.spacing.md,
+  },
+  actionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+  },
+  actionButton: {
+    flexGrow: 1,
   },
 });

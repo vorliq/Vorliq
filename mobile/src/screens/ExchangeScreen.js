@@ -1,6 +1,16 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { acceptExchangeOffer, cancelExchangeOffer, createExchangeOffer, getExchangeOffers, getExchangeSummary, getMyExchangeTrades } from "../api";
+import {
+  acceptExchangeOffer,
+  cancelExchangeOffer,
+  confirmExchangeComplete,
+  createExchangeOffer,
+  getExchangeOffers,
+  getExchangeSummary,
+  getMyExchangeTrades,
+  openExchangeDispute,
+  recordExchangeVlqTx,
+} from "../api";
 import { loadWallet } from "../storage";
 import theme from "../theme";
 import { formatTimestamp, normalizeStatus, shortText, statusColor } from "../utils/format";
@@ -21,6 +31,7 @@ export default function ExchangeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [actionLoadingId, setActionLoadingId] = useState("");
 
   const loadData = useCallback(async () => {
     const savedWallet = await loadWallet();
@@ -82,6 +93,53 @@ export default function ExchangeScreen({ navigation }) {
     }
   };
 
+  const handleRecordTx = async (offerId, txId) => {
+    setError("");
+    setMessage("");
+    if (!wallet?.address) return setError("Create a wallet before recording trade actions.");
+    if (!txId.trim()) return setError("Paste the VLQ transaction ID from the Send screen.");
+    setActionLoadingId(`record-${offerId}`);
+    const result = await recordExchangeVlqTx({ offer_id: offerId, tx_id: txId.trim(), caller_address: wallet.address });
+    if (result.success) {
+      setMessage("VLQ transaction linked to the trade.");
+      await loadData();
+    } else {
+      setError(result.error);
+    }
+    setActionLoadingId("");
+  };
+
+  const handleConfirmComplete = async (offerId) => {
+    setError("");
+    setMessage("");
+    if (!wallet?.address) return setError("Create a wallet before confirming completion.");
+    setActionLoadingId(`confirm-${offerId}`);
+    const result = await confirmExchangeComplete({ offer_id: offerId, caller_address: wallet.address });
+    if (result.success) {
+      setMessage(result.data.offer?.status === "completed" ? "Trade completed after both confirmations." : "Completion confirmation recorded.");
+      await loadData();
+    } else {
+      setError(result.error);
+    }
+    setActionLoadingId("");
+  };
+
+  const handleDispute = async (offerId, reason) => {
+    setError("");
+    setMessage("");
+    if (!wallet?.address) return setError("Create a wallet before opening a dispute record.");
+    if (!reason.trim() || reason.trim().length > 300) return setError("Enter a dispute reason up to 300 characters.");
+    setActionLoadingId(`dispute-${offerId}`);
+    const result = await openExchangeDispute({ offer_id: offerId, caller_address: wallet.address, reason: reason.trim() });
+    if (result.success) {
+      setMessage("Dispute record opened. This does not enforce off-chain recovery.");
+      await loadData();
+    } else {
+      setError(result.error);
+    }
+    setActionLoadingId("");
+  };
+
   const visible =
     segment === "Browse"
       ? offers.filter((offer) => offer.status === "open")
@@ -136,15 +194,36 @@ export default function ExchangeScreen({ navigation }) {
         </View>
       ) : (
         visible.length ? visible.map((offer) => (
-          <OfferCard key={offer.offer_id} offer={offer} wallet={wallet} navigation={navigation} onAccept={handleAccept} onCancel={handleCancel} />
+          <OfferCard
+            key={offer.offer_id}
+            offer={offer}
+            wallet={wallet}
+            navigation={navigation}
+            onAccept={handleAccept}
+            onCancel={handleCancel}
+            onRecordTx={handleRecordTx}
+            onConfirmComplete={handleConfirmComplete}
+            onDispute={handleDispute}
+            actionLoadingId={actionLoadingId}
+          />
         )) : <Text style={sharedStyles.mutedText}>No exchange records returned for this view.</Text>
       )}
     </ScrollView>
   );
 }
 
-function OfferCard({ offer, wallet, navigation, onAccept, onCancel }) {
+function OfferCard({ offer, wallet, navigation, onAccept, onCancel, onRecordTx, onConfirmComplete, onDispute, actionLoadingId }) {
+  const [txId, setTxId] = useState("");
+  const [disputeReason, setDisputeReason] = useState("");
   const isCreator = wallet?.address && wallet.address === offer.creator_address;
+  const isAcceptor = wallet?.address && wallet.address === offer.acceptor_address;
+  const isParticipant = isCreator || isAcceptor;
+  const activeTrade = ["accepted", "vlq_pending", "vlq_confirmed"].includes(offer.status);
+  const expectedSender = offer.offer_type === "sell" ? offer.creator_address : offer.acceptor_address;
+  const expectedReceiver = offer.offer_type === "sell" ? offer.acceptor_address : offer.creator_address;
+  const canRecordTx = activeTrade && wallet?.address === expectedSender;
+  const canConfirm = offer.status === "vlq_confirmed" && isParticipant;
+  const canDispute = activeTrade && isParticipant;
   return (
     <View style={sharedStyles.card}>
       <View style={[sharedStyles.badge, { backgroundColor: statusColor(offer.status) }]}>
@@ -155,6 +234,7 @@ function OfferCard({ offer, wallet, navigation, onAccept, onCancel }) {
       <Text style={sharedStyles.mutedText}>{offer.description}</Text>
       <Text style={sharedStyles.mutedText}>Creator: {shortText(offer.creator_address, 12, 6)}</Text>
       <Text style={sharedStyles.mutedText}>Acceptor: {shortText(offer.acceptor_address, 12, 6)}</Text>
+      <Text style={sharedStyles.mutedText}>Creator confirmed: {offer.offchain_confirmation_creator ? "Yes" : "No"} | Acceptor confirmed: {offer.offchain_confirmation_acceptor ? "Yes" : "No"}</Text>
       <Text style={sharedStyles.mutedText}>Created: {formatTimestamp(offer.created_at || offer.timestamp)}</Text>
       {offer.vlq_tx_id ? (
         <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton, styles.top]} onPress={() => navigation.navigate("Transaction", { txId: offer.vlq_tx_id })}>
@@ -171,8 +251,38 @@ function OfferCard({ offer, wallet, navigation, onAccept, onCancel }) {
           <Text style={sharedStyles.buttonText}>Cancel Offer</Text>
         </Pressable>
       ) : null}
-      {["accepted", "vlq_pending", "vlq_confirmed", "disputed"].includes(offer.status) ? (
-        <Text style={[sharedStyles.warningText, styles.top]}>Record-tx, completion, and dispute actions are available on the web app in this mobile release.</Text>
+      {canRecordTx ? (
+        <View style={styles.actionPanel}>
+          <Text style={sharedStyles.label}>Record VLQ Transaction</Text>
+          <Text style={sharedStyles.mutedText}>
+            Send VLQ first using Send, then paste the transaction ID here. Expected sender: {shortText(expectedSender, 12, 6)} to {shortText(expectedReceiver, 12, 6)}.
+          </Text>
+          <Pressable
+            style={[sharedStyles.button, sharedStyles.secondaryButton, styles.top]}
+            onPress={() => navigation.navigate("Tabs", { screen: "Send", params: { receiver: expectedReceiver, amount: String(offer.amount || ""), returnToExchange: true } })}
+          >
+            <Text style={sharedStyles.buttonText}>Open Send Prefilled</Text>
+          </Pressable>
+          <TextInput autoCapitalize="none" style={[sharedStyles.input, styles.top]} placeholder="Paste tx id" placeholderTextColor={theme.textSecondary} value={txId} onChangeText={setTxId} />
+          <Pressable style={sharedStyles.button} onPress={() => onRecordTx(offer.offer_id, txId)} disabled={actionLoadingId === `record-${offer.offer_id}`}>
+            <Text style={sharedStyles.buttonText}>{actionLoadingId === `record-${offer.offer_id}` ? "Recording..." : "Record Transaction"}</Text>
+          </Pressable>
+        </View>
+      ) : null}
+      {canConfirm ? (
+        <Pressable style={[sharedStyles.button, styles.top]} onPress={() => onConfirmComplete(offer.offer_id)} disabled={actionLoadingId === `confirm-${offer.offer_id}`}>
+          <Text style={sharedStyles.buttonText}>{actionLoadingId === `confirm-${offer.offer_id}` ? "Confirming..." : "Confirm Complete"}</Text>
+        </Pressable>
+      ) : null}
+      {canDispute ? (
+        <View style={styles.actionPanel}>
+          <Text style={sharedStyles.label}>Open Dispute</Text>
+          <Text style={sharedStyles.warningText}>A dispute is a community record only. It does not enforce off-chain recovery.</Text>
+          <TextInput multiline maxLength={300} style={[sharedStyles.input, sharedStyles.textArea]} placeholder="Short reason, max 300 characters" placeholderTextColor={theme.textSecondary} value={disputeReason} onChangeText={setDisputeReason} />
+          <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton]} onPress={() => onDispute(offer.offer_id, disputeReason)} disabled={actionLoadingId === `dispute-${offer.offer_id}`}>
+            <Text style={sharedStyles.buttonText}>{actionLoadingId === `dispute-${offer.offer_id}` ? "Opening..." : "Open Dispute"}</Text>
+          </Pressable>
+        </View>
       ) : null}
     </View>
   );
@@ -224,5 +334,11 @@ const styles = StyleSheet.create({
   },
   top: {
     marginTop: theme.spacing.md,
+  },
+  actionPanel: {
+    borderTopColor: theme.border,
+    borderTopWidth: 1,
+    marginTop: theme.spacing.md,
+    paddingTop: theme.spacing.md,
   },
 });

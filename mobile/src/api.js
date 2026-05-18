@@ -208,6 +208,24 @@ export async function completeExchangeOffer(offerData) {
   });
 }
 
+export async function recordExchangeVlqTx(offerData) {
+  return request("post", "/api/exchange/record-vlq-tx", {
+    data: offerData,
+  });
+}
+
+export async function confirmExchangeComplete(offerData) {
+  return request("post", "/api/exchange/confirm-complete", {
+    data: offerData,
+  });
+}
+
+export async function openExchangeDispute(offerData) {
+  return request("post", "/api/exchange/dispute", {
+    data: offerData,
+  });
+}
+
 export async function cancelExchangeOffer(offerData) {
   return request("post", "/api/exchange/cancel", {
     data: offerData,
@@ -263,6 +281,24 @@ export async function getTreasuryLedger(options = {}) {
 export async function getTreasuryProposals(params = {}) {
   return request("get", "/api/treasury/proposals", {
     params: cleanParams(params),
+  });
+}
+
+export async function getMyTreasury(address) {
+  return request("get", "/api/treasury/my", {
+    params: { address },
+  });
+}
+
+export async function submitTreasuryProposal(proposalData) {
+  return request("post", "/api/treasury/propose", {
+    data: proposalData,
+  });
+}
+
+export async function voteTreasuryProposal(voteData) {
+  return request("post", "/api/treasury/vote", {
+    data: voteData,
   });
 }
 
