@@ -53,6 +53,17 @@ function governanceQuery(params = {}) {
   return value ? `?${value}` : "";
 }
 
+function treasuryQuery(params = {}) {
+  const query = new URLSearchParams();
+  if (params.limit !== undefined) query.set("limit", String(params.limit));
+  if (params.offset !== undefined) query.set("offset", String(params.offset));
+  if (params.status) query.set("status", String(params.status));
+  if (params.category) query.set("category", String(params.category));
+  if (params.address) query.set("address", String(params.address));
+  const value = query.toString();
+  return value ? `?${value}` : "";
+}
+
 class VorliqSDK {
   /**
    * Creates a Vorliq SDK client.
@@ -505,6 +516,63 @@ class VorliqSDK {
   async getGovernanceSettingsHistory(params = {}) {
     const data = await this.request(`/api/governance/settings/history${governanceQuery(params)}`);
     return data.history || data.rule_changes || [];
+  }
+
+  /**
+   * Gets aggregate treasury lifecycle totals and latest ledger entries.
+   *
+   * @returns {Promise<object>} Treasury summary fields.
+   */
+  async getTreasurySummary() {
+    const data = await this.request("/api/treasury/summary");
+    return data.summary || data;
+  }
+
+  /**
+   * Gets one treasury proposal by ID.
+   *
+   * @param {string} proposalId - Treasury proposal ID.
+   * @returns {Promise<object>} Treasury proposal lifecycle record.
+   */
+  async getTreasuryProposal(proposalId) {
+    const query = new URLSearchParams({ proposal_id: proposalId });
+    const data = await this.request(`/api/treasury/proposal?${query.toString()}`);
+    return data.proposal || data;
+  }
+
+  /**
+   * Gets treasury activity where an address is proposer, voter, or payout recipient.
+   *
+   * @param {string} address - Wallet address to inspect.
+   * @returns {Promise<object>} Created, voted, received, and combined proposal lists.
+   */
+  async getMyTreasury(address) {
+    const query = new URLSearchParams({ address });
+    return this.request(`/api/treasury/my?${query.toString()}`);
+  }
+
+  /**
+   * Cancels an active treasury proposal before votes are cast.
+   *
+   * @param {string} proposalId - Treasury proposal ID.
+   * @param {string} proposerAddress - Proposal creator address.
+   * @returns {Promise<object>} Updated proposal response.
+   */
+  async cancelTreasuryProposal(proposalId, proposerAddress) {
+    return this.request("/api/treasury/cancel", {
+      method: "POST",
+      body: JSON.stringify({ proposal_id: proposalId, proposer_address: proposerAddress }),
+    });
+  }
+
+  /**
+   * Gets public treasury ledger entries.
+   *
+   * @param {object} [options] - Pagination options.
+   * @returns {Promise<object>} Ledger response with entries, total, limit, offset, and has_more.
+   */
+  async getTreasuryLedger(options = {}) {
+    return this.request(`/api/treasury/ledger${treasuryQuery(options)}`);
   }
 
   /**

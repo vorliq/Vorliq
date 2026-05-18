@@ -23,6 +23,7 @@ function Account() {
   const [loans, setLoans] = useState([]);
   const [exchangeTrades, setExchangeTrades] = useState([]);
   const [governanceActivity, setGovernanceActivity] = useState({ created: [], voted: [], proposals: [] });
+  const [treasuryActivity, setTreasuryActivity] = useState({ created: [], voted: [], received: [], proposals: [] });
   const [earnedAchievements, setEarnedAchievements] = useState([]);
   const [allAchievements, setAllAchievements] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -47,12 +48,13 @@ function Account() {
             if (error.response?.status === 404) return { data: { profile: null } };
             throw error;
           });
-        const [balanceResponse, transactionResponse, loansResponse, exchangeResponse, governanceResponse, earnedResponse, allAchievementsResponse, profileResponse] = await Promise.all([
+        const [balanceResponse, transactionResponse, loansResponse, exchangeResponse, governanceResponse, treasuryResponse, earnedResponse, allAchievementsResponse, profileResponse] = await Promise.all([
           api.get("/wallet/balance", { params: { address: wallet.address } }),
           api.get("/chain/address", { params: { address: wallet.address, limit: 100 } }),
           api.get("/lending/my", { params: { address: wallet.address } }),
           api.get("/exchange/my", { params: { address: wallet.address } }),
           api.get("/governance/my", { params: { address: wallet.address } }),
+          api.get("/treasury/my", { params: { address: wallet.address } }),
           api.get("/achievements", { params: { address: wallet.address } }),
           api.get("/achievements/all"),
           profileRequest,
@@ -68,6 +70,12 @@ function Account() {
             created: governanceResponse.data.created || [],
             voted: governanceResponse.data.voted || [],
             proposals: governanceResponse.data.proposals || [],
+          });
+          setTreasuryActivity({
+            created: treasuryResponse.data.created || [],
+            voted: treasuryResponse.data.voted || [],
+            received: treasuryResponse.data.received || [],
+            proposals: treasuryResponse.data.proposals || [],
           });
           setEarnedAchievements(earnedResponse.data.achievements || []);
           setAllAchievements(allAchievementsResponse.data.achievements || []);
@@ -671,6 +679,47 @@ function Account() {
                 <Link className="button secondary small-button" to="/governance">
                   Open Governance
                 </Link>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="card card-pad account-section">
+        <h2>My Treasury Activity</h2>
+        {loading && <Spinner label="Loading treasury activity..." />}
+
+        {!loading && treasuryActivity.proposals.length === 0 && <div className="empty-state">No treasury proposals, votes, or recipient records yet.</div>}
+
+        <div className="governance-grid">
+          {treasuryActivity.proposals.slice(0, 6).map((proposal) => {
+            const voteRecord = proposal.votes?.[wallet.address];
+            const role = proposal.proposer_address === wallet.address ? "Proposer" : proposal.recipient_address === wallet.address ? "Recipient" : "Voter";
+            return (
+              <article className="governance-card" key={proposal.proposal_id}>
+                <div className="section-title">
+                  <h3>{proposal.title}</h3>
+                  <span className={`status-badge ${proposal.status}`}>{String(proposal.status).replace(/_/g, " ")}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Role</span>
+                  <span className="meta-value">{role}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Amount</span>
+                  <span className="meta-value">{proposal.requested_amount} VLQ</span>
+                </div>
+                {voteRecord && (
+                  <div className="meta-item">
+                    <span className="meta-label">Vote</span>
+                    <span className="meta-value">{voteRecord.vote || voteRecord}</span>
+                  </div>
+                )}
+                {proposal.payout_tx_id && (
+                  <Link className="button secondary small-button" to={`/tx/${proposal.payout_tx_id}`}>
+                    Payout Tx
+                  </Link>
+                )}
               </article>
             );
           })}

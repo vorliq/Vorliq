@@ -15,6 +15,7 @@ import Login from "./pages/Login";
 import Lending from "./pages/Lending";
 import Exchange from "./pages/Exchange";
 import Governance from "./pages/Governance";
+import Treasury from "./pages/Treasury";
 import Mine from "./pages/Mine";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
@@ -391,6 +392,155 @@ function defaultApiGet(path) {
 
   if (path === "/governance/my") {
     return Promise.resolve({ data: { success: true, created: [], voted: [], proposals: [] } });
+  }
+
+  if (path === "/treasury/balance") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        address: "VORLIQ_TREASURY",
+        balance: 250,
+        treasury_percentage: 0.05,
+      },
+    });
+  }
+
+  if (path === "/treasury/summary") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        summary: {
+          current_balance: 250,
+          total_received: 300,
+          total_paid: 50,
+          pending_payouts: 25,
+          pending_payout_count: 1,
+          paid_proposal_count: 1,
+          active_proposal_count: 1,
+          rejected_proposal_count: 0,
+          expired_proposal_count: 0,
+          latest_ledger_entries: [],
+        },
+      },
+    });
+  }
+
+  if (path === "/treasury/proposals") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        proposals: [
+          {
+            proposal_id: "treasury-active-1",
+            proposer_address: "VLQ_TREASURER",
+            title: "Fund security review",
+            description: "A public request to fund a security review for the Vorliq network.",
+            category: "security",
+            requested_amount: 25,
+            recipient_address: "VLQ_RECIPIENT",
+            status: "active",
+            created_at: 1715791000,
+            voting_deadline: 2715791000,
+            votes: {},
+            yes_vote_weight: 50,
+            no_vote_weight: 0,
+            quorum: 200,
+            approval_threshold: 0.6,
+            status_history: [{ status: "active", timestamp: 1715791000, note: "Treasury proposal opened." }],
+          },
+        ],
+        total: 1,
+      },
+    });
+  }
+
+  if (path === "/treasury/all") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        proposals: [
+          {
+            proposal_id: "treasury-active-1",
+            proposer_address: "VLQ_TREASURER",
+            title: "Fund security review",
+            description: "A public request to fund a security review for the Vorliq network.",
+            category: "security",
+            requested_amount: 25,
+            recipient_address: "VLQ_RECIPIENT",
+            status: "active",
+            created_at: 1715791000,
+            voting_deadline: 2715791000,
+            votes: {},
+            yes_vote_weight: 50,
+            no_vote_weight: 0,
+            quorum: 200,
+            approval_threshold: 0.6,
+            status_history: [{ status: "active", timestamp: 1715791000, note: "Treasury proposal opened." }],
+          },
+          {
+            proposal_id: "treasury-paid-1",
+            proposer_address: "VLQ_TREASURER",
+            title: "Paid docs work",
+            description: "A completed treasury payout for documentation.",
+            category: "education",
+            requested_amount: 50,
+            recipient_address: "VLQ_RECIPIENT",
+            status: "paid",
+            payout_tx_id: "treasury-tx-1",
+            payout_block_index: 3,
+            created_at: 1715790000,
+            voting_deadline: 2715791000,
+            votes: { VLQ_VOTER: { vote: "yes", weight: 250 } },
+            yes_vote_weight: 250,
+            no_vote_weight: 0,
+            quorum: 200,
+            approval_threshold: 0.6,
+            status_history: [{ status: "paid", timestamp: 1715791000, note: "Payout confirmed." }],
+          },
+        ],
+        total: 2,
+      },
+    });
+  }
+
+  if (path === "/treasury/my") {
+    return Promise.resolve({ data: { success: true, created: [], voted: [], received: [], proposals: [] } });
+  }
+
+  if (path === "/treasury/ledger") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        entries: [
+          {
+            ledger_id: "ledger-1",
+            type: "reward_in",
+            amount: 2.5,
+            from_address: "SYSTEM",
+            to_address: "VORLIQ_TREASURY",
+            tx_id: "reward-tx-1",
+            block_index: 2,
+            block_hash: "block-hash",
+            timestamp: 1715791000,
+            description: "Treasury mining reward",
+          },
+          {
+            ledger_id: "ledger-2",
+            type: "payout_paid",
+            amount: 50,
+            from_address: "VORLIQ_TREASURY",
+            to_address: "VLQ_RECIPIENT",
+            tx_id: "treasury-tx-1",
+            block_index: 3,
+            block_hash: "block-hash-3",
+            timestamp: 1715792000,
+            proposal_id: "treasury-paid-1",
+            description: "Treasury payout for Paid docs work",
+          },
+        ],
+        total: 2,
+      },
+    });
   }
 
   if (path === "/economics") {
@@ -1067,6 +1217,50 @@ test("Governance My Governance state renders", async () => {
 
   expect(await screen.findByText(/my voted proposal/i)).toBeInTheDocument();
   expect(screen.getAllByText(/executed/i).length).toBeGreaterThan(0);
+});
+
+test("Treasury tabs render overview and active proposal card", async () => {
+  renderWithProviders(<Treasury />, "/treasury");
+
+  expect(await screen.findByRole("button", { name: /overview/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /active proposals/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /submit proposal/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /my treasury/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /treasury ledger/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /history/i })).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole("button", { name: /active proposals/i }));
+
+  expect(await screen.findByText(/fund security review/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/active/i).length).toBeGreaterThan(0);
+});
+
+test("Treasury overview summary renders", async () => {
+  renderWithProviders(<Treasury />, "/treasury");
+
+  expect(await screen.findByText(/treasury balance/i)).toBeInTheDocument();
+  expect(await screen.findByText(/250 VLQ/i)).toBeInTheDocument();
+  expect(screen.getByText(/total received/i)).toBeInTheDocument();
+});
+
+test("Treasury ledger tab renders public entries", async () => {
+  renderWithProviders(<Treasury />, "/treasury");
+
+  await userEvent.click(await screen.findByRole("button", { name: /treasury ledger/i }));
+
+  expect(await screen.findByRole("heading", { name: /treasury inflows and payouts/i })).toBeInTheDocument();
+  expect(await screen.findByText(/treasury mining reward/i)).toBeInTheDocument();
+  expect(screen.getByText(/payout paid/i)).toBeInTheDocument();
+});
+
+test("Treasury proposal form shows treasury balance max and risk notice", async () => {
+  renderWithProviders(<Treasury />, "/treasury");
+
+  expect(await screen.findByLabelText(/risk notice/i)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: /submit proposal/i }));
+
+  expect(await screen.findByText(/maximum request right now/i)).toBeInTheDocument();
+  expect(screen.getByPlaceholderText(/maximum 250 vlq/i)).toBeInTheDocument();
 });
 
 test("wallet backup import rejects invalid JSON", async () => {

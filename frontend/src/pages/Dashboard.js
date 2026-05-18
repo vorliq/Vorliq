@@ -67,6 +67,7 @@ function Dashboard() {
   const [lendingSummary, setLendingSummary] = useState(null);
   const [exchangeSummary, setExchangeSummary] = useState(null);
   const [governanceSummary, setGovernanceSummary] = useState(null);
+  const [treasurySummary, setTreasurySummary] = useState(null);
   const [featuredPosts, setFeaturedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -77,12 +78,13 @@ function Dashboard() {
 
     async function loadDashboard() {
       try {
-        const [summaryResponse, featuredResponse, lendingResponse, exchangeResponse, governanceResponse] = await Promise.all([
+        const [summaryResponse, featuredResponse, lendingResponse, exchangeResponse, governanceResponse, treasuryResponse] = await Promise.all([
           api.get("/chain/summary"),
           api.get("/forum/featured", { params: { limit: 3 } }),
           api.get("/lending/summary"),
           api.get("/exchange/summary"),
           api.get("/governance/summary"),
+          api.get("/treasury/summary"),
         ]);
         if (mounted) {
           setErrorMessage("");
@@ -90,6 +92,7 @@ function Dashboard() {
           setLendingSummary(lendingResponse.data.summary || {});
           setExchangeSummary(exchangeResponse.data.summary || {});
           setGovernanceSummary(governanceResponse.data.summary || {});
+          setTreasurySummary(treasuryResponse.data.summary || {});
           setFeaturedPosts((featuredResponse.data.posts || []).slice(0, 3));
           setLastUpdated(new Date());
         }
@@ -126,8 +129,11 @@ function Dashboard() {
       activeProposals: governanceSummary?.active_count ?? 0,
       executedRuleChanges: governanceSummary?.executed_count ?? 0,
       latestRuleChange: governanceSummary?.latest_executed_rule_change?.category,
+      treasuryBalance: treasurySummary?.current_balance ?? 0,
+      activeTreasury: treasurySummary?.active_proposal_count ?? 0,
+      pendingTreasuryPayouts: treasurySummary?.pending_payout_count ?? 0,
     };
-  }, [exchangeSummary, governanceSummary, lendingSummary, summary]);
+  }, [exchangeSummary, governanceSummary, lendingSummary, summary, treasurySummary]);
 
   return (
     <div className="page">
@@ -241,6 +247,18 @@ function Dashboard() {
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Latest Rule</span>
               <span className="stat-value">{stats.latestRuleChange || "None"}</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Treasury Balance</span>
+              <span className="stat-value">{stats.treasuryBalance} VLQ</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Treasury Proposals</span>
+              <span className="stat-value">{stats.activeTreasury}</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Pending Payouts</span>
+              <span className="stat-value">{stats.pendingTreasuryPayouts}</span>
             </div>
           </div>
         </section>

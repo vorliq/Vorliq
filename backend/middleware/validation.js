@@ -4,7 +4,7 @@ const { logError } = require("../logger");
 const SYSTEM_ADDRESSES = new Set(["SYSTEM", "VORLIQ_TREASURY", "LENDING_POOL"]);
 const FORUM_CATEGORIES = new Set(["general", "mining", "lending", "exchange", "governance", "technical"]);
 const GOVERNANCE_CATEGORIES = new Set(["mining_reward", "difficulty", "loan_limit", "loan_interest", "exchange_limit", "general"]);
-const TREASURY_CATEGORIES = new Set(["development", "marketing", "community", "infrastructure"]);
+const TREASURY_CATEGORIES = new Set(["development", "marketing", "community", "infrastructure", "security", "education", "other"]);
 
 function reject(req, res, message, status = 400) {
   logError(`Validation rejected ${req.method} ${req.originalUrl}: ${message}`);
@@ -267,6 +267,20 @@ function validateBody(req, res, next) {
     requireEnum(req, res, body, ["category"], "category", TREASURY_CATEGORIES);
     if (res.headersSent) return;
     requireNumber(req, res, body, ["requested_amount", "requestedAmount"], "requested amount", { min: 0, max: 1_000_000 });
+  }
+
+  if (path === "/api/treasury/vote") {
+    requireText(req, res, body, ["proposal_id", "proposalId"], "proposal ID", 128);
+    if (res.headersSent) return;
+    validateAddress(req, res, body, ["voter_address", "voterAddress"], "voter address");
+    if (res.headersSent) return;
+    requireEnum(req, res, body, ["vote"], "vote", new Set(["yes", "no"]));
+  }
+
+  if (path === "/api/treasury/cancel") {
+    requireText(req, res, body, ["proposal_id", "proposalId"], "proposal ID", 128);
+    if (res.headersSent) return;
+    validateAddress(req, res, body, ["proposer_address", "proposerAddress"], "proposer address");
   }
 
   if (path === "/api/price/signal") {

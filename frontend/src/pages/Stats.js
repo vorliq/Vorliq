@@ -10,6 +10,7 @@ function Stats() {
   const [lendingSummary, setLendingSummary] = useState(null);
   const [exchangeSummary, setExchangeSummary] = useState(null);
   const [governanceSummary, setGovernanceSummary] = useState(null);
+  const [treasurySummary, setTreasurySummary] = useState(null);
   const [leaderboard, setLeaderboard] = useState({ holders: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -19,11 +20,12 @@ function Stats() {
 
     async function loadStats() {
       try {
-        const [summaryResponse, loansResponse, exchangeResponse, governanceResponse, leaderboardResponse] = await Promise.all([
+        const [summaryResponse, loansResponse, exchangeResponse, governanceResponse, treasuryResponse, leaderboardResponse] = await Promise.all([
           api.get("/chain/summary"),
           api.get("/lending/summary"),
           api.get("/exchange/summary"),
           api.get("/governance/summary"),
+          api.get("/treasury/summary"),
           api.get("/leaderboard", { params: { limit: 10 } }),
         ]);
 
@@ -32,6 +34,7 @@ function Stats() {
           setLendingSummary(loansResponse.data.summary || {});
           setExchangeSummary(exchangeResponse.data.summary || {});
           setGovernanceSummary(governanceResponse.data.summary || {});
+          setTreasurySummary(treasuryResponse.data.summary || {});
           setLeaderboard(leaderboardResponse.data || { holders: [] });
         }
       } catch (requestError) {
@@ -83,9 +86,14 @@ function Stats() {
       pendingExecution: governanceSummary?.passed_pending_execution_count ?? 0,
       executedRuleChanges: governanceSummary?.executed_count ?? 0,
       latestRuleChange: governanceSummary?.latest_executed_rule_change?.category || "None",
+      treasuryBalance: treasurySummary?.current_balance ?? 0,
+      treasuryReceived: treasurySummary?.total_received ?? 0,
+      treasuryPaid: treasurySummary?.total_paid ?? 0,
+      treasuryPendingPayouts: treasurySummary?.pending_payout_count ?? 0,
+      treasuryActiveProposals: treasurySummary?.active_proposal_count ?? 0,
       topAddresses: leaderboard.holders || [],
     };
-  }, [exchangeSummary, governanceSummary, leaderboard, lendingSummary, summary]);
+  }, [exchangeSummary, governanceSummary, leaderboard, lendingSummary, summary, treasurySummary]);
 
   if (loading) {
     return (
@@ -157,6 +165,17 @@ function Stats() {
           ["Pending Execution", stats.pendingExecution],
           ["Executed Rule Changes", stats.executedRuleChanges],
           ["Latest Rule Change", stats.latestRuleChange],
+        ]}
+      />
+
+      <StatsSection
+        title="Treasury Statistics"
+        items={[
+          ["Treasury Balance", `${formatNumber(stats.treasuryBalance)} VLQ`],
+          ["Total Received", `${formatNumber(stats.treasuryReceived)} VLQ`],
+          ["Total Paid", `${formatNumber(stats.treasuryPaid)} VLQ`],
+          ["Pending Payouts", stats.treasuryPendingPayouts],
+          ["Active Proposals", stats.treasuryActiveProposals],
         ]}
       />
 

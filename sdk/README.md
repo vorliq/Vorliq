@@ -179,6 +179,33 @@ async function main() {
 main().catch(console.error);
 ```
 
+Treasury records track the path from community approval to pending payout and confirmed payment. The treasury receives 5 percent of mining rewards, and the public ledger shows reward inflows and payout outflows involving the treasury address. This is community treasury tracking inside Vorliq software, not legal treasury control or guaranteed funding.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const summary = await vorliq.getTreasurySummary();
+  const ledger = await vorliq.getTreasuryLedger({ limit: 10 });
+
+  console.log("Treasury balance:", summary.current_balance);
+  console.log("Ledger entries:", ledger.entries.length);
+
+  if (ledger.entries[0]?.proposal_id) {
+    const proposal = await vorliq.getTreasuryProposal(ledger.entries[0].proposal_id);
+    const mine = await vorliq.getMyTreasury(proposal.proposer_address);
+    console.log("Proposal status:", proposal.status);
+    console.log("Member treasury records:", mine.proposals.length);
+  }
+
+  // Active treasury proposals can be cancelled by their proposer only before votes are cast:
+  // await vorliq.cancelTreasuryProposal("PROPOSAL_ID", "VLQ_PROPOSER");
+}
+
+main().catch(console.error);
+```
+
 To get a wallet balance, create a client and pass the wallet address to `getBalance`. This complete example prints the balance as a number.
 
 ```js

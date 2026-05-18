@@ -213,6 +213,17 @@ def _sync_exchange(save: bool = True) -> bool:
 _sync_exchange(save=True)
 
 
+def _sync_treasury(save: bool = True) -> bool:
+    changed = treasury.sync_treasury_statuses(node.blockchain)
+    if changed and save:
+        storage.save_treasury(treasury)
+        storage.save_pending(node.blockchain.pending_transactions)
+    return changed
+
+
+_sync_treasury(save=True)
+
+
 def _is_private_hostname(hostname: str) -> bool:
     host = hostname.lower()
     if host in {"localhost", "::1"} or host.endswith(".local"):
@@ -434,10 +445,12 @@ def mine_block():
         block = node.blockchain.get_block_detail(str(raw_block["index"])) or raw_block
         _sync_lending_pool(save=False)
         _sync_exchange(save=False)
+        _sync_treasury(save=False)
         storage.save_chain(node.blockchain)
         storage.save_pending(node.blockchain.pending_transactions)
         storage.save_lending_pool(lending_pool)
         storage.save_exchange(exchange)
+        storage.save_treasury(treasury)
         achievements.check_and_award(miner_address, "first_mine", node.blockchain)
         achievements.check_and_award(miner_address, "ten_blocks", node.blockchain)
         storage.save_achievements(achievements)
@@ -608,6 +621,7 @@ def get_weekly_report_preview():
 
 @app.get("/treasury/balance")
 def get_treasury_balance():
+    _sync_treasury(save=True)
     return jsonify(
         {
             "success": True,
@@ -618,13 +632,25 @@ def get_treasury_balance():
     )
 
 
+@app.get("/treasury/summary")
+def get_treasury_summary():
+    _sync_treasury(save=True)
+    return jsonify({"success": True, "summary": treasury.get_treasury_summary(node.blockchain)})
+
+
 @app.get("/treasury/proposals")
 def get_treasury_proposals():
-    if treasury.expire_proposals():
-        storage.save_treasury(treasury)
+    _sync_treasury(save=True)
     try:
         limit, offset = _pagination()
-        proposals, total, has_more = _page(treasury.get_active_proposals(), limit, offset)
+        status = request.args.get("status")
+        category = request.args.get("category")
+        address = request.args.get("address")
+        if status or category or address:
+            proposal_records = treasury.get_proposals(status=status, category=category, address=address)
+        else:
+            proposal_records = treasury.get_active_proposals()
+        proposals, total, has_more = _page(proposal_records, limit, offset)
         return jsonify({"success": True, "proposals": proposals, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
@@ -632,12 +658,34 @@ def get_treasury_proposals():
 
 @app.get("/treasury/all")
 def get_all_treasury_proposals():
-    if treasury.expire_proposals():
-        storage.save_treasury(treasury)
+    _sync_treasury(save=True)
     try:
         limit, offset = _pagination()
-        proposals, total, has_more = _page(treasury.get_all_proposals(), limit, offset)
+        proposals, total, has_more = _page(treasury.get_proposals(
+            status=request.args.get("status"),
+            category=request.args.get("category"),
+            address=request.args.get("address"),
+        ), limit, offset)
         return jsonify({"success": True, "proposals": proposals, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/treasury/proposal")
+def get_treasury_proposal():
+    _sync_treasury(save=True)
+    proposal = treasury.get_proposal(request.args.get("proposal_id") or request.args.get("proposalId") or "")
+    if not proposal:
+        return jsonify({"success": False, "error": "treasury proposal does not exist"}), 404
+    return jsonify({"success": True, "proposal": proposal})
+
+
+@app.get("/treasury/my")
+def get_my_treasury():
+    _sync_treasury(save=True)
+    try:
+        address = _require_text(request.args.get("address"), "address", 160)
+        return jsonify({"success": True, **treasury.get_my_treasury(address)})
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
 
@@ -683,6 +731,32 @@ def vote_on_treasury_proposal():
     except Exception as exc:
         vorliq_logger.error("Treasury vote endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.post("/treasury/cancel")
+def cancel_treasury_proposal():
+    try:
+        data = _json_body()
+        proposal = treasury.cancel_proposal(
+            proposal_id=data.get("proposal_id") or data.get("proposalId"),
+            proposer_address=data.get("proposer_address") or data.get("proposerAddress"),
+        )
+        storage.save_treasury(treasury)
+        return jsonify({"success": True, "proposal": proposal})
+    except Exception as exc:
+        vorliq_logger.error("Treasury cancel endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/treasury/ledger")
+def get_treasury_ledger():
+    _sync_treasury(save=True)
+    try:
+        limit, offset = _pagination(default_limit=25)
+        ledger = treasury.get_treasury_ledger(node.blockchain, limit, offset)
+        return jsonify({"success": True, **ledger})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.post("/price/signal")
@@ -881,19 +955,23 @@ def receive_block():
             node.blockchain.prune_pending_transactions(drop_system_rewards=False)
             _sync_lending_pool(save=False)
             _sync_exchange(save=False)
+            _sync_treasury(save=False)
             storage.save_chain(node.blockchain)
             storage.save_pending(node.blockchain.pending_transactions)
             storage.save_lending_pool(lending_pool)
             storage.save_exchange(exchange)
+            storage.save_treasury(treasury)
             return jsonify({"success": True, "message": "Block accepted"}), 201
 
         updated = network.sync_chain(node.blockchain)
         if updated:
             _sync_lending_pool(save=False)
             _sync_exchange(save=False)
+            _sync_treasury(save=False)
             storage.save_chain(node.blockchain)
             storage.save_lending_pool(lending_pool)
             storage.save_exchange(exchange)
+            storage.save_treasury(treasury)
         return jsonify(
             {
                 "success": False,
@@ -906,9 +984,11 @@ def receive_block():
         if updated:
             _sync_lending_pool(save=False)
             _sync_exchange(save=False)
+            _sync_treasury(save=False)
             storage.save_chain(node.blockchain)
             storage.save_lending_pool(lending_pool)
             storage.save_exchange(exchange)
+            storage.save_treasury(treasury)
         vorliq_logger.error("Receive block endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc), "chain_updated": updated}), 400
 
@@ -919,9 +999,11 @@ def sync_peers():
     if updated:
         _sync_lending_pool(save=False)
         _sync_exchange(save=False)
+        _sync_treasury(save=False)
         storage.save_chain(node.blockchain)
         storage.save_lending_pool(lending_pool)
         storage.save_exchange(exchange)
+        storage.save_treasury(treasury)
     peer_statuses = network.check_peer_statuses()
     return jsonify(
         {
