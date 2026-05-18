@@ -443,6 +443,7 @@
         const checkedAt = new Date();
         let health = null;
         let diagnostics = null;
+        let registrySummary = null;
         let chain = null;
         let incidents = [];
         let backendOk = false;
@@ -471,6 +472,13 @@
           sslOk = true;
         } catch (error) {
           diagnostics = null;
+        }
+
+        try {
+          const registryResponse = await fetchJson(`${API_BASE}/registry/summary`);
+          registrySummary = registryResponse.summary || null;
+        } catch (error) {
+          registrySummary = null;
         }
 
         try {
@@ -504,6 +512,10 @@
               statCard("Total VLQ in Circulation", `${diagnostics.total_vlq_in_circulation} VLQ`),
               statCard("Current Mining Reward", `${diagnostics.current_mining_reward} VLQ`),
               statCard("Node Uptime", `${diagnostics.uptime_seconds} seconds`),
+              statCard("Active Registry Nodes", registrySummary?.active_node_count ?? diagnostics.active_registry_nodes ?? "Unavailable"),
+              statCard("Synced Registry Nodes", registrySummary?.synced_node_count ?? "Unavailable"),
+              statCard("Highest Registry Height", registrySummary?.highest_chain_height ?? "Unavailable"),
+              statCard("Average Node Reliability", registrySummary ? `${registrySummary.average_reliability_score}%` : "Unavailable"),
             ].join("")
           : '<p class="message">Diagnostics are unavailable right now.</p>';
 

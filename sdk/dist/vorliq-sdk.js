@@ -64,6 +64,15 @@ function treasuryQuery(params = {}) {
   return value ? `?${value}` : "";
 }
 
+function registryQuery(params = {}) {
+  const query = new URLSearchParams();
+  if (params.status) query.set("status", String(params.status));
+  if (params.country) query.set("country", String(params.country));
+  if (params.sync_status || params.syncStatus) query.set("sync_status", String(params.sync_status || params.syncStatus));
+  const value = query.toString();
+  return value ? `?${value}` : "";
+}
+
 class VorliqSDK {
   /**
    * Creates a Vorliq SDK client.
@@ -225,6 +234,73 @@ class VorliqSDK {
    */
   async getNetworkManifest() {
     return this.request("/api/network/manifest");
+  }
+
+  /**
+   * Gets public registry summary counts and node trust signals.
+   *
+   * @returns {Promise<object>} Registry summary fields.
+   */
+  async getRegistrySummary() {
+    const data = await this.request("/api/registry/summary");
+    return data.summary || data;
+  }
+
+  /**
+   * Gets active public nodes seen in the recent active window.
+   *
+   * @returns {Promise<object>} Active node list response.
+   */
+  async getActiveNodes() {
+    return this.request("/api/registry/nodes");
+  }
+
+  /**
+   * Gets all registered nodes, including inactive nodes.
+   *
+   * @param {object} [options] Optional status, country, and sync_status filters.
+   * @returns {Promise<object>} Node list response.
+   */
+  async getAllNodes(options = {}) {
+    return this.request(`/api/registry/all${registryQuery(options)}`);
+  }
+
+  /**
+   * Gets one registry node by URL.
+   *
+   * @param {string} nodeUrl Public node URL.
+   * @returns {Promise<object>} Public node detail.
+   */
+  async getNodeDetails(nodeUrl) {
+    const query = new URLSearchParams({ node_url: nodeUrl });
+    const data = await this.request(`/api/registry/node?${query.toString()}`);
+    return data.node || data;
+  }
+
+  /**
+   * Registers a public Vorliq node.
+   *
+   * @param {object} data Public node metadata.
+   * @returns {Promise<object>} Registration response.
+   */
+  async registerNode(data) {
+    return this.request("/api/registry/register", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Sends public heartbeat diagnostics for a node.
+   *
+   * @param {object} data Safe node heartbeat payload.
+   * @returns {Promise<object>} Heartbeat response.
+   */
+  async sendNodeHeartbeat(data) {
+    return this.request("/api/registry/heartbeat", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 
   /**

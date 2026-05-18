@@ -159,10 +159,13 @@ class Network:
         if parsed.scheme not in {"http", "https"}:
             raise ValueError("peer URL must start with http:// or https://")
 
-        if not parsed.hostname or not parsed.port:
-            raise ValueError("peer URL must include a host and port")
+        if not parsed.hostname:
+            raise ValueError("peer URL must include a host")
 
-        return f"{parsed.scheme}://{parsed.hostname}:{parsed.port}"
+        netloc = parsed.hostname
+        if parsed.port:
+            netloc = f"{netloc}:{parsed.port}"
+        return f"{parsed.scheme}://{netloc}"
 
     def _is_valid_chain(self, chain: list[Block], blockchain_rules: Blockchain) -> bool:
         if not chain:

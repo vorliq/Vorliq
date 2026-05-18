@@ -25,6 +25,7 @@ function Health() {
   const [activeIncidents, setActiveIncidents] = useState([]);
   const [weeklyReport, setWeeklyReport] = useState(null);
   const [registryNodes, setRegistryNodes] = useState([]);
+  const [registrySummary, setRegistrySummary] = useState(null);
   const [networkHealth, setNetworkHealth] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -40,6 +41,7 @@ function Health() {
         const diagnosticsStart = performance.now();
         const diagnosticsRequest = api.get("/diagnostics");
         const registryRequest = api.get("/registry/nodes");
+        const registrySummaryRequest = api.get("/registry/summary");
         const deploymentRequest = api.get("/deployment");
         const securityRequest = api.get("/security/status");
         const backupRequest = api.get("/backup/status");
@@ -48,6 +50,7 @@ function Health() {
         const [
           diagnosticsResponse,
           registryResponse,
+          registrySummaryResponse,
           deploymentResponse,
           securityResponse,
           backupResponse,
@@ -56,6 +59,7 @@ function Health() {
         ] = await Promise.all([
           diagnosticsRequest,
           registryRequest,
+          registrySummaryRequest,
           deploymentRequest,
           securityRequest,
           backupRequest,
@@ -93,6 +97,7 @@ function Health() {
           setActiveIncidents(incidentsResponse.data.incidents || []);
           setWeeklyReport(weeklyReportResponse.data);
           setRegistryNodes(nodes);
+          setRegistrySummary(registrySummaryResponse.data.summary || null);
           setNetworkHealth(nodeChecks);
         }
       } catch (error) {
@@ -176,6 +181,45 @@ function Health() {
           </div>
         ) : (
           <div className="empty-state">Diagnostics are unavailable right now.</div>
+        )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <div className="section-title">
+          <h2>Network Registry Health</h2>
+          <span className="eyebrow">Public node trust signals</span>
+        </div>
+        {loading ? (
+          <Spinner label="Loading registry summary..." />
+        ) : registrySummary ? (
+          <div className="stats-grid compact-stats">
+            <div className="stat-card">
+              <span>Active nodes</span>
+              <strong>{registrySummary.active_node_count}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Synced nodes</span>
+              <strong>{registrySummary.synced_node_count}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Behind nodes</span>
+              <strong>{registrySummary.behind_node_count}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Invalid nodes</span>
+              <strong>{registrySummary.invalid_node_count}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Average reliability</span>
+              <strong>{registrySummary.average_reliability_score}%</strong>
+            </div>
+            <div className="stat-card">
+              <span>Highest chain height</span>
+              <strong>{registrySummary.highest_chain_height}</strong>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">Registry summary is unavailable right now.</div>
         )}
       </section>
 

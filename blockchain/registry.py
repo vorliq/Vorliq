@@ -1,86 +1,397 @@
 from __future__ import annotations
 
+import re
 import time
-from typing import Any
-from urllib.parse import urlparse
+from typing import Any, Callable
+from urllib.parse import urlparse, urlunparse
 
 from logger import vorliq_logger
 
 
 class NodeRegistry:
     active_window_seconds = 30 * 60
+    history_limit = 100
+    display_name_limit = 64
+    description_limit = 300
+    location_limit = 80
 
     def __init__(self) -> None:
         self.registered_nodes: dict[str, dict[str, Any]] = {}
 
-    def register_node(self, node_url: str, display_name: str) -> dict[str, Any]:
+    def register_node(
+        self,
+        node_url: str,
+        display_name: str,
+        description: str = "",
+        region: str = "",
+        country: str = "",
+        operator_wallet_address: str = "",
+        software_version: str = "",
+        is_public: bool = True,
+    ) -> dict[str, Any]:
         normalized_url = self._normalize_node_url(node_url)
-        display_name = self._require_display_name(display_name)
         now = time.time()
+        existing = self._normalize_node(self.registered_nodes.get(normalized_url, {}), normalized_url)
 
-        existing_node = self.registered_nodes.get(normalized_url, {})
-        self.registered_nodes[normalized_url] = {
-            "node_url": normalized_url,
-            "display_name": display_name,
-            "registered_at": existing_node.get("registered_at", now),
-            "last_seen": now,
+        existing.update(
+            {
+                "node_url": normalized_url,
+                "display_name": self._require_text(display_name, "display_name", self.display_name_limit),
+                "description": self._optional_text(description, "description", self.description_limit),
+                "region": self._optional_text(region, "region", self.location_limit),
+                "country": self._optional_text(country, "country", self.location_limit),
+                "operator_wallet_address": self._optional_text(operator_wallet_address, "operator_wallet_address", 160),
+                "software_version": self._optional_text(software_version, "software_version", 80),
+                "registered_at": float(existing.get("registered_at") or now),
+                "last_seen": float(existing.get("last_seen") or now),
+                "is_public": bool(is_public),
+                "is_verified_operator": bool(existing.get("is_verified_operator", False)),
+            }
+        )
+
+        self.registered_nodes[normalized_url] = self._normalize_node(existing, normalized_url)
+        vorliq_logger.info("Registry node registered: %s as %s", normalized_url, existing["display_name"])
+        return self.get_node(normalized_url) or self.registered_nodes[normalized_url]
+
+    def heartbeat(
+        self,
+        node_url: str,
+        public_chain_height: int = 0,
+        display_name: str | None = None,
+        chain_height: int | None = None,
+        last_block_hash: str | None = None,
+        chain_valid: bool | None = None,
+        software_version: str | None = None,
+        operator_wallet_address: str | None = None,
+        response_time_ms: int | None = None,
+        region: str | None = None,
+        country: str | None = None,
+    ) -> dict[str, Any]:
+        normalized_url = self._normalize_node_url(node_url)
+        now = time.time()
+        node = self._normalize_node(self.registered_nodes.get(normalized_url, {}), normalized_url)
+
+        if display_name is not None and str(display_name).strip():
+            node["display_name"] = self._require_text(display_name, "display_name", self.display_name_limit)
+        if software_version is not None:
+            node["software_version"] = self._optional_text(software_version, "software_version", 80)
+        if operator_wallet_address is not None:
+            node["operator_wallet_address"] = self._optional_text(operator_wallet_address, "operator_wallet_address", 160)
+        if region is not None:
+            node["region"] = self._optional_text(region, "region", self.location_limit)
+        if country is not None:
+            node["country"] = self._optional_text(country, "country", self.location_limit)
+
+        node["last_seen"] = now
+        node["last_heartbeat_at"] = now
+        node["last_chain_height"] = self._optional_int(chain_height)
+        node["last_block_hash"] = self._optional_text(last_block_hash, "last_block_hash", 160)
+        node["last_diagnostics_status"] = "valid" if chain_valid is True else "invalid" if chain_valid is False else "unknown"
+        node["sync_status"] = self._sync_status(node["last_chain_height"], bool(chain_valid), public_chain_height)
+
+        history_status = "online"
+        if node["sync_status"] in {"synced", "behind", "invalid", "unknown"}:
+            history_status = node["sync_status"]
+        self._append_history(
+            node,
+            {
+                "timestamp": now,
+                "status": history_status,
+                "chain_height": node["last_chain_height"],
+                "last_block_hash": node["last_block_hash"],
+                "response_time_ms": self._optional_int(response_time_ms),
+                "message": self._history_message(node["sync_status"]),
+            },
+        )
+        self._recalculate_scores(node)
+        self.registered_nodes[normalized_url] = node
+        vorliq_logger.info("Registry heartbeat received from %s", normalized_url)
+        return self.get_node(normalized_url) or node
+
+    def get_active_nodes(self, profile_lookup: Callable[[str], dict[str, Any] | None] | None = None) -> list[dict[str, Any]]:
+        cutoff = time.time() - self.active_window_seconds
+        return [
+            self._public_node(node, profile_lookup)
+            for node in self._sorted_nodes()
+            if self._is_active(node, cutoff)
+        ]
+
+    def get_all_nodes(
+        self,
+        status: str | None = None,
+        country: str | None = None,
+        sync_status: str | None = None,
+        profile_lookup: Callable[[str], dict[str, Any] | None] | None = None,
+    ) -> list[dict[str, Any]]:
+        cutoff = time.time() - self.active_window_seconds
+        nodes = []
+        for node in self._sorted_nodes():
+            public = self._public_node(node, profile_lookup)
+            if status:
+                normalized_status = status.lower()
+                if normalized_status == "active" and not self._is_active(node, cutoff):
+                    continue
+                if normalized_status == "inactive" and self._is_active(node, cutoff):
+                    continue
+            if country and str(public.get("country", "")).lower() != country.lower():
+                continue
+            if sync_status and public.get("sync_status") != sync_status:
+                continue
+            nodes.append(public)
+        return nodes
+
+    def get_node(
+        self,
+        node_url: str,
+        profile_lookup: Callable[[str], dict[str, Any] | None] | None = None,
+    ) -> dict[str, Any] | None:
+        normalized_url = self._normalize_node_url(node_url)
+        node = self.registered_nodes.get(normalized_url)
+        if not node:
+            return None
+        return self._public_node(self._normalize_node(node, normalized_url), profile_lookup)
+
+    def get_summary(self, public_chain_height: int = 0) -> dict[str, Any]:
+        cutoff = time.time() - self.active_window_seconds
+        active = 0
+        synced = 0
+        behind = 0
+        invalid = 0
+        unknown = 0
+        highest_height = 0
+        latest_hash = ""
+        reliability_scores: list[int] = []
+
+        for node in self._sorted_nodes():
+            if self._is_active(node, cutoff):
+                active += 1
+            sync_status = self._current_sync_status(node, public_chain_height)
+            if sync_status == "synced":
+                synced += 1
+            elif sync_status == "behind":
+                behind += 1
+            elif sync_status == "invalid":
+                invalid += 1
+            else:
+                unknown += 1
+            height = int(node.get("last_chain_height") or 0)
+            if height >= highest_height:
+                highest_height = height
+                latest_hash = str(node.get("last_block_hash") or latest_hash)
+            reliability_scores.append(int(node.get("reliability_score") or 0))
+
+        average_reliability = round(sum(reliability_scores) / len(reliability_scores)) if reliability_scores else 0
+        return {
+            "active_node_count": active,
+            "total_registered_node_count": len(self.registered_nodes),
+            "synced_node_count": synced,
+            "behind_node_count": behind,
+            "invalid_node_count": invalid,
+            "unknown_node_count": unknown,
+            "average_reliability_score": average_reliability,
+            "highest_chain_height": highest_height,
+            "latest_block_hash": latest_hash,
         }
 
-        vorliq_logger.info("Registry node registered: %s as %s", normalized_url, display_name)
-        return self.registered_nodes[normalized_url]
-
-    def get_active_nodes(self) -> list[dict[str, Any]]:
-        cutoff = time.time() - self.active_window_seconds
-        return sorted(
-            [
-                node
-                for node in self.registered_nodes.values()
-                if float(node.get("last_seen", 0)) >= cutoff
-            ],
-            key=lambda node: float(node["last_seen"]),
-            reverse=True,
-        )
-
-    def heartbeat(self, node_url: str) -> dict[str, Any]:
+    def mark_offline(self, node_url: str, message: str = "Node health check failed") -> dict[str, Any] | None:
         normalized_url = self._normalize_node_url(node_url)
-        now = time.time()
-
-        if normalized_url not in self.registered_nodes:
-            self.registered_nodes[normalized_url] = {
-                "node_url": normalized_url,
-                "display_name": "Vorliq Node",
-                "registered_at": now,
-                "last_seen": now,
-            }
-        else:
-            self.registered_nodes[normalized_url]["last_seen"] = now
-
-        vorliq_logger.info("Registry heartbeat received from %s", normalized_url)
-        return self.registered_nodes[normalized_url]
-
-    def get_all_nodes(self) -> list[dict[str, Any]]:
-        return sorted(
-            self.registered_nodes.values(),
-            key=lambda node: float(node.get("last_seen", 0)),
-            reverse=True,
+        node = self.registered_nodes.get(normalized_url)
+        if not node:
+            return None
+        node = self._normalize_node(node, normalized_url)
+        self._append_history(
+            node,
+            {
+                "timestamp": time.time(),
+                "status": "offline",
+                "chain_height": node.get("last_chain_height"),
+                "last_block_hash": node.get("last_block_hash"),
+                "response_time_ms": None,
+                "message": self._optional_text(message, "message", 160),
+            },
         )
+        self._recalculate_scores(node)
+        self.registered_nodes[normalized_url] = node
+        return self._public_node(node)
+
+    def _normalize_node(self, node: dict[str, Any], node_url: str) -> dict[str, Any]:
+        now = time.time()
+        normalized = dict(node or {})
+        normalized["node_url"] = self._normalize_node_url(normalized.get("node_url") or node_url)
+        normalized["display_name"] = self._optional_text(
+            normalized.get("display_name") or "Vorliq Node",
+            "display_name",
+            self.display_name_limit,
+        ) or "Vorliq Node"
+        normalized["description"] = self._optional_text(normalized.get("description"), "description", self.description_limit)
+        normalized["region"] = self._optional_text(normalized.get("region"), "region", self.location_limit)
+        normalized["country"] = self._optional_text(normalized.get("country"), "country", self.location_limit)
+        normalized["operator_wallet_address"] = self._optional_text(
+            normalized.get("operator_wallet_address"),
+            "operator_wallet_address",
+            160,
+        )
+        normalized["software_version"] = self._optional_text(normalized.get("software_version"), "software_version", 80)
+        normalized["registered_at"] = float(normalized.get("registered_at") or now)
+        normalized["last_seen"] = float(normalized.get("last_seen") or normalized["registered_at"])
+        normalized["last_heartbeat_at"] = float(normalized.get("last_heartbeat_at") or 0)
+        normalized["last_chain_height"] = self._optional_int(normalized.get("last_chain_height"))
+        normalized["last_block_hash"] = self._optional_text(normalized.get("last_block_hash"), "last_block_hash", 160)
+        normalized["last_diagnostics_status"] = self._optional_text(
+            normalized.get("last_diagnostics_status") or "unknown",
+            "last_diagnostics_status",
+            32,
+        )
+        normalized["uptime_score"] = int(normalized.get("uptime_score") or 0)
+        normalized["reliability_score"] = int(normalized.get("reliability_score") or 0)
+        normalized["sync_status"] = self._optional_text(normalized.get("sync_status") or "unknown", "sync_status", 32)
+        normalized["is_public"] = bool(normalized.get("is_public", True))
+        normalized["is_verified_operator"] = bool(normalized.get("is_verified_operator", False))
+        history = normalized.get("status_history") if isinstance(normalized.get("status_history"), list) else []
+        normalized["status_history"] = [self._normalize_history_entry(entry) for entry in history][-self.history_limit :]
+        return normalized
+
+    def _public_node(
+        self,
+        node: dict[str, Any],
+        profile_lookup: Callable[[str], dict[str, Any] | None] | None = None,
+    ) -> dict[str, Any]:
+        normalized = self._normalize_node(node, str(node.get("node_url")))
+        public = {
+            "node_url": normalized["node_url"],
+            "display_name": normalized["display_name"],
+            "operator_wallet_address": normalized["operator_wallet_address"],
+            "operator_profile": None,
+            "description": normalized["description"],
+            "region": normalized["region"],
+            "country": normalized["country"],
+            "software_version": normalized["software_version"],
+            "registered_at": normalized["registered_at"],
+            "last_seen": normalized["last_seen"],
+            "last_heartbeat_at": normalized["last_heartbeat_at"],
+            "last_chain_height": normalized["last_chain_height"],
+            "last_block_hash": normalized["last_block_hash"],
+            "last_diagnostics_status": normalized["last_diagnostics_status"],
+            "uptime_score": normalized["uptime_score"],
+            "reliability_score": normalized["reliability_score"],
+            "sync_status": normalized["sync_status"],
+            "is_public": normalized["is_public"],
+            "is_verified_operator": normalized["is_verified_operator"],
+            "active": self._is_active(normalized),
+            "status_history": normalized["status_history"],
+        }
+        wallet = normalized.get("operator_wallet_address")
+        if wallet and profile_lookup:
+            try:
+                public["operator_profile"] = profile_lookup(wallet)
+            except Exception:
+                public["operator_profile"] = None
+        return public
+
+    def _sync_status(self, chain_height: int | None, chain_valid: bool, public_chain_height: int) -> str:
+        if chain_valid is False:
+            return "invalid"
+        if chain_height is None:
+            return "unknown"
+        if int(chain_height) >= max(0, int(public_chain_height) - 1):
+            return "synced"
+        return "behind"
+
+    def _current_sync_status(self, node: dict[str, Any], public_chain_height: int) -> str:
+        if not self._is_active(node):
+            return "unknown"
+        if node.get("last_diagnostics_status") == "invalid":
+            return "invalid"
+        return self._sync_status(self._optional_int(node.get("last_chain_height")), node.get("last_diagnostics_status") != "invalid", public_chain_height)
+
+    def _append_history(self, node: dict[str, Any], entry: dict[str, Any]) -> None:
+        history = node.get("status_history") if isinstance(node.get("status_history"), list) else []
+        history.append(self._normalize_history_entry(entry))
+        node["status_history"] = history[-self.history_limit :]
+
+    def _normalize_history_entry(self, entry: Any) -> dict[str, Any]:
+        if not isinstance(entry, dict):
+            entry = {}
+        return {
+            "timestamp": float(entry.get("timestamp") or time.time()),
+            "status": self._optional_text(entry.get("status") or "unknown", "status", 32),
+            "chain_height": self._optional_int(entry.get("chain_height")),
+            "last_block_hash": self._optional_text(entry.get("last_block_hash"), "last_block_hash", 160),
+            "response_time_ms": self._optional_int(entry.get("response_time_ms")),
+            "message": self._optional_text(entry.get("message"), "message", 160),
+        }
+
+    def _recalculate_scores(self, node: dict[str, Any]) -> None:
+        history = node.get("status_history") if isinstance(node.get("status_history"), list) else []
+        if not history:
+            node["uptime_score"] = 0
+            node["reliability_score"] = 0
+            return
+        online_count = sum(1 for entry in history if entry.get("status") in {"online", "synced", "behind", "unknown"})
+        reliable_count = sum(1 for entry in history if entry.get("status") in {"online", "synced"})
+        node["uptime_score"] = round((online_count / len(history)) * 100)
+        node["reliability_score"] = round((reliable_count / len(history)) * 100)
+
+    def _sorted_nodes(self) -> list[dict[str, Any]]:
+        normalized_nodes = []
+        for node_url, node in list(self.registered_nodes.items()):
+            normalized = self._normalize_node(node, node_url)
+            self.registered_nodes[normalized["node_url"]] = normalized
+            normalized_nodes.append(normalized)
+        return sorted(normalized_nodes, key=lambda item: float(item.get("last_seen") or 0), reverse=True)
+
+    def _is_active(self, node: dict[str, Any], cutoff: float | None = None) -> bool:
+        cutoff = cutoff if cutoff is not None else time.time() - self.active_window_seconds
+        return float(node.get("last_seen") or 0) >= cutoff
+
+    def _history_message(self, sync_status: str) -> str:
+        return {
+            "synced": "Node heartbeat is valid and close to the public chain height.",
+            "behind": "Node heartbeat is valid but behind the public chain height.",
+            "invalid": "Node reported an invalid chain.",
+            "unknown": "Node heartbeat did not include enough diagnostics.",
+        }.get(sync_status, "Node heartbeat received.")
 
     def _normalize_node_url(self, node_url: str) -> str:
         if not isinstance(node_url, str) or not node_url.strip():
             raise ValueError("node_url must be a non-empty URL string")
 
-        node_url = node_url.strip().rstrip("/")
-        parsed = urlparse(node_url)
-
+        parsed = urlparse(node_url.strip().rstrip("/"))
         if parsed.scheme not in {"http", "https"}:
             raise ValueError("node_url must start with http:// or https://")
+        if not parsed.hostname:
+            raise ValueError("node_url must include a host")
+        if parsed.username or parsed.password:
+            raise ValueError("node_url must not include credentials")
 
-        if not parsed.hostname or not parsed.port:
-            raise ValueError("node_url must include a host and port")
+        netloc = parsed.hostname.lower()
+        if parsed.port:
+            netloc = f"{netloc}:{parsed.port}"
+        return urlunparse((parsed.scheme, netloc, "", "", "", ""))
 
-        return f"{parsed.scheme}://{parsed.hostname}:{parsed.port}"
+    def _require_text(self, value: Any, field_name: str, max_length: int) -> str:
+        normalized = self._optional_text(value, field_name, max_length)
+        if not normalized:
+            raise ValueError(f"{field_name} is required")
+        return normalized
 
-    def _require_display_name(self, display_name: str) -> str:
-        if not isinstance(display_name, str) or not display_name.strip():
-            raise ValueError("display_name is required")
-        return display_name.strip()[:80]
+    def _optional_text(self, value: Any, field_name: str, max_length: int) -> str:
+        if value is None:
+            return ""
+        if not isinstance(value, str):
+            value = str(value)
+        normalized = value.replace("\x00", "").strip()
+        if re.search(r"<\s*/?\s*(script|iframe|object|embed|img|svg|html|body|style|link|meta)\b", normalized, re.I):
+            raise ValueError(f"{field_name} contains unsafe markup")
+        normalized = re.sub(r"<[^>]*>", "", normalized).strip()
+        if len(normalized) > max_length:
+            raise ValueError(f"{field_name} must be {max_length} characters or fewer")
+        return normalized
+
+    def _optional_int(self, value: Any) -> int | None:
+        if value in {None, ""}:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None

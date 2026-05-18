@@ -28,6 +28,8 @@ import Admin from "./pages/Admin";
 import TransactionDetail from "./pages/TransactionDetail";
 import BlockDetail from "./pages/BlockDetail";
 import Blockchain from "./pages/Blockchain";
+import Registry from "./pages/Registry";
+import Health from "./pages/Health";
 
 jest.mock("./helpers/api", () => ({
   get: jest.fn(),
@@ -60,6 +62,10 @@ function defaultApiGet(path) {
 
   if (path === "/incidents/active") {
     return Promise.resolve({ data: { success: true, incidents: [] } });
+  }
+
+  if (path === "/reports/weekly") {
+    return Promise.resolve({ data: { success: true, stats: { block_height: 12, generated_at: "now" } } });
   }
 
   if (path === "/chain") {
@@ -591,6 +597,116 @@ function defaultApiGet(path) {
         incidents: { active: false, active_count: 0 },
         sdk: { supported_version: "1.0.0" },
         generated_at: "2026-05-16T12:00:00.000Z",
+      },
+    });
+  }
+
+  if (path === "/registry/nodes") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        nodes: [
+          {
+            node_url: "https://node.example.org",
+            display_name: "Example Node",
+            description: "A public Vorliq node",
+            region: "Europe",
+            country: "United Kingdom",
+            operator_wallet_address: "VLQ_OPERATOR",
+            software_version: "vorliq-node",
+            last_seen: Math.floor(Date.now() / 1000),
+            last_heartbeat_at: Math.floor(Date.now() / 1000),
+            last_chain_height: 12,
+            last_block_hash: "0000nodehash",
+            last_diagnostics_status: "valid",
+            uptime_score: 100,
+            reliability_score: 98,
+            sync_status: "synced",
+            active: true,
+            status_history: [
+              {
+                timestamp: Math.floor(Date.now() / 1000),
+                status: "synced",
+                chain_height: 12,
+                last_block_hash: "0000nodehash",
+                response_time_ms: 42,
+                message: "Node heartbeat is valid and close to the public chain height.",
+              },
+            ],
+          },
+        ],
+      },
+    });
+  }
+
+  if (path === "/registry/all") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        nodes: [
+          {
+            node_url: "https://node.example.org",
+            display_name: "Example Node",
+            region: "Europe",
+            country: "United Kingdom",
+            last_chain_height: 12,
+            uptime_score: 100,
+            reliability_score: 98,
+            sync_status: "synced",
+            active: true,
+            status_history: [],
+          },
+        ],
+      },
+    });
+  }
+
+  if (path === "/registry/summary") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        summary: {
+          active_node_count: 1,
+          total_registered_node_count: 1,
+          synced_node_count: 1,
+          behind_node_count: 0,
+          invalid_node_count: 0,
+          unknown_node_count: 0,
+          average_reliability_score: 98,
+          highest_chain_height: 12,
+          latest_block_hash: "0000nodehash",
+        },
+      },
+    });
+  }
+
+  if (path === "/registry/node") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        node: {
+          node_url: "https://node.example.org",
+          display_name: "Example Node",
+          region: "Europe",
+          country: "United Kingdom",
+          operator_wallet_address: "VLQ_OPERATOR",
+          last_chain_height: 12,
+          last_block_hash: "0000nodehash",
+          last_diagnostics_status: "valid",
+          uptime_score: 100,
+          reliability_score: 98,
+          sync_status: "synced",
+          active: true,
+          status_history: [
+            {
+              timestamp: Math.floor(Date.now() / 1000),
+              status: "synced",
+              chain_height: 12,
+              response_time_ms: 42,
+              message: "Node heartbeat is valid.",
+            },
+          ],
+        },
       },
     });
   }
@@ -1416,6 +1532,48 @@ test("Blockchain explorer loads pending transactions and links to tx details", a
   expect(await screen.findByRole("heading", { name: /pending transactions/i })).toBeInTheDocument();
   expect(await screen.findByText(/pending-tx/i)).toBeInTheDocument();
   expect(screen.getByText(/pending-tx/i).closest("a")).toHaveAttribute("href", "/tx/pending-tx");
+});
+
+test("Registry tabs render active node card with sync status", async () => {
+  renderWithProviders(<Registry />, "/registry");
+
+  expect(await screen.findByRole("heading", { name: /registry/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /active nodes/i })).toBeInTheDocument();
+  expect(await screen.findByText(/example node/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/synced/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/98%/i).length).toBeGreaterThan(0);
+});
+
+test("Registry register node form validates through API errors", async () => {
+  api.post.mockRejectedValueOnce({ response: { data: { message: "display name is required." } } });
+
+  renderWithProviders(<Registry />, "/registry");
+
+  await userEvent.click(await screen.findByRole("button", { name: /register node/i }));
+  fireEvent.change(screen.getByLabelText(/display name/i), { target: { value: "" } });
+  const registerForm = screen.getByRole("heading", { name: /^register node$/i }).closest("section");
+  await userEvent.click(within(registerForm).getByRole("button", { name: /^register node$/i }));
+
+  expect(await screen.findByText(/display name is required/i)).toBeInTheDocument();
+});
+
+test("Registry node details search renders health history", async () => {
+  renderWithProviders(<Registry />, "/registry");
+
+  await userEvent.click(await screen.findByRole("button", { name: /node details/i }));
+  fireEvent.change(screen.getByLabelText(/node url/i), { target: { value: "https://node.example.org" } });
+  await userEvent.click(screen.getByRole("button", { name: /^search$/i }));
+
+  expect(await screen.findByRole("heading", { name: /health history/i })).toBeInTheDocument();
+  expect(screen.getByText(/node heartbeat is valid/i)).toBeInTheDocument();
+});
+
+test("Health page renders registry summary section", async () => {
+  renderWithProviders(<Health />, "/health");
+
+  expect(await screen.findByRole("heading", { name: /network registry health/i })).toBeInTheDocument();
+  expect(screen.getByText(/average reliability/i)).toBeInTheDocument();
+  expect(screen.getByText(/98%/i)).toBeInTheDocument();
 });
 
 test("IncidentBanner does not render when no active incidents are returned", async () => {

@@ -193,6 +193,10 @@ def _profile_dependencies() -> dict:
     }
 
 
+def _registry_profile_lookup(wallet_address: str) -> dict | None:
+    return profiles.get_public_profile(wallet_address, _profile_dependencies())
+
+
 def _sync_lending_pool(save: bool = True) -> bool:
     changed = lending_pool.sync_loan_statuses(node.blockchain)
     if changed and save:
@@ -1022,12 +1026,24 @@ def sync_peers():
 def register_public_node():
     try:
         data = _json_body()
-        node_registry.register_node(
+        registered_node = node_registry.register_node(
             node_url=_require_public_url(data.get("node_url") or data.get("nodeUrl"), "node URL"),
             display_name=_require_text(data.get("display_name") or data.get("displayName"), "display name", MAX_TEXT_LENGTHS["display_name"]),
+            description=data.get("description", ""),
+            region=data.get("region", ""),
+            country=data.get("country", ""),
+            operator_wallet_address=data.get("operator_wallet_address") or data.get("operatorWalletAddress") or "",
+            software_version=data.get("software_version") or data.get("softwareVersion") or "",
+            is_public=bool(data.get("is_public", data.get("isPublic", True))),
         )
         storage.save_registry(node_registry)
-        return jsonify({"success": True, "nodes": node_registry.get_active_nodes()}), 201
+        return jsonify(
+            {
+                "success": True,
+                "node": registered_node,
+                "nodes": node_registry.get_active_nodes(_registry_profile_lookup),
+            }
+        ), 201
     except Exception as exc:
         vorliq_logger.error("Registry register endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
@@ -1035,16 +1051,73 @@ def register_public_node():
 
 @app.get("/registry/nodes")
 def get_registry_nodes():
-    return jsonify({"success": True, "nodes": node_registry.get_active_nodes()})
+    return jsonify({"success": True, "nodes": node_registry.get_active_nodes(_registry_profile_lookup)})
+
+
+@app.get("/registry/all")
+def get_registry_all_nodes():
+    status = request.args.get("status")
+    country = request.args.get("country")
+    sync_status = request.args.get("sync_status") or request.args.get("syncStatus")
+    return jsonify(
+        {
+            "success": True,
+            "nodes": node_registry.get_all_nodes(
+                status=status,
+                country=country,
+                sync_status=sync_status,
+                profile_lookup=_registry_profile_lookup,
+            ),
+        }
+    )
+
+
+@app.get("/registry/node")
+def get_registry_node():
+    try:
+        node_url = _require_public_url(request.args.get("node_url") or request.args.get("nodeUrl"), "node URL")
+        registry_node = node_registry.get_node(node_url, _registry_profile_lookup)
+        if not registry_node:
+            return jsonify({"success": False, "message": "Node not found"}), 404
+        return jsonify({"success": True, "node": registry_node})
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/registry/summary")
+def get_registry_summary():
+    return jsonify(
+        {
+            "success": True,
+            "summary": node_registry.get_summary(node.blockchain.get_block_height()),
+        }
+    )
 
 
 @app.post("/registry/heartbeat")
 def registry_heartbeat():
     try:
         data = _json_body()
-        node = node_registry.heartbeat(_require_public_url(data.get("node_url") or data.get("nodeUrl"), "node URL"))
+        node_url = _require_public_url(data.get("node_url") or data.get("nodeUrl"), "node URL")
+        chain_height = data.get("chain_height") if data.get("chain_height") is not None else data.get("chainHeight")
+        chain_valid = data.get("chain_valid") if data.get("chain_valid") is not None else data.get("chainValid")
+        if isinstance(chain_valid, str):
+            chain_valid = chain_valid.lower() in {"true", "1", "yes", "valid"}
+        registry_node = node_registry.heartbeat(
+            node_url=node_url,
+            public_chain_height=node.blockchain.get_block_height(),
+            display_name=data.get("display_name") or data.get("displayName"),
+            chain_height=chain_height,
+            last_block_hash=data.get("last_block_hash") or data.get("lastBlockHash"),
+            chain_valid=chain_valid if isinstance(chain_valid, bool) else None,
+            software_version=data.get("software_version") or data.get("softwareVersion"),
+            operator_wallet_address=data.get("operator_wallet_address") or data.get("operatorWalletAddress"),
+            response_time_ms=data.get("response_time_ms") or data.get("responseTimeMs"),
+            region=data.get("region"),
+            country=data.get("country"),
+        )
         storage.save_registry(node_registry)
-        return jsonify({"success": True, "node": node})
+        return jsonify({"success": True, "node": registry_node})
     except Exception as exc:
         vorliq_logger.error("Registry heartbeat endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400

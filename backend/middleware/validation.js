@@ -294,7 +294,7 @@ function validateBody(req, res, next) {
   if (path === "/api/registry/register") {
     validatePublicUrl(req, res, body, ["node_url", "nodeUrl"], "node URL");
     if (res.headersSent) return;
-    requireText(req, res, body, ["display_name", "displayName"], "display name", 80);
+    requireText(req, res, body, ["display_name", "displayName"], "display name", 64);
   }
 
   if (path === "/api/registry/heartbeat" || path === "/api/peers/announce") {

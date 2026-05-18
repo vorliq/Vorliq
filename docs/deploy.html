@@ -105,6 +105,12 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target</pre>
+        <p>Public node operators can add optional registry identity environment variables to the backend service. These values are public metadata used by the heartbeat script and should not contain secrets.</p>
+        <pre>Environment=VORLIQ_NODE_URL=https://node.example.org
+Environment=VORLIQ_NODE_NAME=Example Vorliq Node
+Environment=VORLIQ_NODE_REGION=Europe
+Environment=VORLIQ_NODE_COUNTRY=United Kingdom
+Environment=VORLIQ_OPERATOR_WALLET=VLQ_PUBLIC_OPERATOR_ADDRESS</pre>
       </section>
 
       <section>

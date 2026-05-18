@@ -13,12 +13,17 @@ function Network() {
   const [adding, setAdding] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [peerStatuses, setPeerStatuses] = useState({});
+  const [recommendedNodes, setRecommendedNodes] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
 
   async function loadPeers({ quiet = false } = {}) {
     try {
-      const response = await api.get("/peers");
-      setPeers(response.data.peers || []);
+      const [peersResponse, registryResponse] = await Promise.all([
+        api.get("/peers"),
+        api.get("/registry/nodes"),
+      ]);
+      setPeers(peersResponse.data.peers || []);
+      setRecommendedNodes(registryResponse.data.nodes || []);
       setErrorMessage("");
     } catch (error) {
       if (!quiet) {
@@ -63,6 +68,19 @@ function Network() {
       toast.error(message);
     } finally {
       setAdding(false);
+    }
+  }
+
+  async function addPeerUrl(url) {
+    try {
+      const response = await api.post("/peers/add", { peer: url });
+      setPeers(response.data.peers || []);
+      setErrorMessage("");
+      toast.success("Node added to your Vorliq node.");
+    } catch (error) {
+      const message = apiErrorMessage(error, "Unable to add peer.");
+      setErrorMessage(message);
+      toast.error(message);
     }
   }
 
@@ -157,6 +175,42 @@ function Network() {
                 onClick={() => toast.info("Peer removal coming in the next version.")}
               >
                 Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="card card-pad peer-section">
+        <div className="section-title">
+          <h2>Recommended Active Nodes</h2>
+          <span className="eyebrow">{recommendedNodes.length} from registry</span>
+        </div>
+        {!loading && recommendedNodes.length === 0 && (
+          <div className="empty-state">No active registry nodes are available right now.</div>
+        )}
+        <div className="peer-list">
+          {recommendedNodes.map((node) => (
+            <div className="peer-item" key={node.node_url}>
+              <span className="peer-url">
+                <span
+                  className={`status-dot ${node.sync_status === "synced" ? "online" : "unknown"}`}
+                  aria-label={`${node.sync_status || "unknown"} node`}
+                />
+                <span>
+                  <strong>{node.display_name}</strong>
+                  <span className="meta-value">{node.node_url}</span>
+                </span>
+              </span>
+              <span className="meta-label">
+                Height {node.last_chain_height ?? "unknown"} · Reliability {node.reliability_score ?? 0}%
+              </span>
+              <button
+                className="button secondary small-button"
+                type="button"
+                onClick={() => addPeerUrl(node.node_url)}
+              >
+                Add Node
               </button>
             </div>
           ))}

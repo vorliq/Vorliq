@@ -81,6 +81,46 @@ async function main() {
 main().catch(console.error);
 ```
 
+## Node Registry
+
+The public node registry lets applications show active nodes, sync status, reliability, uptime, and safe operator metadata. Registry trust signals are operational signals only; a verified operator flag is not identity verification.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const summary = await vorliq.getRegistrySummary();
+  const active = await vorliq.getActiveNodes();
+  const allSynced = await vorliq.getAllNodes({ sync_status: "synced" });
+
+  console.log("Active nodes:", summary.active_node_count);
+  console.log("Known synced nodes:", allSynced.nodes.length);
+
+  if (active.nodes[0]) {
+    const node = await vorliq.getNodeDetails(active.nodes[0].node_url);
+    console.log("Node reliability:", node.reliability_score);
+  }
+
+  await vorliq.registerNode({
+    node_url: "https://node.example.org",
+    display_name: "Example Vorliq Node",
+    region: "Europe",
+    country: "United Kingdom",
+  });
+
+  await vorliq.sendNodeHeartbeat({
+    node_url: "https://node.example.org",
+    display_name: "Example Vorliq Node",
+    chain_height: 12,
+    last_block_hash: "0000...",
+    chain_valid: true,
+  });
+}
+
+main().catch(console.error);
+```
+
 Public member profiles are linked to wallet addresses. They are not verified legal identities, and applications should treat every profile field as public community content. Do not store private keys, wallet passwords, recovery phrases, or secrets in profile fields.
 
 ```js
