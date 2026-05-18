@@ -15,6 +15,7 @@ const exchangeRoutes = require("./routes/exchange");
 const forumRoutes = require("./routes/forum");
 const governanceRoutes = require("./routes/governance");
 const treasuryRoutes = require("./routes/treasury");
+const { router: faucetRoutes } = require("./routes/faucet");
 const priceRoutes = require("./routes/price");
 const profilesRoutes = require("./routes/profiles");
 const achievementsRoutes = require("./routes/achievements");
@@ -31,6 +32,7 @@ const { validateBody } = require("./middleware/validation");
 const {
   apiSlowDown,
   chatLimiter,
+  faucetLimiter,
   generalLimiter,
   miningLimiter,
   proposalLimiter,
@@ -163,6 +165,7 @@ app.use(
   writeLimiter
 );
 app.use(["/api/governance/propose", "/api/treasury/propose"], proposalLimiter);
+app.use("/api/faucet/claim", faucetLimiter);
 app.use(["/api/registry/register", "/api/registry/heartbeat", "/api/peers/add", "/api/peers/announce"], registryLimiter);
 app.use("/api/reports/weekly", reportLimiter);
 app.use(validateBody);
@@ -189,6 +192,7 @@ app.use(exchangeRoutes);
 app.use(forumRoutes);
 app.use(governanceRoutes);
 app.use(treasuryRoutes);
+app.use(faucetRoutes);
 app.use(priceRoutes);
 app.use(profilesRoutes);
 app.use(achievementsRoutes);

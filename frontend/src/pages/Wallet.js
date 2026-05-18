@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
@@ -108,6 +109,10 @@ function Wallet() {
               <div className="field">
                 <label>Wallet Address</label>
                 <div className="value-box">{wallet.address}</div>
+              </div>
+              <div className="empty-state">
+                Need starter VLQ? The faucet can send a small treasury-funded transaction when funds are available.{" "}
+                <Link to={`/faucet?address=${wallet.address}`}>Open Faucet</Link>
               </div>
               <section className="receive-panel">
                 <h2>Receive VLQ</h2>

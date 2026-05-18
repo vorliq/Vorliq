@@ -8,6 +8,7 @@ from achievements import Achievements
 from block import Block
 from blockchain import Blockchain
 from exchange import Exchange
+from faucet import Faucet
 from forum import Forum
 from governance import Governance
 from lending import LendingPool
@@ -30,6 +31,7 @@ class Storage:
         self.forum_file = self.data_dir / "forum.json"
         self.governance_file = self.data_dir / "governance.json"
         self.treasury_file = self.data_dir / "treasury.json"
+        self.faucet_file = self.data_dir / "faucet.json"
         self.price_file = self.data_dir / "price.json"
         self.profiles_file = self.data_dir / "profiles.json"
         self.achievements_file = self.data_dir / "achievements.json"
@@ -213,6 +215,24 @@ class Storage:
         treasury.proposals = proposals
         vorliq_logger.info("Loaded treasury with %s proposal records", len(proposals))
         return treasury
+
+    def save_faucet(self, faucet: Faucet) -> None:
+        self._write_json(self.faucet_file, {"claims": faucet.claims})
+        vorliq_logger.info("Saved faucet with %s claim records", len(faucet.claims))
+
+    def load_faucet(self) -> Faucet:
+        faucet = Faucet()
+        if not self.faucet_file.exists():
+            vorliq_logger.info("No saved faucet found on disk")
+            return faucet
+
+        data = self._read_json(self.faucet_file)
+        claims = data.get("claims", {})
+        if not isinstance(claims, dict):
+            raise ValueError("faucet data must contain a claims object")
+        faucet.claims = claims
+        vorliq_logger.info("Loaded faucet with %s claim records", len(claims))
+        return faucet
 
     def save_price_discovery(self, price_discovery: PriceDiscovery) -> None:
         self._write_json(self.price_file, {"signals": price_discovery.signals})

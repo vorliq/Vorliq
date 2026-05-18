@@ -24,6 +24,7 @@ function Account() {
   const [exchangeTrades, setExchangeTrades] = useState([]);
   const [governanceActivity, setGovernanceActivity] = useState({ created: [], voted: [], proposals: [] });
   const [treasuryActivity, setTreasuryActivity] = useState({ created: [], voted: [], received: [], proposals: [] });
+  const [faucetClaims, setFaucetClaims] = useState([]);
   const [earnedAchievements, setEarnedAchievements] = useState([]);
   const [allAchievements, setAllAchievements] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -48,13 +49,14 @@ function Account() {
             if (error.response?.status === 404) return { data: { profile: null } };
             throw error;
           });
-        const [balanceResponse, transactionResponse, loansResponse, exchangeResponse, governanceResponse, treasuryResponse, earnedResponse, allAchievementsResponse, profileResponse] = await Promise.all([
+        const [balanceResponse, transactionResponse, loansResponse, exchangeResponse, governanceResponse, treasuryResponse, faucetResponse, earnedResponse, allAchievementsResponse, profileResponse] = await Promise.all([
           api.get("/wallet/balance", { params: { address: wallet.address } }),
           api.get("/chain/address", { params: { address: wallet.address, limit: 100 } }),
           api.get("/lending/my", { params: { address: wallet.address } }),
           api.get("/exchange/my", { params: { address: wallet.address } }),
           api.get("/governance/my", { params: { address: wallet.address } }),
           api.get("/treasury/my", { params: { address: wallet.address } }),
+          api.get("/faucet/claims", { params: { address: wallet.address } }),
           api.get("/achievements", { params: { address: wallet.address } }),
           api.get("/achievements/all"),
           profileRequest,
@@ -77,6 +79,7 @@ function Account() {
             received: treasuryResponse.data.received || [],
             proposals: treasuryResponse.data.proposals || [],
           });
+          setFaucetClaims(faucetResponse.data.claims || []);
           setEarnedAchievements(earnedResponse.data.achievements || []);
           setAllAchievements(allAchievementsResponse.data.achievements || []);
           setProfile(profileResponse.data.profile || null);
@@ -458,6 +461,32 @@ function Account() {
             </div>
           </div>
         )}
+      </section>
+
+      <section className="card card-pad account-section">
+        <div className="section-title">
+          <h2>Faucet Claims</h2>
+          <Link className="button secondary small-button" to={`/faucet?address=${wallet.address}`}>
+            Open Faucet
+          </Link>
+        </div>
+        {loading && <Spinner label="Loading faucet claims..." />}
+        {!loading && faucetClaims.length === 0 && (
+          <div className="empty-state">No starter VLQ faucet claims for this wallet yet.</div>
+        )}
+        <div className="history-list">
+          {faucetClaims.slice(0, 5).map((claim) => (
+            <div className="history-row" key={claim.claim_id}>
+              <span className={`status-badge ${claim.status}`}>{claim.status}</span>
+              <span>{claim.amount} VLQ</span>
+              {claim.tx_id ? (
+                <Link to={`/tx/${claim.tx_id}`}>View Tx</Link>
+              ) : (
+                <span>{claim.reason || "No transaction"}</span>
+              )}
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="card card-pad account-section">

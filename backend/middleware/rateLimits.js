@@ -1,5 +1,6 @@
 const rateLimit = require("express-rate-limit");
 const slowDown = require("express-slow-down");
+const crypto = require("crypto");
 const { logError } = require("../logger");
 
 function rateLimitHandler(req, res, _next, options) {
@@ -76,6 +77,25 @@ const registryLimiter = createLimiter({
   message: "Too many registry requests. Please try again later.",
 });
 
+const faucetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: "Too many faucet claims. Please try again later.",
+  handler(req, res, _next, options) {
+    const fingerprint = crypto
+      .createHash("sha256")
+      .update(`${req.ip || ""}:${req.get("user-agent") || ""}`)
+      .digest("hex");
+    logError(`Faucet rate limit rejected ${req.method} ${req.originalUrl} fingerprint=${fingerprint}`);
+    return res.status(options.statusCode).json({
+      success: false,
+      message: options.message,
+    });
+  },
+});
+
 const chatLimiter = createLimiter({
   windowMs: 60 * 1000,
   max: 40,
@@ -85,6 +105,7 @@ const chatLimiter = createLimiter({
 module.exports = {
   apiSlowDown,
   chatLimiter,
+  faucetLimiter,
   generalLimiter,
   miningLimiter,
   proposalLimiter,

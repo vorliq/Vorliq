@@ -29,6 +29,7 @@ import Governance from "./pages/Governance";
 import Forum from "./pages/Forum";
 import Leaderboard from "./pages/Leaderboard";
 import Treasury from "./pages/Treasury";
+import Faucet from "./pages/Faucet";
 import Price from "./pages/Price";
 import Ambassador from "./pages/Ambassador";
 import Chat from "./pages/Chat";
@@ -58,6 +59,7 @@ const moreLinks = [
   { to: "/exchange", label: "Exchange" },
   { to: "/governance", label: "Governance" },
   { to: "/treasury", label: "Treasury" },
+  { to: "/faucet", label: "Faucet" },
   { to: "/price", label: "Price" },
   { to: "/leaderboard", label: "Leaderboard" },
   { to: "/registry", label: "Registry" },
@@ -89,6 +91,7 @@ const mobileNavSections = [
       { to: "/exchange", label: "Exchange" },
       { to: "/governance", label: "Governance" },
       { to: "/treasury", label: "Treasury" },
+      { to: "/faucet", label: "Faucet" },
     ],
   },
   {
@@ -472,6 +475,7 @@ function AppShell() {
           <Route path="/exchange" element={<Exchange />} />
           <Route path="/governance" element={<Governance />} />
           <Route path="/treasury" element={<Treasury />} />
+          <Route path="/faucet" element={<Faucet />} />
           <Route path="/price" element={<Price />} />
           <Route path="/forum" element={<Forum />} />
           <Route path="/chat" element={<Chat />} />

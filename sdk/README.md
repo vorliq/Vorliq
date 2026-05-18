@@ -246,6 +246,30 @@ async function main() {
 main().catch(console.error);
 ```
 
+The starter faucet is treasury-backed. It does not mint VLQ and it does not need a user private key. If the public treasury has enough confirmed balance, `claimFaucet` queues a real transaction from `VORLIQ_TREASURY` to the wallet. Treat the claim as pending until it is mined.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const summary = await vorliq.getFaucetSummary();
+  console.log("Starter amount:", summary.starter_amount);
+  console.log("Treasury balance:", summary.treasury_balance);
+
+  const claim = await vorliq.claimFaucet("VLQ_ADDRESS_HERE");
+  console.log("Claim status:", claim.claim.status);
+  console.log("Pending tx:", claim.claim.tx_id);
+
+  const myClaims = await vorliq.getFaucetClaims("VLQ_ADDRESS_HERE");
+  const recent = await vorliq.getRecentFaucetClaims({ limit: 5 });
+  console.log("My claims:", myClaims.length);
+  console.log("Recent claims:", recent.claims.length);
+}
+
+main().catch(console.error);
+```
+
 To get a wallet balance, create a client and pass the wallet address to `getBalance`. This complete example prints the balance as a number.
 
 ```js

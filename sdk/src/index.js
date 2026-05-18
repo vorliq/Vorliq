@@ -652,6 +652,51 @@ class VorliqSDK {
   }
 
   /**
+   * Gets starter faucet availability and public claim totals.
+   *
+   * @returns {Promise<object>} Faucet summary fields.
+   */
+  async getFaucetSummary() {
+    const data = await this.request("/api/faucet/summary");
+    return data.summary || data;
+  }
+
+  /**
+   * Requests a treasury-backed starter VLQ claim for a wallet address.
+   *
+   * @param {string} walletAddress - Recipient wallet address.
+   * @returns {Promise<object>} Claim response with pending transaction details when funded.
+   */
+  async claimFaucet(walletAddress) {
+    return this.request("/api/faucet/claim", {
+      method: "POST",
+      body: JSON.stringify({ wallet_address: walletAddress }),
+    });
+  }
+
+  /**
+   * Gets faucet claims for a wallet address.
+   *
+   * @param {string} address - Wallet address to inspect.
+   * @returns {Promise<Array<object>>} Claim records for the address.
+   */
+  async getFaucetClaims(address) {
+    const query = new URLSearchParams({ address });
+    const data = await this.request(`/api/faucet/claims?${query.toString()}`);
+    return data.claims || [];
+  }
+
+  /**
+   * Gets recent public faucet claims.
+   *
+   * @param {object} [options] - Pagination options.
+   * @returns {Promise<object>} Recent claims response.
+   */
+  async getRecentFaucetClaims(options = {}) {
+    return this.request(`/api/faucet/recent${paginationQuery(options.limit, options.offset)}`);
+  }
+
+  /**
    * Gets node diagnostic information.
    *
    * @returns {Promise<object>} Full diagnostics object returned by GET /api/diagnostics.

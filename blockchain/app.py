@@ -9,6 +9,7 @@ from achievements import Achievements
 from block import Block
 from blockchain import Blockchain, MiningCooldownError
 from exchange import Exchange
+from faucet import Faucet
 from forum import Forum
 from governance import Governance
 from lending import LendingPool
@@ -94,6 +95,8 @@ vorliq_logger.info("Flask startup restored %s registry records", len(node_regist
 treasury = storage.load_treasury()
 treasury.blockchain = node.blockchain
 vorliq_logger.info("Flask startup restored %s treasury proposals", len(treasury.proposals))
+faucet = storage.load_faucet()
+vorliq_logger.info("Flask startup restored %s faucet claims", len(faucet.claims))
 price_discovery = storage.load_price_discovery()
 vorliq_logger.info("Flask startup restored %s price signals", len(price_discovery.signals))
 profiles = storage.load_profiles()
@@ -110,6 +113,7 @@ _imports_ready = (
     Forum,
     Governance,
     Treasury,
+    Faucet,
     PriceDiscovery,
     Profiles,
 )
@@ -226,6 +230,16 @@ def _sync_treasury(save: bool = True) -> bool:
 
 
 _sync_treasury(save=True)
+
+
+def _sync_faucet(save: bool = True) -> bool:
+    changed = faucet.sync_claim_statuses(node.blockchain)
+    if changed and save:
+        storage.save_faucet(faucet)
+    return changed
+
+
+_sync_faucet(save=True)
 
 
 def _is_private_hostname(hostname: str) -> bool:
@@ -450,11 +464,13 @@ def mine_block():
         _sync_lending_pool(save=False)
         _sync_exchange(save=False)
         _sync_treasury(save=False)
+        _sync_faucet(save=False)
         storage.save_chain(node.blockchain)
         storage.save_pending(node.blockchain.pending_transactions)
         storage.save_lending_pool(lending_pool)
         storage.save_exchange(exchange)
         storage.save_treasury(treasury)
+        storage.save_faucet(faucet)
         achievements.check_and_award(miner_address, "first_mine", node.blockchain)
         achievements.check_and_award(miner_address, "ten_blocks", node.blockchain)
         storage.save_achievements(achievements)
@@ -763,6 +779,66 @@ def get_treasury_ledger():
         return jsonify({"success": False, "message": str(exc)}), 400
 
 
+@app.get("/faucet/summary")
+def get_faucet_summary():
+    try:
+        _sync_faucet(save=True)
+        return jsonify({"success": True, "summary": faucet.get_faucet_summary(node.blockchain)})
+    except Exception as exc:
+        vorliq_logger.error("Faucet summary endpoint failed: %s", exc)
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.post("/faucet/claim")
+def claim_faucet():
+    try:
+        data = _json_body()
+        wallet_address = _require_text(data.get("wallet_address") or data.get("walletAddress"), "wallet address", 160)
+        fingerprint_hash = data.get("fingerprint_hash") or data.get("fingerprintHash")
+        claim = faucet.request_claim(
+            wallet_address=wallet_address,
+            treasury_balance=treasury.get_treasury_balance(node.blockchain),
+            blockchain=node.blockchain,
+            fingerprint_hash=fingerprint_hash,
+        )
+        storage.save_faucet(faucet)
+        storage.save_pending(node.blockchain.pending_transactions)
+        status = claim.get("status")
+        if status == "rate_limited":
+            return jsonify({"success": False, "claim": claim, "message": claim.get("reason")}), 429
+        if status in {"rejected", "treasury_empty"}:
+            return jsonify({"success": False, "claim": claim, "message": claim.get("reason")}), 400
+        return jsonify({"success": True, "claim": claim, "message": "Starter VLQ claim submitted as a pending treasury transaction."}), 201
+    except ValueError as exc:
+        vorliq_logger.warning("Faucet claim rejected: %s", exc)
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:
+        vorliq_logger.error("Faucet claim endpoint failed: %s", exc)
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/faucet/claims")
+def get_faucet_claims():
+    try:
+        _sync_faucet(save=True)
+        address = _require_text(request.args.get("address"), "wallet address", 160)
+        return jsonify({"success": True, "claims": faucet.get_claims_for_address(address)})
+    except Exception as exc:
+        vorliq_logger.error("Faucet claims endpoint failed: %s", exc)
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/faucet/recent")
+def get_recent_faucet_claims():
+    try:
+        _sync_faucet(save=True)
+        limit, offset = _pagination(default_limit=25)
+        return jsonify({"success": True, **faucet.get_recent_claims(limit, offset)})
+    except Exception as exc:
+        vorliq_logger.error("Faucet recent endpoint failed: %s", exc)
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
 @app.post("/price/signal")
 def submit_price_signal():
     try:
@@ -960,11 +1036,13 @@ def receive_block():
             _sync_lending_pool(save=False)
             _sync_exchange(save=False)
             _sync_treasury(save=False)
+            _sync_faucet(save=False)
             storage.save_chain(node.blockchain)
             storage.save_pending(node.blockchain.pending_transactions)
             storage.save_lending_pool(lending_pool)
             storage.save_exchange(exchange)
             storage.save_treasury(treasury)
+            storage.save_faucet(faucet)
             return jsonify({"success": True, "message": "Block accepted"}), 201
 
         updated = network.sync_chain(node.blockchain)
@@ -972,10 +1050,12 @@ def receive_block():
             _sync_lending_pool(save=False)
             _sync_exchange(save=False)
             _sync_treasury(save=False)
+            _sync_faucet(save=False)
             storage.save_chain(node.blockchain)
             storage.save_lending_pool(lending_pool)
             storage.save_exchange(exchange)
             storage.save_treasury(treasury)
+            storage.save_faucet(faucet)
         return jsonify(
             {
                 "success": False,
@@ -989,10 +1069,12 @@ def receive_block():
             _sync_lending_pool(save=False)
             _sync_exchange(save=False)
             _sync_treasury(save=False)
+            _sync_faucet(save=False)
             storage.save_chain(node.blockchain)
             storage.save_lending_pool(lending_pool)
             storage.save_exchange(exchange)
             storage.save_treasury(treasury)
+            storage.save_faucet(faucet)
         vorliq_logger.error("Receive block endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc), "chain_updated": updated}), 400
 
@@ -1004,10 +1086,12 @@ def sync_peers():
         _sync_lending_pool(save=False)
         _sync_exchange(save=False)
         _sync_treasury(save=False)
+        _sync_faucet(save=False)
         storage.save_chain(node.blockchain)
         storage.save_lending_pool(lending_pool)
         storage.save_exchange(exchange)
         storage.save_treasury(treasury)
+        storage.save_faucet(faucet)
     peer_statuses = network.check_peer_statuses()
     return jsonify(
         {

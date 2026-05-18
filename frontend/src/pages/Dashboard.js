@@ -10,6 +10,7 @@ import { apiErrorMessage } from "../helpers/errors";
 
 const quickLinks = [
   { to: "/wallet", label: "Wallet", detail: "Create and check your VLQ wallet" },
+  { to: "/faucet", label: "Faucet", detail: "Request starter VLQ from the treasury" },
   { to: "/send", label: "Send", detail: "Move VLQ to another member" },
   { to: "/mine", label: "Mine", detail: "Mine blocks and support the chain" },
   { to: "/lending", label: "Lending", detail: "Request or vote on community loans" },
@@ -45,8 +46,11 @@ const getStartedSteps = [
     step: "Step 3",
     title: "Get your first VLQ",
     body:
-      "Mine a block to support the chain and earn VLQ. Vorliq has a cooldown, so you may need to wait before mining again.",
-    links: [{ to: "/mine", label: "Mine VLQ" }],
+      "Use the starter faucet if the community treasury is funded, or mine a block to support the chain and earn VLQ. Faucet payouts are real pending treasury transactions.",
+    links: [
+      { to: "/faucet", label: "Get Starter VLQ" },
+      { to: "/mine", label: "Mine VLQ" },
+    ],
   },
   {
     step: "Step 4",
@@ -146,6 +150,7 @@ function Dashboard() {
         </p>
         <div className="hero-actions">
           <Link className="button brand-button" to="/login">Create Wallet</Link>
+          <Link className="button secondary brand-button-secondary" to="/faucet">Get Starter VLQ</Link>
           <Link className="button secondary brand-button-secondary" to="/mine">Mine VLQ</Link>
           <Link className="button secondary brand-button-secondary" to="/forum">Explore Forum</Link>
           <Link className="button secondary brand-button-secondary" to="/transparency">View Transparency</Link>

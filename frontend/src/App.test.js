@@ -16,6 +16,7 @@ import Lending from "./pages/Lending";
 import Exchange from "./pages/Exchange";
 import Governance from "./pages/Governance";
 import Treasury from "./pages/Treasury";
+import Faucet from "./pages/Faucet";
 import Mine from "./pages/Mine";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
@@ -549,6 +550,58 @@ function defaultApiGet(path) {
     });
   }
 
+  if (path === "/faucet/summary") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        summary: {
+          enabled: true,
+          starter_amount: 1,
+          treasury_balance: 250,
+          claims_24h: 1,
+          pending_claims: 1,
+          confirmed_claims: 2,
+        },
+      },
+    });
+  }
+
+  if (path === "/faucet/claims") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        claims: [
+          {
+            claim_id: "claim-1",
+            wallet_address: "VLQ_TEST_ADDRESS_123456",
+            amount: 1,
+            status: "pending",
+            tx_id: "faucet-tx-1",
+            requested_at: 1715791000,
+          },
+        ],
+      },
+    });
+  }
+
+  if (path === "/faucet/recent") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        claims: [
+          {
+            claim_id: "claim-1",
+            wallet_address: "VLQ_TEST_ADDRESS_123456",
+            amount: 1,
+            status: "pending",
+            tx_id: "faucet-tx-1",
+            requested_at: 1715791000,
+          },
+        ],
+      },
+    });
+  }
+
   if (path === "/economics") {
     return Promise.resolve({
       data: {
@@ -834,6 +887,7 @@ test("Dashboard shows a first-user Get Started section with core actions", async
 
   expect(within(getStarted).getByText(/read the safety notice/i)).toBeInTheDocument();
   expect(within(getStarted).getByRole("link", { name: /read transparency/i })).toHaveAttribute("href", "/transparency");
+  expect(within(getStarted).getByRole("link", { name: /get starter vlq/i })).toHaveAttribute("href", "/faucet");
   expect(within(getStarted).getByRole("link", { name: /mine vlq/i })).toHaveAttribute("href", "/mine");
   expect(within(getStarted).getByRole("link", { name: /governance/i })).toHaveAttribute("href", "/governance");
 });
@@ -1162,6 +1216,8 @@ test("Account loan section handles active lifecycle statuses", async () => {
   expect(await screen.findByText(/loan-active-/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /issuance tx/i })).toHaveAttribute("href", "/tx/issue-tx");
   expect(screen.getByRole("button", { name: /^repay$/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /faucet claims/i })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /open faucet/i })).toHaveAttribute("href", "/faucet?address=VLQ_ME");
 });
 
 test("Exchange lifecycle tabs render open offer cards and risk notice", async () => {
@@ -1377,6 +1433,57 @@ test("Treasury proposal form shows treasury balance max and risk notice", async 
 
   expect(await screen.findByText(/maximum request right now/i)).toBeInTheDocument();
   expect(screen.getByPlaceholderText(/maximum 250 vlq/i)).toBeInTheDocument();
+});
+
+test("Faucet page renders and success state shows tx link", async () => {
+  api.post.mockResolvedValueOnce({
+    data: {
+      success: true,
+      claim: {
+        claim_id: "claim-success",
+        wallet_address: "VLQ_TEST_ADDRESS_123456",
+        amount: 1,
+        status: "pending",
+        tx_id: "faucet-tx-success",
+        reason: "Starter VLQ transaction submitted from the community treasury.",
+      },
+    },
+  });
+
+  renderWithProviders(<Faucet />, "/faucet");
+
+  expect(await screen.findByRole("heading", { name: /starter vlq faucet/i })).toBeInTheDocument();
+  expect(await screen.findByText(/250 VLQ/i)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText(/wallet address/i), { target: { value: "VLQ_TEST_ADDRESS_123456" } });
+  await userEvent.click(screen.getByRole("button", { name: /claim starter vlq/i }));
+
+  expect(await screen.findByText(/faucet-tx-success/i)).toBeInTheDocument();
+  expect(screen.getByText(/faucet-tx-success/i).closest("a")).toHaveAttribute("href", "/tx/faucet-tx-success");
+});
+
+test("Faucet claim form validates wallet address", async () => {
+  renderWithProviders(<Faucet />, "/faucet");
+
+  await screen.findByRole("heading", { name: /starter vlq faucet/i });
+  fireEvent.change(screen.getByLabelText(/wallet address/i), { target: { value: "" } });
+  await userEvent.click(screen.getByRole("button", { name: /claim starter vlq/i }));
+
+  expect(api.post).not.toHaveBeenCalledWith("/faucet/claim", expect.anything());
+});
+
+test("Wallet page contains faucet callout after wallet creation", async () => {
+  api.post.mockResolvedValueOnce({ data: walletResponse });
+
+  renderWithProviders(<Wallet />, "/wallet");
+
+  await userEvent.click(screen.getByLabelText(/private key cannot be recovered/i));
+  await userEvent.click(screen.getByRole("button", { name: /create new wallet/i }));
+
+  expect(await screen.findByText(/need starter vlq/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /open faucet/i })).toHaveAttribute(
+    "href",
+    `/faucet?address=${walletResponse.address}`
+  );
 });
 
 test("wallet backup import rejects invalid JSON", async () => {
