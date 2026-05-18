@@ -27,6 +27,7 @@ function Health() {
   const [registryNodes, setRegistryNodes] = useState([]);
   const [registrySummary, setRegistrySummary] = useState(null);
   const [networkHealth, setNetworkHealth] = useState([]);
+  const [miningStatus, setMiningStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -47,6 +48,7 @@ function Health() {
         const backupRequest = api.get("/backup/status");
         const incidentsRequest = api.get("/incidents/active");
         const weeklyReportRequest = api.get("/reports/weekly");
+        const miningRequest = api.get("/mining/status");
         const [
           diagnosticsResponse,
           registryResponse,
@@ -56,6 +58,7 @@ function Health() {
           backupResponse,
           incidentsResponse,
           weeklyReportResponse,
+          miningResponse,
         ] = await Promise.all([
           diagnosticsRequest,
           registryRequest,
@@ -65,6 +68,7 @@ function Health() {
           backupRequest,
           incidentsRequest,
           weeklyReportRequest,
+          miningRequest,
         ]);
         const diagnosticsResponseTime = Math.round(performance.now() - diagnosticsStart);
         const registeredNodes = registryResponse.data.nodes || [];
@@ -99,6 +103,7 @@ function Health() {
           setRegistryNodes(nodes);
           setRegistrySummary(registrySummaryResponse.data.summary || null);
           setNetworkHealth(nodeChecks);
+          setMiningStatus(miningResponse.data.status || null);
         }
       } catch (error) {
         if (mounted) {
@@ -181,6 +186,45 @@ function Health() {
           </div>
         ) : (
           <div className="empty-state">Diagnostics are unavailable right now.</div>
+        )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <div className="section-title">
+          <h2>Mining Operations</h2>
+          <span className="eyebrow">Block production status</span>
+        </div>
+        {loading ? (
+          <Spinner label="Loading mining operations..." />
+        ) : miningStatus ? (
+          <div className="stats-grid compact-stats">
+            <div className="stat-card">
+              <span>Current height</span>
+              <strong>{miningStatus.current_block_height}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Can mine now</span>
+              <strong>{miningStatus.can_mine_now ? "Yes" : "No"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Next block in</span>
+              <strong>{miningStatus.seconds_until_next_allowed_block}s</strong>
+            </div>
+            <div className="stat-card">
+              <span>Difficulty</span>
+              <strong>{miningStatus.current_difficulty}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Miner reward</span>
+              <strong>{miningStatus.miner_reward_after_treasury} VLQ</strong>
+            </div>
+            <div className="stat-card">
+              <span>Treasury reward</span>
+              <strong>{miningStatus.treasury_reward_per_block} VLQ</strong>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">Mining operations status is unavailable right now.</div>
         )}
       </section>
 

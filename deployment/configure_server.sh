@@ -97,8 +97,37 @@ RestartSec=5
 WantedBy=multi-user.target
 SERVICE
 
+cat >/etc/systemd/system/vorliq-miner.service <<SERVICE
+[Unit]
+Description=Vorliq Controlled Public Node Miner
+After=network-online.target vorliq-blockchain.service vorliq-backend.service
+Wants=network-online.target
+Requires=vorliq-blockchain.service vorliq-backend.service
+
+[Service]
+Type=simple
+User=vorliq
+Group=vorliq
+WorkingDirectory=/home/vorliq/app/backend
+Environment=NODE_ENV=production
+Environment=PUBLIC_MINER_API_URL=http://127.0.0.1:5000
+Environment=VORLIQ_PUBLIC_MINER_ENABLED=${VORLIQ_PUBLIC_MINER_ENABLED:-false}
+Environment=VORLIQ_PUBLIC_MINER_ADDRESS=${VORLIQ_PUBLIC_MINER_ADDRESS:-}
+ExecStart=/usr/bin/node miner.js
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
 systemctl daemon-reload
 systemctl enable vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat.service
+if [[ "${VORLIQ_PUBLIC_MINER_ENABLED:-false}" == "true" && -n "${VORLIQ_PUBLIC_MINER_ADDRESS:-}" ]]; then
+  systemctl enable vorliq-miner.service
+else
+  systemctl disable vorliq-miner.service >/dev/null 2>&1 || true
+fi
 systemctl restart vorliq-blockchain.service
 systemctl restart vorliq-backend.service
 for attempt in 1 2 3 4 5; do
@@ -108,6 +137,9 @@ for attempt in 1 2 3 4 5; do
   sleep 3
 done
 systemctl restart vorliq-heartbeat.service
+if [[ "${VORLIQ_PUBLIC_MINER_ENABLED:-false}" == "true" && -n "${VORLIQ_PUBLIC_MINER_ADDRESS:-}" ]]; then
+  systemctl restart vorliq-miner.service
+fi
 
 for service in vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat.service; do
   if systemctl is-active --quiet "${service}"; then
@@ -117,6 +149,12 @@ for service in vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat
     systemctl status "${service}" --no-pager || true
   fi
 done
+
+if systemctl is-enabled --quiet vorliq-miner.service; then
+  systemctl is-active --quiet vorliq-miner.service && echo "vorliq-miner.service is running." || systemctl status vorliq-miner.service --no-pager || true
+else
+  echo "vorliq-miner.service installed but disabled. Set VORLIQ_PUBLIC_MINER_ENABLED=true and VORLIQ_PUBLIC_MINER_ADDRESS to enable controlled public node mining."
+fi
 
 mkdir -p /home/vorliq/backups
 chown -R vorliq:vorliq /home/vorliq/backups

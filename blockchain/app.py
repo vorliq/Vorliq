@@ -493,6 +493,26 @@ def mine_block():
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
+@app.get("/mining/status")
+def get_mining_status():
+    try:
+        status = node.blockchain.get_mining_status()
+        return jsonify({"success": True, **status, "status": status})
+    except Exception as exc:
+        vorliq_logger.error("Mining status endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/mining/history")
+def get_mining_history():
+    try:
+        limit, offset = _pagination(25)
+        return jsonify({"success": True, **node.blockchain.get_mining_history(limit, offset)})
+    except Exception as exc:
+        vorliq_logger.error("Mining history endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
 @app.post("/wallet")
 def create_wallet():
     wallet = Wallet()

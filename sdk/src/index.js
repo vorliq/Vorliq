@@ -217,6 +217,28 @@ class VorliqSDK {
   }
 
   /**
+   * Gets public mining status, cooldown, reward split, and pending transaction counts.
+   *
+   * @returns {Promise<object>} Mining status fields from GET /api/mining/status.
+   */
+  async getMiningStatus() {
+    const data = await this.request("/api/mining/status");
+    return data.status || data;
+  }
+
+  /**
+   * Gets recent mined block history with reward split and block timing.
+   *
+   * @param {object} [options] - Pagination options.
+   * @param {number} [options.limit=25] - Maximum history rows to return.
+   * @param {number} [options.offset=0] - Number of newest rows to skip.
+   * @returns {Promise<object>} Mining history response.
+   */
+  async getMiningHistory(options = {}) {
+    return this.request(`/api/mining/history${paginationQuery(options.limit ?? 25, options.offset ?? 0)}`);
+  }
+
+  /**
    * Gets the community leaderboard calculated server side.
    *
    * @param {number} [limit=20] - Maximum rows per leaderboard section.

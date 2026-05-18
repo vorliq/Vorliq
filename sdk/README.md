@@ -62,6 +62,25 @@ async function main() {
 main().catch(console.error);
 ```
 
+The mining status APIs let apps show whether a node can mine now, why mining may be cooling down, and how each block reward is split between the miner and the public treasury. They do not bypass proof of work.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const status = await vorliq.getMiningStatus();
+  const history = await vorliq.getMiningHistory({ limit: 5 });
+
+  console.log("Can mine now:", status.can_mine_now);
+  console.log("Miner reward:", status.miner_reward_after_treasury);
+  console.log("Treasury reward:", status.treasury_reward_per_block);
+  console.log("Recent mined blocks:", history.history.length);
+}
+
+main().catch(console.error);
+```
+
 Developers can also verify the live network metadata before showing production status, connecting to a public node, or displaying trust information. The manifest is safe public data and includes the project URLs, deployed commit hash, chain summary, diagnostics, SDK version, incident activity, and generation time.
 
 ```js

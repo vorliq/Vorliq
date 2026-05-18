@@ -764,6 +764,56 @@ function defaultApiGet(path) {
     });
   }
 
+  if (path === "/mining/status") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        status: {
+          enabled: true,
+          current_block_height: 12,
+          chain_valid: true,
+          current_difficulty: 3,
+          current_mining_reward: 50,
+          treasury_percentage: 0.05,
+          miner_reward_after_treasury: 47.5,
+          treasury_reward_per_block: 2.5,
+          block_time_target: 60,
+          block_time_minimum: 30,
+          seconds_since_last_block: 45,
+          seconds_until_next_allowed_block: 0,
+          last_block_timestamp: 1715791000,
+          last_block_hash: "0000latestblock",
+          last_miner_address: "VLQ_MINER",
+          can_mine_now: true,
+          reason_if_not: null,
+          pending_transaction_count: 2,
+          pending_user_transaction_count: 1,
+        },
+      },
+    });
+  }
+
+  if (path === "/mining/history") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        history: [
+          {
+            block_index: 12,
+            block_hash: "0000latestblock",
+            miner_address: "VLQ_MINER",
+            transaction_count: 2,
+            difficulty: 3,
+            miner_reward_amount: 47.5,
+            treasury_reward_amount: 2.5,
+            seconds_since_previous_block: 61,
+          },
+        ],
+        total: 1,
+      },
+    });
+  }
+
   return Promise.resolve({ data: { success: true } });
 }
 
@@ -890,6 +940,8 @@ test("Dashboard shows a first-user Get Started section with core actions", async
   expect(within(getStarted).getByRole("link", { name: /get starter vlq/i })).toHaveAttribute("href", "/faucet");
   expect(within(getStarted).getByRole("link", { name: /mine vlq/i })).toHaveAttribute("href", "/mine");
   expect(within(getStarted).getByRole("link", { name: /governance/i })).toHaveAttribute("href", "/governance");
+  expect(await screen.findByText(/block production/i)).toBeInTheDocument();
+  expect(screen.getByText(/treasury per block/i)).toBeInTheDocument();
 });
 
 test("mobile hamburger announces expanded state when opened", async () => {
@@ -1569,7 +1621,9 @@ test("Mine page displays a cooldown message when the API returns a mining cooldo
 
   render(
     <NotificationProvider>
-      <Mine />
+      <MemoryRouter>
+        <Mine />
+      </MemoryRouter>
     </NotificationProvider>
   );
 
@@ -1579,6 +1633,44 @@ test("Mine page displays a cooldown message when the API returns a mining cooldo
   await userEvent.click(screen.getByRole("button", { name: /mine block/i }));
 
   expect(await screen.findByText(/cooling down\. ready to mine in 12 seconds/i)).toBeInTheDocument();
+});
+
+test("Mine page renders Mining Status and reward split", async () => {
+  renderWithProviders(<Mine />, "/mine");
+
+  expect(await screen.findByRole("heading", { name: /mining status/i })).toBeInTheDocument();
+  expect(await screen.findByText(/miner receives/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/47\.5 VLQ/i).length).toBeGreaterThan(0);
+  expect(screen.getByText(/treasury receives/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/2\.5 VLQ/i).length).toBeGreaterThan(0);
+});
+
+test("Mine page renders cooldown reason from mining status", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/mining/status") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          status: {
+            chain_valid: true,
+            can_mine_now: false,
+            reason_if_not: "Next block is allowed in 20 seconds.",
+            seconds_until_next_allowed_block: 20,
+            current_block_height: 12,
+            current_difficulty: 3,
+            miner_reward_after_treasury: 47.5,
+            treasury_reward_per_block: 2.5,
+            pending_transaction_count: 0,
+          },
+        },
+      });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Mine />, "/mine");
+
+  expect(await screen.findByText(/next block is allowed in 20 seconds/i)).toBeInTheDocument();
 });
 
 test("Transaction detail page renders status and block link", async () => {
@@ -1681,6 +1773,8 @@ test("Health page renders registry summary section", async () => {
   expect(await screen.findByRole("heading", { name: /network registry health/i })).toBeInTheDocument();
   expect(screen.getByText(/average reliability/i)).toBeInTheDocument();
   expect(screen.getByText(/98%/i)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /mining operations/i })).toBeInTheDocument();
+  expect(screen.getByText(/block production status/i)).toBeInTheDocument();
 });
 
 test("IncidentBanner does not render when no active incidents are returned", async () => {

@@ -71,6 +71,34 @@ jobs:
               sed -i '/^Environment=NODE_ENV=production/a Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000\nEnvironment=VORLIQ_NODE_URL=https://node.vorliq.org\nEnvironment="VORLIQ_NODE_NAME=Vorliq Public Node"\nEnvironment=VORLIQ_NODE_REGION=London\nEnvironment="VORLIQ_NODE_COUNTRY=United Kingdom"' /etc/systemd/system/vorliq-heartbeat.service
               systemctl daemon-reload
             fi
+            if [ ! -f /etc/systemd/system/vorliq-miner.service ]; then
+              cat >/etc/systemd/system/vorliq-miner.service <<'SERVICE'
+            [Unit]
+            Description=Vorliq Controlled Public Node Miner
+            After=network-online.target vorliq-blockchain.service vorliq-backend.service
+            Wants=network-online.target
+            Requires=vorliq-blockchain.service vorliq-backend.service
+
+            [Service]
+            Type=simple
+            User=vorliq
+            Group=vorliq
+            WorkingDirectory=/home/vorliq/app/backend
+            Environment=NODE_ENV=production
+            Environment=PUBLIC_MINER_API_URL=http://127.0.0.1:5000
+            Environment=VORLIQ_PUBLIC_MINER_ENABLED=false
+            Environment=VORLIQ_PUBLIC_MINER_ADDRESS=
+            ExecStart=/usr/bin/node miner.js
+            Restart=on-failure
+            RestartSec=15
+
+            [Install]
+            WantedBy=multi-user.target
+            SERVICE
+              sed -i 's/^            //' /etc/systemd/system/vorliq-miner.service
+              systemctl daemon-reload
+              systemctl disable vorliq-miner.service >/dev/null 2>&1 || true
+            fi
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/backend && npm install'
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm install'
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm run build'
@@ -138,6 +166,9 @@ jobs:
             echo "${HEALTH_RESPONSE}" | grep -q '"success":true'
             systemctl restart vorliq-heartbeat
             systemctl is-active --quiet vorliq-heartbeat
+            if systemctl is-enabled --quiet vorliq-miner.service; then
+              systemctl restart vorliq-miner.service
+            fi
             sudo -u vorliq -H env \
               NODE_ENV=production \
               HEARTBEAT_API_URL=http://127.0.0.1:5000 \

@@ -72,6 +72,7 @@ function Dashboard() {
   const [exchangeSummary, setExchangeSummary] = useState(null);
   const [governanceSummary, setGovernanceSummary] = useState(null);
   const [treasurySummary, setTreasurySummary] = useState(null);
+  const [miningStatus, setMiningStatus] = useState(null);
   const [featuredPosts, setFeaturedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -82,13 +83,22 @@ function Dashboard() {
 
     async function loadDashboard() {
       try {
-        const [summaryResponse, featuredResponse, lendingResponse, exchangeResponse, governanceResponse, treasuryResponse] = await Promise.all([
+        const [
+          summaryResponse,
+          featuredResponse,
+          lendingResponse,
+          exchangeResponse,
+          governanceResponse,
+          treasuryResponse,
+          miningResponse,
+        ] = await Promise.all([
           api.get("/chain/summary"),
           api.get("/forum/featured", { params: { limit: 3 } }),
           api.get("/lending/summary"),
           api.get("/exchange/summary"),
           api.get("/governance/summary"),
           api.get("/treasury/summary"),
+          api.get("/mining/status"),
         ]);
         if (mounted) {
           setErrorMessage("");
@@ -97,6 +107,7 @@ function Dashboard() {
           setExchangeSummary(exchangeResponse.data.summary || {});
           setGovernanceSummary(governanceResponse.data.summary || {});
           setTreasurySummary(treasuryResponse.data.summary || {});
+          setMiningStatus(miningResponse.data.status || {});
           setFeaturedPosts((featuredResponse.data.posts || []).slice(0, 3));
           setLastUpdated(new Date());
         }
@@ -136,8 +147,11 @@ function Dashboard() {
       treasuryBalance: treasurySummary?.current_balance ?? 0,
       activeTreasury: treasurySummary?.active_proposal_count ?? 0,
       pendingTreasuryPayouts: treasurySummary?.pending_payout_count ?? 0,
+      canMineNow: Boolean(miningStatus?.can_mine_now),
+      nextBlockWait: miningStatus?.seconds_until_next_allowed_block ?? 0,
+      treasuryPerBlock: miningStatus?.treasury_reward_per_block ?? 0,
     };
-  }, [exchangeSummary, governanceSummary, lendingSummary, summary, treasurySummary]);
+  }, [exchangeSummary, governanceSummary, lendingSummary, miningStatus, summary, treasurySummary]);
 
   return (
     <div className="page">
@@ -264,6 +278,16 @@ function Dashboard() {
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Pending Payouts</span>
               <span className="stat-value">{stats.pendingTreasuryPayouts}</span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Block Production</span>
+              <span className={`stat-value ${stats.canMineNow ? "green" : "gold"}`}>
+                {stats.canMineNow ? "Ready" : `${stats.nextBlockWait}s`}
+              </span>
+            </div>
+            <div className="card card-pad glass-card stat-card">
+              <span className="stat-label">Treasury Per Block</span>
+              <span className="stat-value">{stats.treasuryPerBlock} VLQ</span>
             </div>
           </div>
         </section>

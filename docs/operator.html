@@ -72,6 +72,21 @@ sudo systemctl restart vorliq-backend.service</code></pre>
           <li>Use Forum Moderation only to pin or feature posts. This pass intentionally does not add delete tools.</li>
         </ul>
       </section>
+
+      <section class="glass">
+        <h2>Controlled Public Node Miner</h2>
+        <p>The optional public miner service is disabled by default. It does not hold private keys and it does not bypass proof of work. When enabled, it checks <code>/api/mining/status</code> and only attempts a block when the chain is valid and the block-time rules allow mining.</p>
+        <pre><code>sudo systemctl edit vorliq-miner.service
+
+[Service]
+Environment=VORLIQ_PUBLIC_MINER_ENABLED=true
+Environment=VORLIQ_PUBLIC_MINER_ADDRESS=VLQ_PUBLIC_MINER_ADDRESS
+Environment=PUBLIC_MINER_API_URL=http://127.0.0.1:5000
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now vorliq-miner.service</code></pre>
+        <p>To disable it, run <code>sudo systemctl disable --now vorliq-miner.service</code>. Never add private keys, admin tokens, SSH keys, or wallet passwords to the miner service.</p>
+      </section>
     </main>
     <footer><div class="wrap">2026 Vorliq. Keep operator credentials private.</div></footer>
   </body>

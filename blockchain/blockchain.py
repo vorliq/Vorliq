@@ -269,6 +269,108 @@ class Blockchain:
             "chain_valid": self.is_chain_valid(),
         }
 
+    def get_mining_status(self) -> dict[str, Any]:
+        last_block = self.get_latest_block()
+        now = time.time()
+        seconds_since_last_block = max(now - float(last_block.timestamp), 0.0)
+        seconds_until_next_allowed_block = max(self.BLOCK_TIME_MINIMUM - seconds_since_last_block, 0.0)
+        chain_valid = self.is_chain_valid()
+        current_reward = self.get_current_mining_reward()
+        miner_reward = round(current_reward * (1 - self.TREASURY_PERCENTAGE), 8)
+        treasury_reward = round(current_reward * self.TREASURY_PERCENTAGE, 8)
+        previous_miner = getattr(last_block, "miner_address", None)
+        pending_transactions = self.pending_transactions or []
+        pending_user_transactions = [
+            transaction for transaction in pending_transactions
+            if self._coerce_transaction(transaction).sender_address != SYSTEM_ADDRESS
+        ]
+
+        can_mine_now = chain_valid and seconds_until_next_allowed_block <= 0
+        reason_if_not = None
+        if not chain_valid:
+            reason_if_not = "Chain validation failed."
+        elif seconds_until_next_allowed_block > 0:
+            reason_if_not = f"Next block is allowed in {int(math.ceil(seconds_until_next_allowed_block))} seconds."
+
+        return {
+            "enabled": True,
+            "current_block_height": self.get_block_height(),
+            "chain_valid": chain_valid,
+            "current_difficulty": self.difficulty,
+            "current_mining_reward": current_reward,
+            "treasury_percentage": self.TREASURY_PERCENTAGE,
+            "miner_reward_after_treasury": miner_reward,
+            "treasury_reward_per_block": treasury_reward,
+            "block_time_target": self.BLOCK_TIME_TARGET,
+            "block_time_minimum": self.BLOCK_TIME_MINIMUM,
+            "seconds_since_last_block": round(seconds_since_last_block, 2),
+            "seconds_until_next_allowed_block": int(math.ceil(seconds_until_next_allowed_block)),
+            "last_block_timestamp": last_block.timestamp,
+            "last_block_hash": last_block.hash,
+            "last_miner_address": previous_miner,
+            "can_mine_now": can_mine_now,
+            "reason_if_not": reason_if_not,
+            "pending_transaction_count": len(pending_transactions),
+            "pending_user_transaction_count": len(pending_user_transactions),
+        }
+
+    def _block_reward_record(self, block_index: int, miner_address: str | None) -> dict[str, Any]:
+        current_reward = self.get_current_mining_reward()
+        expected_miner_reward = round(current_reward * (1 - self.TREASURY_PERCENTAGE), 8)
+        expected_treasury_reward = round(current_reward * self.TREASURY_PERCENTAGE, 8)
+        reward_block = self.chain[block_index + 1] if block_index + 1 < len(self.chain) else None
+        miner_reward = None
+        treasury_reward = None
+
+        if reward_block is not None:
+            for transaction in reward_block.transactions or []:
+                tx = self._coerce_transaction(transaction)
+                if tx.sender_address != SYSTEM_ADDRESS:
+                    continue
+                if miner_address and tx.receiver_address == miner_address and miner_reward is None:
+                    miner_reward = tx.amount
+                if tx.receiver_address == self.TREASURY_ADDRESS and treasury_reward is None:
+                    treasury_reward = tx.amount
+
+        return {
+            "miner_reward_amount": miner_reward if miner_reward is not None else expected_miner_reward,
+            "treasury_reward_amount": treasury_reward if treasury_reward is not None else expected_treasury_reward,
+            "reward_status": "confirmed" if reward_block is not None else "pending_next_block",
+        }
+
+    def get_mining_history(self, limit: int, offset: int) -> dict[str, Any]:
+        mined_blocks = [block for block in self.chain[1:] if getattr(block, "miner_address", None)]
+        rows: list[dict[str, Any]] = []
+        for block in reversed(mined_blocks):
+            previous_block = self.chain[block.index - 1] if block.index > 0 else None
+            rewards = self._block_reward_record(block.index, getattr(block, "miner_address", None))
+            rows.append(
+                {
+                    "block_index": block.index,
+                    "block_hash": block.hash,
+                    "timestamp": block.timestamp,
+                    "miner_address": getattr(block, "miner_address", None),
+                    "transaction_count": len(block.transactions or []),
+                    "difficulty": getattr(block, "difficulty", None),
+                    "seconds_since_previous_block": (
+                        round(block.timestamp - previous_block.timestamp, 2)
+                        if previous_block is not None
+                        else None
+                    ),
+                    **rewards,
+                }
+            )
+
+        total = len(rows)
+        page = rows[offset : offset + limit]
+        return {
+            "history": page,
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "has_more": offset + limit < total,
+        }
+
     def get_address_transactions(self, address: str, limit: int, offset: int) -> tuple[list[dict[str, Any]], int, bool]:
         if not address:
             raise ValueError("address is required")

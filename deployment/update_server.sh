@@ -71,6 +71,38 @@ if [[ -f /etc/systemd/system/vorliq-heartbeat.service ]]; then
   systemctl daemon-reload
 fi
 
+if [[ ! -f /etc/systemd/system/vorliq-miner.service ]]; then
+  cat >/etc/systemd/system/vorliq-miner.service <<'SERVICE'
+[Unit]
+Description=Vorliq Controlled Public Node Miner
+After=network-online.target vorliq-blockchain.service vorliq-backend.service
+Wants=network-online.target
+Requires=vorliq-blockchain.service vorliq-backend.service
+
+[Service]
+Type=simple
+User=vorliq
+Group=vorliq
+WorkingDirectory=/home/vorliq/app/backend
+Environment=NODE_ENV=production
+Environment=PUBLIC_MINER_API_URL=http://127.0.0.1:5000
+Environment=VORLIQ_PUBLIC_MINER_ENABLED=false
+Environment=VORLIQ_PUBLIC_MINER_ADDRESS=
+ExecStart=/usr/bin/node miner.js
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+  systemctl daemon-reload
+  systemctl disable vorliq-miner.service >/dev/null 2>&1 || true
+else
+  sed -i 's/^After=network-online.target vorliq-blockchain.service.*/After=network-online.target vorliq-blockchain.service vorliq-backend.service/' /etc/systemd/system/vorliq-miner.service
+  sed -i 's/^Requires=vorliq-blockchain.service.*/Requires=vorliq-blockchain.service vorliq-backend.service/' /etc/systemd/system/vorliq-miner.service
+  systemctl daemon-reload
+fi
+
 mkdir -p /home/vorliq/backups
 chown -R vorliq:vorliq /home/vorliq/backups
 cp /home/vorliq/app/deployment/backup.sh /home/vorliq/backup.sh
@@ -96,6 +128,9 @@ for attempt in 1 2 3 4 5; do
   sleep 3
 done
 systemctl restart vorliq-heartbeat.service
+if systemctl is-enabled --quiet vorliq-miner.service; then
+  systemctl restart vorliq-miner.service
+fi
 
 if [[ -n "${GENERATED_ADMIN_TOKEN}" ]]; then
   echo "A new Vorliq ADMIN_TOKEN was generated because none existed. Save it securely now; it will not be shown again:"

@@ -106,6 +106,36 @@ function readLogSummaries(pattern, limit) {
     .map(sanitizeText);
 }
 
+function minerStatusFile() {
+  return process.env.VORLIQ_MINER_STATUS_FILE || path.join(os.tmpdir(), "vorliq-miner-status.json");
+}
+
+function readPublicMinerState() {
+  const fileName = minerStatusFile();
+  if (!fs.existsSync(fileName)) {
+    return {
+      last_mining_attempt_timestamp: null,
+      last_mining_result: null,
+      last_mining_error: null,
+    };
+  }
+
+  try {
+    const raw = JSON.parse(fs.readFileSync(fileName, "utf8"));
+    return {
+      last_mining_attempt_timestamp: raw.last_mining_attempt_timestamp || null,
+      last_mining_result: raw.last_mining_result ? sanitizeText(raw.last_mining_result) : null,
+      last_mining_error: raw.last_mining_error ? sanitizeText(raw.last_mining_error) : null,
+    };
+  } catch (error) {
+    return {
+      last_mining_attempt_timestamp: null,
+      last_mining_result: null,
+      last_mining_error: "Miner status file could not be read.",
+    };
+  }
+}
+
 async function flaskGet(pathname, options = {}) {
   const response = await axios.get(`${flaskUrl}${pathname}`, { timeout: 5000, ...options });
   return response.data || {};
@@ -238,6 +268,31 @@ router.get("/api/admin/security", (req, res) => {
     abuse_log_summaries: readLogSummaries(/rate limit|Validation rejected|system-controlled|too large|invalid/i, 20),
     note: "No secrets, private keys, passwords, tokens, or raw environment values are displayed.",
   });
+});
+
+router.get("/api/admin/mining/status", async (req, res) => {
+  try {
+    const publicStatus = await flaskGet("/mining/status").catch(() => ({}));
+    const minerState = readPublicMinerState();
+    return res.json({
+      success: true,
+      status: publicStatus.status || null,
+      autominers: {
+        public_node_miner_enabled: process.env.VORLIQ_PUBLIC_MINER_ENABLED === "true",
+        public_node_miner_address_configured: Boolean(process.env.VORLIQ_PUBLIC_MINER_ADDRESS),
+      },
+      services: {
+        public_node_miner: await getServiceStatus("vorliq-miner.service"),
+      },
+      last_mining_attempt_timestamp: minerState.last_mining_attempt_timestamp,
+      last_mining_result: minerState.last_mining_result,
+      last_mining_error: minerState.last_mining_error,
+      note: "No private keys, admin tokens, or environment secrets are displayed.",
+    });
+  } catch (error) {
+    logError(`GET /api/admin/mining/status failed: ${error.message}`);
+    return res.status(500).json({ success: false, message: "Admin mining status is unavailable." });
+  }
 });
 
 router.post("/api/admin/incidents/create", (req, res) => {
