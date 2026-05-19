@@ -95,7 +95,7 @@ router.get("/api/network/manifest", async (req, res) => {
     project: {
       name: "Vorliq",
       version: "1.0.0",
-      description: "A decentralized community savings bank built on its own blockchain.",
+      description: "An experimental open-source community blockchain platform built on its own VLQ network.",
     },
     urls: {
       website: "https://vorliq.org",

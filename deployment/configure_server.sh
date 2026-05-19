@@ -90,7 +90,7 @@ Environment="VORLIQ_NODE_NAME=Vorliq Public Node"
 Environment=VORLIQ_NODE_REGION=London
 Environment="VORLIQ_NODE_COUNTRY=United Kingdom"
 ExecStart=/usr/bin/node heartbeat.js
-Restart=on-failure
+Restart=always
 RestartSec=5
 
 [Install]

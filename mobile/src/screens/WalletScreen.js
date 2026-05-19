@@ -13,6 +13,7 @@ import * as Clipboard from "expo-clipboard";
 import * as LocalAuthentication from "expo-local-authentication";
 import QRCode from "react-native-qrcode-svg";
 import { createWallet, getAddressHistory, getBalance, getFaucetSummary } from "../api";
+import IdDisplay from "../components/IdDisplay";
 import { scheduleLocalNotification } from "../notifications";
 import { clearWallet, loadWallet, saveWallet } from "../storage";
 import theme from "../theme";
@@ -197,8 +198,7 @@ export default function WalletScreen({ navigation }) {
       {error ? <Text style={sharedStyles.errorText}>{error}</Text> : null}
 
       <View style={sharedStyles.card}>
-        <Text style={sharedStyles.label}>Address</Text>
-        <Text style={styles.address}>{wallet.address}</Text>
+        <IdDisplay label="Address" value={wallet.address} copyLabel="Copy Address" />
         <Pressable style={[sharedStyles.button, styles.marginTop]} onPress={copyAddress}>
           <Text style={sharedStyles.buttonText}>Copy Address</Text>
         </Pressable>
@@ -251,14 +251,18 @@ export default function WalletScreen({ navigation }) {
         <Text style={sharedStyles.label}>Recent Transactions</Text>
         {(history?.transactions || history?.recent_transactions || []).length ? (
           (history.transactions || history.recent_transactions).slice(0, 10).map((tx, index) => (
-            <Pressable
-              key={tx.tx_id || index}
-              style={styles.txRow}
-              onPress={() => tx.tx_id && navigation.navigate("Transaction", { txId: tx.tx_id })}
-            >
+            <View key={tx.tx_id || index} style={styles.txRow}>
               <Text style={sharedStyles.value}>{tx.amount ?? 0} VLQ - {tx.status || "confirmed"}</Text>
-              <Text style={sharedStyles.linkText}>{tx.tx_id ? `${String(tx.tx_id).slice(0, 12)}...` : "No transaction id"}</Text>
-            </Pressable>
+              <IdDisplay value={tx.tx_id} copyLabel="Copy Tx ID" emptyLabel="No transaction id" />
+              {tx.tx_id ? (
+                <Pressable
+                  style={[sharedStyles.button, sharedStyles.secondaryButton, sharedStyles.smallButton]}
+                  onPress={() => navigation.navigate("Transaction", { txId: tx.tx_id })}
+                >
+                  <Text style={sharedStyles.buttonText}>Open Transaction</Text>
+                </Pressable>
+              ) : null}
+            </View>
           ))
         ) : (
           <Text style={sharedStyles.mutedText}>No transaction history returned yet.</Text>
@@ -266,8 +270,7 @@ export default function WalletScreen({ navigation }) {
       </View>
 
       <View style={sharedStyles.card}>
-        <Text style={sharedStyles.label}>Public Key</Text>
-        <Text style={styles.keyText}>{wallet.public_key}</Text>
+        <IdDisplay label="Public Key" value={wallet.public_key} copyLabel="Copy Public Key" start={18} end={10} />
       </View>
 
       <View style={sharedStyles.card}>

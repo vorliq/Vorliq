@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { getActiveNodes, getMiningStatus, getNodeDetails, getRegistrySummary } from "../api";
+import IdDisplay from "../components/IdDisplay";
 import { DEFAULT_NODE_URL, loadNodeUrl, saveNodeUrl } from "../storage";
 import theme from "../theme";
-import { formatTimestamp, normalizeStatus, shortText, statusColor } from "../utils/format";
+import { formatTimestamp, normalizeStatus, statusColor } from "../utils/format";
 import sharedStyles from "./sharedStyles";
 
 export default function NetworkScreen({ navigation }) {
@@ -64,7 +65,7 @@ export default function NetworkScreen({ navigation }) {
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.label}>Configured API</Text>
-        <Text style={sharedStyles.codeText}>{nodeUrl}</Text>
+        <IdDisplay value={nodeUrl} copyLabel="Copy API URL" start={24} end={10} />
         <Pressable style={[sharedStyles.button, styles.top]} onPress={resetNode}>
           <Text style={sharedStyles.buttonText}>Reset to Community Node</Text>
         </Pressable>
@@ -112,7 +113,8 @@ function NodeRow({ node, detailed = false }) {
         <Text style={sharedStyles.badgeText}>{normalizeStatus(node.sync_status || node.status)}</Text>
       </View>
       <Text style={[sharedStyles.value, styles.top]}>{node.display_name || node.node_url}</Text>
-      <Text style={sharedStyles.codeText}>{shortText(node.node_url, 20, 10)}</Text>
+      <IdDisplay label="Node URL" value={node.node_url} copyLabel="Copy Node URL" start={20} end={10} />
+      {detailed ? <IdDisplay label="Last Block Hash" value={node.last_block_hash} copyLabel="Copy Hash" start={16} end={10} /> : null}
       <Text style={sharedStyles.mutedText}>{[node.region, node.country].filter(Boolean).join(", ") || "Region not shared"}</Text>
       <Text style={sharedStyles.mutedText}>Height {node.last_chain_height ?? "?"} | Reliability {node.reliability_score ?? 0}% | Uptime {node.uptime_score ?? 0}%</Text>
       {detailed ? <Text style={sharedStyles.mutedText}>Last seen {formatTimestamp(node.last_seen)}</Text> : null}

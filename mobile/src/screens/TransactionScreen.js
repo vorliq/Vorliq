@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { getTransaction } from "../api";
+import IdDisplay from "../components/IdDisplay";
 import theme from "../theme";
-import { formatTimestamp, normalizeStatus, shortText, statusColor } from "../utils/format";
+import { formatTimestamp, normalizeStatus, statusColor } from "../utils/format";
 import sharedStyles from "./sharedStyles";
 
 export default function TransactionScreen({ navigation, route }) {
@@ -58,10 +59,10 @@ export default function TransactionScreen({ navigation, route }) {
           </View>
           <Text style={[sharedStyles.label, styles.top]}>Amount</Text>
           <Text style={sharedStyles.value}>{transaction.amount ?? 0} VLQ</Text>
-          <Text style={sharedStyles.label}>Sender</Text>
-          <Text style={sharedStyles.codeText}>{shortText(transaction.sender || transaction.sender_address, 14, 8)}</Text>
-          <Text style={sharedStyles.label}>Recipient</Text>
-          <Text style={sharedStyles.codeText}>{shortText(transaction.recipient || transaction.receiver_address, 14, 8)}</Text>
+          <IdDisplay label="Transaction ID" value={transaction.tx_id || txId} copyLabel="Copy Tx ID" />
+          <IdDisplay label="Sender" value={transaction.sender || transaction.sender_address} copyLabel="Copy Sender" />
+          <IdDisplay label="Recipient" value={transaction.recipient || transaction.receiver_address} copyLabel="Copy Recipient" />
+          <IdDisplay label="Block Hash" value={transaction.block_hash} copyLabel="Copy Block Hash" />
           <Text style={sharedStyles.label}>Type</Text>
           <Text style={sharedStyles.value}>{transaction.type || transaction.category || "transfer"}</Text>
           <Text style={sharedStyles.label}>Timestamp</Text>

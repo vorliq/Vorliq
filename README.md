@@ -8,14 +8,16 @@ Vorliq
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 ![Coin: VLQ](https://img.shields.io/badge/coin-VLQ-6c63ff.svg)
 
-Live website: https://vorliq.github.io/Vorliq
+Live app: https://vorliq.org
+
+Public docs: https://vorliq.github.io/Vorliq
 
 What is Vorliq
 --------------
 
 Vorliq is experimental open-source community blockchain software built on its own lightweight blockchain. It does not depend on Ethereum, Bitcoin, Solana, or any outside cryptocurrency network. The native coin is called VLQ, and the application includes a Python proof of work blockchain core, a Node.js backend API, a React web application, and a React Native mobile application.
 
-Vorliq uses the phrase community savings bank as a plain-English metaphor for community coordination and record keeping. It is not a licensed bank, broker, exchange, lender, investment adviser, custodian, or financial institution. Members can create wallets, mine blocks, send signed VLQ transactions, request community support, vote on requests with VLQ balance as voting weight, post buy and sell offers, connect peer nodes, monitor network health, and vote on governance proposals that can change supported network rules.
+Vorliq is community coordination and record-keeping software for its own VLQ blockchain. It is not a licensed bank, broker, exchange, lender, investment adviser, custodian, or financial institution. Members can create wallets, mine blocks, send signed VLQ transactions, request community support, vote on requests with VLQ balance as voting weight, post buy and sell offers, connect peer nodes, monitor network health, and vote on governance proposals that can change supported network rules.
 
 What is VLQ
 -----------
@@ -37,7 +39,7 @@ The peer to peer network lets Vorliq nodes register peers, broadcast transaction
 
 The community governance system gives VLQ holders on-chain voting power over Vorliq rules. Members can propose changes, vote with balance-weighted votes, and approved proposals automatically apply supported changes such as mining reward and difficulty updates.
 
-The React web application provides the browser interface for wallets, sending VLQ, mining, chain exploration, lending, exchange, governance, node registry, statistics, account history, notifications, and health monitoring. The React Native mobile application brings wallet, sending, lending, exchange, governance, settings, and notifications to Android and iOS through Expo.
+The React web application provides the browser interface for wallets, sending VLQ, mining, chain exploration, lending, exchange, governance, treasury, faucet, profiles, node registry, statistics, account history, notifications, and health monitoring. The React Native Expo mobile application supports community-testing flows for wallet creation, local signing, sending, faucet claims, mining status, transaction and block details, profiles, lending repayment, exchange trade actions, governance views, treasury proposal submission and voting, node registry status, settings, and notifications.
 
 Vorliq includes encrypted browser wallet storage, local key storage on mobile, dark and light mode, persistent notifications, push notification support through Expo, node diagnostics, rotating logs, a public node registry, GitHub Pages documentation, a full test suite, GitHub Actions CI, and production deployment documentation.
 
@@ -59,7 +61,7 @@ The easiest way to start the application is to double click `start.bat` in the r
 
 If you are setting up from a fresh clone, install the dependencies first. In the `blockchain` folder create and activate the Python virtual environment with `python -m venv .venv` and `.venv\Scripts\activate`, then run `pip install -r requirements.txt`. In the `backend` folder run `npm install`. In the `frontend` folder run `npm install`. In the `mobile` folder run `npm install` if you want to run the Expo mobile application.
 
-To use the mobile app, install Expo Go on your phone, open a terminal in the `mobile` folder, run `npx expo start`, and scan the QR code with Expo Go. In the mobile Settings screen, set the node URL to the IP address and port of your running Vorliq backend, usually something like `http://192.168.1.20:5000` on your local network.
+To use the mobile app, install Expo Go on your phone, open a terminal in the `mobile` folder, run `npx expo start`, and scan the QR code with Expo Go. The default mobile node URL is `https://vorliq.org`. In the mobile Settings screen, you can switch to your own backend, usually something like `http://192.168.1.20:5000` on your local network. Private mobile service files such as Android notification config should stay out of git.
 
 Community
 ---------

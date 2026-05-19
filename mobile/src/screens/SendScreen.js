@@ -13,6 +13,7 @@ import * as Clipboard from "expo-clipboard";
 import * as Crypto from "expo-crypto";
 import elliptic from "elliptic";
 import { sendTransaction } from "../api";
+import IdDisplay from "../components/IdDisplay";
 import { loadWallet } from "../storage";
 import theme from "../theme";
 import sharedStyles from "./sharedStyles";
@@ -222,7 +223,7 @@ export default function SendScreen({ navigation, route }) {
       ) : (
         <View style={sharedStyles.card}>
           <Text style={sharedStyles.label}>Sender</Text>
-          <Text style={styles.sender}>{wallet.address}</Text>
+          <IdDisplay value={wallet.address} copyLabel="Copy Sender" />
         </View>
       )}
 
@@ -232,7 +233,7 @@ export default function SendScreen({ navigation, route }) {
       {submittedTx ? (
         <View style={sharedStyles.card}>
           <Text style={sharedStyles.label}>Pending Transaction</Text>
-          <Text style={sharedStyles.codeText}>{submittedTx}</Text>
+          <IdDisplay value={submittedTx} copyLabel="Copy Transaction ID" />
           <Text style={sharedStyles.mutedText}>Mining confirms this transaction into a block.</Text>
           <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton, styles.scanButton]} onPress={() => Clipboard.setStringAsync(submittedTx)}>
             <Text style={sharedStyles.buttonText}>Copy Transaction ID</Text>

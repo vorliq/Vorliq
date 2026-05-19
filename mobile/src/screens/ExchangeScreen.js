@@ -11,9 +11,10 @@ import {
   openExchangeDispute,
   recordExchangeVlqTx,
 } from "../api";
+import IdDisplay from "../components/IdDisplay";
 import { loadWallet } from "../storage";
 import theme from "../theme";
-import { formatTimestamp, normalizeStatus, shortText, statusColor } from "../utils/format";
+import { formatTimestamp, normalizeStatus, statusColor } from "../utils/format";
 import sharedStyles from "./sharedStyles";
 
 const segments = ["Browse", "Post", "My Trades", "Active", "History"];
@@ -232,8 +233,8 @@ function OfferCard({ offer, wallet, navigation, onAccept, onCancel, onRecordTx, 
       <Text style={[sharedStyles.sectionTitle, styles.top]}>{String(offer.offer_type || "offer").toUpperCase()} {offer.amount} VLQ</Text>
       <Text style={sharedStyles.value}>{offer.price}</Text>
       <Text style={sharedStyles.mutedText}>{offer.description}</Text>
-      <Text style={sharedStyles.mutedText}>Creator: {shortText(offer.creator_address, 12, 6)}</Text>
-      <Text style={sharedStyles.mutedText}>Acceptor: {shortText(offer.acceptor_address, 12, 6)}</Text>
+      <IdDisplay label="Creator" value={offer.creator_address} copyLabel="Copy Creator" start={12} end={6} />
+      <IdDisplay label="Acceptor" value={offer.acceptor_address} copyLabel="Copy Acceptor" start={12} end={6} />
       <Text style={sharedStyles.mutedText}>Creator confirmed: {offer.offchain_confirmation_creator ? "Yes" : "No"} | Acceptor confirmed: {offer.offchain_confirmation_acceptor ? "Yes" : "No"}</Text>
       <Text style={sharedStyles.mutedText}>Created: {formatTimestamp(offer.created_at || offer.timestamp)}</Text>
       {offer.vlq_tx_id ? (
@@ -255,8 +256,10 @@ function OfferCard({ offer, wallet, navigation, onAccept, onCancel, onRecordTx, 
         <View style={styles.actionPanel}>
           <Text style={sharedStyles.label}>Record VLQ Transaction</Text>
           <Text style={sharedStyles.mutedText}>
-            Send VLQ first using Send, then paste the transaction ID here. Expected sender: {shortText(expectedSender, 12, 6)} to {shortText(expectedReceiver, 12, 6)}.
+            Send VLQ first using Send, then paste the transaction ID here.
           </Text>
+          <IdDisplay label="Expected Sender" value={expectedSender} copyLabel="Copy Sender" start={12} end={6} />
+          <IdDisplay label="Expected Receiver" value={expectedReceiver} copyLabel="Copy Receiver" start={12} end={6} />
           <Pressable
             style={[sharedStyles.button, sharedStyles.secondaryButton, styles.top]}
             onPress={() => navigation.navigate("Tabs", { screen: "Send", params: { receiver: expectedReceiver, amount: String(offer.amount || ""), returnToExchange: true } })}

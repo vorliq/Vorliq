@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { getBlock } from "../api";
+import IdDisplay from "../components/IdDisplay";
 import theme from "../theme";
-import { formatTimestamp, shortText } from "../utils/format";
+import { formatTimestamp } from "../utils/format";
 import sharedStyles from "./sharedStyles";
 
 export default function BlockScreen({ navigation, route }) {
@@ -48,10 +49,8 @@ export default function BlockScreen({ navigation, route }) {
         <View style={sharedStyles.card}>
           <Text style={sharedStyles.label}>Index</Text>
           <Text style={sharedStyles.value}>#{block.index}</Text>
-          <Text style={sharedStyles.label}>Hash</Text>
-          <Text style={sharedStyles.codeText}>{shortText(block.hash, 16, 10)}</Text>
-          <Text style={sharedStyles.label}>Previous Hash</Text>
-          <Text style={sharedStyles.codeText}>{shortText(block.previous_hash, 16, 10)}</Text>
+          <IdDisplay label="Hash" value={block.hash} copyLabel="Copy Hash" start={16} end={10} />
+          <IdDisplay label="Previous Hash" value={block.previous_hash} copyLabel="Copy Previous" start={16} end={10} />
           <Text style={sharedStyles.label}>Timestamp</Text>
           <Text style={sharedStyles.value}>{formatTimestamp(block.timestamp)}</Text>
           <Text style={sharedStyles.label}>Nonce</Text>
@@ -61,10 +60,15 @@ export default function BlockScreen({ navigation, route }) {
           <Text style={sharedStyles.label}>Confirmations</Text>
           <Text style={sharedStyles.value}>{block.confirmations ?? 0}</Text>
           {(block.transactions || []).map((tx, index) => (
-            <Pressable key={tx.tx_id || index} style={styles.txRow} onPress={() => tx.tx_id && navigation.navigate("Transaction", { txId: tx.tx_id })}>
+            <View key={tx.tx_id || index} style={styles.txRow}>
               <Text style={sharedStyles.value}>{tx.amount ?? 0} VLQ</Text>
-              <Text style={sharedStyles.linkText}>{shortText(tx.tx_id || "No transaction id")}</Text>
-            </Pressable>
+              <IdDisplay value={tx.tx_id} copyLabel="Copy Tx ID" emptyLabel="No transaction id" />
+              {tx.tx_id ? (
+                <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton, sharedStyles.smallButton]} onPress={() => navigation.navigate("Transaction", { txId: tx.tx_id })}>
+                  <Text style={sharedStyles.buttonText}>Open Transaction</Text>
+                </Pressable>
+              ) : null}
+            </View>
           ))}
         </View>
       ) : null}

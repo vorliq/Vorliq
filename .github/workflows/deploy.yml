@@ -69,6 +69,7 @@ jobs:
               sed -i '/^Environment="VORLIQ_NODE_COUNTRY=/d' /etc/systemd/system/vorliq-heartbeat.service
               sed -i '/^Environment=VORLIQ_NODE_COUNTRY=/d' /etc/systemd/system/vorliq-heartbeat.service
               sed -i '/^Environment=NODE_ENV=production/a Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000\nEnvironment=VORLIQ_NODE_URL=https://node.vorliq.org\nEnvironment="VORLIQ_NODE_NAME=Vorliq Public Node"\nEnvironment=VORLIQ_NODE_REGION=London\nEnvironment="VORLIQ_NODE_COUNTRY=United Kingdom"' /etc/systemd/system/vorliq-heartbeat.service
+              sed -i 's/^Restart=on-failure/Restart=always/' /etc/systemd/system/vorliq-heartbeat.service
               systemctl daemon-reload
             fi
             if [ ! -f /etc/systemd/system/vorliq-miner.service ]; then
@@ -172,6 +173,7 @@ jobs:
             done
             echo "${BLOCKCHAIN_RESPONSE}"
             echo "${BLOCKCHAIN_RESPONSE}" | grep -q '"chain_valid"'
+            systemctl enable vorliq-heartbeat
             systemctl restart vorliq-heartbeat
             systemctl is-active --quiet vorliq-heartbeat
             if systemctl is-enabled --quiet vorliq-miner.service; then

@@ -18,7 +18,11 @@ const operatorWallet = process.env.VORLIQ_OPERATOR_WALLET || "";
 const commit = process.env.GITHUB_SHA || process.env.VORLIQ_COMMIT || "";
 const packageVersion = process.env.npm_package_version || "1.0.0";
 const softwareVersion = process.env.VORLIQ_SOFTWARE_VERSION || (commit ? commit.slice(0, 7) : `backend-${packageVersion}`);
-const heartbeatIntervalMs = Number(process.env.VORLIQ_HEARTBEAT_INTERVAL_MS || 5 * 60 * 1000);
+const configuredHeartbeatIntervalMs = Number(process.env.VORLIQ_HEARTBEAT_INTERVAL_MS || 5 * 60 * 1000);
+const heartbeatIntervalMs =
+  Number.isFinite(configuredHeartbeatIntervalMs) && configuredHeartbeatIntervalMs >= 30_000
+    ? configuredHeartbeatIntervalMs
+    : 5 * 60 * 1000;
 
 function safeError(error) {
   return error.response?.data?.message || error.response?.data?.error || error.message;
@@ -102,7 +106,12 @@ async function sendHeartbeat(options = {}) {
 async function startHeartbeatLoop() {
   await registerLocalNode();
   await sendHeartbeat();
-  setInterval(sendHeartbeat, heartbeatIntervalMs);
+  setInterval(() => {
+    sendHeartbeat().catch((error) => {
+      console.log(`Heartbeat loop error: ${safeError(error)}`);
+    });
+  }, heartbeatIntervalMs);
+  console.log(`Vorliq heartbeat loop running every ${Math.round(heartbeatIntervalMs / 1000)} seconds for ${localNodeUrl}.`);
 }
 
 if (require.main === module) {

@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { getMyTreasury, getTreasuryLedger, getTreasuryProposals, getTreasurySummary, submitTreasuryProposal, voteTreasuryProposal } from "../api";
+import IdDisplay from "../components/IdDisplay";
 import { loadWallet } from "../storage";
 import theme from "../theme";
-import { formatTimestamp, normalizeStatus, shortText, statusColor } from "../utils/format";
+import { formatTimestamp, normalizeStatus, statusColor } from "../utils/format";
 import sharedStyles from "./sharedStyles";
 
 export default function TreasuryScreen({ navigation }) {
@@ -135,7 +136,7 @@ export default function TreasuryScreen({ navigation }) {
         <View style={sharedStyles.card}>
           <Text style={sharedStyles.label}>Submit Treasury Proposal</Text>
           <Text style={sharedStyles.mutedText}>Current treasury balance: {treasuryBalance} VLQ. Requested amount cannot exceed this balance.</Text>
-          <Text style={sharedStyles.mutedText}>Proposer: {shortText(wallet?.address, 14, 8)}</Text>
+          <IdDisplay label="Proposer Wallet" value={wallet?.address} copyLabel="Copy Proposer" />
           <TextInput style={sharedStyles.input} placeholder="Title" placeholderTextColor={theme.textSecondary} value={proposalForm.title} onChangeText={(title) => setProposalForm((form) => ({ ...form, title }))} />
           <View style={styles.categoryWrap}>
             {["development", "marketing", "community", "infrastructure", "security", "education", "other"].map((category) => (
@@ -180,13 +181,18 @@ export default function TreasuryScreen({ navigation }) {
 
 function LedgerEntry({ entry, navigation }) {
   return (
-    <Pressable style={sharedStyles.card} onPress={() => entry.tx_id && navigation.navigate("Transaction", { txId: entry.tx_id })}>
+    <View style={sharedStyles.card}>
       <Text style={sharedStyles.label}>{String(entry.type || "ledger").replace(/_/g, " ")}</Text>
       <Text style={sharedStyles.value}>{entry.amount} VLQ</Text>
       <Text style={sharedStyles.mutedText}>{formatTimestamp(entry.timestamp)}</Text>
-      {entry.tx_id ? <Text style={sharedStyles.linkText}>{shortText(entry.tx_id)}</Text> : null}
+      {entry.tx_id ? <IdDisplay label="Transaction" value={entry.tx_id} copyLabel="Copy Tx ID" /> : null}
       {entry.block_index !== undefined && entry.block_index !== null ? <Text style={sharedStyles.mutedText}>Block #{entry.block_index}</Text> : null}
-    </Pressable>
+      {entry.tx_id ? (
+        <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton, styles.top]} onPress={() => navigation.navigate("Transaction", { txId: entry.tx_id })}>
+          <Text style={sharedStyles.buttonText}>Open Transaction</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -201,7 +207,7 @@ function Proposal({ proposal, navigation, wallet, onVote, actionLoading }) {
       <Text style={sharedStyles.value}>{proposal.description}</Text>
       <Text style={sharedStyles.mutedText}>Requested: {proposal.requested_amount} VLQ</Text>
       <Text style={sharedStyles.mutedText}>Category: {proposal.category}</Text>
-      <Text style={sharedStyles.mutedText}>Recipient: {shortText(proposal.recipient_address, 12, 6)}</Text>
+      <IdDisplay label="Recipient" value={proposal.recipient_address} copyLabel="Copy Recipient" start={12} end={6} />
       <Text style={sharedStyles.mutedText}>Yes {proposal.yes_vote_weight || 0} | No {proposal.no_vote_weight || 0}</Text>
       {canVote ? (
         <View style={styles.voteRow}>

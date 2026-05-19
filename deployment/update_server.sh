@@ -68,6 +68,7 @@ if [[ -f /etc/systemd/system/vorliq-heartbeat.service ]]; then
   sed -i '/^Environment="VORLIQ_NODE_COUNTRY=/d' /etc/systemd/system/vorliq-heartbeat.service
   sed -i '/^Environment=VORLIQ_NODE_COUNTRY=/d' /etc/systemd/system/vorliq-heartbeat.service
   sed -i '/^Environment=NODE_ENV=production/a Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000\nEnvironment=VORLIQ_NODE_URL=https://node.vorliq.org\nEnvironment="VORLIQ_NODE_NAME=Vorliq Public Node"\nEnvironment=VORLIQ_NODE_REGION=London\nEnvironment="VORLIQ_NODE_COUNTRY=United Kingdom"' /etc/systemd/system/vorliq-heartbeat.service
+  sed -i 's/^Restart=on-failure/Restart=always/' /etc/systemd/system/vorliq-heartbeat.service
   systemctl daemon-reload
 fi
 
@@ -127,6 +128,7 @@ for attempt in 1 2 3 4 5; do
   fi
   sleep 3
 done
+systemctl enable vorliq-heartbeat.service
 systemctl restart vorliq-heartbeat.service
 if systemctl is-enabled --quiet vorliq-miner.service; then
   systemctl restart vorliq-miner.service

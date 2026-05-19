@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { getBalance, getLendingSummary, getLoans, getMyLoans, repayLoan, submitLoan, voteLoan } from "../api";
+import IdDisplay from "../components/IdDisplay";
 import { loadWallet } from "../storage";
 import theme from "../theme";
-import { normalizeStatus, shortText, statusColor } from "../utils/format";
+import { normalizeStatus, statusColor } from "../utils/format";
 import sharedStyles from "./sharedStyles";
 
 const segments = ["Active Votes", "Active Loans", "My Loans", "History", "Request"];
@@ -143,9 +144,9 @@ export default function LendingScreen({ navigation }) {
       {repayTarget ? (
         <View style={sharedStyles.card}>
           <Text style={sharedStyles.label}>Confirm Loan Repayment</Text>
-          <Text style={sharedStyles.codeText}>Loan: {shortText(repayTarget.loan_id, 14, 8)}</Text>
+          <IdDisplay label="Loan ID" value={repayTarget.loan_id} copyLabel="Copy Loan ID" />
           <Text style={sharedStyles.value}>Repayment amount: {repayTarget.repayment_amount ?? "?"} VLQ</Text>
-          <Text style={sharedStyles.mutedText}>Borrower wallet: {shortText(wallet?.address, 14, 8)}</Text>
+          <IdDisplay label="Borrower Wallet" value={wallet?.address} copyLabel="Copy Borrower" />
           <Text style={sharedStyles.mutedText}>Current status: {normalizeStatus(repayTarget.status)}</Text>
           <Text style={sharedStyles.warningText}>
             Repayment creates a pending blockchain transaction and is only confirmed after mining.
@@ -217,7 +218,7 @@ function LoanCard({ loan, navigation, wallet, onRepay }) {
       </View>
       <Text style={[sharedStyles.sectionTitle, styles.top]}>{loan.amount} VLQ</Text>
       <Text style={sharedStyles.mutedText}>Repayment: {loan.repayment_amount ?? "?"} VLQ</Text>
-      <Text style={sharedStyles.mutedText}>Borrower: {shortText(loan.borrower || loan.requester_address, 12, 6)}</Text>
+      <IdDisplay label="Borrower" value={loan.borrower || loan.requester_address} copyLabel="Copy Borrower" start={12} end={6} />
       <Text style={sharedStyles.value}>{loan.reason}</Text>
       <Text style={sharedStyles.mutedText}>Yes {loan.yes_vote_weight || 0} | No {loan.no_vote_weight || 0}</Text>
       <Text style={sharedStyles.mutedText}>Due block: {loan.due_block ?? "Not active"} | Blocks left: {loan.blocks_until_due ?? "n/a"}</Text>

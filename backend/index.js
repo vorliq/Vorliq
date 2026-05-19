@@ -25,6 +25,7 @@ const incidentsRoutes = require("./routes/incidents");
 const reportsRoutes = require("./routes/reports");
 const manifestRoutes = require("./routes/manifest");
 const adminRoutes = require("./routes/admin");
+const systemRoutes = require("./routes/system");
 const { logError, logInfo } = require("./logger");
 const { sendWeeklyReport } = require("./reports");
 const { corsMiddleware, helmetMiddleware, isAllowedOrigin, securityStatus } = require("./middleware/security");
@@ -201,6 +202,7 @@ app.use(deploymentRoutes);
 app.use(incidentsRoutes);
 app.use(reportsRoutes);
 app.use(manifestRoutes);
+app.use(systemRoutes);
 app.use(adminRoutes);
 
 app.use((req, res) => {
