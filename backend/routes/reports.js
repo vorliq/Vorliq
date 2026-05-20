@@ -3,6 +3,7 @@ const { sendCachedJson } = require("../cache");
 const { createReport } = require("../communityReports");
 const { generateWeeklyReport } = require("../reports");
 const { logError } = require("../logger");
+const { sendError } = require("../utils/apiResponse");
 
 const router = express.Router();
 
@@ -15,10 +16,7 @@ router.post("/api/reports", (req, res) => {
       message: "Report received for moderator review. Content is not removed automatically.",
     });
   } catch (error) {
-    return res.status(error.status || 400).json({
-      success: false,
-      message: error.message || "Report could not be created.",
-    });
+    return sendError(res, error.status || 400, "VALIDATION_ERROR", error.message || "Report could not be created.");
   }
 });
 
@@ -29,11 +27,8 @@ router.get("/api/reports/weekly", async (req, res) => {
       return { status: 200, data: report };
     });
   } catch (error) {
-    logError(`GET /api/reports/weekly failed: ${error.message}`);
-    res.status(503).json({
-      success: false,
-      message: "Unable to generate the weekly report because one or more Vorliq services are unavailable.",
-    });
+    logError(`[${req.requestId || "unknown"}] GET /api/reports/weekly failed: ${error.message}`);
+    return sendError(res, 503, "UPSTREAM_ERROR", "Unable to generate the weekly report because one or more Vorliq services are unavailable.");
   }
 });
 

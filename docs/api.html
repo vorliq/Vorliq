@@ -44,8 +44,11 @@
       .try { color:#03101b; text-decoration:none; border:1px solid transparent; border-radius:999px; padding:9px 12px; font-weight:900; background:linear-gradient(90deg,var(--green),var(--accent),var(--blue)); }
       .sdk-callout { border:1px solid var(--border); border-radius:14px; background:rgba(8,14,28,.34); backdrop-filter:blur(8px); padding:18px; margin-top:18px; }
       .sdk-callout a { display:inline-flex; border:1px solid transparent; border-radius:999px; background:linear-gradient(90deg,var(--green),var(--accent),var(--blue)); color:#03101b; font-weight:900; padding:10px 13px; text-decoration:none; }
+      .compat-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:20px 0 34px; }
+      .compat-card { border:1px solid var(--border); border-radius:14px; background:rgba(8,14,28,.38); padding:18px; }
+      .compat-card h2 { font-size:1.18rem; margin-bottom:8px; }
       footer { color:var(--muted); padding:28px 0; border-top:1px solid var(--border); }
-      @media (max-width:900px) { .layout { grid-template-columns:1fr; } aside { position:relative; height:auto; border-right:0; border-bottom:1px solid var(--border); } nav { grid-template-columns:repeat(2,minmax(0,1fr)); } .fields { grid-template-columns:1fr; } }
+      @media (max-width:900px) { .layout { grid-template-columns:1fr; } aside { position:relative; height:auto; border-right:0; border-bottom:1px solid var(--border); } nav { grid-template-columns:repeat(2,minmax(0,1fr)); } .fields, .compat-grid { grid-template-columns:1fr; } }
       @media (max-width:560px) { main { width:min(100% - 22px,1120px); padding:26px 0 56px; } aside { padding:14px 12px; } .brand { margin-bottom:12px; } .brand img { width:34px; height:34px; } nav { grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; } nav a { padding:8px 9px; font-size:.88rem; } .endpoint { padding:16px; } .endpoint-head { align-items:flex-start; } .try, .sdk-callout a { width:100%; justify-content:center; } }
     </style>
   </head>
@@ -59,14 +62,39 @@
         <div class="hero">
           <span class="eyebrow">Developer Documentation</span>
           <h1>Vorliq Public API</h1>
-          <p>These endpoints are served through <strong>https://vorliq.org/api</strong>. They let developers inspect the chain, build wallet tools, monitor nodes, and integrate with Vorliq community features. POST endpoints should be used carefully because many of them create real pending transactions, votes, proposals, or community records.</p>
+          <p>These endpoints are served through <strong>https://vorliq.org/api</strong> and the stable developer alias <strong>https://vorliq.org/api/v1</strong>. They let developers inspect the chain, build wallet tools, monitor nodes, and integrate with Vorliq community features. POST endpoints should be used carefully because many of them create real pending transactions, votes, proposals, or community records.</p>
           <div class="sdk-callout">
-            <p>Developers who want a simpler integration can use the official Vorliq JavaScript SDK instead of calling the API directly. The SDK creates wallets, checks balances, signs VLQ transactions locally, watches for new blocks, and builds payment URLs.</p>
+            <p>Developers who want a simpler integration can use the official Vorliq JavaScript SDK instead of calling the API directly. The SDK defaults to v1, creates wallets, checks balances, signs VLQ transactions locally, watches for new blocks, and builds payment URLs.</p>
             <a href="https://github.com/vorliq/Vorliq/tree/main/sdk#readme">Read the SDK README</a>
+            <a href="api-versioning.html">API Versioning</a>
+            <a href="examples.html">Developer Examples</a>
             <a href="operator.html">Operator Dashboard Guide</a>
             <a href="audit.html">Audit Export Guide</a>
           </div>
         </div>
+        <section class="compat-grid" aria-label="API compatibility">
+          <article class="compat-card">
+            <h2>Versioning</h2>
+            <p>The current stable version is v1. Unversioned <code>/api</code> routes remain backward compatible for existing clients; new developer integrations should use <code>/api/v1</code>.</p>
+          </article>
+          <article class="compat-card">
+            <h2>Request IDs</h2>
+            <p>Clients may send <code>X-Request-ID</code>. Vorliq returns <code>X-Request-ID</code>, <code>X-Vorliq-API-Version: 1</code>, and <code>X-Vorliq-API-Stability: stable</code> on backend responses.</p>
+          </article>
+          <article class="compat-card">
+            <h2>Error Format</h2>
+            <p>Standardized errors include <code>success:false</code>, a compatibility <code>message</code>, structured <code>error.code</code> and <code>error.message</code>, and <code>request_id</code>.</p>
+          </article>
+          <article class="compat-card">
+            <h2>Example</h2>
+            <pre>{
+  "success": false,
+  "message": "description is required.",
+  "error": { "code": "VALIDATION_ERROR", "message": "description is required.", "details": {} },
+  "request_id": "request-123"
+}</pre>
+          </article>
+        </section>
         <div id="content"></div>
         <footer>2026 Vorliq. All rights reserved.</footer>
       </main>
@@ -76,6 +104,7 @@
       const base = "https://vorliq.org";
       const sections = [
         ["Authentication", [
+          ["GET", "/api/version", "Returns current API version metadata, stability level, supported versions, deprecation policy URL, documentation URL, and SDK version. The same response is available at /api/v1/version.", [], [["api_version","number","Current stable API version."],["stability","string","Current stability level."],["supported_versions","array","Supported major API versions."],["default_version","number","Default version for new SDK clients."],["request_id","string","Present on structured error responses, and X-Request-ID is always returned as a header."]], "curl -i https://vorliq.org/api/v1/version", { success:true, api_version:1, stability:"stable", supported_versions:[1], default_version:1, deprecation_policy_url:"https://vorliq.github.io/Vorliq/api-versioning.html" }],
           ["GET", "/api/deployment", "Returns the Git commit currently deployed on the production server.", [], [["success","boolean","Whether the request succeeded."],["commit_hash","string","The deployed commit hash."],["commit_timestamp","string","The commit timestamp."]], "curl https://vorliq.org/api/deployment", { success:true, commit_hash:"602adf...", commit_timestamp:"2026-05-15T10:04:27+01:00" }],
           ["GET", "/api/network/manifest", "Returns safe public network metadata for transparency tools, including project URLs, deployed commit, chain summary, diagnostics, API groups, SDK version, incident activity, and generated timestamp.", [], [["project","object","Public project name and version."],["urls","object","Public website, status, docs, and GitHub URLs."],["chain_summary","object","Safe lightweight chain summary."],["diagnostics","object","Allowlisted public diagnostics."],["generated_at","string","Timestamp when the manifest was generated."]], "curl https://vorliq.org/api/network/manifest", { success:true, project:{ name:"Vorliq", version:"1.0.0" }, urls:{ website:"https://vorliq.org" }, chain_summary:{ block_height:12, chain_valid:true }, incidents:{ active:false }, generated_at:"2026-05-16T12:00:00.000Z" }],
           ["GET", "/api/system/self-check", "Returns a safe production self-check for operators and monitors without exposing secrets, environment dumps, private keys, or server paths.", [], [["api_health","boolean","Whether the Node backend responded."],["blockchain_reachable","boolean","Whether the blockchain API diagnostics endpoint responded."],["chain_valid","boolean","Current chain validity if available."],["backup_status_available","boolean","Whether backup status metadata can be read."],["storage_health","string","Storage health status: ok, warning, or error."],["critical_storage_errors","number","Critical storage error count."],["backup_available","boolean","Whether a storage backup file is known to exist."],["registry_active_node_count","number","Current active public registry node count."],["active_incident_count","number","Active public incident count."],["deployment_commit","string","Current deployed commit when available."],["public_node_url","string","Public node URL used by operator tooling."],["timestamp","string","Self-check timestamp."]], "curl https://vorliq.org/api/system/self-check", { success:true, api_health:true, blockchain_reachable:true, chain_valid:true, storage_health:"ok", critical_storage_errors:0, backup_available:true, registry_active_node_count:1, public_node_url:"https://node.vorliq.org" }]

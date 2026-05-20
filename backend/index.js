@@ -24,16 +24,19 @@ const deploymentRoutes = require("./routes/deployment");
 const incidentsRoutes = require("./routes/incidents");
 const reportsRoutes = require("./routes/reports");
 const manifestRoutes = require("./routes/manifest");
+const versionRoutes = require("./routes/version");
 const adminRoutes = require("./routes/admin");
 const systemRoutes = require("./routes/system");
 const analyticsRoutes = require("./routes/analytics");
 const storageRoutes = require("./routes/storage");
 const auditRoutes = require("./routes/audit");
 const adminAuth = require("./middleware/adminAuth");
+const { sendError } = require("./utils/apiResponse");
 const { pruneAnalytics } = require("./analytics");
 const { logError, logInfo } = require("./logger");
 const { sendWeeklyReport } = require("./reports");
 const { corsMiddleware, helmetMiddleware, isAllowedOrigin, securityStatus } = require("./middleware/security");
+const { apiV1Alias, requestMetadata } = require("./middleware/requestMetadata");
 const { validateBody } = require("./middleware/validation");
 const {
   apiSlowDown,
@@ -145,15 +148,17 @@ io.on("connection", (socket) => {
 
 app.use(helmetMiddleware());
 app.use(corsMiddleware());
+app.use(requestMetadata);
+app.use(apiV1Alias);
 app.use("/api/forum", express.json({ limit: "2.5mb" }));
 app.use(express.json({ limit: "100kb" }));
 app.use((req, res, next) => {
-  logInfo(`${req.method} ${req.path}`);
+  logInfo(`[${req.requestId}] ${req.method} ${req.originalUrl}`);
   const start = Date.now();
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (duration > 1000) {
-      logInfo(`Slow route ${req.method} ${req.path} completed in ${duration}ms with status ${res.statusCode}`);
+      logInfo(`[${req.requestId}] Slow route ${req.method} ${req.originalUrl} completed in ${duration}ms with status ${res.statusCode}`);
     }
   });
   next();
@@ -214,7 +219,7 @@ app.get("/api/admin/moderation/chat", adminAuth, (req, res) => {
 app.post("/api/admin/moderation/chat/hide", adminAuth, (req, res) => {
   const messageId = safeChatText(req.body?.message_id || req.body?.messageId).slice(0, 120);
   const message = chatHistory.find((item) => item.message_id === messageId);
-  if (!message) return res.status(404).json({ success: false, message: "Chat message was not found." });
+  if (!message) return sendError(res, 404, "NOT_FOUND", "Chat message was not found.");
   message.moderation_status = "hidden";
   message.text = "This chat message is hidden by community moderation review.";
   message.warning = "";
@@ -242,41 +247,30 @@ app.use(deploymentRoutes);
 app.use(incidentsRoutes);
 app.use(reportsRoutes);
 app.use(manifestRoutes);
+app.use(versionRoutes);
 app.use(systemRoutes);
 app.use(storageRoutes);
 app.use(auditRoutes);
 app.use(adminRoutes);
 
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: "Route not found",
-  });
+  return sendError(res, 404, "NOT_FOUND", "Route not found");
 });
 
 app.use((error, req, res, next) => {
-  logError(`${req.method} ${req.path} failed: ${error.message}`);
+  logError(`[${req.requestId || "unknown"}] ${req.method} ${req.originalUrl} failed: ${error.message}`);
   if (error.type === "entity.too.large") {
-    return res.status(413).json({
-      success: false,
-      message: "Request body is too large.",
-    });
+    return sendError(res, 413, "PAYLOAD_TOO_LARGE", "Request body is too large.");
   }
   if (error instanceof SyntaxError && "body" in error) {
-    return res.status(400).json({
-      success: false,
-      message: "Request body must be valid JSON.",
-    });
+    return sendError(res, 400, "INVALID_JSON", "Request body must be valid JSON.");
   }
   const status = error.response?.status || 500;
   const message =
     error.code === "ECONNREFUSED" || error.code === "ECONNABORTED" || !error.response
       ? "Blockchain service is currently unavailable. Please make sure the Vorliq blockchain API is running."
       : error.response?.data?.message || error.response?.data?.error || "The backend could not complete this request.";
-  res.status(status).json({
-    success: false,
-    message,
-  });
+  return sendError(res, status, status >= 500 ? "UPSTREAM_ERROR" : "REQUEST_FAILED", message);
 });
 
 if (require.main === module) {

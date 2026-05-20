@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vorliq Developer Examples</title>
+  <style>
+    body { margin:0; font-family:Inter,Arial,sans-serif; background:#020817; color:#fff; }
+    a { color:#18d7c9; }
+    .wrap { width:min(100% - 32px,1000px); margin:0 auto; padding:38px 0 64px; }
+    section { border-top:1px solid rgba(24,215,201,.24); padding:24px 0; }
+    p { color:#c7d2e4; line-height:1.75; }
+    code, pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+    pre { overflow:auto; background:#061326; border:1px solid rgba(24,215,201,.24); border-radius:10px; padding:14px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <a href="index.html">Vorliq Docs</a>
+      <h1>Developer Examples</h1>
+      <p>Practical read-oriented examples for building with the stable v1 API and SDK. Never put a real private key into frontend source code; signing should happen only in a user-controlled local wallet or local SDK environment.</p>
+    </header>
+    <section>
+      <h2>Check Network Status</h2>
+      <pre>curl https://vorliq.org/api/v1/health
+curl https://vorliq.org/api/v1/network/manifest</pre>
+    </section>
+    <section>
+      <h2>Create a Payment URL</h2>
+      <pre>const VorliqSDK = require("vorliq-sdk");
+const sdk = new VorliqSDK();
+const url = sdk.createPaymentURL("3MNQE1X7T4Bz9kLmNpQrStUvWx", 2.5);</pre>
+    </section>
+    <section>
+      <h2>Check Balance</h2>
+      <pre>curl "https://vorliq.org/api/v1/wallet/balance?address=3MNQE1X7T4Bz9kLmNpQrStUvWx"</pre>
+    </section>
+    <section>
+      <h2>View Latest Blocks</h2>
+      <pre>curl "https://vorliq.org/api/v1/chain/blocks?limit=5&offset=0"</pre>
+    </section>
+    <section>
+      <h2>Verify Audit Manifest</h2>
+      <pre>curl https://vorliq.org/api/v1/audit/manifest
+node tools/verify_audit.js https://vorliq.org</pre>
+    </section>
+    <section>
+      <h2>Optional Analytics Event</h2>
+      <pre>curl -X POST https://vorliq.org/api/v1/analytics/event \
+  -H "Content-Type: application/json" \
+  -d "{\"event_type\":\"page_view\",\"route\":\"/docs\",\"category\":\"docs\",\"anonymous_session_id\":\"anon_example1234567890\"}"</pre>
+      <p>Analytics events are optional, aggregate-oriented, and must not include private keys, passwords, admin tokens, raw IP addresses, raw user agents, or message bodies.</p>
+    </section>
+    <section>
+      <h2>Use SDK with v1 API</h2>
+      <pre>const VorliqSDK = require("vorliq-sdk");
+const sdk = new VorliqSDK({ nodeUrl: "https://vorliq.org", apiVersion: "v1" });
+sdk.setRequestId("docs-example-1");
+const version = await sdk.getAPIVersion();
+const summary = await sdk.getChainSummary();</pre>
+    </section>
+    <section>
+      <h2>Local-Only Signing Placeholder</h2>
+      <pre>await sdk.sendTransaction(
+  "SENDER_ADDRESS",
+  "-----BEGIN EC PRIVATE KEY-----\\nFAKE_LOCAL_ONLY_EXAMPLE\\n-----END EC PRIVATE KEY-----",
+  "-----BEGIN PUBLIC KEY-----\\nFAKE_PUBLIC_KEY\\n-----END PUBLIC KEY-----",
+  "RECEIVER_ADDRESS",
+  1
+);</pre>
+      <p>The private key above is deliberately fake. Do not expose real private keys in app code, logs, docs, analytics, bug reports, or backend requests.</p>
+    </section>
+  </main>
+</body>
+</html>

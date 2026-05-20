@@ -10,13 +10,39 @@ Developers should not collect or store users private keys unless they fully unde
 
 Before sending VLQ, applications should show a review step with the sender address, receiver address, amount, pending-until-mined status, address validation result, and a clear warning that transactions cannot be reversed. The SDK exposes `validateAddress(address)`, `isReservedAddress(address)`, and `createTransactionReview(from, to, amount)` to support that flow.
 
-Install the SDK from the `sdk` folder in this repository while it is being developed locally. From the project root, run `cd sdk`, then run `npm install`, and then run `npm run build`. Applications can import the built SDK from `dist/vorliq-sdk.js`. The default node is `https://vorliq.org`, but you can pass any compatible Vorliq node URL when you create the client.
+Install the SDK from the `sdk` folder in this repository while it is being developed locally. From the project root, run `cd sdk`, then run `npm install`, and then run `npm run build`. Applications can import the built SDK from `dist/vorliq-sdk.js`. The default node is `https://vorliq.org`, and the SDK defaults to stable `/api/v1` routes. Pass `apiVersion: "legacy"` only when you need old unversioned `/api` paths during migration.
 
 ```js
 const { VorliqSDK } = require("./dist/vorliq-sdk");
 
-const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org", apiVersion: "v1" });
 ```
+
+## API Versioning and Request IDs
+
+Vorliq API v1 is the current stable developer contract. Unversioned `/api` routes remain supported, but new SDK calls use `/api/v1` by default. The compatibility policy is documented at https://vorliq.github.io/Vorliq/api-versioning.html and examples are available at https://vorliq.github.io/Vorliq/examples.html.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  vorliq.setRequestId("my-app-request-1");
+
+  const version = await vorliq.getAPIVersion();
+  const summary = await vorliq.getChainSummary();
+
+  console.log("API version:", version.api_version);
+  console.log("Chain height:", summary.block_height);
+  console.log("Last request ID:", vorliq.lastRequestId);
+}
+
+main().catch((error) => {
+  console.error("Vorliq error:", error.code || error.status, error.message, error.requestId);
+});
+```
+
+The SDK handles both structured v1 errors such as `{ error: { code, message }, request_id }` and legacy top-level `message` errors. Use `new VorliqSDK({ apiVersion: "legacy" })` if an older integration must keep calling `/api/...` directly.
 
 Production applications should prefer the lightweight and paginated methods when they do not need the entire blockchain. The `getChain` method remains available for compatibility and local tooling, but it downloads the full chain and can become expensive as the network grows. For dashboards, explorers, and account history, use `getChainSummary`, `getBlocks`, `getTransactions`, `getPendingTransactions`, `getTransaction`, `getBlock`, `getAddressHistory`, and `getLeaderboard`.
 

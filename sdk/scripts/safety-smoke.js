@@ -18,6 +18,8 @@ const sdk = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
 assert.strictEqual(typeof sdk.getProfileVerificationChallenge, "function");
 assert.strictEqual(typeof sdk.submitProfileVerification, "function");
 assert.strictEqual(typeof sdk.reportContent, "function");
+assert.strictEqual(typeof sdk.getAPIVersion, "function");
+assert.strictEqual(typeof sdk.setRequestId, "function");
 sdk
   .sendTransaction("SYSTEM", "not-used", "not-used", validAddress, 1)
   .then(() => {
@@ -25,5 +27,68 @@ sdk
   })
   .catch((error) => {
     assert.match(error.message, /reserved system address/i);
-    console.log("SDK safety smoke passed");
   });
+
+const originalFetch = global.fetch;
+const calls = [];
+global.fetch = async (url, options = {}) => {
+  calls.push({ url, options });
+  const ok = !String(url).includes("/api/v1/reports");
+  return {
+    ok,
+    status: ok ? 200 : 400,
+    headers: {
+      get(name) {
+        return name.toLowerCase() === "x-request-id" ? "sdk-smoke-request" : "";
+      },
+    },
+    async json() {
+      if (!ok) {
+        return {
+          success: false,
+          message: "description is required.",
+          error: { code: "VALIDATION_ERROR", message: "description is required.", details: {} },
+          request_id: "sdk-smoke-request",
+        };
+      }
+      if (String(url).endsWith("/api/v1/version")) {
+        return { success: true, api_version: 1, supported_versions: [1] };
+      }
+      return { success: true, summary: { height: 1 } };
+    },
+  };
+};
+
+(async () => {
+  const v1Client = new VorliqSDK({ nodeUrl: "https://example.invalid" });
+  v1Client.setRequestId("sdk-smoke");
+  const version = await v1Client.getAPIVersion();
+  assert.strictEqual(version.api_version, 1);
+  const summary = await v1Client.getChainSummary();
+  assert.strictEqual(summary.height, 1);
+  assert.strictEqual(calls[0].url, "https://example.invalid/api/v1/version");
+  assert.strictEqual(calls[1].url, "https://example.invalid/api/v1/chain/summary");
+  assert.strictEqual(calls[1].options.headers["X-Request-ID"], "sdk-smoke");
+  assert.strictEqual(v1Client.lastRequestId, "sdk-smoke-request");
+
+  const legacyClient = new VorliqSDK({ nodeUrl: "https://example.invalid", apiVersion: "legacy" });
+  await legacyClient.getChainSummary();
+  assert.strictEqual(calls[2].url, "https://example.invalid/api/chain/summary");
+
+  try {
+    await v1Client.reportContent({ target_type: "profile", target_id: "x", reason: "other" });
+    throw new Error("validation error should throw");
+  } catch (error) {
+    assert.strictEqual(error.status, 400);
+    assert.strictEqual(error.code, "VALIDATION_ERROR");
+    assert.strictEqual(error.requestId, "sdk-smoke-request");
+    assert.match(error.message, /description is required/i);
+  } finally {
+    global.fetch = originalFetch;
+  }
+
+  console.log("SDK safety smoke passed");
+})().catch((error) => {
+  global.fetch = originalFetch;
+  throw error;
+});

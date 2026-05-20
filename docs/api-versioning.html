@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vorliq API Versioning</title>
+  <style>
+    body { margin:0; font-family:Inter,Arial,sans-serif; background:#020817; color:#fff; }
+    a { color:#18d7c9; }
+    .wrap { width:min(100% - 32px,960px); margin:0 auto; padding:38px 0 64px; }
+    header, section { border-bottom:1px solid rgba(24,215,201,.24); padding:26px 0; }
+    p, li { color:#c7d2e4; line-height:1.75; }
+    code, pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+    pre { overflow:auto; background:#061326; border:1px solid rgba(24,215,201,.24); border-radius:10px; padding:14px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <a href="index.html">Vorliq Docs</a>
+      <h1>API Versioning and Compatibility</h1>
+      <p>Vorliq API v1 is the current stable developer contract. Existing unversioned <code>/api</code> routes remain supported for backward compatibility, while new integrations should prefer <code>/api/v1</code>.</p>
+    </header>
+    <section>
+      <h2>Current Version</h2>
+      <p>The current API version is <strong>v1</strong>. You can check it at <a href="https://vorliq.org/api/version">https://vorliq.org/api/version</a> or <a href="https://vorliq.org/api/v1/version">https://vorliq.org/api/v1/version</a>.</p>
+      <p>Every backend response includes <code>X-Vorliq-API-Version: 1</code> and <code>X-Vorliq-API-Stability: stable</code>.</p>
+    </section>
+    <section>
+      <h2>Path Policy</h2>
+      <p><code>/api</code> remains supported for existing clients. <code>/api/v1</code> is the recommended stable path for SDK users and external developers. Breaking changes require a future version such as <code>/api/v2</code>; v1 behavior should not be removed silently.</p>
+    </section>
+    <section>
+      <h2>Deprecation Policy</h2>
+      <p>When a public endpoint must be deprecated, Vorliq will keep the old route available during a notice period where practical, document the replacement, and avoid adding new authentication requirements to public read endpoints unless the route was already protected.</p>
+    </section>
+    <section>
+      <h2>Error Format</h2>
+      <p>New standardized errors include a compatibility top-level <code>message</code>, a structured <code>error</code> object, and a <code>request_id</code>.</p>
+      <pre>{
+  "success": false,
+  "message": "description is required.",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "description is required.",
+    "details": {}
+  },
+  "request_id": "request-123"
+}</pre>
+    </section>
+    <section>
+      <h2>Request IDs</h2>
+      <p>Clients may send <code>X-Request-ID</code> using letters, numbers, dots, underscores, colons, or hyphens up to 80 characters. Unsafe or missing IDs are replaced with a server-generated UUID. The chosen ID is returned in the response header and included in JSON error responses.</p>
+      <p>When reporting API bugs, include the endpoint, timestamp, and request ID. Do not include private keys, passwords, admin tokens, raw user agents, IP addresses, or server paths.</p>
+    </section>
+    <section>
+      <h2>Stability Levels</h2>
+      <p><strong>stable</strong> means the route is intended for developer integrations. Experimental product behavior may still evolve, but the API should avoid breaking response contracts inside v1.</p>
+    </section>
+    <section>
+      <h2>SDK Compatibility Promise</h2>
+      <p>The JavaScript SDK defaults to <code>/api/v1</code>. Developers can use <code>apiVersion: "legacy"</code> to keep calling unversioned <code>/api</code> paths while migrating. The SDK handles both legacy and structured error formats.</p>
+    </section>
+  </main>
+</body>
+</html>

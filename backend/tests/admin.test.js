@@ -31,7 +31,10 @@ describe("admin routes", () => {
   test("admin routes reject missing token", async () => {
     const response = await request(app).get("/api/admin/overview");
     expect(response.status).toBe(401);
-    expect(response.body).toEqual({ success: false, message: "Unauthorized" });
+    expect(response.body.success).toBe(false);
+    expect(response.body.message).toBe("Unauthorized");
+    expect(response.body.error.code).toBe("UNAUTHORIZED");
+    expect(response.body.request_id).toBeTruthy();
   });
 
   test("admin routes reject wrong token", async () => {

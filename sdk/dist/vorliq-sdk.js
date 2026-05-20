@@ -20,6 +20,20 @@ function trimNodeUrl(nodeUrl) {
   return String(nodeUrl || "https://vorliq.org").replace(/\/+$/, "");
 }
 
+function normalizeApiVersion(apiVersion) {
+  const version = String(apiVersion || "v1").toLowerCase();
+  if (version === "legacy" || version === "v1") return version;
+  throw new Error('apiVersion must be "v1" or "legacy".');
+}
+
+function versionedPath(path, apiVersion) {
+  if (apiVersion === "legacy") return path;
+  if (path === "/api") return "/api/v1";
+  if (path.startsWith("/api/v1/") || path === "/api/v1") return path;
+  if (path.startsWith("/api/")) return path.replace(/^\/api(?=\/)/, "/api/v1");
+  return path;
+}
+
 function paginationQuery(limit, offset) {
   const params = new URLSearchParams();
   if (limit !== undefined) params.set("limit", String(limit));
@@ -113,7 +127,19 @@ class VorliqSDK {
    */
   constructor(config = {}) {
     this.nodeUrl = trimNodeUrl(config.nodeUrl || "https://vorliq.org");
+    this.apiVersion = normalizeApiVersion(config.apiVersion || "v1");
     this.pollIntervalMs = 30000;
+    this.requestId = "";
+    this.lastRequestId = "";
+  }
+
+  setRequestId(requestId) {
+    const normalized = String(requestId || "").trim();
+    if (normalized && !/^[A-Za-z0-9._:-]{1,80}$/.test(normalized)) {
+      throw new Error("requestId must be 80 safe characters or fewer.");
+    }
+    this.requestId = normalized;
+    return this;
   }
 
   /**
@@ -125,22 +151,34 @@ class VorliqSDK {
    */
   async request(path, options = {}) {
     const fetchImpl = await getFetch();
+    const requestId = options.requestId || this.requestId;
     const headers = {
       Accept: "application/json",
       ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(requestId ? { "X-Request-ID": requestId } : {}),
       ...(options.headers || {}),
     };
-    const response = await fetchImpl(`${this.nodeUrl}${path}`, { ...options, headers });
+    const { requestId: _requestId, ...fetchOptions } = options;
+    const response = await fetchImpl(`${this.nodeUrl}${versionedPath(path, this.apiVersion)}`, { ...fetchOptions, headers });
+    this.lastRequestId = response.headers?.get?.("x-request-id") || this.lastRequestId || "";
     const data = await response.json();
 
     if (!response.ok || data.success === false) {
-      const error = new Error(data.error || data.message || `Vorliq request failed with status ${response.status}.`);
+      const errorObject = data.error && typeof data.error === "object" ? data.error : {};
+      const message = errorObject.message || data.message || data.error || `Vorliq request failed with status ${response.status}.`;
+      const error = new Error(message);
       error.status = response.status;
+      error.code = errorObject.code;
       error.data = data;
+      error.requestId = data.request_id || this.lastRequestId || "";
       throw error;
     }
 
     return data;
+  }
+
+  async getAPIVersion() {
+    return this.request("/api/version");
   }
 
   /**

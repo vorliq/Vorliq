@@ -3,6 +3,8 @@ const { safeApiJson } = require("./helpers");
 
 const endpoints = [
   "/api/health",
+  "/api/version",
+  "/api/v1/health",
   "/api/deployment",
   "/api/system/self-check",
   "/api/mining/status",

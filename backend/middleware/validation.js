@@ -1,6 +1,7 @@
 const net = require("net");
 const { logError } = require("../logger");
 const { isReservedAddress, validateAddress: validateVorliqAddress } = require("../address");
+const { sendError } = require("../utils/apiResponse");
 
 const SYSTEM_ADDRESSES = new Set(["SYSTEM", "VORLIQ_TREASURY", "LENDING_POOL"]);
 const FORUM_CATEGORIES = new Set(["general", "mining", "lending", "exchange", "governance", "technical"]);
@@ -11,8 +12,8 @@ const REPORT_REASONS = new Set(["spam", "impersonation", "abuse", "scam", "illeg
 const SECRET_PATTERN = /(BEGIN [A-Z ]*PRIVATE KEY|private[_ -]?key|password|admin[_ -]?token|bearer\s+[A-Za-z0-9._~+/=-]+|ssh-rsa|ssh-ed25519)/i;
 
 function reject(req, res, message, status = 400) {
-  logError(`Validation rejected ${req.method} ${req.originalUrl}: ${message}`);
-  return res.status(status).json({ success: false, message });
+  logError(`[${req.requestId || "unknown"}] Validation rejected ${req.method} ${req.originalUrl}: ${message}`);
+  return sendError(res, status, "VALIDATION_ERROR", message);
 }
 
 function text(value) {

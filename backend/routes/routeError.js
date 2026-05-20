@@ -1,4 +1,5 @@
 const { logError } = require("../logger");
+const { sendError } = require("../utils/apiResponse");
 
 function friendlyMessage(error, fallbackMessage = "Unable to complete this request.") {
   if (error.code === "ECONNREFUSED" || error.code === "ECONNABORTED" || !error.response) {
@@ -10,11 +11,9 @@ function friendlyMessage(error, fallbackMessage = "Unable to complete this reque
 
 function handleRouteError(res, error, context, fallbackMessage) {
   const message = friendlyMessage(error, fallbackMessage);
-  logError(`${context}: ${error.message}`);
-  return res.status(error.response?.status || 503).json({
-    success: false,
-    message,
-  });
+  const requestId = res.req?.requestId || "unknown";
+  logError(`[${requestId}] ${context}: ${error.message}`);
+  return sendError(res, error.response?.status || error.status || 503, "UPSTREAM_ERROR", message);
 }
 
 module.exports = {
