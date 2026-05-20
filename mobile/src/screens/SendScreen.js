@@ -12,7 +12,8 @@ import { CameraView, Camera } from "expo-camera";
 import * as Clipboard from "expo-clipboard";
 import * as Crypto from "expo-crypto";
 import elliptic from "elliptic";
-import { sendTransaction } from "../api";
+import { getBalance, sendTransaction } from "../api";
+import { validateTransactionReview } from "../address";
 import IdDisplay from "../components/IdDisplay";
 import { loadWallet } from "../storage";
 import theme from "../theme";
@@ -110,6 +111,7 @@ export default function SendScreen({ navigation, route }) {
   const [wallet, setWallet] = useState(null);
   const [receiver, setReceiver] = useState("");
   const [amount, setAmount] = useState("");
+  const [balance, setBalance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState("");
@@ -117,10 +119,20 @@ export default function SendScreen({ navigation, route }) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [submittedTx, setSubmittedTx] = useState(null);
+  const [step, setStep] = useState("details");
+  const [lastSubmitted, setLastSubmitted] = useState(null);
+  const [duplicateOverride, setDuplicateOverride] = useState(false);
 
   useEffect(() => {
     async function load() {
-      setWallet(await loadWallet());
+      const savedWallet = await loadWallet();
+      setWallet(savedWallet);
+      if (savedWallet?.address) {
+        const balanceResult = await getBalance(savedWallet.address);
+        if (balanceResult.success) {
+          setBalance(Number(balanceResult.data.balance ?? balanceResult.data.data?.balance ?? 0));
+        }
+      }
       setLoading(false);
     }
 
@@ -136,7 +148,18 @@ export default function SendScreen({ navigation, route }) {
     }
   }, [route?.params?.receiver, route?.params?.amount]);
 
-  const handleSend = async () => {
+  const review = validateTransactionReview({
+    senderAddress: wallet?.address || "",
+    receiverAddress: receiver,
+    amount,
+    balance,
+  });
+  const transactionFingerprint = `${wallet?.address || ""}|${receiver.trim()}|${Number(amount)}`;
+  const duplicateAttempt =
+    lastSubmitted?.fingerprint === transactionFingerprint &&
+    Date.now() - lastSubmitted.submittedAt < 60000;
+
+  const continueToReview = () => {
     setError("");
     setMessage("");
     setSubmittedTx(null);
@@ -146,15 +169,33 @@ export default function SendScreen({ navigation, route }) {
       return;
     }
 
-    if (!receiver.trim() || Number(amount) <= 0) {
-      setError("Enter a receiver address and a positive VLQ amount.");
+    if (!review.canSubmit) {
+      setError(review.errors[0] || "Review the transaction details before continuing.");
+      return;
+    }
+
+    setStep("review");
+  };
+
+  const handleSend = async () => {
+    setError("");
+    setMessage("");
+    setSubmittedTx(null);
+
+    if (sending) return;
+    if (!review.canSubmit) {
+      setError(review.errors[0] || "Review the transaction details before sending.");
+      return;
+    }
+    if (duplicateAttempt && !duplicateOverride) {
+      setError("This matches a transaction you just submitted. Confirm that you want to send the same details again.");
       return;
     }
 
     setSending(true);
 
     try {
-      const transaction = await signVorliqTransaction(wallet, receiver.trim(), amount);
+      const transaction = await signVorliqTransaction(wallet, review.receiver.address, amount);
       const result = await sendTransaction(transaction);
 
       if (result.success) {
@@ -165,8 +206,11 @@ export default function SendScreen({ navigation, route }) {
           result.data.data?.transaction?.tx_id;
         setSubmittedTx(txId || null);
         setMessage("Transaction signed locally and submitted as pending. It is confirmed after mining.");
+        setLastSubmitted({ fingerprint: transactionFingerprint, txId, submittedAt: Date.now() });
         setReceiver("");
         setAmount("");
+        setStep("result");
+        setDuplicateOverride(false);
       } else {
         setError(result.error);
       }
@@ -200,6 +244,7 @@ export default function SendScreen({ navigation, route }) {
       setAmount(payment.amount);
     }
     setScannerOpen(false);
+    setStep("details");
     setMessage("Payment QR code scanned.");
   };
 
@@ -234,7 +279,7 @@ export default function SendScreen({ navigation, route }) {
         <View style={sharedStyles.card}>
           <Text style={sharedStyles.label}>Pending Transaction</Text>
           <IdDisplay value={submittedTx} copyLabel="Copy Transaction ID" />
-          <Text style={sharedStyles.mutedText}>Mining confirms this transaction into a block.</Text>
+          <Text style={sharedStyles.mutedText}>Status is pending until a miner confirms this transaction in a block.</Text>
           <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton, styles.scanButton]} onPress={() => Clipboard.setStringAsync(submittedTx)}>
             <Text style={sharedStyles.buttonText}>Copy Transaction ID</Text>
           </Pressable>
@@ -249,46 +294,101 @@ export default function SendScreen({ navigation, route }) {
         </View>
       ) : null}
 
-      <Pressable style={[sharedStyles.button, styles.scanButton]} onPress={scannerOpen ? () => setScannerOpen(false) : openScanner}>
-        <Text style={sharedStyles.buttonText}>{scannerOpen ? "Close Scanner" : "Scan QR Code"}</Text>
-      </Pressable>
+      {step === "details" ? (
+        <>
+          <View style={sharedStyles.card}>
+            <Text style={sharedStyles.label}>Step 1 of 3</Text>
+            <Text style={sharedStyles.mutedText}>Enter transaction details. Your private key remains on this phone and is used only for local signing.</Text>
+          </View>
 
-      {scannerOpen ? (
-        <View style={styles.cameraWrap}>
-          <CameraView
-            style={styles.camera}
-            facing="back"
-            barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-            onCameraReady={() => setCameraReady(true)}
-            onBarcodeScanned={handleBarcodeScanned}
+          <Pressable style={[sharedStyles.button, styles.scanButton]} onPress={scannerOpen ? () => setScannerOpen(false) : openScanner}>
+            <Text style={sharedStyles.buttonText}>{scannerOpen ? "Close Scanner" : "Scan QR Code"}</Text>
+          </Pressable>
+
+          {scannerOpen ? (
+            <View style={styles.cameraWrap}>
+              <CameraView
+                style={styles.camera}
+                facing="back"
+                barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+                onCameraReady={() => setCameraReady(true)}
+                onBarcodeScanned={handleBarcodeScanned}
+              />
+              <Text style={sharedStyles.mutedText}>Point your camera at a Vorliq payment QR code.</Text>
+            </View>
+          ) : null}
+
+          <Text style={sharedStyles.label}>Receiver Address</Text>
+          <TextInput
+            autoCapitalize="none"
+            style={sharedStyles.input}
+            placeholder="Paste receiver wallet address"
+            placeholderTextColor={theme.textSecondary}
+            value={receiver}
+            onChangeText={(value) => {
+              setReceiver(value);
+              setDuplicateOverride(false);
+            }}
           />
-          <Text style={sharedStyles.mutedText}>Point your camera at a Vorliq payment QR code.</Text>
-        </View>
+          {receiver.trim() ? (
+            <Text style={review.receiver.looksValid ? sharedStyles.mutedText : sharedStyles.errorText}>
+              Receiver address {review.receiver.looksValid ? "looks valid." : "needs careful review."}
+            </Text>
+          ) : null}
+
+          <Text style={sharedStyles.label}>Amount of VLQ</Text>
+          <TextInput
+            keyboardType="decimal-pad"
+            style={sharedStyles.input}
+            placeholder="10"
+            placeholderTextColor={theme.textSecondary}
+            value={amount}
+            onChangeText={(value) => {
+              setAmount(value);
+              setDuplicateOverride(false);
+            }}
+          />
+          {balance !== null ? <Text style={sharedStyles.mutedText}>Confirmed balance available for review: {balance} VLQ</Text> : null}
+          {review.errors.map((item) => <Text style={sharedStyles.errorText} key={item}>{item}</Text>)}
+          {review.warnings.map((item) => <Text style={sharedStyles.errorText} key={item}>{item}</Text>)}
+
+          <Pressable style={sharedStyles.button} onPress={continueToReview}>
+            <Text style={sharedStyles.buttonText}>Review Transaction</Text>
+          </Pressable>
+        </>
       ) : null}
 
-      <Text style={sharedStyles.label}>Receiver Address</Text>
-      <TextInput
-        autoCapitalize="none"
-        style={sharedStyles.input}
-        placeholder="Paste receiver wallet address"
-        placeholderTextColor={theme.textSecondary}
-        value={receiver}
-        onChangeText={setReceiver}
-      />
-
-      <Text style={sharedStyles.label}>Amount of VLQ</Text>
-      <TextInput
-        keyboardType="decimal-pad"
-        style={sharedStyles.input}
-        placeholder="10"
-        placeholderTextColor={theme.textSecondary}
-        value={amount}
-        onChangeText={setAmount}
-      />
-
-      <Pressable style={sharedStyles.button} onPress={handleSend} disabled={sending}>
-        <Text style={sharedStyles.buttonText}>{sending ? "Sending..." : "Send VLQ"}</Text>
-      </Pressable>
+      {step === "review" ? (
+        <View style={sharedStyles.card}>
+          <Text style={sharedStyles.label}>Step 2 of 3 - Review Transaction</Text>
+          <Text style={sharedStyles.errorText}>Transactions cannot be reversed. Verify the receiver address before confirming.</Text>
+          <IdDisplay label="Sender" value={wallet?.address} copyLabel="Copy Sender" />
+          <IdDisplay label="Receiver" value={review.receiver.address} copyLabel="Copy Receiver" />
+          <Text style={sharedStyles.label}>Amount</Text>
+          <Text style={sharedStyles.value}>{review.amount} VLQ</Text>
+          <Text style={sharedStyles.label}>Estimated Status</Text>
+          <Text style={sharedStyles.value}>Pending until mined</Text>
+          <Text style={sharedStyles.label}>Receiver Validation</Text>
+          <Text style={sharedStyles.value}>{review.receiver.looksValid ? "Looks valid" : "Warnings present"}</Text>
+          <Text style={sharedStyles.mutedText}>The private key stays on this phone and is not sent to the backend.</Text>
+          {review.errors.map((item) => <Text style={sharedStyles.errorText} key={item}>{item}</Text>)}
+          {review.warnings.map((item) => <Text style={sharedStyles.errorText} key={item}>{item}</Text>)}
+          {duplicateAttempt ? (
+            <Pressable style={styles.confirmRow} onPress={() => setDuplicateOverride((current) => !current)}>
+              <View style={[styles.checkbox, duplicateOverride && styles.checkboxChecked]}>
+                {duplicateOverride ? <Text style={styles.checkboxMark}>OK</Text> : null}
+              </View>
+              <Text style={styles.confirmText}>I understand this repeats the same send details submitted moments ago.</Text>
+            </Pressable>
+          ) : null}
+          <Pressable style={[sharedStyles.button, sharedStyles.secondaryButton, styles.scanButton]} onPress={() => setStep("details")} disabled={sending}>
+            <Text style={sharedStyles.buttonText}>Back</Text>
+          </Pressable>
+          <Pressable style={sharedStyles.button} onPress={handleSend} disabled={sending || !review.canSubmit || (duplicateAttempt && !duplicateOverride)}>
+            <Text style={sharedStyles.buttonText}>{sending ? "Sending..." : "Confirm and Send"}</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -317,5 +417,35 @@ const styles = StyleSheet.create({
   camera: {
     height: 280,
     width: "100%",
+  },
+  confirmRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+    marginVertical: theme.spacing.md,
+  },
+  checkbox: {
+    alignItems: "center",
+    borderColor: theme.border,
+    borderRadius: 6,
+    borderWidth: 1,
+    height: 26,
+    justifyContent: "center",
+    width: 26,
+  },
+  checkboxChecked: {
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
+  },
+  checkboxMark: {
+    color: theme.background,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  confirmText: {
+    color: theme.text,
+    flex: 1,
+    fontSize: theme.fonts.small,
+    lineHeight: 18,
   },
 });

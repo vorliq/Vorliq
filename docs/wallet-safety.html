@@ -104,6 +104,27 @@
       </section>
 
       <section class="section card">
+        <h2>Verify A Receiver Address</h2>
+        <ol>
+          <li>Copy the receiver address from the source the receiver controls.</li>
+          <li>Check that it uses only Vorliq base58 characters. Ambiguous characters such as <code>0</code>, <code>O</code>, <code>I</code>, and <code>l</code> should not appear.</li>
+          <li>Compare the first and last several characters before sending.</li>
+          <li>Do not send normal user transactions to <code>SYSTEM</code>, <code>VORLIQ_TREASURY</code>, or <code>LENDING_POOL</code>.</li>
+          <li>When sending meaningful value, test with a small amount first and wait for confirmation.</li>
+        </ol>
+      </section>
+
+      <section class="section card danger">
+        <h2>Sending Is Final</h2>
+        <p>A submitted transaction cannot be reversed by Vorliq support, miners, node operators, or the community. If the receiver address is wrong, the funds may be unrecoverable. The Send page includes a review step so users can verify sender, receiver, amount, pending status, and local signing before confirming.</p>
+      </section>
+
+      <section class="section card">
+        <h2>Pending And Confirmed</h2>
+        <p>After a send is accepted, it is placed in the pending pool. Pending means the transaction has not yet been mined into a block. Confirmed means a miner included it in a valid block. Transaction detail pages show status, confirmations, block links when available, sender, receiver, and copy buttons for safe verification.</p>
+      </section>
+
+      <section class="section card">
         <h2>Faucet Claims</h2>
         <p>The starter faucet only needs a public wallet address. You never need to enter a private key, wallet password, recovery phrase, admin token, or secret to request starter VLQ.</p>
       </section>

@@ -1,4 +1,5 @@
 const WALLET_STORAGE_KEY = "vorliq_wallet";
+const WALLET_LAST_BACKUP_KEY = "vorliq_wallet_last_backup_at";
 const PBKDF2_ITERATIONS = 250000;
 const WALLET_BACKUP_VERSION = 1;
 
@@ -59,6 +60,12 @@ async function deriveEncryptionKey(password, salt, iterations = PBKDF2_ITERATION
 }
 
 export async function saveWallet(wallet, password) {
+  const storedWallet = await createEncryptedWalletBackup(wallet, password);
+  window.localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(storedWallet));
+  return true;
+}
+
+export async function createEncryptedWalletBackup(wallet, password) {
   const normalizedWallet = normalizeWallet(wallet);
   const now = new Date().toISOString();
   const salt = window.crypto.getRandomValues(new Uint8Array(16));
@@ -84,8 +91,7 @@ export async function saveWallet(wallet, password) {
     created_at: now,
   };
 
-  window.localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(storedWallet));
-  return true;
+  return storedWallet;
 }
 
 export async function loadWallet(password) {
@@ -167,6 +173,9 @@ export async function exportEncryptedWalletBackup(password) {
   const storedWallet = getStoredEncryptedWallet();
   await decryptStoredWallet(storedWallet, password);
 
+  const exportedAt = new Date().toISOString();
+  window.localStorage.setItem(WALLET_LAST_BACKUP_KEY, exportedAt);
+
   return {
     version: Number(storedWallet.version || WALLET_BACKUP_VERSION),
     address: storedWallet.address,
@@ -179,7 +188,7 @@ export async function exportEncryptedWalletBackup(password) {
     encryption_method: storedWallet.encryption_method || "PBKDF2-SHA256-AES-GCM",
     iterations: Number(storedWallet.iterations || PBKDF2_ITERATIONS),
     created_at: storedWallet.created_at || null,
-    exported_at: new Date().toISOString(),
+    exported_at: exportedAt,
   };
 }
 
@@ -210,6 +219,11 @@ export function hasWallet() {
   return Boolean(window.localStorage.getItem(WALLET_STORAGE_KEY));
 }
 
+export function getLastWalletBackupAt() {
+  return window.localStorage.getItem(WALLET_LAST_BACKUP_KEY);
+}
+
 export function clearWallet() {
   window.localStorage.removeItem(WALLET_STORAGE_KEY);
+  window.localStorage.removeItem(WALLET_LAST_BACKUP_KEY);
 }

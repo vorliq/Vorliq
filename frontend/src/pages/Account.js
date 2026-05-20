@@ -12,7 +12,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
-import { exportEncryptedWalletBackup, loadWallet } from "../helpers/storage";
+import { exportEncryptedWalletBackup, getLastWalletBackupAt, loadWallet } from "../helpers/storage";
 
 function Account() {
   const { wallet } = useAuth();
@@ -38,6 +38,7 @@ function Account() {
   const [revealOpen, setRevealOpen] = useState(false);
   const [revealPassword, setRevealPassword] = useState("");
   const [revealedPrivateKey, setRevealedPrivateKey] = useState("");
+  const [lastBackupAt, setLastBackupAt] = useState(() => getLastWalletBackupAt());
 
   useEffect(() => {
     let mounted = true;
@@ -215,6 +216,7 @@ function Account() {
       URL.revokeObjectURL(url);
       setExportPassword("");
       setExportOpen(false);
+      setLastBackupAt(getLastWalletBackupAt());
       toast.success("Encrypted wallet backup exported.");
     } catch (error) {
       toast.error("Unable to export wallet backup. Check your password.");
@@ -396,6 +398,15 @@ function Account() {
             <label>Pending Outgoing</label>
             <div className="value-box">{loading ? "Loading..." : `${addressHistory?.pending_outgoing_total ?? 0} VLQ`}</div>
           </div>
+        </div>
+
+        <div className={lastBackupAt ? "wallet-safety-box" : "private-key-warning"}>
+          <strong>{lastBackupAt ? "Encrypted backup recorded" : "Backup recommended"}</strong>
+          <p>
+            {lastBackupAt
+              ? `Last encrypted wallet backup exported from this browser: ${new Date(lastBackupAt).toLocaleString()}.`
+              : "This browser has a saved wallet but no recorded encrypted backup export. Download a backup before storing meaningful VLQ."}
+          </p>
         </div>
 
         {exportOpen && (

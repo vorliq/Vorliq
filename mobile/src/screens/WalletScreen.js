@@ -123,6 +123,16 @@ export default function WalletScreen({ navigation }) {
         setError("Biometric check was not completed.");
         return;
       }
+    } else {
+      Alert.alert(
+        "Reveal Private Key",
+        "Only reveal your private key on a trusted device where nobody can see your screen.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Reveal", style: "destructive", onPress: () => setPrivateKeyUnlocked(true) },
+        ]
+      );
+      return;
     }
 
     setPrivateKeyUnlocked(true);
@@ -164,11 +174,12 @@ export default function WalletScreen({ navigation }) {
         <Text style={sharedStyles.title}>Create Your Wallet</Text>
         <Text style={[sharedStyles.subtitle, styles.centerText]}>Generate a Vorliq wallet on this phone so you can receive, send, and vote with VLQ.</Text>
         <View style={[sharedStyles.card, styles.safetyCard]}>
-          <Text style={sharedStyles.label}>Wallet Safety</Text>
+          <Text style={sharedStyles.label}>Backup Before Use</Text>
           <Text style={sharedStyles.mutedText}>
             Vorliq cannot recover your private key. Anyone with your private key can control
             your wallet. After creating a wallet, save the private key somewhere safe before
-            storing meaningful VLQ on it.
+            storing meaningful VLQ on it. Deleting app storage or losing this phone can lose
+            the wallet if it is not backed up.
           </Text>
           <Pressable style={styles.confirmRow} onPress={() => setSafetyConfirmed((confirmed) => !confirmed)}>
             <View style={[styles.checkbox, safetyConfirmed && styles.checkboxChecked]}>
@@ -198,6 +209,11 @@ export default function WalletScreen({ navigation }) {
       {error ? <Text style={sharedStyles.errorText}>{error}</Text> : null}
 
       <View style={sharedStyles.card}>
+        <Text style={sharedStyles.label}>Backup Now</Text>
+        <Text style={sharedStyles.mutedText}>
+          Copy your public address for receiving VLQ, then keep a secure private-key backup.
+          Mobile encrypted file export/import is not implemented in this release.
+        </Text>
         <IdDisplay label="Address" value={wallet.address} copyLabel="Copy Address" />
         <Pressable style={[sharedStyles.button, styles.marginTop]} onPress={copyAddress}>
           <Text style={sharedStyles.buttonText}>Copy Address</Text>

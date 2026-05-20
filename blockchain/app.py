@@ -22,7 +22,7 @@ from registry import NodeRegistry
 from storage import Storage
 from transaction import SYSTEM_ADDRESSES, TREASURY_ADDRESS, Transaction
 from treasury import Treasury
-from wallet import Wallet
+from wallet import Wallet, is_reserved_address, validate_address
 
 APP_START_TIME = time.time()
 VORLIQ_HOST = os.environ.get("VORLIQ_HOST", "127.0.0.1")
@@ -146,12 +146,28 @@ def _require_text(value: object, field_name: str, max_length: int | None = None)
 
 
 def _require_number(value: object, field_name: str, maximum: float | None = None) -> float:
-    number = float(value)
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{field_name} must be a valid number") from None
     if number <= 0:
         raise ValueError(f"{field_name} must be greater than zero")
     if maximum is not None and number > maximum:
         raise ValueError(f"{field_name} is too large")
     return number
+
+
+def _require_public_wallet_address(value: object, field_name: str, *, allow_reserved: bool = False) -> str:
+    normalized = _require_text(value, field_name, 96)
+    valid, errors, _warnings = validate_address(
+        normalized,
+        label=field_name,
+        strict_length=True,
+        allow_reserved=allow_reserved,
+    )
+    if not valid:
+        raise ValueError(errors[0])
+    return normalized
 
 
 def _require_enum(value: object, field_name: str, allowed: set[str]) -> str:
@@ -424,21 +440,25 @@ def get_transactions():
 def create_transaction():
     try:
         data = _json_body()
-        sender_address = _require_text(
+        sender_address = _require_public_wallet_address(
             _pick(data, "sender_address", "senderAddress", "sender"),
             "sender address",
-            160,
+            allow_reserved=True,
         )
-        _require_text(
+        receiver_address = _require_public_wallet_address(
             _pick(data, "receiver_address", "receiverAddress", "receiver"),
             "receiver address",
-            160,
+            allow_reserved=True,
         )
         _require_number(data.get("amount"), "amount", MAX_PUBLIC_TRANSACTION_AMOUNT)
         _require_text(data.get("signature"), "signature", 512)
         _require_text(_pick(data, "sender_public_key", "senderPublicKey"), "sender public key", 3000)
-        if sender_address in SYSTEM_ADDRESSES or sender_address == TREASURY_ADDRESS:
+        if sender_address in SYSTEM_ADDRESSES or sender_address == TREASURY_ADDRESS or is_reserved_address(sender_address):
             raise ValueError("system-controlled addresses cannot submit public transactions")
+        if is_reserved_address(receiver_address):
+            raise ValueError("reserved system addresses cannot receive public user transactions")
+        if sender_address == receiver_address:
+            raise ValueError("sender and receiver cannot be the same address")
         transaction = Transaction.from_dict(data)
         node.submit_transaction(transaction)
         achievements.check_and_award(transaction.sender_address, "first_transaction", node.blockchain)

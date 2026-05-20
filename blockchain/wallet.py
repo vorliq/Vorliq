@@ -10,6 +10,10 @@ from logger import vorliq_logger
 
 
 BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+BASE58_ALPHABET_SET = set(BASE58_ALPHABET)
+RESERVED_ADDRESSES = {"SYSTEM", "VORLIQ_TREASURY", "LENDING_POOL"}
+MIN_REASONABLE_ADDRESS_LENGTH = 16
+MAX_REASONABLE_ADDRESS_LENGTH = 96
 _RIPEMD160_MASK = 0xFFFFFFFF
 _RIPEMD160_R = [
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
@@ -53,6 +57,46 @@ def base58_encode(data: bytes) -> str:
         encoded = BASE58_ALPHABET[remainder] + encoded
 
     return ("1" * leading_zeroes) + (encoded or "")
+
+
+def normalize_address(address: object) -> str:
+    return str(address or "").replace("\x00", "").strip()
+
+
+def is_reserved_address(address: object) -> bool:
+    return normalize_address(address) in RESERVED_ADDRESSES
+
+
+def validate_address(
+    address: object,
+    *,
+    allow_reserved: bool = False,
+    strict_length: bool = True,
+    label: str = "address",
+) -> tuple[bool, list[str], list[str]]:
+    normalized = normalize_address(address)
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not normalized:
+        errors.append(f"{label} is required.")
+    else:
+        reserved = is_reserved_address(normalized)
+        if reserved and not allow_reserved:
+            errors.append(f"{label} is a reserved system address.")
+        if not reserved and any(character not in BASE58_ALPHABET_SET for character in normalized):
+            errors.append(f"{label} must use the Vorliq base58 address character set.")
+        if (
+            not reserved
+            and (len(normalized) < MIN_REASONABLE_ADDRESS_LENGTH or len(normalized) > MAX_REASONABLE_ADDRESS_LENGTH)
+        ):
+            message = f"{label} length is not valid for public wallet transactions."
+            if strict_length:
+                errors.append(message)
+            else:
+                warnings.append(message)
+
+    return len(errors) == 0, errors, warnings
 
 
 def ripemd160(data: bytes) -> bytes:

@@ -5,7 +5,8 @@
   "main": "dist/vorliq-sdk.js",
   "scripts": {
     "build": "node scripts/build.js",
-    "example": "node examples/basic.js"
+    "example": "node examples/basic.js",
+    "test:safety": "node scripts/safety-smoke.js"
   },
   "repository": "https://github.com/vorliq/Vorliq",
   "license": "MIT",

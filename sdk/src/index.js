@@ -1,4 +1,10 @@
 const { signTransaction } = require("./signer");
+const {
+  createTransactionReview,
+  isReservedAddress,
+  validateAddress,
+  assertTransactionReview,
+} = require("./address");
 const crypto = require("crypto");
 
 async function getFetch() {
@@ -379,6 +385,8 @@ class VorliqSDK {
 
   /**
    * Signs a VLQ transaction locally and submits it to the Vorliq pending pool.
+   * The private key is used only in this SDK caller environment and is never
+   * sent to the Vorliq API.
    *
    * @param {string} fromAddress - Sender wallet address.
    * @param {string} fromPrivateKey - Sender private key in PEM format.
@@ -388,12 +396,15 @@ class VorliqSDK {
    * @returns {Promise<object>} API result returned by POST /api/transaction/send.
    */
   async sendTransaction(fromAddress, fromPrivateKey, fromPublicKey, toAddress, amount) {
+    const review = createTransactionReview(fromAddress, toAddress, amount);
+    assertTransactionReview(review);
+
     const signedTransaction = signTransaction({
-      senderAddress: fromAddress,
+      senderAddress: review.from,
       senderPrivateKey: fromPrivateKey,
       senderPublicKey: fromPublicKey,
-      receiverAddress: toAddress,
-      amount,
+      receiverAddress: review.to,
+      amount: review.amount,
     });
 
     return this.request("/api/transaction/send", {
@@ -996,3 +1007,6 @@ class VorliqSDK {
 module.exports = VorliqSDK;
 module.exports.VorliqSDK = VorliqSDK;
 module.exports.canonicalStringify = canonicalStringify;
+module.exports.createTransactionReview = createTransactionReview;
+module.exports.isReservedAddress = isReservedAddress;
+module.exports.validateAddress = validateAddress;

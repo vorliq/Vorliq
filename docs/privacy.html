@@ -40,6 +40,7 @@
 
         <h2>Local Wallet Storage</h2>
         <p>The web app may store encrypted wallet data in the user's browser localStorage. That local record can include a public wallet address, public key, encrypted private key, encryption salt, initialization vector, and encryption settings. The password used to decrypt it is not stored by Vorliq. The mobile app stores wallet data locally on the user's device.</p>
+        <p>Manual private key mode is intended for exceptional use. The app does not need to send private keys to the backend to create a transaction; signing happens locally and the submitted transaction contains public transaction fields plus a signature.</p>
 
         <h2>Operational Data</h2>
         <p>Vorliq infrastructure can produce logs for service health, diagnostics, errors, deployment status, rate limiting, and security monitoring. Logs are intended to operate the public node and may include IP addresses, request paths, timestamps, and technical metadata.</p>

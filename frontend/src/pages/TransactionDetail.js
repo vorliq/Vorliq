@@ -65,7 +65,7 @@ function TransactionDetail() {
         <section className="card card-pad stack explorer-detail">
           <div className="section-title">
             <div>
-              <span className={`status-badge ${transaction.status}`}>{transaction.status}</span>
+              <span className={`status-badge ${statusClass(transaction.status)}`}>{statusLabel(transaction.status)}</span>
               <h2>{shortId(transaction.tx_id)}</h2>
             </div>
             <button className="button secondary small-button" type="button" onClick={() => copy(transaction.tx_id, "Transaction ID")}>
@@ -74,8 +74,8 @@ function TransactionDetail() {
           </div>
 
           <div className="grid explorer-summary-grid">
-            <IdentityPanel label="Sender" address={transaction.sender_address} />
-            <IdentityPanel label="Recipient" address={transaction.receiver_address} />
+            <IdentityPanel label="Sender" address={transaction.sender_address} onCopy={copy} />
+            <IdentityPanel label="Recipient" address={transaction.receiver_address} onCopy={copy} />
             <Meta label="Amount" value={`${transaction.amount} VLQ`} />
             <Meta label="Type" value={transaction.type || transaction.category || "transfer"} />
             <Meta label="Timestamp" value={formatTime(transaction.timestamp)} />
@@ -96,7 +96,7 @@ function TransactionDetail() {
           {transaction.status === "pending" && (
             <div className="risk-box">
               This transaction is in the pending pool. It becomes confirmed after a miner includes
-              it in a valid block.
+              it in a valid block. Do not assume it is final until confirmations appear.
             </div>
           )}
 
@@ -106,16 +106,29 @@ function TransactionDetail() {
           {rawOpen && <pre className="code-box">{JSON.stringify(transaction, null, 2)}</pre>}
         </section>
       )}
+
+      {!loading && !transaction && (
+        <section className="card card-pad empty-state">
+          <h2>Transaction not found</h2>
+          <p>
+            No pending or confirmed transaction was found for this ID. Check that the full
+            transaction ID was copied correctly.
+          </p>
+        </section>
+      )}
     </div>
   );
 }
 
-function IdentityPanel({ label, address }) {
+function IdentityPanel({ label, address, onCopy }) {
   return (
     <div className="meta-item identity-panel">
       <span className="meta-label">{label}</span>
       <AddressIdentity address={address} compact />
       <span className="meta-value">{address}</span>
+      <button className="button secondary small-button" type="button" onClick={() => onCopy(address, label)}>
+        Copy {label}
+      </button>
     </div>
   );
 }
@@ -132,6 +145,17 @@ function Meta({ label, value }) {
 function shortId(value) {
   if (!value) return "Unknown transaction";
   return value.length > 24 ? `${value.slice(0, 16)}...${value.slice(-8)}` : value;
+}
+
+function statusClass(status) {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "pending" || normalized === "confirmed") return normalized;
+  return "unknown";
+}
+
+function statusLabel(status) {
+  const normalized = statusClass(status);
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
 function formatTime(timestamp) {

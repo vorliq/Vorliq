@@ -8,6 +8,8 @@ Vorliq is experimental open-source community blockchain software. VLQ has no gua
 
 Developers should not collect or store users private keys unless they fully understand custody risk and have a strong security model. In most cases, applications should sign locally on the user's device, avoid logging private keys, avoid sending keys to servers, and give users plain warnings before they create transactions, exchange offers, lending requests, mining actions, governance votes, or treasury votes.
 
+Before sending VLQ, applications should show a review step with the sender address, receiver address, amount, pending-until-mined status, address validation result, and a clear warning that transactions cannot be reversed. The SDK exposes `validateAddress(address)`, `isReservedAddress(address)`, and `createTransactionReview(from, to, amount)` to support that flow.
+
 Install the SDK from the `sdk` folder in this repository while it is being developed locally. From the project root, run `cd sdk`, then run `npm install`, and then run `npm run build`. Applications can import the built SDK from `dist/vorliq-sdk.js`. The default node is `https://vorliq.org`, but you can pass any compatible Vorliq node URL when you create the client.
 
 ```js
@@ -337,19 +339,37 @@ async function main() {
 main().catch(console.error);
 ```
 
-To send VLQ, provide the sender address, sender private key, sender public key, recipient address, and amount. The SDK signs the transaction locally before it sends anything to the node, using the same signing payload as the Vorliq web app.
+To send VLQ, provide the sender address, sender private key, sender public key, recipient address, and amount. The SDK validates the send request before signing, rejects reserved user sender addresses, rejects same sender and receiver, rejects invalid amounts, and signs the transaction locally before it sends anything to the node. The private key is used only in the SDK caller environment; do not log it or send it to your own backend.
 
 ```js
 const { VorliqSDK } = require("./dist/vorliq-sdk");
 
 async function main() {
   const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const review = VorliqSDK.createTransactionReview(
+    "3MNQE1X7T4Bz9kLmNpQrStUvWx",
+    "7YWHMfk9JZe9LMQaPq2X3B4C5D",
+    5
+  );
+
+  if (!review.canSubmit) {
+    throw new Error(review.errors.join(" "));
+  }
+
+  console.log("Review before send:", {
+    from: review.from,
+    to: review.to,
+    amount: review.amount,
+    status: review.status,
+    warnings: review.warnings,
+  });
+
   const result = await vorliq.sendTransaction(
-    "VLQ_SENDER_ADDRESS",
+    review.from,
     "-----BEGIN EC PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END EC PRIVATE KEY-----",
     "-----BEGIN PUBLIC KEY-----\nYOUR_PUBLIC_KEY\n-----END PUBLIC KEY-----",
-    "VLQ_RECEIVER_ADDRESS",
-    5
+    review.to,
+    review.amount
   );
   console.log(result);
 }

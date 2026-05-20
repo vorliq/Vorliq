@@ -1653,7 +1653,7 @@ test("Account protected route redirects to login behavior when no wallet is load
 test("Send page logged-out manual mode shows the private-key safety warning", () => {
   renderWithProviders(<Send />, "/send");
 
-  expect(screen.getByText(/pasting private keys into any website is risky/i)).toBeInTheDocument();
+  expect(screen.getByText(/pasted private keys are never saved/i)).toBeInTheDocument();
 });
 
 test("Mine page displays a cooldown message when the API returns a mining cooldown error", async () => {

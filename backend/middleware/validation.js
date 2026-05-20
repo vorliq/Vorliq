@@ -1,5 +1,6 @@
 const net = require("net");
 const { logError } = require("../logger");
+const { isReservedAddress, validateAddress: validateVorliqAddress } = require("../address");
 
 const SYSTEM_ADDRESSES = new Set(["SYSTEM", "VORLIQ_TREASURY", "LENDING_POOL"]);
 const FORUM_CATEGORIES = new Set(["general", "mining", "lending", "exchange", "governance", "technical"]);
@@ -55,6 +56,19 @@ function validateAddress(req, res, body, names, label) {
   return value;
 }
 
+function validatePublicWalletAddress(req, res, body, names, label, options = {}) {
+  const value = requireText(req, res, body, names, label, 96);
+  if (res.headersSent) return undefined;
+  const result = validateVorliqAddress(value, {
+    label,
+    allowReserved: Boolean(options.allowReserved),
+    strictLength: true,
+  });
+  if (!result.valid) return reject(req, res, result.errors[0]);
+  body[names[0]] = result.address;
+  return result.address;
+}
+
 function validateSignature(req, res, body, names, label) {
   const value = requireText(req, res, body, names, label, 512);
   if (res.headersSent) return undefined;
@@ -108,10 +122,13 @@ function validateBody(req, res, next) {
   }
 
   if (path === "/api/transaction/send") {
-    const sender = validateAddress(req, res, body, ["sender_address", "senderAddress", "sender"], "sender address");
+    const sender = validatePublicWalletAddress(req, res, body, ["sender_address", "senderAddress", "sender"], "sender address", { allowReserved: true });
     if (res.headersSent) return;
-    if (SYSTEM_ADDRESSES.has(sender)) return reject(req, res, "system-controlled addresses cannot submit public transactions.");
-    validateAddress(req, res, body, ["receiver_address", "receiverAddress", "receiver"], "receiver address");
+    if (SYSTEM_ADDRESSES.has(sender) || isReservedAddress(sender)) return reject(req, res, "system-controlled addresses cannot submit public transactions.");
+    const receiver = validatePublicWalletAddress(req, res, body, ["receiver_address", "receiverAddress", "receiver"], "receiver address");
+    if (res.headersSent) return;
+    if (sender === receiver) return reject(req, res, "sender and receiver cannot be the same address.");
+    if (isReservedAddress(receiver)) return reject(req, res, "reserved system addresses cannot receive public user transactions.");
     if (res.headersSent) return;
     requireNumber(req, res, body, ["amount"], "amount", { min: 0, max: 21_000_000 });
     if (res.headersSent) return;

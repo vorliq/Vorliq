@@ -8,6 +8,7 @@ import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
+import { createEncryptedWalletBackup } from "../helpers/storage";
 
 function Wallet() {
   const [wallet, setWallet] = useState(null);
@@ -18,6 +19,8 @@ function Wallet() {
   const [errorMessage, setErrorMessage] = useState("");
   const [receiveAmount, setReceiveAmount] = useState("");
   const [safetyConfirmed, setSafetyConfirmed] = useState(false);
+  const [backupPassword, setBackupPassword] = useState("");
+  const [backupCreated, setBackupCreated] = useState(false);
 
   async function createWallet() {
     if (!safetyConfirmed) {
@@ -64,6 +67,44 @@ function Wallet() {
     }
   }
 
+  async function copyText(value, label) {
+    try {
+      await navigator.clipboard.writeText(String(value || ""));
+      toast.success(`${label} copied.`);
+    } catch {
+      toast.error(`Unable to copy ${label.toLowerCase()}.`);
+    }
+  }
+
+  async function downloadEncryptedBackup(event) {
+    event.preventDefault();
+    if (!wallet) return;
+    if (!backupPassword) {
+      toast.error("Enter a password to encrypt the backup.");
+      return;
+    }
+
+    try {
+      const backup = await createEncryptedWalletBackup(wallet, backupPassword);
+      const blob = new Blob([JSON.stringify({ ...backup, exported_at: new Date().toISOString() }, null, 2)], {
+        type: "application/json;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "vorliq-wallet-backup.json";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      setBackupPassword("");
+      setBackupCreated(true);
+      toast.success("Encrypted wallet backup downloaded.");
+    } catch (error) {
+      toast.error("Unable to create encrypted backup.");
+    }
+  }
+
   return (
     <div className="page">
       <section className="hero">
@@ -106,10 +147,43 @@ function Wallet() {
             <Spinner label="Creating wallet..." />
           ) : wallet ? (
             <div className="stack">
+              <div className="wallet-safety-box">
+                <strong>Backup now</strong>
+                <p>
+                  Copy the public address for receiving VLQ, then download an encrypted backup
+                  before sending funds to this wallet. The raw private key below is shown only
+                  for immediate backup; Vorliq cannot recover it later.
+                </p>
+              </div>
               <div className="field">
                 <label>Wallet Address</label>
                 <div className="value-box">{wallet.address}</div>
+                <button className="button secondary small-button" type="button" onClick={() => copyText(wallet.address, "Public address")}>
+                  Copy Public Address
+                </button>
               </div>
+              <form className="form wallet-action-panel" onSubmit={downloadEncryptedBackup}>
+                <h3>Download Encrypted Backup</h3>
+                <p className="help-text">
+                  This backup encrypts the private key with a password you choose. Keep both the
+                  file and password safe.
+                </p>
+                <div className="field">
+                  <label htmlFor="new-wallet-backup-password">Backup Password</label>
+                  <input
+                    id="new-wallet-backup-password"
+                    className="input"
+                    type="password"
+                    value={backupPassword}
+                    onChange={(event) => setBackupPassword(event.target.value)}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <button className="button" type="submit">
+                  Download Encrypted Backup
+                </button>
+                {backupCreated && <p className="help-text">Backup downloaded in this browser session.</p>}
+              </form>
               <div className="empty-state">
                 Need starter VLQ? The faucet can send a small treasury-funded transaction when funds are available.{" "}
                 <Link to={`/faucet?address=${wallet.address}`}>Open Faucet</Link>
