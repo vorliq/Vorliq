@@ -1,0 +1,16 @@
+{
+  "name": "vorliq-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Read-only Playwright end-to-end and visual regression smoke tests for Vorliq.",
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:ci": "playwright test tests/ci-production.spec.js",
+    "e2e:headed": "playwright test --headed",
+    "e2e:report": "playwright show-report",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
+  }
+}

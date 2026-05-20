@@ -75,3 +75,58 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: npm run build
+
+  e2e-production-smoke:
+    runs-on: ubuntu-latest
+    needs:
+      - backend-tests
+      - frontend-build
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: Install Chromium browser
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Run read-only production E2E smoke tests
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: https://vorliq.org
+          E2E_WORKERS: "1"
+        run: npm run e2e:ci
+
+      - name: Report Playwright failure context
+        if: failure()
+        working-directory: e2e
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          contexts = list(Path("test-results").glob("**/error-context.md"))
+          if not contexts:
+              print("::error title=Playwright failure::No Playwright error-context.md files were produced.")
+          for path in contexts[:5]:
+              text = path.read_text(encoding="utf-8", errors="replace")
+              text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+              print(f"::error file={path},title=Playwright failure::{text[:6000]}")
+          PY
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/

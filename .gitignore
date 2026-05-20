@@ -16,6 +16,9 @@ build/
 dist/
 !sdk/dist/
 !sdk/dist/*.js
+e2e/playwright-report/
+e2e/test-results/
+e2e/screenshots/
 frontend/public/docs/
 frontend/public/pitch.html
 frontend/public/sdk/

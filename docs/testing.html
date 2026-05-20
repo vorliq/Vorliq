@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Testing</title>
+    <meta name="description" content="How Vorliq verifies blockchain, backend, frontend, SDK, mobile, and read-only browser E2E behavior." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      :root { --bg:#020817; --glass:rgba(8,14,28,.38); --green:#86e33b; --cyan:#18d7c9; --blue:#1479ff; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.26); --danger:#ff6574; }
+      * { box-sizing:border-box; }
+      body { margin:0; min-width:320px; font-family:Inter,Arial,sans-serif; color:var(--text); background:radial-gradient(circle at 14% 14%,rgba(134,227,59,.18),transparent 28rem),radial-gradient(circle at 84% 18%,rgba(20,121,255,.22),transparent 34rem),linear-gradient(180deg,#020817,#061326 56%,#020817); overflow-x:hidden; }
+      a { color:inherit; }
+      .wrap { width:min(980px,calc(100% - 32px)); margin:0 auto; }
+      header, footer { border-color:var(--border); background:rgba(8,14,28,.62); backdrop-filter:blur(14px); }
+      header { border-bottom:1px solid var(--border); }
+      nav { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:16px 0; }
+      .brand { font-weight:900; text-decoration:none; }
+      .button { display:inline-flex; justify-content:center; border:1px solid var(--border); border-radius:999px; padding:10px 14px; text-decoration:none; font-weight:900; color:var(--muted); }
+      main { padding:clamp(42px,8vw,78px) 0; }
+      .hero, section { display:grid; gap:14px; margin-bottom:30px; }
+      .eyebrow { color:var(--green); font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+      h1 { margin:0; font-size:clamp(2.25rem,7vw,4rem); line-height:1; }
+      h2 { margin:0; font-size:clamp(1.45rem,4vw,2.1rem); }
+      p, li { color:var(--muted); line-height:1.75; }
+      .glass { border:1px solid var(--border); border-radius:16px; background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012)),var(--glass); padding:22px; backdrop-filter:blur(8px); }
+      code, pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+      pre { max-width:100%; overflow:auto; white-space:pre-wrap; border:1px solid var(--border); border-radius:12px; padding:16px; background:rgba(2,8,23,.78); color:#e7f7ff; }
+      .warning { border-color:rgba(255,101,116,.44); }
+      footer { border-top:1px solid var(--border); padding:24px 0; color:var(--muted); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a class="brand" href="index.html">Vorliq</a>
+        <a class="button" href="api.html">API Docs</a>
+      </nav>
+    </header>
+    <main class="wrap">
+      <section class="hero">
+        <span class="eyebrow">Quality and Safety</span>
+        <h1>Vorliq Testing</h1>
+        <p>Vorliq uses layered testing so blockchain rules, backend APIs, frontend behavior, mobile export readiness, SDK calls, deployment scripts, and real browser routes are checked from different angles.</p>
+      </section>
+
+      <section class="glass">
+        <h2>Test Layers</h2>
+        <ul>
+          <li><strong>Python tests</strong> verify blockchain blocks, transactions, wallets, storage, profiles, faucet, lending, exchange, governance, treasury, mining status, registry, and security behavior.</li>
+          <li><strong>Backend Jest tests</strong> verify Node API routes, validation, safe error handling, admin protection, incidents, backups, manifests, heartbeat, faucet, mining, and lifecycle route proxies.</li>
+          <li><strong>Frontend tests</strong> verify React rendering, onboarding, navigation, theme behavior, wallet safety, risk notices, and major page states.</li>
+          <li><strong>SDK checks</strong> build the JavaScript SDK and run a bounded smoke call against safe public endpoints.</li>
+          <li><strong>Mobile Expo export</strong> confirms the Expo app bundles for community testing when mobile code changes.</li>
+          <li><strong>Playwright E2E tests</strong> run Chromium browser checks against the live production app using read-only paths. The full suite is run locally before release, and CI runs a smaller production smoke subset to gate deployments without overloading the public node.</li>
+        </ul>
+      </section>
+
+      <section class="glass warning">
+        <h2>Read-Only Production E2E</h2>
+        <p>The Playwright suite intentionally does not claim faucet funds, mine production blocks, create posts, submit exchange offers, create proposals, spend treasury funds, or use a real admin token. It checks public routes, layout, navigation, non-destructive page states, and safe API responses only.</p>
+      </section>
+
+      <section class="glass">
+        <h2>Run Locally</h2>
+        <pre><code>cd blockchain
+python -m pytest tests/ -v
+
+cd ../backend
+npm test
+
+cd ../frontend
+npm test -- --watchAll=false
+npm run build
+
+cd ../sdk
+npm run build
+
+cd ../e2e
+npm install
+npx playwright install chromium
+npm run e2e
+npm run e2e:ci</code></pre>
+        <p>Set <code>E2E_BASE_URL</code> to test another deployed environment. The default is <code>https://vorliq.org</code>.</p>
+      </section>
+
+      <section class="glass">
+        <h2>Playwright Coverage</h2>
+        <p>The browser suite covers public web routes, mobile and desktop overflow checks, mobile drawer behavior, desktop More menu behavior, footer social icon buttons, top logo visibility, Dashboard background guardrails, onboarding skip, theme toggle, wallet safety copy, faucet/mine read-only states, invalid transaction and block detail routes, forum search safety, registry summary, health sections, and safe API smoke endpoints.</p>
+        <p>Failure screenshots, traces, and the HTML report are generated as artifacts and are not committed to the repository.</p>
+      </section>
+
+      <section class="glass">
+        <h2>CI</h2>
+        <p>GitHub Actions runs blockchain, backend, frontend, and read-only Playwright E2E checks. Deployment only proceeds after the CI workflow succeeds. The production deployment workflow still performs server-side health, backup, incident, heartbeat, and deployment checks.</p>
+      </section>
+    </main>
+    <footer><div class="wrap">2026 Vorliq. Tests improve confidence, but users should still understand the experimental nature of VLQ software.</div></footer>
+  </body>
+</html>

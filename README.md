@@ -12,6 +12,8 @@ Live app: https://vorliq.org
 
 Public docs: https://vorliq.github.io/Vorliq
 
+Testing guide: https://vorliq.github.io/Vorliq/testing.html
+
 What is Vorliq
 --------------
 
@@ -62,6 +64,11 @@ The easiest way to start the application is to double click `start.bat` in the r
 If you are setting up from a fresh clone, install the dependencies first. In the `blockchain` folder create and activate the Python virtual environment with `python -m venv .venv` and `.venv\Scripts\activate`, then run `pip install -r requirements.txt`. In the `backend` folder run `npm install`. In the `frontend` folder run `npm install`. In the `mobile` folder run `npm install` if you want to run the Expo mobile application.
 
 To use the mobile app, install Expo Go on your phone, open a terminal in the `mobile` folder, run `npx expo start`, and scan the QR code with Expo Go. The default mobile node URL is `https://vorliq.org`. In the mobile Settings screen, you can switch to your own backend, usually something like `http://192.168.1.20:5000` on your local network. Private mobile service files such as Android notification config should stay out of git.
+
+Testing
+-------
+
+Vorliq uses Python tests for blockchain behavior, backend Jest tests for API behavior, frontend React tests for browser UI state, SDK build/smoke checks, mobile Expo export when mobile code changes, and Playwright Chromium E2E tests for read-only production route, layout, navigation, and API smoke coverage. The Playwright suite is intentionally non-destructive: it does not claim faucet funds, mine production blocks, create posts, submit offers, create proposals, spend treasury funds, or use admin tokens. See the full guide at https://vorliq.github.io/Vorliq/testing.html.
 
 Community
 ---------

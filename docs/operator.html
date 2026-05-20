@@ -74,6 +74,11 @@ sudo systemctl restart vorliq-backend.service</code></pre>
       </section>
 
       <section class="glass">
+        <h2>Post-Deploy Checks</h2>
+        <p>After deployment, verify the public app, <code>/api/health</code>, <code>/api/deployment</code>, <code>/api/system/self-check</code>, the registry summary, and the status page. CI also runs read-only Playwright browser tests against production so route loading, mobile navigation, layout overflow, safe API responses, and non-destructive user journeys are checked before the deploy workflow runs.</p>
+      </section>
+
+      <section class="glass">
         <h2>Controlled Public Node Miner</h2>
         <p>The optional public miner service is disabled by default. It does not hold private keys and it does not bypass proof of work. When enabled, it checks <code>/api/mining/status</code> and only attempts a block when the chain is valid and the block-time rules allow mining.</p>
         <pre><code>sudo systemctl edit vorliq-miner.service
