@@ -1,9 +1,13 @@
 import unittest
 import os
 import tempfile
+import hashlib
 
 _TEST_DATA_DIR = tempfile.TemporaryDirectory()
 os.environ["VORLIQ_DATA_DIR"] = _TEST_DATA_DIR.name
+
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec, utils
 
 from app import app
 from blockchain import Blockchain
@@ -115,6 +119,45 @@ class SecurityEndpointTests(unittest.TestCase):
         self.assertTrue(valid)
         self.assertEqual(errors, [])
         self.assertEqual(warnings, [])
+
+    def test_profile_verification_challenge_and_submit(self):
+        wallet = Wallet()
+        challenge_response = self.client.post("/profiles/verify/challenge", json={"address": wallet.address})
+        self.assertEqual(challenge_response.status_code, 200)
+        message = challenge_response.get_json()["message"]
+        digest = hashlib.sha256(message.encode("utf-8")).digest()
+        signature = wallet.private_key.sign(digest, ec.ECDSA(utils.Prehashed(hashes.SHA256()))).hex()
+
+        submit_response = self.client.post(
+            "/profiles/verify/submit",
+            json={
+                "address": wallet.address,
+                "public_key": wallet.public_key_pem(),
+                "signature": signature,
+                "message": message,
+            },
+        )
+
+        self.assertEqual(submit_response.status_code, 200)
+        self.assertTrue(submit_response.get_json()["verified_wallet"])
+
+    def test_profile_verification_rejects_invalid_signature(self):
+        wallet = Wallet()
+        challenge_response = self.client.post("/profiles/verify/challenge", json={"address": wallet.address})
+        message = challenge_response.get_json()["message"]
+
+        submit_response = self.client.post(
+            "/profiles/verify/submit",
+            json={
+                "address": wallet.address,
+                "public_key": wallet.public_key_pem(),
+                "signature": "abcdef",
+                "message": message,
+            },
+        )
+
+        self.assertEqual(submit_response.status_code, 400)
+        self.assertIn("signature", submit_response.get_json()["message"])
 
     def test_lending_request_rejects_invalid_amount(self):
         response = self.client.post(

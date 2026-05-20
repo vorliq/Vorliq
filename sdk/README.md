@@ -160,7 +160,7 @@ async function main() {
 main().catch(console.error);
 ```
 
-Public member profiles are linked to wallet addresses. They are not verified legal identities, and applications should treat every profile field as public community content. Do not store private keys, wallet passwords, recovery phrases, or secrets in profile fields.
+Public member profiles are linked to wallet addresses. They are not verified legal identities, and applications should treat every profile field as public community content. Wallet verification proves control of a Vorliq wallet only; it is not KYC. Do not store private keys, wallet passwords, recovery phrases, or secrets in profile fields.
 
 ```js
 const { VorliqSDK } = require("./dist/vorliq-sdk");
@@ -175,12 +175,28 @@ async function main() {
     website: "https://example.com"
   });
   const topProfiles = await vorliq.getTopProfiles(10);
+  const challenge = await vorliq.getProfileVerificationChallenge("VLQ_ADDRESS_HERE");
+  // Sign challenge.message locally in your wallet environment, then submit the public key and signature.
+  // Never send a private key to your backend or to Vorliq.
 
   console.log("Saved profile:", profile.display_name);
+  console.log("Verification challenge:", challenge.message);
   console.log("Top reputation:", topProfiles);
 }
 
 main().catch(console.error);
+```
+
+Applications can report public community content without auto-tracking users. Reports create a moderator review queue only and do not delete content automatically.
+
+```js
+await vorliq.reportContent({
+  target_type: "profile",
+  target_id: "VLQ_ADDRESS_HERE",
+  reason: "impersonation",
+  description: "Display name appears to impersonate another public member.",
+  reported_by: "anonymous"
+});
 ```
 
 Community lending records now expose a lifecycle from `pending_vote` through issuance, active repayment tracking, and confirmed `repaid` status. Approval does not mean funds are confirmed; applications should link users to the issuance transaction and wait for mining confirmation before treating a loan as active.

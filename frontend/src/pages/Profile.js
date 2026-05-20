@@ -6,10 +6,14 @@ import AddressIdentity, { shortAddress } from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
 import ProfileAvatar from "../components/ProfileAvatar";
 import ProfileBadge from "../components/ProfileBadge";
+import ReportButton from "../components/ReportButton";
 import Spinner from "../components/Spinner";
+import TrustLabels from "../components/TrustLabels";
 import { useAuth } from "../context/AuthContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
+import { signMessage } from "../helpers/signer";
+import { loadWallet } from "../helpers/storage";
 
 const emptyForm = {
   display_name: "",
@@ -34,6 +38,9 @@ function Profile() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(Boolean(initialAddress));
   const [saving, setSaving] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verificationPassword, setVerificationPassword] = useState("");
+  const [manualVerification, setManualVerification] = useState({ message: "", publicKey: "", signature: "" });
   const [errorMessage, setErrorMessage] = useState("");
   const canEdit = Boolean(isLoggedIn && wallet?.address && wallet.address === activeAddress);
 
@@ -155,6 +162,71 @@ function Profile() {
     }
   }
 
+  async function requestChallenge() {
+    if (!activeAddress) {
+      setErrorMessage("Enter a wallet address before verification.");
+      return null;
+    }
+    const response = await api.post("/profiles/verify/challenge", { address: activeAddress });
+    setManualVerification((current) => ({ ...current, message: response.data.message || "" }));
+    return response.data;
+  }
+
+  async function verifyWithLocalWallet(event) {
+    event.preventDefault();
+    if (!canEdit) {
+      setErrorMessage("Log in with this wallet to verify it.");
+      return;
+    }
+    if (!verificationPassword) {
+      setErrorMessage("Enter your wallet password to sign the verification challenge locally.");
+      return;
+    }
+    setVerifying(true);
+    try {
+      const challenge = await requestChallenge();
+      const localWallet = await loadWallet(verificationPassword);
+      const signature = await signMessage({ privateKeyPem: localWallet.private_key, message: challenge.message });
+      const response = await api.post("/profiles/verify/submit", {
+        address: wallet.address,
+        public_key: wallet.public_key,
+        signature,
+        message: challenge.message,
+      });
+      setProfile(response.data.profile);
+      setVerificationPassword("");
+      setErrorMessage("");
+      toast.success("Wallet control verified. This is not legal identity verification.");
+    } catch (error) {
+      const message = apiErrorMessage(error, "Unable to verify wallet ownership.");
+      setErrorMessage(message);
+      toast.error(message);
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function submitManualVerification(event) {
+    event.preventDefault();
+    setVerifying(true);
+    try {
+      const response = await api.post("/profiles/verify/submit", {
+        address: activeAddress,
+        public_key: manualVerification.publicKey,
+        signature: manualVerification.signature,
+        message: manualVerification.message,
+      });
+      setProfile(response.data.profile);
+      toast.success("Wallet control verified.");
+    } catch (error) {
+      const message = apiErrorMessage(error, "Unable to submit manual verification.");
+      setErrorMessage(message);
+      toast.error(message);
+    } finally {
+      setVerifying(false);
+    }
+  }
+
   return (
     <div className="page">
       <section className="hero">
@@ -216,6 +288,8 @@ function Profile() {
                   <strong>{profile.reputation_score || 0}</strong>
                   <span>Reputation score</span>
                 </div>
+                <TrustLabels profile={profile} />
+                <p className="help-text">Wallet verification proves control of this wallet only. It is not KYC or real-world identity verification.</p>
                 <div className="meta-list">
                   <div className="meta-item"><span className="meta-label">Wallet</span><span className="meta-value">{shortAddress(activeAddress)}</span></div>
                   {(profile.location || profile.country) && (
@@ -233,6 +307,7 @@ function Profile() {
                   {profile.is_ambassador && <ProfileBadge badge="Ambassador" />}
                 </div>
                 <ActivitySummary summary={profile.activity_summary || {}} />
+                <ReportButton targetType="profile" targetId={activeAddress} defaultReporter={wallet?.address || ""} />
               </>
             )}
           </section>
@@ -294,6 +369,56 @@ function Profile() {
                   {saving ? "Saving..." : "Save Profile"}
                 </button>
               </form>
+              <div className="profile-verification-box">
+                <span className="eyebrow">Wallet Verification</span>
+                <h3>{profile?.verified_wallet ? "Wallet verified" : "Verify Wallet"}</h3>
+                <p className="help-text">
+                  Sign a short challenge locally to prove this profile is controlled by your wallet. Your private key stays in this browser.
+                </p>
+                <form className="form" onSubmit={verifyWithLocalWallet}>
+                  <label htmlFor="profile-verification-password">Wallet password</label>
+                  <input
+                    id="profile-verification-password"
+                    className="input"
+                    type="password"
+                    value={verificationPassword}
+                    onChange={(event) => setVerificationPassword(event.target.value)}
+                    autoComplete="current-password"
+                  />
+                  <button className="button secondary" type="submit" disabled={verifying || profile?.verified_wallet}>
+                    {verifying ? "Verifying..." : "Verify Wallet"}
+                  </button>
+                </form>
+              </div>
+              <div className="profile-verification-box">
+                <span className="eyebrow">Manual Verification</span>
+                <p className="help-text">Use this only if you sign the challenge in another trusted wallet tool. Do not paste private keys here.</p>
+                <button className="button secondary small-button" type="button" onClick={requestChallenge}>Get Challenge</button>
+                <form className="form" onSubmit={submitManualVerification}>
+                  <label htmlFor="manual-verification-message">Challenge message</label>
+                  <textarea
+                    id="manual-verification-message"
+                    className="textarea"
+                    value={manualVerification.message}
+                    onChange={(event) => setManualVerification((current) => ({ ...current, message: event.target.value }))}
+                  />
+                  <label htmlFor="manual-verification-public-key">Public key</label>
+                  <textarea
+                    id="manual-verification-public-key"
+                    className="textarea"
+                    value={manualVerification.publicKey}
+                    onChange={(event) => setManualVerification((current) => ({ ...current, publicKey: event.target.value }))}
+                  />
+                  <label htmlFor="manual-verification-signature">Signature</label>
+                  <input
+                    id="manual-verification-signature"
+                    className="input"
+                    value={manualVerification.signature}
+                    onChange={(event) => setManualVerification((current) => ({ ...current, signature: event.target.value }))}
+                  />
+                  <button className="button secondary" type="submit" disabled={verifying}>Submit Manual Verification</button>
+                </form>
+              </div>
             </section>
           )}
         </div>

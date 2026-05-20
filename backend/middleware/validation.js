@@ -6,6 +6,9 @@ const SYSTEM_ADDRESSES = new Set(["SYSTEM", "VORLIQ_TREASURY", "LENDING_POOL"]);
 const FORUM_CATEGORIES = new Set(["general", "mining", "lending", "exchange", "governance", "technical"]);
 const GOVERNANCE_CATEGORIES = new Set(["mining_reward", "difficulty", "loan_limit", "loan_interest", "exchange_limit", "general"]);
 const TREASURY_CATEGORIES = new Set(["development", "marketing", "community", "infrastructure", "security", "education", "other"]);
+const REPORT_TARGET_TYPES = new Set(["forum_post", "forum_reply", "chat_message", "profile"]);
+const REPORT_REASONS = new Set(["spam", "impersonation", "abuse", "scam", "illegal_content", "other"]);
+const SECRET_PATTERN = /(BEGIN [A-Z ]*PRIVATE KEY|private[_ -]?key|password|admin[_ -]?token|bearer\s+[A-Za-z0-9._~+/=-]+|ssh-rsa|ssh-ed25519)/i;
 
 function reject(req, res, message, status = 400) {
   logError(`Validation rejected ${req.method} ${req.originalUrl}: ${message}`);
@@ -169,6 +172,20 @@ function validateBody(req, res, next) {
     requireText(req, res, body, ["post_id", "postId"], "post ID", 128);
     if (res.headersSent) return;
     validateAddress(req, res, body, ["voter_address", "voterAddress"], "voter address");
+  }
+
+  if (path === "/api/reports") {
+    const bodyText = JSON.stringify(body || {});
+    if (SECRET_PATTERN.test(bodyText)) {
+      return reject(req, res, "Report text must not include private keys, passwords, admin tokens, or secrets.");
+    }
+    requireEnum(req, res, body, ["target_type", "targetType"], "target type", REPORT_TARGET_TYPES);
+    if (res.headersSent) return;
+    requireText(req, res, body, ["target_id", "targetId"], "target ID", 160);
+    if (res.headersSent) return;
+    requireEnum(req, res, body, ["reason"], "reason", REPORT_REASONS);
+    if (res.headersSent) return;
+    requireText(req, res, body, ["description"], "description", 1000);
   }
 
   if (path === "/api/lending/request") {

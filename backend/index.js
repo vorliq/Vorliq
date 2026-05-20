@@ -29,6 +29,7 @@ const systemRoutes = require("./routes/system");
 const analyticsRoutes = require("./routes/analytics");
 const storageRoutes = require("./routes/storage");
 const auditRoutes = require("./routes/audit");
+const adminAuth = require("./middleware/adminAuth");
 const { pruneAnalytics } = require("./analytics");
 const { logError, logInfo } = require("./logger");
 const { sendWeeklyReport } = require("./reports");
@@ -65,6 +66,15 @@ const port = process.env.PORT || 5000;
 const socketAddresses = new Map();
 const socketMessageTimes = new Map();
 const chatHistory = [];
+let chatMessageSequence = 0;
+
+function safeChatText(value) {
+  return String(value || "").replace(/\0/g, "").replace(/[<>]/g, "").trim();
+}
+
+function chatWarning(text) {
+  return /(airdrop|double your|seed phrase|private key|guaranteed profit|urgent wallet|free vlq)/i.test(text || "");
+}
 
 function emitUserCount() {
   io.emit("user_count", io.sockets.sockets.size);
@@ -85,13 +95,13 @@ io.on("connection", (socket) => {
   });
 
   socket.on("message", (message) => {
-    const senderAddress = String(message?.sender_address || message?.senderAddress || "").trim();
-    const text = String(message?.text || "").trim();
+    const senderAddress = safeChatText(message?.sender_address || message?.senderAddress).slice(0, 160);
+    const text = safeChatText(message?.text);
     const timestamp = Number(message?.timestamp) || Date.now();
     const now = Date.now();
     const recentMessages = (socketMessageTimes.get(socket.id) || []).filter((sentAt) => now - sentAt < 60_000);
 
-    if (recentMessages.length >= 40) {
+    if (recentMessages.length >= 12 || (recentMessages.length && now - recentMessages[recentMessages.length - 1] < 1200)) {
       logError(`Chat rate limit rejected socket ${socket.id}`);
       socket.emit("chat_error", { message: "Chat messages are rate limited. Please slow down." });
       socketMessageTimes.set(socket.id, recentMessages);
@@ -107,9 +117,12 @@ io.on("connection", (socket) => {
     recentMessages.push(now);
     socketMessageTimes.set(socket.id, recentMessages);
     const chatMessage = {
+      message_id: `chat_${now}_${chatMessageSequence += 1}`,
       sender_address: senderAddress || socketAddresses.get(socket.id) || "Unknown",
       text,
       timestamp,
+      moderation_status: "visible",
+      warning: chatWarning(text) ? "This message may mention scams, private keys, or unrealistic offers. Verify independently." : "",
     };
     chatHistory.push(chatMessage);
     if (chatHistory.length > 100) {
@@ -158,6 +171,7 @@ app.use(
     "/api/forum/reply",
     "/api/forum/upvote",
     "/api/forum/feature",
+    "/api/reports",
     "/api/price/signal",
     "/api/lending/request",
     "/api/lending/vote",
@@ -175,7 +189,7 @@ app.use(
 app.use(["/api/governance/propose", "/api/treasury/propose"], proposalLimiter);
 app.use("/api/faucet/claim", faucetLimiter);
 app.use(["/api/registry/register", "/api/registry/heartbeat", "/api/peers/add", "/api/peers/announce"], registryLimiter);
-app.use("/api/reports/weekly", reportLimiter);
+app.use(["/api/reports", "/api/reports/weekly"], reportLimiter);
 app.use(validateBody);
 
 app.get("/api/health", (req, res) => {
@@ -187,6 +201,25 @@ app.get("/api/health", (req, res) => {
 
 app.get("/api/security/status", (req, res) => {
   res.json(securityStatus());
+});
+
+app.get("/api/admin/moderation/chat", adminAuth, (req, res) => {
+  res.json({
+    success: true,
+    messages: chatHistory.slice(-100),
+    note: "Community chat is public. This view does not expose IP addresses or raw user agents.",
+  });
+});
+
+app.post("/api/admin/moderation/chat/hide", adminAuth, (req, res) => {
+  const messageId = safeChatText(req.body?.message_id || req.body?.messageId).slice(0, 120);
+  const message = chatHistory.find((item) => item.message_id === messageId);
+  if (!message) return res.status(404).json({ success: false, message: "Chat message was not found." });
+  message.moderation_status = "hidden";
+  message.text = "This chat message is hidden by community moderation review.";
+  message.warning = "";
+  io.emit("history", chatHistory);
+  return res.json({ success: true, message });
 });
 
 app.use(chainRoutes);

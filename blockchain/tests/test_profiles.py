@@ -112,3 +112,16 @@ def test_public_profile_never_returns_secret_fields():
     assert public["display_name"] == "Safe User"
     assert "wallet_password" not in public
     assert "admin_token" not in public
+
+
+def test_profile_verification_fields_and_trust_labels():
+    profiles = Profiles()
+    address = "VLQ_VERIFIED"
+    profiles.create_or_update_profile(address, {"display_name": "Verified Member"})
+    challenge = profiles.create_verification_challenge(address)
+    profile = profiles.mark_wallet_verified(address, challenge["message"])
+    public = profiles.get_public_profile(address)
+
+    assert profile["verified_wallet"] is True
+    assert public["verified_wallet"] is True
+    assert "Wallet Verified" in public["trust_labels"]

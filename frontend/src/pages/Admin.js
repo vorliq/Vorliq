@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../helpers/api";
 
 const ADMIN_TOKEN_KEY = "vorliq_admin_token";
-const tabs = ["Overview", "Analytics", "Storage", "Security", "Backups", "Incidents", "Forum Moderation"];
+const tabs = ["Overview", "Analytics", "Storage", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
 
 function authHeader(token) {
   return { Authorization: `Bearer ${token}` };
@@ -19,7 +19,11 @@ function Admin() {
   const [storage, setStorage] = useState(null);
   const [backups, setBackups] = useState(null);
   const [incidents, setIncidents] = useState({ active: [], recent: [] });
+  const [reports, setReports] = useState([]);
   const [forumPosts, setForumPosts] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [profileSearch, setProfileSearch] = useState("");
+  const [profileResults, setProfileResults] = useState([]);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [incidentForm, setIncidentForm] = useState({
@@ -70,6 +74,16 @@ function Admin() {
     setForumPosts(response.data.posts || []);
   }, [headers]);
 
+  const loadReports = useCallback(async () => {
+    const response = await api.get("/admin/reports", { headers });
+    setReports(response.data.reports || []);
+  }, [headers]);
+
+  const loadChatModeration = useCallback(async () => {
+    const response = await api.get("/admin/moderation/chat", { headers });
+    setChatMessages(response.data.messages || []);
+  }, [headers]);
+
   const refreshCurrentTab = useCallback(async (tab = activeTab) => {
     if (!headers) return;
     setError("");
@@ -80,11 +94,13 @@ function Admin() {
       if (tab === "Security") await loadSecurity();
       if (tab === "Backups") await loadBackups();
       if (tab === "Incidents") await loadIncidents();
+      if (tab === "Reports") await loadReports();
       if (tab === "Forum Moderation") await loadForumModeration();
+      if (tab === "Chat Moderation") await loadChatModeration();
     } catch (requestError) {
       setError(requestError.response?.status === 401 ? "Unauthorized" : "Unable to load admin data.");
     }
-  }, [activeTab, headers, loadAnalytics, loadBackups, loadForumModeration, loadIncidents, loadOverview, loadSecurity, loadStorage]);
+  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadOverview, loadReports, loadSecurity, loadStorage]);
 
   useEffect(() => {
     if (adminToken) {
@@ -116,7 +132,9 @@ function Admin() {
     setAnalytics(null);
     setStorage(null);
     setBackups(null);
+    setReports([]);
     setForumPosts([]);
+    setChatMessages([]);
   }
 
   async function runBackup() {
@@ -173,6 +191,32 @@ function Admin() {
     await api.post(endpoint, payload, { headers });
     setStatus(`${field === "pinned" ? "Pin" : "Feature"} status updated.`);
     await loadForumModeration();
+  }
+
+  async function moderateForumItem(payload) {
+    await api.post("/admin/moderation/forum/moderate", payload, { headers });
+    setStatus("Forum moderation status updated.");
+    await loadForumModeration();
+  }
+
+  async function updateReport(report, action) {
+    await api.post(`/admin/reports/${action}`, { report_id: report.report_id, moderator_note: "Reviewed from admin dashboard." }, { headers });
+    setStatus("Report status updated.");
+    await loadReports();
+  }
+
+  async function hideChatMessage(message) {
+    await api.post("/admin/moderation/chat/hide", { message_id: message.message_id }, { headers });
+    setStatus("Chat message hidden from future history.");
+    await loadChatModeration();
+  }
+
+  async function searchProfiles(event) {
+    event.preventDefault();
+    const query = profileSearch.trim();
+    if (!query) return;
+    const response = await api.get("/profiles/search", { params: { q: query, limit: 20 } });
+    setProfileResults(response.data.profiles || []);
   }
 
   if (!adminToken || !overview) {
@@ -247,8 +291,17 @@ function Admin() {
           onResolve={resolveIncident}
         />
       )}
+      {activeTab === "Reports" && (
+        <ReportsTab reports={reports} onLoad={loadReports} onUpdate={updateReport} />
+      )}
       {activeTab === "Forum Moderation" && (
-        <ForumModerationTab posts={forumPosts} onLoad={loadForumModeration} onUpdate={updateForumPost} />
+        <ForumModerationTab posts={forumPosts} onLoad={loadForumModeration} onUpdate={updateForumPost} onModerate={moderateForumItem} />
+      )}
+      {activeTab === "Chat Moderation" && (
+        <ChatModerationTab messages={chatMessages} onLoad={loadChatModeration} onHide={hideChatMessage} />
+      )}
+      {activeTab === "Profiles" && (
+        <ProfilesModerationTab search={profileSearch} setSearch={setProfileSearch} profiles={profileResults} onSearch={searchProfiles} />
       )}
     </div>
   );
@@ -452,16 +505,42 @@ function IncidentsTab({ incidents, form, setForm, onLoad, onCreate, onResolve })
   );
 }
 
-function ForumModerationTab({ posts, onLoad, onUpdate }) {
+function ReportsTab({ reports, onLoad, onUpdate }) {
   useEffect(() => { onLoad(); }, [onLoad]);
   return (
     <section className="glass-section card-pad">
+      <h2>Reports</h2>
+      <p className="risk-box">Reports create a review queue only. Moderator actions are non-destructive and do not erase blockchain history.</p>
+      <div className="admin-list">
+        {reports.map((report) => (
+          <article className="admin-moderation-card" key={report.report_id}>
+            <h3>{report.reason} - {report.target_type}</h3>
+            <p>{report.description || "No description provided."}</p>
+            <span>{report.target_id} - {report.status} - reported by {report.reported_by || "anonymous"}</span>
+            <div className="button-row">
+              <button className="button secondary brand-button-secondary" type="button" onClick={() => onUpdate(report, "review")}>Mark Reviewed</button>
+              <button className="button secondary brand-button-secondary" type="button" onClick={() => onUpdate(report, "dismiss")}>Dismiss</button>
+              <button className="button secondary brand-button-secondary" type="button" onClick={() => onUpdate(report, "action")}>Action Taken</button>
+            </div>
+          </article>
+        ))}
+        {!reports.length && <div className="empty-state">No reports are in the queue.</div>}
+      </div>
+    </section>
+  );
+}
+
+function ForumModerationTab({ posts, onLoad, onUpdate, onModerate }) {
+  useEffect(() => { onLoad(); }, [onLoad]);
+  return (
+    <section className="glass-section card-pad">
+      <h2>Forum Moderation</h2>
       <div className="admin-list">
         {posts.map((post) => (
           <article className="admin-moderation-card" key={post.post_id}>
             <h3>{post.title}</h3>
             <p>{post.body_preview}</p>
-            <span>By {post.profile_display_name || post.author_address}</span>
+            <span>By {post.profile_display_name || post.author_address} - {post.moderation_status} - reports {post.report_count || 0}</span>
             <div className="button-row">
               <button className="button secondary brand-button-secondary" type="button" onClick={() => onUpdate(post, "pinned")}>
                 {post.pinned ? "Unpin" : "Pin"}
@@ -469,8 +548,70 @@ function ForumModerationTab({ posts, onLoad, onUpdate }) {
               <button className="button secondary brand-button-secondary" type="button" onClick={() => onUpdate(post, "featured")}>
                 {post.featured ? "Unfeature" : "Feature"}
               </button>
+              <button className="button secondary brand-button-secondary" type="button" onClick={() => onModerate({ target_type: "post", post_id: post.post_id, status: post.hidden ? "visible" : "hidden", reason: "Moderator review" })}>
+                {post.hidden ? "Unhide" : "Hide"}
+              </button>
+              <button className="button secondary brand-button-secondary" type="button" onClick={() => onModerate({ target_type: "post", post_id: post.post_id, status: post.locked ? "visible" : "locked", reason: "Moderator review" })}>
+                {post.locked ? "Unlock" : "Lock"}
+              </button>
             </div>
+            {(post.replies || []).length > 0 && (
+              <div className="admin-list compact">
+                {post.replies.map((reply) => (
+                  <div className="admin-row" key={reply.reply_id}>
+                    <strong>{reply.body_preview || "Reply"}</strong>
+                    <span>{reply.moderation_status} - reports {reply.report_count || 0}</span>
+                    <button className="button secondary small-button" type="button" onClick={() => onModerate({ target_type: "reply", post_id: post.post_id, reply_id: reply.reply_id, status: reply.moderation_status === "hidden" ? "visible" : "hidden", reason: "Moderator review" })}>
+                      {reply.moderation_status === "hidden" ? "Unhide Reply" : "Hide Reply"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ChatModerationTab({ messages, onLoad, onHide }) {
+  useEffect(() => { onLoad(); }, [onLoad]);
+  return (
+    <section className="glass-section card-pad">
+      <h2>Chat Moderation</h2>
+      <p className="risk-box">Chat is public community chat. This view lists recent in-memory messages only and does not expose IP addresses or raw user agents.</p>
+      <div className="admin-list">
+        {messages.map((message) => (
+          <div className="admin-row" key={message.message_id || message.timestamp}>
+            <strong>{message.sender_address || "Unknown"}</strong>
+            <span>{message.text}</span>
+            {message.message_id && (
+              <button className="button secondary small-button" type="button" onClick={() => onHide(message)}>Hide</button>
+            )}
+          </div>
+        ))}
+        {!messages.length && <div className="empty-state">No recent chat messages are stored in memory.</div>}
+      </div>
+    </section>
+  );
+}
+
+function ProfilesModerationTab({ search, setSearch, profiles, onSearch }) {
+  return (
+    <section className="glass-section card-pad">
+      <h2>Profiles</h2>
+      <p className="risk-box">Admins can review public profile status and report context, but cannot fake wallet verification.</p>
+      <form className="admin-form-grid" onSubmit={onSearch}>
+        <input placeholder="Wallet address or display name" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <button className="button brand-button" type="submit">Search Profiles</button>
+      </form>
+      <div className="admin-list">
+        {profiles.map((profile) => (
+          <div className="admin-row" key={profile.wallet_address}>
+            <strong>{profile.display_name || profile.wallet_address}</strong>
+            <span>{profile.verified_wallet ? "Wallet Verified" : "Unverified Wallet"} - reputation {profile.reputation_score || 0}</span>
+          </div>
         ))}
       </div>
     </section>

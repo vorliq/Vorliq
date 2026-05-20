@@ -15,6 +15,9 @@ assert.strictEqual(sameAddressReview.canSubmit, false);
 assert.match(sameAddressReview.errors.join(" "), /same address/i);
 
 const sdk = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+assert.strictEqual(typeof sdk.getProfileVerificationChallenge, "function");
+assert.strictEqual(typeof sdk.submitProfileVerification, "function");
+assert.strictEqual(typeof sdk.reportContent, "function");
 sdk
   .sendTransaction("SYSTEM", "not-used", "not-used", validAddress, 1)
   .then(() => {

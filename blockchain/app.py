@@ -1,3 +1,4 @@
+import hashlib
 import ipaddress
 import os
 import time
@@ -22,7 +23,7 @@ from registry import NodeRegistry
 from storage import Storage
 from transaction import SYSTEM_ADDRESSES, TREASURY_ADDRESS, Transaction
 from treasury import Treasury
-from wallet import Wallet, is_reserved_address, validate_address
+from wallet import Wallet, address_from_public_key_pem, is_reserved_address, validate_address, verify_digest_signature
 
 APP_START_TIME = time.time()
 VORLIQ_HOST = os.environ.get("VORLIQ_HOST", "127.0.0.1")
@@ -211,6 +212,31 @@ def _profile_dependencies() -> dict:
         "forum": forum,
         "achievements": achievements,
     }
+
+
+def _public_forum_post(post: dict, *, include_hidden_replies: bool = False) -> dict:
+    public_post = dict(post)
+    replies = list(public_post.get("replies", []))
+    if not include_hidden_replies:
+        replies = [
+            reply if reply.get("moderation_status") != "hidden" else {
+                "reply_id": reply.get("reply_id"),
+                "author_address": reply.get("author_address", ""),
+                "body": "This reply is hidden by community moderation review.",
+                "image_data": None,
+                "timestamp": reply.get("timestamp"),
+                "vote_count": 0,
+                "voters": [],
+                "tips": [],
+                "moderation_status": "hidden",
+                "moderation_reason": reply.get("moderation_reason", ""),
+                "moderated_at": reply.get("moderated_at"),
+                "moderated_by_admin": bool(reply.get("moderated_by_admin", False)),
+            }
+            for reply in replies
+        ]
+    public_post["replies"] = replies
+    return public_post
 
 
 def _registry_profile_lookup(wallet_address: str) -> dict | None:
@@ -1151,6 +1177,58 @@ def get_top_profiles():
         return jsonify({"success": False, "message": str(exc)}), 400
 
 
+@app.post("/profiles/verify/challenge")
+def create_profile_verification_challenge():
+    try:
+        data = _json_body()
+        address = _require_text(data.get("address") or data.get("wallet_address") or data.get("walletAddress"), "wallet address", 160)
+        valid, errors, _warnings = validate_address(address, label="wallet address")
+        if not valid:
+            raise ValueError(errors[0])
+        challenge = profiles.create_verification_challenge(address)
+        return jsonify({
+            "success": True,
+            "address": address,
+            "message": challenge["message"],
+            "timestamp": challenge["timestamp"],
+            "expires_at": challenge["expires_at"],
+            "note": "This proves control of a Vorliq wallet only. It is not KYC or legal identity verification.",
+        })
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.post("/profiles/verify/submit")
+def submit_profile_verification():
+    try:
+        data = _json_body()
+        address = _require_text(data.get("address") or data.get("wallet_address") or data.get("walletAddress"), "wallet address", 160)
+        public_key = _require_text(data.get("public_key") or data.get("publicKey"), "public key", 3000)
+        signature = _require_text(data.get("signature"), "signature", 512)
+        message = _require_text(data.get("message"), "verification message", 220)
+        challenge = profiles.get_active_challenge(address)
+        if not challenge or challenge.get("message") != message:
+            raise ValueError("verification challenge is missing or expired")
+        derived_address = address_from_public_key_pem(public_key)
+        if derived_address != address:
+            raise ValueError("public key does not match wallet address")
+        digest_hex = hashlib.sha256(message.encode("utf-8")).hexdigest()
+        if not verify_digest_signature(digest_hex, signature, public_key):
+            raise ValueError("signature could not be verified")
+        profile = profiles.mark_wallet_verified(address, message)
+        storage.save_profiles(profiles)
+        public_profile = profiles.get_public_profile(address, _profile_dependencies()) or profile
+        return jsonify({
+            "success": True,
+            "verified_wallet": True,
+            "profile": public_profile,
+            "note": "Wallet verification proves control of this wallet only. It is not real-world identity verification.",
+        })
+    except Exception as exc:
+        vorliq_logger.error("Profile verification submit endpoint failed: %s", exc)
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
 @app.post("/peers/register")
 def register_peer():
     try:
@@ -1697,7 +1775,7 @@ def create_forum_post():
 def get_forum_posts():
     try:
         limit, offset = _pagination()
-        posts, total, has_more = _page(forum.get_all_posts(), limit, offset)
+        posts, total, has_more = _page([_public_forum_post(post) for post in forum.get_all_posts()], limit, offset)
         return jsonify({"success": True, "posts": posts, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
@@ -1707,7 +1785,7 @@ def get_forum_posts():
 def get_featured_forum_posts():
     try:
         limit, offset = _pagination()
-        posts, total, has_more = _page(forum.get_featured_posts(), limit, offset)
+        posts, total, has_more = _page([_public_forum_post(post) for post in forum.get_featured_posts()], limit, offset)
         return jsonify({"success": True, "posts": posts, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
@@ -1718,7 +1796,7 @@ def search_forum_posts():
     try:
         query = request.args.get("q", "")
         limit, offset = _pagination()
-        posts, total, has_more = _page(forum.search_posts(query), limit, offset)
+        posts, total, has_more = _page([_public_forum_post(post) for post in forum.search_posts(query)], limit, offset)
         return jsonify({"success": True, "posts": posts, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
     except Exception as exc:
         vorliq_logger.error("Forum search endpoint failed: %s", exc)
@@ -1731,7 +1809,7 @@ def get_forum_post():
     post = forum.get_post(post_id)
     if not post:
         return jsonify({"success": False, "error": "post does not exist"}), 404
-    return jsonify({"success": True, "post": post})
+    return jsonify({"success": True, "post": _public_forum_post(post)})
 
 
 @app.post("/forum/reply")
@@ -1816,6 +1894,43 @@ def admin_feature_forum_post():
         return jsonify({"success": True, "post": post})
     except Exception as exc:
         vorliq_logger.error("Forum admin feature endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/forum/admin/posts")
+def admin_get_forum_posts():
+    try:
+        limit, offset = _pagination()
+        posts, total, has_more = _page([_public_forum_post(post, include_hidden_replies=True) for post in forum.get_all_posts(include_hidden=True)], limit, offset)
+        return jsonify({"success": True, "posts": posts, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.post("/forum/admin/moderate")
+def admin_moderate_forum_content():
+    try:
+        data = _json_body()
+        target_type = _require_enum(data.get("target_type") or data.get("targetType") or "post", "target type", {"post", "reply"})
+        status = _require_enum(data.get("status"), "moderation status", {"visible", "hidden", "locked"})
+        reason = data.get("reason") or ""
+        if target_type == "post":
+            item = forum.set_post_moderation(
+                post_id=_require_text(data.get("post_id") or data.get("postId"), "post ID", 128),
+                status=status,
+                reason=reason,
+            )
+        else:
+            item = forum.set_reply_moderation(
+                post_id=_require_text(data.get("post_id") or data.get("postId"), "post ID", 128),
+                reply_id=_require_text(data.get("reply_id") or data.get("replyId"), "reply ID", 128),
+                status=status,
+                reason=reason,
+            )
+        storage.save_forum(forum)
+        return jsonify({"success": True, "item": item})
+    except Exception as exc:
+        vorliq_logger.error("Forum admin moderation endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 

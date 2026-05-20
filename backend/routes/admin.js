@@ -8,6 +8,7 @@ const { promisify } = require("util");
 
 const adminAuth = require("../middleware/adminAuth");
 const { publicBackupStatus } = require("./backup");
+const { listReports, reportCountForTarget, updateReport } = require("../communityReports");
 const { createIncident, listActiveIncidents, listIncidents, resolveIncident } = require("../incidents");
 const { logError } = require("../logger");
 
@@ -191,7 +192,19 @@ async function moderationPost(post) {
     reply_count: Array.isArray(post.replies) ? post.replies.length : 0,
     featured: Boolean(post.featured),
     pinned: Boolean(post.pinned),
+    moderation_status: post.moderation_status || "visible",
+    moderation_reason: post.moderation_reason || "",
+    locked: post.moderation_status === "locked",
+    hidden: post.moderation_status === "hidden",
+    report_count: reportCountForTarget("forum_post", post.post_id),
     body_preview: body.length > 180 ? `${body.slice(0, 180)}...` : body,
+    replies: (post.replies || []).slice(0, 10).map((reply) => ({
+      reply_id: reply.reply_id,
+      author_address: reply.author_address || "",
+      body_preview: String(reply.body || "").slice(0, 160),
+      moderation_status: reply.moderation_status || "visible",
+      report_count: reportCountForTarget("forum_reply", reply.reply_id),
+    })),
   };
 }
 
@@ -362,12 +375,44 @@ router.post("/api/admin/backups/verify", async (req, res) => {
 
 router.get("/api/admin/moderation/forum", async (req, res) => {
   try {
-    const data = await flaskGet("/forum/posts", { params: { limit: 25, offset: 0 } });
+    const data = await flaskGet("/forum/admin/posts", { params: { limit: 25, offset: 0 } });
     const posts = await Promise.all((data.posts || []).map(moderationPost));
     return res.json({ success: true, posts, total: safeNumber(data.total, posts.length) });
   } catch (error) {
     logError(`GET /api/admin/moderation/forum failed: ${error.message}`);
     return res.status(503).json({ success: false, message: "Forum moderation data is unavailable." });
+  }
+});
+
+router.get("/api/admin/reports", (req, res) => {
+  const reports = listReports({ status: req.query.status });
+  return res.json({ success: true, reports, total: reports.length });
+});
+
+router.post("/api/admin/reports/review", (req, res) => {
+  try {
+    const report = updateReport(req.body?.report_id || req.body?.reportId, "reviewed", req.body?.moderator_note || req.body?.moderatorNote || "");
+    return res.json({ success: true, report });
+  } catch (error) {
+    return res.status(error.status || 400).json({ success: false, message: error.message });
+  }
+});
+
+router.post("/api/admin/reports/dismiss", (req, res) => {
+  try {
+    const report = updateReport(req.body?.report_id || req.body?.reportId, "dismissed", req.body?.moderator_note || req.body?.moderatorNote || "");
+    return res.json({ success: true, report });
+  } catch (error) {
+    return res.status(error.status || 400).json({ success: false, message: error.message });
+  }
+});
+
+router.post("/api/admin/reports/action", (req, res) => {
+  try {
+    const report = updateReport(req.body?.report_id || req.body?.reportId, "action_taken", req.body?.moderator_note || req.body?.moderatorNote || "");
+    return res.json({ success: true, report });
+  } catch (error) {
+    return res.status(error.status || 400).json({ success: false, message: error.message });
   }
 });
 
@@ -389,6 +434,22 @@ router.post("/api/admin/moderation/forum/feature", async (req, res) => {
     const response = await axios.post(`${flaskUrl}/forum/admin/feature`, {
       post_id: requireLimitedText(req.body?.post_id || req.body?.postId, "post ID", 128),
       featured: booleanValue(req.body?.featured, "featured"),
+    });
+    return res.status(response.status).json(response.data);
+  } catch (error) {
+    const status = error.status || error.response?.status || 400;
+    return res.status(status).json({ success: false, message: error.response?.data?.error || error.message });
+  }
+});
+
+router.post("/api/admin/moderation/forum/moderate", async (req, res) => {
+  try {
+    const response = await axios.post(`${flaskUrl}/forum/admin/moderate`, {
+      target_type: requireLimitedText(req.body?.target_type || req.body?.targetType || "post", "target type", 20),
+      post_id: requireLimitedText(req.body?.post_id || req.body?.postId, "post ID", 128),
+      reply_id: text(req.body?.reply_id || req.body?.replyId, 128),
+      status: requireLimitedText(req.body?.status, "moderation status", 20),
+      reason: text(req.body?.reason, 240),
     });
     return res.status(response.status).json(response.data);
   } catch (error) {

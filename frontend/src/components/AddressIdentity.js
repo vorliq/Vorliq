@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import api from "../helpers/api";
 import ProfileAvatar from "./ProfileAvatar";
+import TrustLabels from "./TrustLabels";
 
 function shortAddress(address) {
   if (!address) return "Unknown";
@@ -62,6 +63,7 @@ function AddressIdentity({ address, compact = false, className = "", profile: pr
       <span>
         <strong>{label}</strong>
         {!compact && profile && <small>{shortAddress(address)}</small>}
+        {profile && <TrustLabels profile={profile} compact />}
         {!loaded && !profile && <small>Loading profile...</small>}
       </span>
     </Link>

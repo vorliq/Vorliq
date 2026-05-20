@@ -4,7 +4,7 @@ import hashlib
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import ec, utils
 
 from logger import vorliq_logger
 
@@ -280,6 +280,18 @@ def verify_signature(data: str, signature: str, public_key_pem: str) -> bool:
     try:
         public_key = public_key_from_pem(public_key_pem)
         public_key.verify(bytes.fromhex(signature), data.encode("utf-8"), ec.ECDSA(hashes.SHA256()))
+        return True
+    except (InvalidSignature, ValueError, TypeError):
+        return False
+
+
+def verify_digest_signature(digest_hex: str, signature: str, public_key_pem: str) -> bool:
+    try:
+        digest = bytes.fromhex(digest_hex)
+        if len(digest) != 32:
+            return False
+        public_key = public_key_from_pem(public_key_pem)
+        public_key.verify(bytes.fromhex(signature), digest, ec.ECDSA(utils.Prehashed(hashes.SHA256())))
         return True
     except (InvalidSignature, ValueError, TypeError):
         return False

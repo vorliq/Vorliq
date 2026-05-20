@@ -24,11 +24,15 @@ class Profiles:
         "reputation_score",
         "is_ambassador",
         "badges",
+        "verified_wallet",
+        "verification_message",
+        "verified_at",
     }
     SECRET_FIELD_PATTERN = re.compile(r"(private|password|secret|token|email)", re.IGNORECASE)
 
     def __init__(self) -> None:
         self.profiles: dict[str, dict[str, Any]] = {}
+        self.verification_challenges: dict[str, dict[str, Any]] = {}
 
     def create_or_update_profile(self, wallet_address: str, data: dict[str, Any]) -> dict[str, Any]:
         wallet_address = self._require_text(wallet_address, "wallet address", 160)
@@ -61,6 +65,11 @@ class Profiles:
             "reputation_score": int(existing.get("reputation_score", 10)),
             "is_ambassador": bool(data.get("is_ambassador", existing.get("is_ambassador", False))),
             "badges": self._badges(data.get("badges", existing.get("badges", []))),
+            "verified_wallet": bool(existing.get("verified_wallet", False)),
+            "verification_message": self._optional_text(
+                existing.get("verification_message", ""), "verification message", 220
+            ),
+            "verified_at": existing.get("verified_at"),
         }
         self.profiles[wallet_address] = profile
         return dict(profile)
@@ -192,7 +201,64 @@ class Profiles:
         public_profile["reputation_score"] = reputation["reputation_score"]
         public_profile["badges"] = badges
         public_profile["activity_summary"] = reputation["activity_summary"]
+        public_profile["trust_labels"] = self.trust_labels(public_profile)
         return public_profile
+
+    def create_verification_challenge(self, wallet_address: str) -> dict[str, Any]:
+        wallet_address = self._require_text(wallet_address, "wallet address", 160)
+        timestamp = int(time.time())
+        message = f"Verify Vorliq profile ownership for {wallet_address} at {timestamp}"
+        challenge = {
+            "wallet_address": wallet_address,
+            "message": message,
+            "timestamp": timestamp,
+            "expires_at": timestamp + 15 * 60,
+        }
+        self.verification_challenges[wallet_address] = challenge
+        return dict(challenge)
+
+    def get_active_challenge(self, wallet_address: str) -> dict[str, Any] | None:
+        wallet_address = self._require_text(wallet_address, "wallet address", 160)
+        challenge = self.verification_challenges.get(wallet_address)
+        if not challenge:
+            return None
+        if float(challenge.get("expires_at", 0)) < time.time():
+            self.verification_challenges.pop(wallet_address, None)
+            return None
+        return dict(challenge)
+
+    def mark_wallet_verified(self, wallet_address: str, verification_message: str) -> dict[str, Any]:
+        wallet_address = self._require_text(wallet_address, "wallet address", 160)
+        profile = self.profiles.get(wallet_address)
+        if not profile:
+            profile = self.create_or_update_profile(wallet_address, {
+                "display_name": f"VLQ {wallet_address[:8]}",
+                "avatar_style": "gradient",
+            })
+        profile["verified_wallet"] = True
+        profile["verification_message"] = self._require_text(verification_message, "verification message", 220)
+        profile["verified_at"] = time.time()
+        self.profiles[wallet_address] = profile
+        self.verification_challenges.pop(wallet_address, None)
+        return dict(profile)
+
+    def trust_labels(self, profile: dict[str, Any]) -> list[str]:
+        labels: list[str] = []
+        if profile.get("verified_wallet"):
+            labels.append("Wallet Verified")
+        else:
+            labels.append("Unverified Wallet")
+        score = int(profile.get("reputation_score", 0) or 0)
+        summary = profile.get("activity_summary", {}) if isinstance(profile.get("activity_summary"), dict) else {}
+        activity_count = sum(int(summary.get(key, 0) or 0) for key in summary)
+        created_at = float(profile.get("created_at", time.time()) or time.time())
+        if score >= 100:
+            labels.append("Top Reputation")
+        if score >= 25 or activity_count >= 5:
+            labels.append("Active Contributor")
+        if time.time() - created_at < 14 * 24 * 60 * 60:
+            labels.append("New Member")
+        return labels
 
     def get_top_profiles(self, limit: int = 20, dependencies: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         limit, _offset = self._page_values(limit, 0)

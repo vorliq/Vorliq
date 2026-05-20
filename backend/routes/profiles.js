@@ -123,4 +123,32 @@ router.get("/api/profiles/top", async (req, res) => {
   }
 });
 
+router.post("/api/profiles/verify/challenge", async (req, res) => {
+  try {
+    const address = safeText(req.body?.address || req.body?.wallet_address || req.body?.walletAddress, "wallet address", 160, true);
+    const response = await axios.post(`${flaskUrl}/profiles/verify/challenge`, { address });
+    return res.status(response.status).json(response.data);
+  } catch (error) {
+    if (!error.response) return reject(res, error.message);
+    return handleRouteError(res, error, "POST /api/profiles/verify/challenge", "Unable to create verification challenge.");
+  }
+});
+
+router.post("/api/profiles/verify/submit", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const payload = {
+      address: safeText(body.address || body.wallet_address || body.walletAddress, "wallet address", 160, true),
+      public_key: safeText(body.public_key || body.publicKey, "public key", 3000, true),
+      signature: safeText(body.signature, "signature", 512, true),
+      message: safeText(body.message, "verification message", 220, true),
+    };
+    const response = await axios.post(`${flaskUrl}/profiles/verify/submit`, payload);
+    return res.status(response.status).json(response.data);
+  } catch (error) {
+    if (!error.response) return reject(res, error.message);
+    return handleRouteError(res, error, "POST /api/profiles/verify/submit", "Unable to verify profile ownership.");
+  }
+});
+
 module.exports = router;

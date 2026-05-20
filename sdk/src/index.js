@@ -829,6 +829,32 @@ class VorliqSDK {
     return data.profiles || [];
   }
 
+  async getProfileVerificationChallenge(address) {
+    return this.request("/api/profiles/verify/challenge", {
+      method: "POST",
+      body: JSON.stringify({ address }),
+    });
+  }
+
+  async submitProfileVerification(address, publicKey, signature, message) {
+    return this.request("/api/profiles/verify/submit", {
+      method: "POST",
+      body: JSON.stringify({
+        address,
+        public_key: publicKey,
+        signature,
+        message,
+      }),
+    });
+  }
+
+  async reportContent(report) {
+    return this.request("/api/reports", {
+      method: "POST",
+      body: JSON.stringify(report),
+    });
+  }
+
   /**
    * Subscribes to newly mined blocks by polling the chain every 30 seconds.
    *

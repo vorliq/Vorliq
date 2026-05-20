@@ -1,9 +1,26 @@
 const express = require("express");
 const { sendCachedJson } = require("../cache");
+const { createReport } = require("../communityReports");
 const { generateWeeklyReport } = require("../reports");
 const { logError } = require("../logger");
 
 const router = express.Router();
+
+router.post("/api/reports", (req, res) => {
+  try {
+    const report = createReport({ ...(req.body || {}), source: req.get("referer") ? "web" : "api" });
+    return res.status(201).json({
+      success: true,
+      report,
+      message: "Report received for moderator review. Content is not removed automatically.",
+    });
+  } catch (error) {
+    return res.status(error.status || 400).json({
+      success: false,
+      message: error.message || "Report could not be created.",
+    });
+  }
+});
 
 router.get("/api/reports/weekly", async (req, res) => {
   try {

@@ -59,6 +59,24 @@ class ForumTests(unittest.TestCase):
         self.assertEqual(post["feature_votes"], [])
         self.assertEqual(post["feature_vote_count"], 0)
 
+    def test_hidden_posts_are_excluded_and_cannot_be_featured(self):
+        forum = Forum()
+        post_id = forum.create_post("author", "Hidden", "Body")
+        forum.set_post_moderation(post_id, "hidden", "spam")
+
+        self.assertEqual(forum.get_all_posts(), [])
+        self.assertEqual(forum.get_featured_posts(), [])
+        with self.assertRaises(ValueError):
+            forum.feature_post(post_id, "voter")
+
+    def test_locked_posts_reject_replies(self):
+        forum = Forum()
+        post_id = forum.create_post("author", "Locked", "Body")
+        forum.set_post_moderation(post_id, "locked", "review")
+
+        with self.assertRaises(ValueError):
+            forum.add_reply(post_id, "member", "reply")
+
 
 if __name__ == "__main__":
     unittest.main()

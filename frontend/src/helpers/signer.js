@@ -83,3 +83,11 @@ export async function signTransaction({
     signature: signature.toDER("hex"),
   };
 }
+
+export async function signMessage({ privateKeyPem, message }) {
+  const privateScalar = extractSecp256k1PrivateScalar(privateKeyPem);
+  const digestHex = await sha256Hex(message);
+  const key = secp256k1.keyFromPrivate(privateScalar, "hex");
+  const signature = key.sign(digestHex, { canonical: true });
+  return signature.toDER("hex");
+}

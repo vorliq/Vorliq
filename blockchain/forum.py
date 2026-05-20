@@ -38,6 +38,10 @@ class Forum:
             "image_data": self._normalize_image(image_data),
             "pinned": False,
             "featured": False,
+            "moderation_status": "visible",
+            "moderation_reason": "",
+            "moderated_at": None,
+            "moderated_by_admin": False,
             "feature_votes": [],
             "feature_vote_count": 0,
             "tips": [],
@@ -57,6 +61,10 @@ class Forum:
         image_data: str | None = None,
     ) -> dict[str, Any]:
         post = self._get_existing_post(post_id)
+        if post.get("moderation_status") == "locked":
+            raise ValueError("post is locked by moderation")
+        if post.get("moderation_status") == "hidden":
+            raise ValueError("post is hidden by moderation")
         author_address = self._require_text(author_address, "author address")
         body = self._require_text(body, "body")
         timestamp = time.time()
@@ -70,6 +78,10 @@ class Forum:
             "vote_count": 0,
             "voters": [],
             "tips": [],
+            "moderation_status": "visible",
+            "moderation_reason": "",
+            "moderated_at": None,
+            "moderated_by_admin": False,
         }
         post["replies"].append(reply)
         vorliq_logger.info("Forum reply added to post %s by %s", post_id, author_address)
@@ -102,6 +114,8 @@ class Forum:
 
     def feature_post(self, post_id: str, voter_address: str) -> dict[str, Any]:
         post = self._get_existing_post(post_id)
+        if post.get("moderation_status") == "hidden":
+            raise ValueError("hidden posts cannot be featured")
         voter_address = self._require_text(voter_address, "voter address")
         voters = set(post.get("feature_votes", []))
         if voter_address in voters:
@@ -114,10 +128,13 @@ class Forum:
         vorliq_logger.info("Forum post %s received a feature vote from %s", post_id, voter_address)
         return post
 
-    def get_all_posts(self) -> list[dict[str, Any]]:
+    def get_all_posts(self, include_hidden: bool = False) -> list[dict[str, Any]]:
         self._normalize_existing_posts()
+        rows = self.posts.values() if include_hidden else [
+            post for post in self.posts.values() if post.get("moderation_status") != "hidden"
+        ]
         return sorted(
-            self.posts.values(),
+            rows,
             key=lambda post: (
                 bool(post.get("pinned", False)),
                 int(post.get("vote_count", 0)),
@@ -126,14 +143,22 @@ class Forum:
             reverse=True,
         )
 
-    def get_post(self, post_id: str) -> dict[str, Any] | None:
+    def get_post(self, post_id: str, include_hidden: bool = False) -> dict[str, Any] | None:
         self._normalize_existing_posts()
-        return self.posts.get(post_id)
+        post = self.posts.get(post_id)
+        if not post:
+            return None
+        if post.get("moderation_status") == "hidden" and not include_hidden:
+            return self.hidden_post_notice(post)
+        return post
 
     def get_featured_posts(self) -> list[dict[str, Any]]:
         self._normalize_existing_posts()
         return sorted(
-            [post for post in self.posts.values() if bool(post.get("featured", False))],
+            [
+                post for post in self.posts.values()
+                if bool(post.get("featured", False)) and post.get("moderation_status") != "hidden"
+            ],
             key=lambda post: (
                 int(post.get("feature_vote_count", 0)),
                 float(post.get("timestamp", 0)),
@@ -164,9 +189,59 @@ class Forum:
 
     def set_featured(self, post_id: str, featured: bool) -> dict[str, Any]:
         post = self._get_existing_post(post_id)
+        if featured and post.get("moderation_status") == "hidden":
+            raise ValueError("hidden posts cannot be featured")
         post["featured"] = bool(featured)
         vorliq_logger.info("Forum post %s featured state set to %s", post_id, post["featured"])
         return post
+
+    def set_post_moderation(self, post_id: str, status: str, reason: str = "") -> dict[str, Any]:
+        post = self._get_existing_post(post_id)
+        status = self._normalize_moderation_status(status, allow_pinned=True)
+        post["moderation_status"] = status
+        post["moderation_reason"] = self._optional_text(reason, 240)
+        post["moderated_at"] = time.time()
+        post["moderated_by_admin"] = True
+        if status == "hidden":
+            post["featured"] = False
+        if status == "pinned":
+            post["pinned"] = True
+            post["moderation_status"] = "visible"
+        vorliq_logger.info("Forum post %s moderation state set to %s", post_id, status)
+        return post
+
+    def set_reply_moderation(self, post_id: str, reply_id: str, status: str, reason: str = "") -> dict[str, Any]:
+        post = self._get_existing_post(post_id)
+        reply = self._get_existing_reply(post, reply_id)
+        status = self._normalize_moderation_status(status)
+        reply["moderation_status"] = status
+        reply["moderation_reason"] = self._optional_text(reason, 240)
+        reply["moderated_at"] = time.time()
+        reply["moderated_by_admin"] = True
+        vorliq_logger.info("Forum reply %s moderation state set to %s", reply_id, status)
+        return reply
+
+    def hidden_post_notice(self, post: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "post_id": post.get("post_id"),
+            "title": "This content is hidden by moderation",
+            "author_address": post.get("author_address", ""),
+            "body": "This forum post is hidden by community moderation review.",
+            "category": post.get("category", "general"),
+            "timestamp": post.get("timestamp"),
+            "pinned": False,
+            "featured": False,
+            "feature_votes": [],
+            "feature_vote_count": 0,
+            "tips": [],
+            "replies": [],
+            "vote_count": 0,
+            "voters": [],
+            "moderation_status": "hidden",
+            "moderation_reason": post.get("moderation_reason", ""),
+            "moderated_at": post.get("moderated_at"),
+            "moderated_by_admin": bool(post.get("moderated_by_admin", False)),
+        }
 
     def tip_post(
         self,
@@ -220,6 +295,23 @@ class Forum:
             raise ValueError(f"{field_name} must be a non-empty string")
         return value.strip()
 
+    def _optional_text(self, value: str, max_length: int) -> str:
+        if value in (None, ""):
+            return ""
+        text = self._require_text(value, "moderation reason")
+        if len(text) > max_length:
+            raise ValueError(f"moderation reason must be {max_length} characters or fewer")
+        return text
+
+    def _normalize_moderation_status(self, status: str, allow_pinned: bool = False) -> str:
+        allowed = {"visible", "hidden", "locked"}
+        if allow_pinned:
+            allowed.add("pinned")
+        normalized = self._require_text(status, "moderation status").lower()
+        if normalized not in allowed:
+            raise ValueError("moderation status is not valid")
+        return normalized
+
     def _normalize_category(self, category: str) -> str:
         category = self._require_text(category or "general", "category").lower()
         if category not in self.VALID_CATEGORIES:
@@ -237,6 +329,12 @@ class Forum:
         post["image_data"] = self._normalize_image(post.get("image_data"))
         post["pinned"] = bool(post.get("pinned", False))
         post["featured"] = bool(post.get("featured", False))
+        post["moderation_status"] = post.get("moderation_status") if post.get("moderation_status") in {"visible", "hidden", "locked"} else "visible"
+        post["moderation_reason"] = str(post.get("moderation_reason", ""))[:240]
+        post["moderated_at"] = post.get("moderated_at")
+        post["moderated_by_admin"] = bool(post.get("moderated_by_admin", False))
+        if post["moderation_status"] == "hidden":
+            post["featured"] = False
         legacy_feature_voters = post.pop("feature_voters", [])
         post["feature_votes"] = list(post.get("feature_votes", legacy_feature_voters))
         post["feature_vote_count"] = int(post.get("feature_vote_count", len(post["feature_votes"])))
@@ -250,6 +348,10 @@ class Forum:
             reply["vote_count"] = int(reply.get("vote_count", 0))
             reply["tips"] = list(reply.get("tips", []))
             reply["image_data"] = self._normalize_image(reply.get("image_data"))
+            reply["moderation_status"] = reply.get("moderation_status") if reply.get("moderation_status") in {"visible", "hidden", "locked"} else "visible"
+            reply["moderation_reason"] = str(reply.get("moderation_reason", ""))[:240]
+            reply["moderated_at"] = reply.get("moderated_at")
+            reply["moderated_by_admin"] = bool(reply.get("moderated_by_admin", False))
 
     def _normalize_image(self, image_data: str | None) -> str | None:
         if image_data is None or image_data == "":

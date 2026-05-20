@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
 import ProfileBadge from "../components/ProfileBadge";
+import TrustLabels from "../components/TrustLabels";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
@@ -171,6 +172,7 @@ function ReputationTable({ rows }) {
                 <th>Member</th>
                 <th>Reputation</th>
                 <th>Badges</th>
+                <th>Trust Labels</th>
               </tr>
             </thead>
             <tbody>
@@ -190,6 +192,7 @@ function ReputationTable({ rows }) {
                       ))}
                     </div>
                   </td>
+                  <td><TrustLabels profile={profile} compact /></td>
                 </tr>
               ))}
             </tbody>

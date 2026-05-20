@@ -3249,3 +3249,28 @@ html[data-theme="light"] .community-links-card.glass-section {
   box-shadow: none;
   backdrop-filter: none;
 }
+
+.trust-labels {
+  gap: 6px;
+}
+
+.trust-badge {
+  white-space: normal;
+}
+
+.trust-badge.verified {
+  border-color: rgba(24, 215, 201, 0.65);
+}
+
+.report-control {
+  margin-top: 10px;
+}
+
+.report-modal,
+.profile-verification-box {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}

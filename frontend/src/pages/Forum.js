@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
+import ReportButton from "../components/ReportButton";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
@@ -234,6 +235,10 @@ function Forum() {
       toast.error("Enter your wallet address and reply.");
       return;
     }
+    if (selectedPost?.moderation_status === "locked") {
+      toast.error("This post is locked by moderation.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -460,6 +465,7 @@ function Forum() {
                       {post.title}
                     </strong>
                     <span className="badge forum-category">{post.category || "general"}</span>
+                    {post.moderation_status === "locked" && <span className="badge">Locked</span>}
                     <span>By <AddressIdentity address={post.author_address} compact /></span>
                     <span>
                       {post.vote_count} votes - {post.feature_vote_count || 0} feature votes - {post.replies?.length || 0} replies - {post.tips?.length || 0} tips
@@ -473,6 +479,7 @@ function Forum() {
                   <button className="button secondary small-button" type="button" onClick={() => featurePost(post.post_id)}>
                     Feature this Post
                   </button>
+                  <ReportButton targetType="forum_post" targetId={post.post_id} />
                   {tipForms[`post:${post.post_id}`] && (
                     <TipForm
                       form={tipForms[`post:${post.post_id}`]}
@@ -582,6 +589,12 @@ function Forum() {
                 </div>
               </div>
               <p>{selectedPost.body}</p>
+              {selectedPost.moderation_status === "hidden" && (
+                <div className="risk-box">This content is hidden by moderation. It is shown as a notice instead of the original content.</div>
+              )}
+              {selectedPost.moderation_status === "locked" && (
+                <div className="risk-box">This post is locked by moderation and cannot receive new replies.</div>
+              )}
               {selectedPost.image_data && <img className="forum-image" src={selectedPost.image_data} alt="Forum attachment" />}
               <div className="block-meta">
                 <div className="meta-item">
@@ -616,6 +629,7 @@ function Forum() {
               <button className="button secondary small-button" type="button" onClick={() => featurePost(selectedPost.post_id)}>
                 Feature this Post
               </button>
+              <ReportButton targetType="forum_post" targetId={selectedPost.post_id} />
               {tipForms[`post:${selectedPost.post_id}`] && (
                 <TipForm
                   form={tipForms[`post:${selectedPost.post_id}`]}
@@ -631,6 +645,7 @@ function Forum() {
                 {selectedPost.replies?.length ? (
                   selectedPost.replies.map((reply) => (
                     <article className="reply-card" key={reply.reply_id}>
+                      {reply.moderation_status === "hidden" && <span className="badge">Hidden by moderation</span>}
                       <p>{reply.body}</p>
                       {reply.image_data && <img className="forum-image" src={reply.image_data} alt="Reply attachment" />}
                       <span>
@@ -640,6 +655,7 @@ function Forum() {
                       <button className="button secondary small-button" type="button" onClick={() => toggleTipForm(`reply:${reply.reply_id}`)}>
                         Tip Reply
                       </button>
+                      <ReportButton targetType="forum_reply" targetId={reply.reply_id} />
                       {tipForms[`reply:${reply.reply_id}`] && (
                         <TipForm
                           form={tipForms[`reply:${reply.reply_id}`]}
@@ -661,6 +677,9 @@ function Forum() {
                 )}
               </section>
 
+              {selectedPost.moderation_status === "locked" ? (
+                <div className="empty-state">Replies are closed because this post is locked by moderation.</div>
+              ) : (
               <form className="form" onSubmit={addReply}>
                 <h2>Reply</h2>
                 <div className="field">
@@ -705,6 +724,7 @@ function Forum() {
                   {submitting ? "Posting..." : "Post Reply"}
                 </button>
               </form>
+              )}
             </>
           ) : (
             <div className="empty-state">Select a post to read the full discussion.</div>

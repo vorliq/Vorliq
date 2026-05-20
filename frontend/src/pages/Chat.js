@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { toast } from "react-toastify";
 
+import ReportButton from "../components/ReportButton";
 import { useAuth } from "../context/AuthContext";
 
 function socketUrl() {
@@ -82,6 +83,9 @@ function Chat() {
       toast.error("Messages must be 500 characters or fewer.");
       return;
     }
+    if (/private key|seed phrase|double your|guaranteed profit/i.test(text)) {
+      toast.warn("This message contains scam-risk wording. Chat is public; never share private keys or recovery material.");
+    }
 
     socketRef.current?.emit("message", {
       sender_address: walletAddress.trim(),
@@ -129,9 +133,11 @@ function Chat() {
             messages.map((message, index) => {
               const own = message.sender_address === walletAddress.trim();
               return (
-                <article className={`chat-message ${own ? "own" : ""}`} key={`${message.timestamp}-${index}`}>
-                  <span>{shorten(message.sender_address)} · {timeAgo(message.timestamp)}</span>
+                <article className={`chat-message ${own ? "own" : ""}`} key={message.message_id || `${message.timestamp}-${index}`}>
+                  <span>{shorten(message.sender_address)} - {timeAgo(message.timestamp)}</span>
+                  {message.warning && <small className="warning">{message.warning}</small>}
                   <p>{message.text}</p>
+                  {message.message_id && <ReportButton targetType="chat_message" targetId={message.message_id} defaultReporter={walletAddress} />}
                 </article>
               );
             })
