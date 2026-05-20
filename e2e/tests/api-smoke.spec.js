@@ -11,6 +11,7 @@ const endpoints = [
   "/api/faucet/summary",
   "/api/network/manifest",
   "/api/incidents/active",
+  "/api/analytics/summary",
 ];
 
 test.describe("read-only API smoke tests", () => {
@@ -27,6 +28,14 @@ test.describe("read-only API smoke tests", () => {
 
   test("admin overview stays protected without a token", async ({ request }) => {
     const response = await request.get("/api/admin/overview");
+    expect(response.status()).toBe(401);
+    const json = await response.json();
+    expect(json.success).toBe(false);
+    safeApiJson(json);
+  });
+
+  test("admin analytics stays protected without a token", async ({ request }) => {
+    const response = await request.get("/api/admin/analytics");
     expect(response.status()).toBe(401);
     const json = await response.json();
     expect(json.success).toBe(false);

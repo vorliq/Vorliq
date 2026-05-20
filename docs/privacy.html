@@ -44,6 +44,11 @@
         <h2>Operational Data</h2>
         <p>Vorliq infrastructure can produce logs for service health, diagnostics, errors, deployment status, rate limiting, and security monitoring. Logs are intended to operate the public node and may include IP addresses, request paths, timestamps, and technical metadata.</p>
 
+        <h2>First-Party Analytics</h2>
+        <p>Vorliq uses privacy-preserving first-party analytics for aggregate product insight. Analytics can count safe events such as page views, opened feature pages, onboarding completion, documentation links, and error boundary visibility. Events use a random anonymous browser session ID stored in localStorage only when analytics is enabled.</p>
+        <p>Analytics does not collect private keys, wallet passwords, recovery phrases, admin tokens, raw IP addresses, raw user agents, message bodies, forum post bodies, private key export data, or personal identity. Analytics events are retained for up to 90 days and are not required to reconstruct blockchain balances.</p>
+        <p>Users can opt out from the Account privacy controls. When disabled, the browser stops sending analytics events and removes the anonymous session ID from that device.</p>
+
         <h2>User Caution</h2>
         <p>Users should be careful on shared, borrowed, public, or work-managed devices. Anyone with access to a device, browser profile, backup, malware, screen recording tool, or private key can create serious wallet risk.</p>
 

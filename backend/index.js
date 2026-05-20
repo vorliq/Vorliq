@@ -26,6 +26,8 @@ const reportsRoutes = require("./routes/reports");
 const manifestRoutes = require("./routes/manifest");
 const adminRoutes = require("./routes/admin");
 const systemRoutes = require("./routes/system");
+const analyticsRoutes = require("./routes/analytics");
+const { pruneAnalytics } = require("./analytics");
 const { logError, logInfo } = require("./logger");
 const { sendWeeklyReport } = require("./reports");
 const { corsMiddleware, helmetMiddleware, isAllowedOrigin, securityStatus } = require("./middleware/security");
@@ -42,6 +44,7 @@ const {
   transactionLimiter,
   walletLimiter,
   writeLimiter,
+  analyticsLimiter,
 } = require("./middleware/rateLimits");
 
 const app = express();
@@ -140,6 +143,8 @@ app.use((req, res, next) => {
   });
   next();
 });
+app.use("/api/analytics/event", analyticsLimiter);
+app.use(analyticsRoutes);
 app.use("/api", generalLimiter, apiSlowDown);
 app.use("/api/socket.io", chatLimiter);
 app.use("/api/wallet/create", walletLimiter);
@@ -238,6 +243,7 @@ app.use((error, req, res, next) => {
 });
 
 if (require.main === module) {
+  pruneAnalytics();
   cron.schedule(
     "0 9 * * 1",
     () => {

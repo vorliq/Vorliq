@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { sendAnalyticsEvent } from "../helpers/analytics";
 
 const ONBOARDING_KEY = "vorliq_onboarding_complete";
 
@@ -47,6 +48,11 @@ function Onboarding() {
 
   const completeOnboarding = useCallback(() => {
     window.localStorage.setItem(ONBOARDING_KEY, "true");
+    sendAnalyticsEvent("onboarding_completed", {
+      route: window.location.pathname || "/",
+      category: "onboarding",
+      metadata: { source: "onboarding" },
+    });
     setVisible(false);
   }, []);
 

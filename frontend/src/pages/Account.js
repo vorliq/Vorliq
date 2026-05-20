@@ -6,6 +6,7 @@ import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
 import ProfileAvatar from "../components/ProfileAvatar";
 import ProfileBadge from "../components/ProfileBadge";
+import PrivacyControls from "../components/PrivacyControls";
 import Spinner from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
@@ -318,6 +319,8 @@ function Account() {
       </section>
 
       <ErrorMessage message={errorMessage} />
+
+      <PrivacyControls />
 
       <section className="card card-pad account-profile-section">
         <div className="section-title">

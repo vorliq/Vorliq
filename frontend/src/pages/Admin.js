@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../helpers/api";
 
 const ADMIN_TOKEN_KEY = "vorliq_admin_token";
-const tabs = ["Overview", "Security", "Backups", "Incidents", "Forum Moderation"];
+const tabs = ["Overview", "Analytics", "Security", "Backups", "Incidents", "Forum Moderation"];
 
 function authHeader(token) {
   return { Authorization: `Bearer ${token}` };
@@ -15,6 +15,7 @@ function Admin() {
   const [activeTab, setActiveTab] = useState("Overview");
   const [overview, setOverview] = useState(null);
   const [security, setSecurity] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [backups, setBackups] = useState(null);
   const [incidents, setIncidents] = useState({ active: [], recent: [] });
   const [forumPosts, setForumPosts] = useState([]);
@@ -40,6 +41,11 @@ function Admin() {
     setSecurity(response.data);
   }, [headers]);
 
+  const loadAnalytics = useCallback(async () => {
+    const response = await api.get("/admin/analytics", { headers });
+    setAnalytics(response.data);
+  }, [headers]);
+
   const loadBackups = useCallback(async () => {
     const response = await api.get("/admin/backups", { headers });
     setBackups(response.data);
@@ -63,6 +69,7 @@ function Admin() {
     setError("");
     try {
       if (tab === "Overview") await loadOverview();
+      if (tab === "Analytics") await loadAnalytics();
       if (tab === "Security") await loadSecurity();
       if (tab === "Backups") await loadBackups();
       if (tab === "Incidents") await loadIncidents();
@@ -70,7 +77,7 @@ function Admin() {
     } catch (requestError) {
       setError(requestError.response?.status === 401 ? "Unauthorized" : "Unable to load admin data.");
     }
-  }, [activeTab, headers, loadBackups, loadForumModeration, loadIncidents, loadOverview, loadSecurity]);
+  }, [activeTab, headers, loadAnalytics, loadBackups, loadForumModeration, loadIncidents, loadOverview, loadSecurity]);
 
   useEffect(() => {
     if (adminToken) {
@@ -99,6 +106,7 @@ function Admin() {
     setAdminToken("");
     setOverview(null);
     setSecurity(null);
+    setAnalytics(null);
     setBackups(null);
     setForumPosts([]);
   }
@@ -217,6 +225,7 @@ function Admin() {
       {status && <div className="empty-state">{status}</div>}
 
       {activeTab === "Overview" && <OverviewTab overview={overview} />}
+      {activeTab === "Analytics" && <AnalyticsTab analytics={analytics} onLoad={loadAnalytics} />}
       {activeTab === "Security" && <SecurityTab security={security} onLoad={loadSecurity} />}
       {activeTab === "Backups" && <BackupsTab backups={backups} onLoad={loadBackups} onRun={runBackup} onVerify={verifyBackup} />}
       {activeTab === "Incidents" && (
@@ -233,6 +242,55 @@ function Admin() {
         <ForumModerationTab posts={forumPosts} onLoad={loadForumModeration} onUpdate={updateForumPost} />
       )}
     </div>
+  );
+}
+
+function AnalyticsTab({ analytics, onLoad }) {
+  useEffect(() => { if (!analytics) onLoad(); }, [analytics, onLoad]);
+  if (!analytics) return <div className="empty-state">Loading analytics aggregates...</div>;
+
+  const cards = [
+    ["Onboarding completions", analytics.onboarding_completion_count],
+    ["Error events", analytics.error_events],
+    ["Opt-out count", analytics.analytics_opt_out_count],
+    ["Retention", `${analytics.retention_days} days`],
+  ];
+
+  return (
+    <section className="glass-section card-pad">
+      <p className="risk-box">{analytics.note}</p>
+      <div className="admin-card-grid">
+        {cards.map(([label, value]) => (
+          <div className="stat-card" key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+      <h2>Top Routes</h2>
+      <div className="admin-list">
+        {(analytics.top_routes || []).map((row) => (
+          <div className="admin-row" key={row.name}><strong>{row.name}</strong><span>{row.count}</span></div>
+        ))}
+      </div>
+      <h2>Feature Usage</h2>
+      <div className="admin-list">
+        {(analytics.feature_usage || []).map((row) => (
+          <div className="admin-row" key={row.name}><strong>{row.name}</strong><span>{row.count}</span></div>
+        ))}
+      </div>
+      <h2>Last 30 Days</h2>
+      <div className="table-wrap">
+        <table className="stats-table">
+          <thead><tr><th>Date</th><th>Events</th><th>Page views</th><th>Anonymous sessions</th></tr></thead>
+          <tbody>
+            {(analytics.daily_counts || []).map((row) => (
+              <tr key={row.date}><td>{row.date}</td><td>{row.events}</td><td>{row.page_views}</td><td>{row.unique_anonymous_sessions}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 

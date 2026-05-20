@@ -4,6 +4,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import AnimatedBrandBackground from "./components/AnimatedBrandBackground";
+import AnalyticsRouteTracker from "./components/AnalyticsRouteTracker";
 import NotificationPanel from "./components/NotificationPanel";
 import Onboarding from "./components/Onboarding";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -26,6 +27,7 @@ import Profile from "./pages/Profile";
 import Health from "./pages/Health";
 import Exchange from "./pages/Exchange";
 import Governance from "./pages/Governance";
+import Growth from "./pages/Growth";
 import Forum from "./pages/Forum";
 import Leaderboard from "./pages/Leaderboard";
 import Treasury from "./pages/Treasury";
@@ -67,6 +69,7 @@ const moreLinks = [
   { to: "/network", label: "Network" },
   { to: "/stats", label: "Stats" },
   { to: "/health", label: "Health" },
+  { to: "/growth", label: "Growth" },
   { to: "/transparency", label: "Transparency" },
   { to: "/whitepaper", label: "Whitepaper" },
 ];
@@ -459,6 +462,7 @@ function AppShell() {
       </div>
 
       <IncidentBanner />
+      <AnalyticsRouteTracker />
 
       <main id="main-content" tabIndex="-1">
         <Routes>
@@ -485,6 +489,7 @@ function AppShell() {
           <Route path="/stats" element={<Stats />} />
           <Route path="/registry" element={<Registry />} />
           <Route path="/health" element={<Health />} />
+          <Route path="/growth" element={<Growth />} />
           <Route path="/transparency" element={<Transparency />} />
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={<Profile />} />

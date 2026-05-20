@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Analytics</title>
+    <meta name="description" content="Privacy-preserving first-party analytics for Vorliq community growth." />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet" />
+    <style>
+      :root { --bg:#020817; --card:rgba(8,22,43,.78); --accent:#18d7c9; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.24); }
+      * { box-sizing:border-box; }
+      body { margin:0; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 12% 14%,rgba(134,227,59,.14),transparent 26rem),radial-gradient(circle at 88% 22%,rgba(20,121,255,.2),transparent 30rem),var(--bg); color:var(--text); }
+      main { width:min(920px,calc(100% - 32px)); margin:0 auto; padding:56px 0; }
+      a { color:var(--accent); font-weight:800; }
+      h1 { font-size:clamp(2.4rem,8vw,4.8rem); margin:18px 0 14px; }
+      h2 { margin:34px 0 10px; }
+      p, li { color:var(--muted); line-height:1.8; }
+      .card { background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02)),var(--card); border:1px solid var(--border); border-radius:18px; box-shadow:0 28px 90px rgba(0,0,0,.32); padding:24px; }
+      code { color:#fff; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a href="index.html">Back to Vorliq</a>
+      <h1>Privacy-Preserving Analytics</h1>
+      <div class="card">
+        <p>Vorliq records safe first-party aggregate product events so the community can understand growth without invasive tracking or third-party analytics.</p>
+        <h2>What Is Collected</h2>
+        <p>Events can include page views, feature page openings, onboarding completion, faucet interest without wallet addresses, documentation link clicks, and error boundary visibility. Each event stores an event type, route, category, timestamp, random anonymous browser session ID, and strictly allowlisted metadata.</p>
+        <h2>What Is Not Collected</h2>
+        <p>Vorliq analytics does not collect private keys, wallet passwords, recovery phrases, raw IP addresses, raw user agents, admin tokens, message body content, forum post body content, private key export data, or personal identity.</p>
+        <h2>Retention</h2>
+        <p>Analytics events are stored in a local JSON file on the backend and pruned to the last 90 days. Analytics data is useful for product insight but is not required to reconstruct blockchain balances.</p>
+        <h2>Opt-Out</h2>
+        <p>Analytics defaults to enabled for aggregate product insight. Users can disable it from the Account privacy controls. Opting out stops future analytics events and removes the anonymous session ID from that browser.</p>
+        <h2>Dashboards</h2>
+        <p>The public Growth dashboard shows aggregate visits, most viewed areas, onboarding completions, faucet interest, forum interest, registry summary, and chain/mining summary. The protected admin dashboard shows more detailed aggregate counts, but never a raw public event list.</p>
+        <h2>API</h2>
+        <p>Public endpoints are <code>POST /api/analytics/event</code> and <code>GET /api/analytics/summary</code>. Protected operator analytics are available at <code>GET /api/admin/analytics</code> with the server-side admin token.</p>
+      </div>
+    </main>
+  </body>
+</html>

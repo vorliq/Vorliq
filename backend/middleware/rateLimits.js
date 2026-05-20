@@ -102,7 +102,23 @@ const chatLimiter = createLimiter({
   message: "Chat messages are rate limited. Please slow down.",
 });
 
+const analyticsLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 80,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: "Analytics requests are rate limited. Please slow down.",
+  handler(req, res, _next, options) {
+    logError(`Analytics rate limit rejected ${req.method} ${req.originalUrl}`);
+    return res.status(options.statusCode).json({
+      success: false,
+      message: options.message,
+    });
+  },
+});
+
 module.exports = {
+  analyticsLimiter,
   apiSlowDown,
   chatLimiter,
   faucetLimiter,

@@ -882,6 +882,29 @@ class VorliqSDK {
 
     return { to, amount: parsedAmount };
   }
+
+  /**
+   * Optionally sends a caller-provided privacy-preserving analytics event.
+   * The SDK never auto-tracks developers or users.
+   *
+   * @param {object} event Safe analytics event payload.
+   * @returns {Promise<object>} Analytics write response.
+   */
+  async sendAnalyticsEvent(event) {
+    return this.request("/api/analytics/event", {
+      method: "POST",
+      body: JSON.stringify(event || {}),
+    });
+  }
+
+  /**
+   * Gets public aggregate analytics summary data.
+   *
+   * @returns {Promise<object>} Public aggregate analytics summary.
+   */
+  async getAnalyticsSummary() {
+    return this.request("/api/analytics/summary");
+  }
 }
 
 module.exports = VorliqSDK;
