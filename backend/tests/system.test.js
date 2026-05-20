@@ -42,6 +42,20 @@ describe("GET /api/system/self-check", () => {
         });
       }
 
+      if (url.endsWith("/storage/health")) {
+        return Promise.resolve({
+          data: {
+            success: true,
+            overall_status: "ok",
+            critical_files_ok: 13,
+            warnings_count: 0,
+            errors_count: 0,
+            backup_available: true,
+            files: [{ file_name: "chain.json", status: "ok" }],
+          },
+        });
+      }
+
       return Promise.reject(new Error(`unexpected URL ${url}`));
     });
   });
@@ -66,6 +80,9 @@ describe("GET /api/system/self-check", () => {
     expect(response.body.blockchain_reachable).toBe(true);
     expect(response.body.chain_valid).toBe(true);
     expect(response.body.registry_active_node_count).toBe(1);
+    expect(response.body.storage_health).toBe("ok");
+    expect(response.body.critical_storage_errors).toBe(0);
+    expect(response.body.backup_available).toBe(true);
     expect(response.body.public_node_url).toBe("https://node.vorliq.org");
     expect(response.body.timestamp).toBeTruthy();
   });

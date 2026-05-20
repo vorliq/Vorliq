@@ -5,6 +5,7 @@ const path = require("path");
 const { promisify } = require("util");
 
 const { publicBackupStatus } = require("./backup");
+const { loadStorageHealth } = require("./storage");
 const { listActiveIncidents } = require("../incidents");
 const { logError } = require("../logger");
 
@@ -84,10 +85,29 @@ async function safeRegistrySummary() {
   }
 }
 
+async function safeStorageHealth() {
+  try {
+    const health = await loadStorageHealth();
+    return {
+      storage_health: health.overall_status,
+      critical_storage_errors: health.errors_count,
+      backup_available: Boolean(health.backup_available),
+    };
+  } catch (error) {
+    logError(`System self-check storage health failed: ${error.message}`);
+    return {
+      storage_health: "error",
+      critical_storage_errors: 1,
+      backup_available: false,
+    };
+  }
+}
+
 router.get("/api/system/self-check", async (req, res) => {
-  const [diagnostics, registry, commit] = await Promise.all([
+  const [diagnostics, registry, storage, commit] = await Promise.all([
     safeDiagnostics(),
     safeRegistrySummary(),
+    safeStorageHealth(),
     deploymentCommit(),
   ]);
 
@@ -104,6 +124,7 @@ router.get("/api/system/self-check", async (req, res) => {
     api_health: true,
     ...diagnostics,
     backup_status_available: backupStatusAvailable,
+    ...storage,
     ...registry,
     active_incident_count: listActiveIncidents().length,
     deployment_commit: commit,

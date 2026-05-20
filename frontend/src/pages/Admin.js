@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../helpers/api";
 
 const ADMIN_TOKEN_KEY = "vorliq_admin_token";
-const tabs = ["Overview", "Analytics", "Security", "Backups", "Incidents", "Forum Moderation"];
+const tabs = ["Overview", "Analytics", "Storage", "Security", "Backups", "Incidents", "Forum Moderation"];
 
 function authHeader(token) {
   return { Authorization: `Bearer ${token}` };
@@ -16,6 +16,7 @@ function Admin() {
   const [overview, setOverview] = useState(null);
   const [security, setSecurity] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [storage, setStorage] = useState(null);
   const [backups, setBackups] = useState(null);
   const [incidents, setIncidents] = useState({ active: [], recent: [] });
   const [forumPosts, setForumPosts] = useState([]);
@@ -51,6 +52,11 @@ function Admin() {
     setBackups(response.data);
   }, [headers]);
 
+  const loadStorage = useCallback(async () => {
+    const response = await api.get("/admin/storage", { headers });
+    setStorage(response.data);
+  }, [headers]);
+
   const loadIncidents = useCallback(async () => {
     const [active, recent] = await Promise.all([api.get("/incidents/active"), api.get("/incidents")]);
     setIncidents({
@@ -70,6 +76,7 @@ function Admin() {
     try {
       if (tab === "Overview") await loadOverview();
       if (tab === "Analytics") await loadAnalytics();
+      if (tab === "Storage") await loadStorage();
       if (tab === "Security") await loadSecurity();
       if (tab === "Backups") await loadBackups();
       if (tab === "Incidents") await loadIncidents();
@@ -77,7 +84,7 @@ function Admin() {
     } catch (requestError) {
       setError(requestError.response?.status === 401 ? "Unauthorized" : "Unable to load admin data.");
     }
-  }, [activeTab, headers, loadAnalytics, loadBackups, loadForumModeration, loadIncidents, loadOverview, loadSecurity]);
+  }, [activeTab, headers, loadAnalytics, loadBackups, loadForumModeration, loadIncidents, loadOverview, loadSecurity, loadStorage]);
 
   useEffect(() => {
     if (adminToken) {
@@ -107,6 +114,7 @@ function Admin() {
     setOverview(null);
     setSecurity(null);
     setAnalytics(null);
+    setStorage(null);
     setBackups(null);
     setForumPosts([]);
   }
@@ -226,6 +234,7 @@ function Admin() {
 
       {activeTab === "Overview" && <OverviewTab overview={overview} />}
       {activeTab === "Analytics" && <AnalyticsTab analytics={analytics} onLoad={loadAnalytics} />}
+      {activeTab === "Storage" && <StorageTab storage={storage} onLoad={loadStorage} />}
       {activeTab === "Security" && <SecurityTab security={security} onLoad={loadSecurity} />}
       {activeTab === "Backups" && <BackupsTab backups={backups} onLoad={loadBackups} onRun={runBackup} onVerify={verifyBackup} />}
       {activeTab === "Incidents" && (
@@ -242,6 +251,48 @@ function Admin() {
         <ForumModerationTab posts={forumPosts} onLoad={loadForumModeration} onUpdate={updateForumPost} />
       )}
     </div>
+  );
+}
+
+function StorageTab({ storage, onLoad }) {
+  useEffect(() => { if (!storage) onLoad(); }, [onLoad, storage]);
+  if (!storage) return <div className="empty-state">Loading storage health...</div>;
+
+  const rows = storage.files || [];
+  return (
+    <section className="glass-section card-pad">
+      <div className="admin-card-grid">
+        {[
+          ["Overall status", storage.overall_status],
+          ["Critical files ok", storage.critical_files_ok],
+          ["Warnings", storage.warnings_count],
+          ["Errors", storage.errors_count],
+          ["Backup available", storage.backup_available ? "Yes" : "No"],
+        ].map(([label, value]) => (
+          <div className="stat-card" key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="table-wrap">
+        <table className="stats-table">
+          <thead><tr><th>File</th><th>Status</th><th>Valid JSON</th><th>Backup</th><th>Size</th><th>Modified</th></tr></thead>
+          <tbody>
+            {rows.map((file) => (
+              <tr key={file.file_name}>
+                <td>{file.file_name}</td>
+                <td>{file.status}</td>
+                <td>{file.valid_json ? "Yes" : "No"}</td>
+                <td>{file.has_backup ? "Yes" : "No"}</td>
+                <td>{file.size_bytes}</td>
+                <td>{file.last_modified || "Not created"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 

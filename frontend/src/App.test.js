@@ -793,6 +793,20 @@ function defaultApiGet(path) {
     });
   }
 
+  if (path === "/storage/health") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        overall_status: "ok",
+        critical_files_ok: 15,
+        warnings_count: 0,
+        errors_count: 0,
+        backup_available: true,
+        files: [{ file_name: "chain.json", status: "ok", valid_json: true, has_backup: true }],
+      },
+    });
+  }
+
   if (path === "/mining/history") {
     return Promise.resolve({
       data: {
@@ -1777,6 +1791,14 @@ test("Health page renders registry summary section", async () => {
   expect(screen.getByText(/block production status/i)).toBeInTheDocument();
 });
 
+test("Health page renders Storage Health", async () => {
+  renderWithProviders(<Health />, "/health");
+
+  expect(await screen.findByRole("heading", { name: /storage health/i })).toBeInTheDocument();
+  expect(screen.getByText(/critical files ok/i)).toBeInTheDocument();
+  expect(screen.getByText(/backup available/i)).toBeInTheDocument();
+});
+
 test("IncidentBanner does not render when no active incidents are returned", async () => {
   api.get.mockResolvedValueOnce({ data: { success: true, incidents: [] } });
 
@@ -1866,4 +1888,54 @@ test("Admin page renders overview after successful response", async () => {
   expect(screen.getByText(/block height/i)).toBeInTheDocument();
   expect(screen.getByText("218")).toBeInTheDocument();
   expect(screen.queryByText("good-token")).not.toBeInTheDocument();
+});
+
+test("Admin page renders storage section after token", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/admin/overview") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          deployment: { commit_hash: "abcdef1234567890" },
+          blockchain: { height: 218, chain_valid: true, pending_transaction_count: 2 },
+          treasury: { balance: 25 },
+          backups: { latest_backup: null },
+          incidents: { active_count: 0 },
+          services: {},
+          server_uptime_seconds: 10,
+        },
+      });
+    }
+    if (path === "/admin/storage") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          overall_status: "warning",
+          critical_files_ok: 14,
+          warnings_count: 1,
+          errors_count: 0,
+          backup_available: true,
+          files: [
+            {
+              file_name: "chain.json",
+              status: "ok",
+              valid_json: true,
+              has_backup: true,
+              size_bytes: 120,
+              last_modified: "2026-05-20T00:00:00.000Z",
+            },
+          ],
+        },
+      });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Admin />, "/admin");
+  fireEvent.change(screen.getByLabelText(/admin token/i), { target: { value: "good-token" } });
+  await userEvent.click(screen.getByRole("button", { name: /open operator dashboard/i }));
+  await userEvent.click(await screen.findByRole("button", { name: /storage/i }));
+
+  expect(await screen.findByText(/overall status/i)).toBeInTheDocument();
+  expect(screen.getByText("chain.json")).toBeInTheDocument();
 });

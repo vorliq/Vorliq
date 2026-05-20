@@ -43,7 +43,7 @@ The community governance system gives VLQ holders on-chain voting power over Vor
 
 The React web application provides the browser interface for wallets, sending VLQ, mining, chain exploration, lending, exchange, governance, treasury, faucet, profiles, node registry, statistics, account history, notifications, and health monitoring. The React Native Expo mobile application supports community-testing flows for wallet creation, local signing, sending, faucet claims, mining status, transaction and block details, profiles, lending repayment, exchange trade actions, governance views, treasury proposal submission and voting, node registry status, settings, and notifications.
 
-Vorliq includes encrypted browser wallet storage, local key storage on mobile, dark and light mode, persistent notifications, push notification support through Expo, node diagnostics, rotating logs, a public node registry, GitHub Pages documentation, a full test suite, GitHub Actions CI, and production deployment documentation.
+Vorliq includes encrypted browser wallet storage, local key storage on mobile, dark and light mode, persistent notifications, push notification support through Expo, node diagnostics, rotating logs, atomic JSON persistence with backup-before-write protection, storage health reporting, a public node registry, GitHub Pages documentation, a full test suite, GitHub Actions CI, and production deployment documentation.
 
 Transparency and Safety
 -----------------------
@@ -52,7 +52,7 @@ Vorliq is live software, but it is still an early cryptocurrency-style network. 
 
 Vorliq is self-custody. The server stores public blockchain data, forum posts, governance activity, exchange offers, lending records, and operational state, but it does not store user private keys or wallet passwords. Lost private keys cannot be recovered by Vorliq, so users should read the wallet safety guide before using real wallets: https://vorliq.github.io/Vorliq/wallet-safety.html.
 
-Public network proof is available through the status page, the recovery guide, and the machine-readable network manifest. Users and developers can check https://status.vorliq.org, https://vorliq.github.io/Vorliq/recovery.html, and https://vorliq.org/api/network/manifest. The build and deployment process is public through GitHub Actions at https://github.com/vorliq/Vorliq/actions.
+Public network proof is available through the status page, the recovery guide, the storage reliability guide, and the machine-readable network manifest. Users and developers can check https://status.vorliq.org, https://vorliq.github.io/Vorliq/recovery.html, https://vorliq.github.io/Vorliq/storage.html, and https://vorliq.org/api/network/manifest. The build and deployment process is public through GitHub Actions at https://github.com/vorliq/Vorliq/actions.
 
 How to Run
 ----------

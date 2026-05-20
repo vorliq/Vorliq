@@ -286,6 +286,11 @@ def health():
     return jsonify({"status": "ok", "coin": "VLQ"})
 
 
+@app.get("/storage/health")
+def storage_health():
+    return jsonify(storage.storage_health())
+
+
 @app.get("/chain")
 def get_chain():
     return jsonify(node.get_full_chain())

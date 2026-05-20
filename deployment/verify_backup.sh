@@ -63,6 +63,8 @@ critical_files = [
     "price.json",
     "forum.json",
     "achievements.json",
+    "profiles.json",
+    "faucet.json",
 ]
 
 errors = []
@@ -82,6 +84,13 @@ for name in critical_files:
         errors.append(f"{name}: invalid JSON: {exc}")
         continue
     valid.append(name)
+    backup = path.with_name(path.name + ".bak")
+    if backup.exists():
+        try:
+            with backup.open("r", encoding="utf-8") as handle:
+                json.load(handle)
+        except Exception as exc:
+            errors.append(f"{backup.name}: invalid backup JSON: {exc}")
 
     if name == "chain.json":
         if not isinstance(parsed, dict):
@@ -102,6 +111,16 @@ for name in critical_files:
 
 if "chain.json" in missing:
     warnings.append("chain.json is missing. This is acceptable only for a fresh node before a chain has been saved.")
+
+backend_data = data_dir.parent.parent / "backend" / "data"
+for name in ["analytics.json", "incidents.json"]:
+    path = backend_data / name
+    if path.exists():
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                json.load(handle)
+        except Exception as exc:
+            errors.append(f"backend/data/{name}: invalid JSON: {exc}")
 
 print("Backup verification report")
 print(f"Data directory: {data_dir}")

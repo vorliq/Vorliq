@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import os
 import json
+import shutil
+import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +24,27 @@ from transaction import Transaction
 from treasury import Treasury
 
 
+CRITICAL_JSON_FILES = [
+    "chain.json",
+    "pending.json",
+    "peers.json",
+    "registry.json",
+    "lending.json",
+    "exchange.json",
+    "governance.json",
+    "treasury.json",
+    "price.json",
+    "forum.json",
+    "achievements.json",
+    "profiles.json",
+    "faucet.json",
+]
+
+
+class StorageCorruptionError(RuntimeError):
+    pass
+
+
 class Storage:
     def __init__(self, data_dir: str | Path | None = None) -> None:
         self.data_dir = Path(data_dir) if data_dir else Path(__file__).resolve().parent / "data"
@@ -37,8 +62,14 @@ class Storage:
         self.achievements_file = self.data_dir / "achievements.json"
         self.peers_file = self.data_dir / "peers.json"
         self.registry_file = self.data_dir / "registry.json"
+        self.chain_storage_error: str | None = None
+        self.chain_write_protected = False
 
     def save_chain(self, blockchain: Blockchain) -> None:
+        if self.chain_write_protected:
+            raise StorageCorruptionError(
+                "chain.json is corrupt and no valid backup was available; refusing to overwrite chain state"
+            )
         chain_data = {
             "coin": "VLQ",
             "difficulty": blockchain.difficulty,
@@ -56,7 +87,12 @@ class Storage:
             vorliq_logger.info("No saved blockchain found on disk")
             return None
 
-        data = self._read_json(self.chain_file)
+        data = self._read_json(self.chain_file, default=None, critical_chain=True)
+        if data is None:
+            self.chain_write_protected = True
+            self.chain_storage_error = "chain.json is corrupt and no valid backup is available"
+            vorliq_logger.critical(self.chain_storage_error)
+            return None
         blocks = [self._block_from_dict(block_data) for block_data in data.get("chain", [])]
 
         if not blocks:
@@ -73,6 +109,9 @@ class Storage:
         blockchain.initial_mining_reward = saved_reward
 
         if not blockchain.is_chain_valid():
+            self.chain_write_protected = True
+            self.chain_storage_error = "chain.json loaded but failed chain validation"
+            vorliq_logger.critical(self.chain_storage_error)
             raise ValueError("saved blockchain data is not valid")
 
         vorliq_logger.info("Loaded blockchain from disk with %s blocks", len(blockchain.chain))
@@ -88,7 +127,7 @@ class Storage:
             vorliq_logger.info("No saved pending transactions found on disk")
             return []
 
-        data = self._read_json(self.pending_file)
+        data = self._read_json(self.pending_file, default=[])
         if not isinstance(data, list):
             raise ValueError("pending transaction data must be a list")
 
@@ -110,7 +149,7 @@ class Storage:
             vorliq_logger.info("No saved lending pool found on disk")
             return lending_pool
 
-        data = self._read_json(self.lending_file)
+        data = self._read_json(self.lending_file, default={"loan_requests": {}})
         loan_requests = data.get("loan_requests", {})
 
         if not isinstance(loan_requests, dict):
@@ -131,7 +170,7 @@ class Storage:
             vorliq_logger.info("No saved exchange found on disk")
             return exchange
 
-        data = self._read_json(self.exchange_file)
+        data = self._read_json(self.exchange_file, default={"offers": {}})
         offers = data.get("offers", {})
 
         if not isinstance(offers, dict):
@@ -152,7 +191,7 @@ class Storage:
             vorliq_logger.info("No saved forum found on disk")
             return forum
 
-        data = self._read_json(self.forum_file)
+        data = self._read_json(self.forum_file, default={"posts": {}})
         posts = data.get("posts", {})
 
         if not isinstance(posts, dict):
@@ -180,7 +219,7 @@ class Storage:
             vorliq_logger.info("No saved governance found on disk")
             return governance
 
-        data = self._read_json(self.governance_file)
+        data = self._read_json(self.governance_file, default={"proposals": {}, "governance_settings": {}, "rule_changes": []})
         proposals = data.get("proposals", {})
         settings = data.get("governance_settings", {})
         rule_changes = data.get("rule_changes", [])
@@ -208,7 +247,7 @@ class Storage:
             vorliq_logger.info("No saved treasury found on disk")
             return treasury
 
-        data = self._read_json(self.treasury_file)
+        data = self._read_json(self.treasury_file, default={"proposals": {}})
         proposals = data.get("proposals", {})
         if not isinstance(proposals, dict):
             raise ValueError("treasury data must contain a proposals object")
@@ -226,7 +265,7 @@ class Storage:
             vorliq_logger.info("No saved faucet found on disk")
             return faucet
 
-        data = self._read_json(self.faucet_file)
+        data = self._read_json(self.faucet_file, default={"claims": {}})
         claims = data.get("claims", {})
         if not isinstance(claims, dict):
             raise ValueError("faucet data must contain a claims object")
@@ -244,7 +283,7 @@ class Storage:
             vorliq_logger.info("No saved price discovery found on disk")
             return price_discovery
 
-        data = self._read_json(self.price_file)
+        data = self._read_json(self.price_file, default={"signals": {}})
         signals = data.get("signals", {})
         if not isinstance(signals, dict):
             raise ValueError("price discovery data must contain a signals object")
@@ -263,7 +302,7 @@ class Storage:
             vorliq_logger.info("No saved profiles found on disk")
             return profiles
 
-        data = self._read_json(self.profiles_file)
+        data = self._read_json(self.profiles_file, default={"profiles": {}})
         profile_records = data.get("profiles", {})
         if not isinstance(profile_records, dict):
             raise ValueError("profiles data must contain a profiles object")
@@ -282,7 +321,7 @@ class Storage:
             vorliq_logger.info("No saved achievements found on disk")
             return achievements
 
-        data = self._read_json(self.achievements_file)
+        data = self._read_json(self.achievements_file, default={"earned": {}})
         earned = data.get("earned", {})
         if not isinstance(earned, dict):
             raise ValueError("achievements data must contain an earned object")
@@ -299,7 +338,7 @@ class Storage:
             vorliq_logger.info("No saved peer list found on disk")
             return set()
 
-        data = self._read_json(self.peers_file)
+        data = self._read_json(self.peers_file, default=[])
         if not isinstance(data, list):
             raise ValueError("peer data must be a list")
 
@@ -318,7 +357,7 @@ class Storage:
             vorliq_logger.info("No saved node registry found on disk")
             return registry
 
-        data = self._read_json(self.registry_file)
+        data = self._read_json(self.registry_file, default={"registered_nodes": {}})
         registered_nodes = data.get("registered_nodes", {})
 
         if not isinstance(registered_nodes, dict):
@@ -328,11 +367,136 @@ class Storage:
         vorliq_logger.info("Loaded node registry with %s records", len(registered_nodes))
         return registry
 
-    def _write_json(self, path: Path, data: Any) -> None:
-        path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+    def _write_json(self, path: Path, data: Any, create_backup: bool = True) -> None:
+        payload = json.dumps(data, indent=2, sort_keys=True)
+        tmp_path = path.with_name(f".{path.name}.{os.getpid()}.{int(time.time() * 1000)}.tmp")
+        bak_path = path.with_suffix(path.suffix + ".bak")
 
-    def _read_json(self, path: Path) -> Any:
-        return json.loads(path.read_text(encoding="utf-8"))
+        with self._file_lock(path):
+            if create_backup and path.exists():
+                shutil.copy2(path, bak_path)
+
+            with tmp_path.open("w", encoding="utf-8") as handle:
+                handle.write(payload)
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+
+            os.replace(tmp_path, path)
+            self._fsync_directory(path.parent)
+
+    def _read_json(self, path: Path, default: Any = None, critical_chain: bool = False) -> Any:
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception as error:
+            vorliq_logger.warning("Could not read %s: %s", path.name, error)
+
+        bak_path = path.with_suffix(path.suffix + ".bak")
+        if bak_path.exists():
+            try:
+                data = json.loads(bak_path.read_text(encoding="utf-8"))
+                corrupt_path = path.with_suffix(path.suffix + f".corrupt.{int(time.time())}")
+                try:
+                    path.replace(corrupt_path)
+                except OSError as move_error:
+                    vorliq_logger.warning("Could not move corrupt %s aside: %s", path.name, move_error)
+                self._write_json(path, data, create_backup=False)
+                vorliq_logger.warning("Restored %s from valid backup %s", path.name, bak_path.name)
+                return data
+            except Exception as backup_error:
+                vorliq_logger.critical("Backup %s is also invalid: %s", bak_path.name, backup_error)
+
+        if critical_chain:
+            return None
+
+        vorliq_logger.critical("Returning safe default for unreadable storage file %s", path.name)
+        return default
+
+    @contextmanager
+    def _file_lock(self, path: Path, timeout: float = 5.0):
+        lock_path = path.with_suffix(path.suffix + ".lock")
+        start = time.monotonic()
+        descriptor: int | None = None
+        while descriptor is None:
+            try:
+                descriptor = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.write(descriptor, str(os.getpid()).encode("ascii"))
+            except FileExistsError:
+                if time.monotonic() - start >= timeout:
+                    raise TimeoutError(f"Timed out waiting for storage lock {lock_path.name}")
+                time.sleep(0.05)
+
+        try:
+            yield
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                pass
+
+    def _fsync_directory(self, directory: Path) -> None:
+        if os.name != "posix":
+            return
+        descriptor = os.open(str(directory), os.O_RDONLY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+
+    def storage_health(self) -> dict[str, Any]:
+        files = [self._file_health(self.data_dir / name) for name in CRITICAL_JSON_FILES]
+        error_count = sum(1 for item in files if item["status"] == "error")
+        warning_count = sum(1 for item in files if item["status"] == "warning")
+        overall = "error" if error_count else "warning" if warning_count else "ok"
+        return {
+            "success": True,
+            "overall_status": overall,
+            "critical_files_ok": sum(1 for item in files if item["status"] == "ok"),
+            "warnings_count": warning_count,
+            "errors_count": error_count,
+            "backup_available": any(item["has_backup"] for item in files),
+            "files": files,
+        }
+
+    def _file_health(self, path: Path) -> dict[str, Any]:
+        exists = path.exists()
+        backup = path.with_suffix(path.suffix + ".bak")
+        valid_json = False
+        message = "file is valid"
+        status = "ok"
+        size_bytes = 0
+        last_modified = None
+
+        if exists:
+            stats = path.stat()
+            size_bytes = stats.st_size
+            last_modified = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(stats.st_mtime))
+            try:
+                json.loads(path.read_text(encoding="utf-8"))
+                valid_json = True
+            except Exception as error:
+                message = f"invalid JSON: {error}"
+                status = "error" if path.name == "chain.json" and not backup.exists() else "warning"
+        else:
+            message = "file has not been created yet"
+            status = "warning" if path.name == "chain.json" else "ok"
+
+        if path.name == "chain.json" and self.chain_write_protected:
+            status = "error"
+            message = self.chain_storage_error or message
+
+        return {
+            "file_name": path.name,
+            "exists": exists,
+            "valid_json": valid_json,
+            "has_backup": backup.exists(),
+            "size_bytes": size_bytes,
+            "last_modified": last_modified,
+            "status": status,
+            "message": message,
+        }
 
     def _block_from_dict(self, data: dict[str, Any]) -> Block:
         return Block.from_dict(data)

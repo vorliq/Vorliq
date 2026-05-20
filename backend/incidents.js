@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const { atomicWriteJson, safeReadJson } = require("./jsonStore");
 
 const VALID_STATUSES = new Set(["investigating", "identified", "monitoring", "resolved"]);
 const VALID_SEVERITIES = new Set(["minor", "major", "critical"]);
@@ -13,14 +14,14 @@ function ensureStore() {
   const filePath = incidentsFilePath();
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, JSON.stringify({ incidents: [] }, null, 2));
+    atomicWriteJson(filePath, { incidents: [] });
   }
   return filePath;
 }
 
 function readIncidents() {
   const filePath = ensureStore();
-  const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  const parsed = safeReadJson(filePath, { incidents: [] });
   if (!parsed || !Array.isArray(parsed.incidents)) {
     throw new Error("incident store must contain an incidents array");
   }
@@ -29,7 +30,7 @@ function readIncidents() {
 
 function writeIncidents(incidents) {
   const filePath = ensureStore();
-  fs.writeFileSync(filePath, JSON.stringify({ incidents }, null, 2));
+  atomicWriteJson(filePath, { incidents });
 }
 
 function publicIncident(incident) {
@@ -168,6 +169,7 @@ module.exports = {
   VALID_SEVERITIES,
   VALID_STATUSES,
   createIncident,
+  incidentsFilePath,
   listActiveIncidents,
   listIncidents,
   pageIncidents,

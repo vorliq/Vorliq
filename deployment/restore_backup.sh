@@ -2,9 +2,11 @@
 set -euo pipefail
 
 BACKUP_ARCHIVE="${1:-}"
-MODE="${2:-}"
+MODE=""
+FORCE=""
 APP_DIR="${VORLIQ_APP_DIR:-/home/vorliq/app}"
 DATA_DIR="${VORLIQ_DATA_DIR:-${APP_DIR}/blockchain/data}"
+BACKEND_DATA_DIR="${VORLIQ_BACKEND_DATA_DIR:-${APP_DIR}/backend/data}"
 BACKUP_DIR="${VORLIQ_BACKUP_DIR:-/home/vorliq/backups}"
 TIMESTAMP="$(date +%Y-%m-%d-%H%M%S)"
 TMP_DIR="$(mktemp -d)"
@@ -39,8 +41,18 @@ on_error() {
 }
 trap 'on_error "$LINENO"' ERR
 
+for arg in "${@:2}"; do
+  if [[ "${arg}" == "--dry-run" ]]; then
+    MODE="--dry-run"
+  elif [[ "${arg}" == "--force" ]]; then
+    FORCE="--force"
+  else
+    fail "unknown restore option: ${arg}"
+  fi
+done
+
 if [[ -z "${BACKUP_ARCHIVE}" ]]; then
-  fail "usage: $0 /path/to/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz [--dry-run]"
+  fail "usage: $0 /path/to/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz [--dry-run] [--force]"
 fi
 
 if [[ ! -f "${BACKUP_ARCHIVE}" ]]; then
@@ -74,10 +86,12 @@ if [[ -z "${RESTORE_SOURCE}" ]]; then
   fail "archive does not contain blockchain/data"
 fi
 
+BACKEND_RESTORE_SOURCE="${TMP_DIR}/vorliq-backup/backend/data"
+
 if [[ "${MODE}" == "--dry-run" ]]; then
   echo "DRY RUN: archive is readable and contains blockchain data at ${RESTORE_SOURCE}"
   echo "DRY RUN: would stop vorliq-blockchain, vorliq-backend, and vorliq-heartbeat"
-  echo "DRY RUN: would safety-copy ${DATA_DIR} and restore archive data into it"
+  echo "DRY RUN: would safety-copy ${DATA_DIR} and ${BACKEND_DATA_DIR} and restore archive data into them"
   echo "DRY RUN: no live files were modified"
   exit 0
 fi
@@ -87,7 +101,16 @@ if [[ "${EUID}" -ne 0 ]]; then
 fi
 
 SAFETY_COPY="${BACKUP_DIR}/pre-restore-data-${TIMESTAMP}"
+SAFETY_BACKEND_COPY="${BACKUP_DIR}/pre-restore-backend-data-${TIMESTAMP}"
 mkdir -p "${BACKUP_DIR}"
+
+if [[ "${FORCE}" != "--force" ]]; then
+  for service in vorliq-heartbeat.service vorliq-backend.service vorliq-blockchain.service; do
+    if systemctl is-active --quiet "${service}"; then
+      fail "${service} is active. Re-run with --force after confirming a maintenance window."
+    fi
+  done
+fi
 
 echo "Stopping Vorliq services."
 systemctl stop vorliq-heartbeat.service vorliq-backend.service vorliq-blockchain.service
@@ -99,11 +122,21 @@ else
   echo "No existing data directory found; creating ${DATA_DIR}"
 fi
 
+if [[ -d "${BACKEND_DATA_DIR}" ]]; then
+  echo "Creating backend safety copy at ${SAFETY_BACKEND_COPY}"
+  cp -a "${BACKEND_DATA_DIR}" "${SAFETY_BACKEND_COPY}"
+fi
+
 rm -rf "${DATA_DIR}"
 mkdir -p "$(dirname "${DATA_DIR}")"
 cp -a "${RESTORE_SOURCE}" "${DATA_DIR}"
 
-chown -R vorliq:vorliq "${DATA_DIR}" "${SAFETY_COPY}" 2>/dev/null || true
+if [[ -d "${BACKEND_RESTORE_SOURCE}" ]]; then
+  mkdir -p "${BACKEND_DATA_DIR}"
+  find "${BACKEND_RESTORE_SOURCE}" -maxdepth 1 -type f \( -name '*.json' -o -name '*.json.bak' \) -exec cp -a {} "${BACKEND_DATA_DIR}/" \;
+fi
+
+chown -R vorliq:vorliq "${DATA_DIR}" "${BACKEND_DATA_DIR}" "${SAFETY_COPY}" "${SAFETY_BACKEND_COPY}" 2>/dev/null || true
 find "${DATA_DIR}" -type d -exec chmod 750 {} \;
 find "${DATA_DIR}" -type f -exec chmod 640 {} \;
 

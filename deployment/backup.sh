@@ -61,9 +61,9 @@ else
 fi
 
 if [[ -d "${APP_DIR}/backend/data" ]]; then
-  find "${APP_DIR}/backend/data" -maxdepth 1 -type f -name '*.log' -print0 |
-    while IFS= read -r -d '' log_file; do
-      cp -a "${log_file}" "${PAYLOAD_DIR}/backend/data/"
+  find "${APP_DIR}/backend/data" -maxdepth 1 -type f \( -name '*.log' -o -name '*.json' -o -name '*.json.bak' \) -print0 |
+    while IFS= read -r -d '' data_file; do
+      cp -a "${data_file}" "${PAYLOAD_DIR}/backend/data/"
     done
 fi
 
@@ -74,6 +74,9 @@ cat > "${PAYLOAD_DIR}/manifest.json" <<MANIFEST
   "retention_days": ${RETENTION_DAYS},
   "contents": [
     "blockchain/data",
+    "blockchain/data/*.json.bak",
+    "backend/data/*.json",
+    "backend/data/*.json.bak",
     "backend/data/*.log"
   ],
   "excludes": [

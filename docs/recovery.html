@@ -50,6 +50,7 @@
         <div class="links">
           <a class="button" href="index.html">Home</a>
           <a class="button" href="deploy.html">Deploy</a>
+          <a class="button" href="storage.html">Storage</a>
           <a class="button" href="status.html">Status</a>
           <a class="button primary" href="https://github.com/vorliq/Vorliq">GitHub</a>
         </div>
@@ -77,7 +78,13 @@
       <section class="section card">
         <h2>What Is Backed Up</h2>
         <p>The backup archive contains the complete <code>/home/vorliq/app/blockchain/data</code> folder. This is the critical node state folder used by the Python blockchain API. It includes the saved chain, pending transactions, peer list, node registry, lending records, exchange offers, governance proposals and settings, treasury proposals, price signals, forum posts, achievements, and operational blockchain logs when those files exist.</p>
-        <p>The backup also includes safe backend log files from <code>/home/vorliq/app/backend/data</code>. It does not include <code>.env</code> files, private keys, SSH keys, <code>node_modules</code>, frontend build artifacts, dependency caches, or unrelated large files.</p>
+        <p>The backup also includes protected JSON and safe log files from <code>/home/vorliq/app/backend/data</code>. Useful <code>.bak</code> files are included so a recent pre-write copy is available during investigation. It does not include <code>.env</code> files, private keys, SSH keys, <code>node_modules</code>, frontend build artifacts, dependency caches, or unrelated large files.</p>
+      </section>
+
+      <section class="section card">
+        <h2>Atomic Storage</h2>
+        <p>Vorliq JSON state is written with backup-before-write protection, temporary files in the same directory, fsync, atomic replace, and lightweight write locks. This reduces the chance that a server crash or interrupted write leaves partial JSON as the main state file.</p>
+        <p>If a main JSON file is malformed but its <code>.bak</code> file is valid, Vorliq restores the backup and preserves the malformed file with a timestamped <code>.corrupt</code> suffix. If <code>chain.json</code> is corrupt and no valid backup exists, Vorliq reports a critical storage error instead of silently creating a fresh chain.</p>
       </section>
 
       <section class="section grid">
@@ -93,8 +100,15 @@
 
       <section class="section card">
         <h2>Verify A Backup</h2>
-        <p>Before restoring, verify that the archive opens cleanly and that every critical JSON file inside the backup is valid JSON. This command does not modify live data.</p>
+        <p>Before restoring, verify that the archive opens cleanly and that every critical JSON file and useful <code>.bak</code> file inside the backup is valid JSON. This command does not modify live data.</p>
         <pre><code>sudo /home/vorliq/app/deployment/verify_backup.sh /home/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz</code></pre>
+      </section>
+
+      <section class="section card">
+        <h2>Check Storage Health</h2>
+        <p>The public storage health endpoint returns safe metadata only: file names, JSON validity, backup availability, sizes, timestamps, and warning/error counts. It does not expose full server paths, private keys, wallet passwords, admin tokens, or raw file contents.</p>
+        <pre><code>curl -fsS https://vorliq.org/api/storage/health
+curl -fsS https://vorliq.org/api/system/self-check</code></pre>
       </section>
 
       <section class="section card">
@@ -110,6 +124,7 @@ sudo mkdir -p /home/vorliq/backups
 sudo cp /tmp/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz /home/vorliq/backups/
 sudo bash /home/vorliq/app/deployment/verify_backup.sh /home/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz
 sudo bash /home/vorliq/app/deployment/restore_backup.sh /home/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz --dry-run
+sudo systemctl stop vorliq-backend.service vorliq-blockchain.service vorliq-heartbeat.service
 sudo bash /home/vorliq/app/deployment/restore_backup.sh /home/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz
 curl -fsS http://localhost:5000/api/health
 curl -fsS http://localhost:5000/api/diagnostics</code></pre>
@@ -117,7 +132,7 @@ curl -fsS http://localhost:5000/api/diagnostics</code></pre>
 
       <section class="section card danger">
         <h2>Live Restore Safety</h2>
-        <p>A live restore stops the blockchain API, backend API, and heartbeat services. The restore script creates a safety copy of the current <code>blockchain/data</code> folder before replacing it. If health checks fail after restart, keep the safety copy and investigate before deleting anything.</p>
+        <p>The restore script refuses to overwrite live data while the blockchain API, backend API, or heartbeat service is active unless an operator explicitly passes a force flag. It creates pre-restore safety copies of the current blockchain and backend data folders before replacing state. If health checks fail after restart, keep the safety copy and investigate before deleting anything.</p>
       </section>
 
       <section class="section card">

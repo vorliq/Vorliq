@@ -1,5 +1,8 @@
+import json
 import tempfile
+import threading
 import unittest
+from pathlib import Path
 
 from blockchain import Blockchain
 from lending import LendingPool
@@ -53,6 +56,84 @@ class StorageTests(unittest.TestCase):
             restored = storage.load_peers()
 
             self.assertEqual(restored, peers)
+
+    def test_atomic_write_creates_valid_json_and_backup_on_overwrite(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+            storage.save_peers({"http://one"})
+            storage.save_peers({"http://two"})
+
+            peers_file = Path(temp_dir) / "peers.json"
+            backup_file = Path(temp_dir) / "peers.json.bak"
+
+            self.assertEqual(json.loads(peers_file.read_text(encoding="utf-8")), ["http://two"])
+            self.assertEqual(json.loads(backup_file.read_text(encoding="utf-8")), ["http://one"])
+
+    def test_load_falls_back_to_backup_when_main_json_is_corrupt(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+            peers_file = Path(temp_dir) / "peers.json"
+            peers_file.write_text("{bad json", encoding="utf-8")
+            (Path(temp_dir) / "peers.json.bak").write_text(json.dumps(["http://backup"]), encoding="utf-8")
+
+            restored = storage.load_peers()
+
+            self.assertEqual(restored, {"http://backup"})
+            self.assertTrue(list(Path(temp_dir).glob("peers.json.corrupt.*")))
+
+    def test_chain_corruption_without_backup_does_not_silently_reset_chain(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+            (Path(temp_dir) / "chain.json").write_text("{bad json", encoding="utf-8")
+
+            restored = storage.load_chain()
+
+            self.assertIsNone(restored)
+            self.assertTrue(storage.chain_write_protected)
+            with self.assertRaises(Exception):
+                storage.save_chain(Blockchain())
+
+    def test_file_locking_prevents_concurrent_write_corruption(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+
+            def write_peer(index):
+                storage.save_peers({f"http://node-{index}"})
+
+            threads = [threading.Thread(target=write_peer, args=(index,)) for index in range(12)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+            data = json.loads((Path(temp_dir) / "peers.json").read_text(encoding="utf-8"))
+            self.assertIsInstance(data, list)
+            self.assertEqual(len(data), 1)
+
+    def test_storage_health_reports_valid_and_corrupt_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+            storage.save_peers({"http://node"})
+            (Path(temp_dir) / "forum.json").write_text("{bad json", encoding="utf-8")
+
+            health = storage.storage_health()
+            by_name = {item["file_name"]: item for item in health["files"]}
+
+            self.assertEqual(by_name["peers.json"]["status"], "ok")
+            self.assertEqual(by_name["forum.json"]["status"], "warning")
+            self.assertGreaterEqual(health["warnings_count"], 1)
+
+    def test_old_saved_data_compatibility_still_works(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+            (Path(temp_dir) / "governance.json").write_text(
+                json.dumps({"proposals": {"p1": {"status": "active"}}}),
+                encoding="utf-8",
+            )
+
+            governance = storage.load_governance()
+
+            self.assertIn("p1", governance.proposals)
 
 
 if __name__ == "__main__":

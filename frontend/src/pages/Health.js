@@ -22,6 +22,7 @@ function Health() {
   const [deployment, setDeployment] = useState(null);
   const [securityStatus, setSecurityStatus] = useState(null);
   const [backupStatus, setBackupStatus] = useState(null);
+  const [storageHealth, setStorageHealth] = useState(null);
   const [activeIncidents, setActiveIncidents] = useState([]);
   const [weeklyReport, setWeeklyReport] = useState(null);
   const [registryNodes, setRegistryNodes] = useState([]);
@@ -46,6 +47,7 @@ function Health() {
         const deploymentRequest = api.get("/deployment");
         const securityRequest = api.get("/security/status");
         const backupRequest = api.get("/backup/status");
+        const storageRequest = api.get("/storage/health");
         const incidentsRequest = api.get("/incidents/active");
         const weeklyReportRequest = api.get("/reports/weekly");
         const miningRequest = api.get("/mining/status");
@@ -56,6 +58,7 @@ function Health() {
           deploymentResponse,
           securityResponse,
           backupResponse,
+          storageResponse,
           incidentsResponse,
           weeklyReportResponse,
           miningResponse,
@@ -66,6 +69,7 @@ function Health() {
           deploymentRequest,
           securityRequest,
           backupRequest,
+          storageRequest,
           incidentsRequest,
           weeklyReportRequest,
           miningRequest,
@@ -98,6 +102,7 @@ function Health() {
           setDeployment(deploymentResponse.data);
           setSecurityStatus(securityResponse.data);
           setBackupStatus(backupResponse.data);
+          setStorageHealth(storageResponse.data);
           setActiveIncidents(incidentsResponse.data.incidents || []);
           setWeeklyReport(weeklyReportResponse.data);
           setRegistryNodes(nodes);
@@ -317,6 +322,43 @@ function Health() {
           </div>
         ) : (
           <div className="empty-state">Deployment information is unavailable right now.</div>
+        )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <div className="section-title">
+          <h2>Storage Health</h2>
+          <span className={`status-badge ${storageHealth?.overall_status || "warning"}`}>
+            {storageHealth?.overall_status || "unknown"}
+          </span>
+        </div>
+        {loading ? (
+          <Spinner label="Loading storage health..." />
+        ) : storageHealth?.success ? (
+          <div className="stats-grid compact-stats">
+            <div className="stat-card">
+              <span>Critical files ok</span>
+              <strong>{storageHealth.critical_files_ok}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Warnings</span>
+              <strong>{storageHealth.warnings_count}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Errors</span>
+              <strong>{storageHealth.errors_count}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Backup available</span>
+              <strong>{storageHealth.backup_available ? "Yes" : "No"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Latest backup</span>
+              <strong>{backupStatus?.latest_backup?.file_name || "None visible"}</strong>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">Storage health is unavailable right now.</div>
         )}
       </section>
 

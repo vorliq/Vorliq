@@ -40,6 +40,34 @@ describe("incident routes", () => {
     expect(response.body.incidents).toEqual([]);
   });
 
+  test("incidents safe load recovers from backup when main file is corrupt", async () => {
+    fs.writeFileSync(incidentsFile, "{bad json");
+    fs.writeFileSync(
+      `${incidentsFile}.bak`,
+      JSON.stringify({
+        incidents: [
+          {
+            id: "incident-1",
+            title: "Recovered",
+            description: "Recovered from backup.",
+            severity: "minor",
+            status: "monitoring",
+            affected_services: [],
+            created_at: "2026-05-20T00:00:00.000Z",
+            updated_at: "2026-05-20T00:00:00.000Z",
+            resolved_at: null,
+          },
+        ],
+      })
+    );
+
+    const response = await request(app).get("/api/incidents");
+
+    expect(response.status).toBe(200);
+    expect(response.body.incidents[0].title).toBe("Recovered");
+    expect(fs.readdirSync(tempDir).some((file) => file.startsWith("incidents.json.corrupt."))).toBe(true);
+  });
+
   test("creating an incident without ADMIN_TOKEN is rejected safely", async () => {
     const response = await request(app)
       .post("/api/incidents")

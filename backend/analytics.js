@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const { atomicWriteJson, safeReadJson } = require("./jsonStore");
 
 const RETENTION_DAYS = 90;
 const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000;
@@ -48,23 +49,19 @@ function ensureStoreFile() {
   const file = analyticsFile();
   fs.mkdirSync(path.dirname(file), { recursive: true });
   if (!fs.existsSync(file)) {
-    fs.writeFileSync(file, JSON.stringify(emptyStore(), null, 2));
+    atomicWriteJson(file, emptyStore());
   }
 }
 
 function readStore() {
   ensureStoreFile();
-  try {
-    const parsed = JSON.parse(fs.readFileSync(analyticsFile(), "utf8"));
-    return { events: Array.isArray(parsed.events) ? parsed.events : [] };
-  } catch (error) {
-    return emptyStore();
-  }
+  const parsed = safeReadJson(analyticsFile(), emptyStore());
+  return { events: Array.isArray(parsed.events) ? parsed.events : [] };
 }
 
 function writeStore(store) {
   ensureStoreFile();
-  fs.writeFileSync(analyticsFile(), JSON.stringify({ events: store.events || [] }, null, 2));
+  atomicWriteJson(analyticsFile(), { events: store.events || [] });
 }
 
 function cutoffTime(now = Date.now()) {
@@ -249,6 +246,7 @@ module.exports = {
   RETENTION_DAYS,
   adminSummary,
   appendEvent,
+  analyticsFile,
   pruneAnalytics,
   summary,
   validateAnalyticsEvent,

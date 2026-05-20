@@ -48,6 +48,30 @@ describe("analytics routes", () => {
     expect(response.body).toEqual({ success: true });
     expect(readEvents()).toHaveLength(1);
     expect(readEvents()[0].event_type).toBe("page_view");
+    expect(fs.existsSync(`${analyticsFile}.bak`)).toBe(true);
+  });
+
+  test("analytics atomic write creates backup on overwrite", async () => {
+    await request(app).post("/api/analytics/event").send(safeEvent());
+    await request(app).post("/api/analytics/event").send(safeEvent({ route: "/forum" }));
+
+    expect(readEvents()).toHaveLength(2);
+    expect(fs.existsSync(`${analyticsFile}.bak`)).toBe(true);
+    expect(JSON.parse(fs.readFileSync(`${analyticsFile}.bak`, "utf8")).events).toHaveLength(1);
+  });
+
+  test("analytics safe load handles corrupt file with backup", async () => {
+    const now = new Date().toISOString();
+    fs.writeFileSync(analyticsFile, JSON.stringify({ events: [{ ...safeEvent(), timestamp: now }] }));
+    fs.writeFileSync(`${analyticsFile}.bak`, JSON.stringify({ events: [{ ...safeEvent({ route: "/backup" }), timestamp: now }] }));
+    fs.writeFileSync(analyticsFile, "{bad json");
+
+    const response = await request(app).get("/api/analytics/summary");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(readEvents()[0].route).toBe("/backup");
+    expect(fs.readdirSync(tempDir).some((file) => file.startsWith("analytics.json.corrupt."))).toBe(true);
   });
 
   test("event endpoint rejects unknown event_type", async () => {
