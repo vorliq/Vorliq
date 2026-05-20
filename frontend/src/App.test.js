@@ -828,6 +828,26 @@ function defaultApiGet(path) {
     });
   }
 
+  if (path === "/audit/manifest") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        audit_schema_version: 1,
+        deployment_commit: "abc123def456",
+        chain_height: 12,
+        latest_block_hash: "0000latest",
+        storage_health_status: "ok",
+        active_node_count: 1,
+        active_incident_count: 0,
+        export_timestamp: "2026-05-20T10:00:00.000Z",
+        exports: [
+          { name: "chain", endpoint: "/api/audit/chain", sha256: "hash1" },
+          { name: "treasury", endpoint: "/api/audit/treasury", sha256: "hash2" },
+        ],
+      },
+    });
+  }
+
   return Promise.resolve({ data: { success: true } });
 }
 

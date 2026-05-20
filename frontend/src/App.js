@@ -28,6 +28,7 @@ import Health from "./pages/Health";
 import Exchange from "./pages/Exchange";
 import Governance from "./pages/Governance";
 import Growth from "./pages/Growth";
+import Audit from "./pages/Audit";
 import Forum from "./pages/Forum";
 import Leaderboard from "./pages/Leaderboard";
 import Treasury from "./pages/Treasury";
@@ -490,6 +491,7 @@ function AppShell() {
           <Route path="/registry" element={<Registry />} />
           <Route path="/health" element={<Health />} />
           <Route path="/growth" element={<Growth />} />
+          <Route path="/audit" element={<Audit />} />
           <Route path="/transparency" element={<Transparency />} />
           <Route path="/login" element={<Login />} />
           <Route path="/profile" element={<Profile />} />

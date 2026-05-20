@@ -664,6 +664,130 @@ def get_weekly_report_preview():
     )
 
 
+def _audit_timestamp() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _audit_base(export_type: str) -> dict:
+    return {
+        "success": True,
+        "audit_schema_version": 1,
+        "export_type": export_type,
+        "network_name": "Vorliq",
+        "export_timestamp": _audit_timestamp(),
+    }
+
+
+@app.get("/audit/chain")
+def get_audit_chain():
+    blocks = node.blockchain.get_chain_data()
+    latest_block = node.blockchain.get_latest_block()
+    genesis_hash = blocks[0].get("hash") if blocks else None
+    return jsonify(
+        {
+            **_audit_base("chain"),
+            "block_count": len(blocks),
+            "chain_valid": node.blockchain.is_chain_valid(),
+            "difficulty": node.blockchain.difficulty,
+            "current_reward": node.blockchain.get_current_mining_reward(),
+            "genesis_hash": genesis_hash,
+            "latest_block_hash": latest_block.hash,
+            "blocks": blocks,
+        }
+    )
+
+
+@app.get("/audit/treasury")
+def get_audit_treasury():
+    _sync_treasury(save=False)
+    proposals = treasury.get_proposals()
+    ledger = treasury.get_treasury_ledger(node.blockchain, limit=1_000_000, offset=0)
+    payout_statuses = [
+        {
+            "proposal_id": proposal.get("proposal_id"),
+            "status": proposal.get("status"),
+            "requested_amount": proposal.get("requested_amount"),
+            "recipient_address": proposal.get("recipient_address"),
+            "payout_tx_id": proposal.get("payout_tx_id"),
+            "paid_at": proposal.get("paid_at"),
+        }
+        for proposal in proposals
+        if proposal.get("status") in {"passed_pending_payout", "payout_pending", "paid"}
+    ]
+    return jsonify(
+        {
+            **_audit_base("treasury"),
+            "treasury_address": node.blockchain.TREASURY_ADDRESS,
+            "treasury_balance": treasury.get_treasury_balance(node.blockchain),
+            "treasury_percentage": node.blockchain.TREASURY_PERCENTAGE,
+            "treasury_ledger": ledger.get("entries", []),
+            "treasury_proposals": proposals,
+            "payout_statuses": payout_statuses,
+        }
+    )
+
+
+@app.get("/audit/governance")
+def get_audit_governance():
+    _expire_governance_if_needed()
+    settings = _current_governance_settings()
+    proposals = governance.get_proposals()
+    vote_weights = [
+        {
+            "proposal_id": proposal.get("proposal_id"),
+            "yes_vote_weight": proposal.get("yes_vote_weight", 0),
+            "no_vote_weight": proposal.get("no_vote_weight", 0),
+            "vote_count": len(proposal.get("votes", {})),
+            "status": proposal.get("status"),
+        }
+        for proposal in proposals
+    ]
+    return jsonify(
+        {
+            **_audit_base("governance"),
+            "governance_proposals": proposals,
+            "rule_change_history": governance.get_rule_changes(),
+            "current_governance_settings": settings,
+            "public_vote_weights": vote_weights,
+        }
+    )
+
+
+@app.get("/audit/lending")
+def get_audit_lending():
+    _sync_lending_pool(save=False)
+    return jsonify(
+        {
+            **_audit_base("lending"),
+            "summary": lending_pool.get_summary(),
+            "loans": lending_pool.get_all_loans(),
+        }
+    )
+
+
+@app.get("/audit/exchange")
+def get_audit_exchange():
+    _sync_exchange(save=False)
+    return jsonify(
+        {
+            **_audit_base("exchange"),
+            "summary": exchange.get_summary(),
+            "offers": exchange.get_all_offers(),
+        }
+    )
+
+
+@app.get("/audit/registry")
+def get_audit_registry():
+    return jsonify(
+        {
+            **_audit_base("registry"),
+            "summary": node_registry.get_summary(node.blockchain.get_block_height()),
+            "nodes": node_registry.get_all_nodes(profile_lookup=_registry_profile_lookup),
+        }
+    )
+
+
 @app.get("/treasury/balance")
 def get_treasury_balance():
     _sync_treasury(save=True)

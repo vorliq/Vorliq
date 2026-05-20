@@ -27,6 +27,7 @@ const routes = [
   ["/stats", /Stats|Statistics/i],
   ["/health", /Health/i],
   ["/growth", /Growth/i],
+  ["/audit", /Audit/i],
   ["/transparency", /Transparency/i],
   ["/notifications", /Notifications/i],
   ["/login", /Create Your Vorliq Wallet|Welcome Back|Login/i],

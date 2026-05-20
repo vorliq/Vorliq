@@ -15,6 +15,7 @@ function Footer() {
         { label: "Developer API", href: "https://vorliq.github.io/Vorliq/api.html" },
         { label: "Transparency", href: "/transparency", internal: true },
         { label: "Growth", href: "/growth", internal: true },
+        { label: "Audit", href: "/audit", internal: true },
         { label: "Profiles", href: "/profile", internal: true },
       ],
     },

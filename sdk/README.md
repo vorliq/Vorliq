@@ -100,6 +100,24 @@ async function main() {
 main().catch(console.error);
 ```
 
+Public audit exports let applications and operators verify public chain and ledger state without auto-tracking users or collecting secrets. The SDK does not run audit verification automatically; call it only when your application explicitly needs it.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const manifest = await vorliq.getAuditManifest();
+  const verification = await vorliq.verifyAuditManifest();
+
+  console.log("Audit schema:", manifest.audit_schema_version);
+  console.log("Latest block:", manifest.latest_block_hash);
+  console.log("Export hashes verified:", verification.verified);
+}
+
+main().catch(console.error);
+```
+
 ## Node Registry
 
 The public node registry lets applications show active nodes, sync status, reliability, uptime, and safe operator metadata. Registry trust signals are operational signals only; a verified operator flag is not identity verification.

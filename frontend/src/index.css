@@ -2797,6 +2797,34 @@ h3 {
   padding: clamp(16px, 2.4vw, 22px);
 }
 
+.info-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.info-list > div {
+  display: grid;
+  gap: 4px;
+}
+
+.info-list span {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.action-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.wrap-anywhere {
+  overflow-wrap: anywhere;
+}
+
 .get-started-card,
 .quick-links-card,
 .featured-community-card,

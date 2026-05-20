@@ -1,4 +1,5 @@
 const { signTransaction } = require("./signer");
+const crypto = require("crypto");
 
 async function getFetch() {
   if (typeof fetch === "function") {
@@ -71,6 +72,29 @@ function registryQuery(params = {}) {
   if (params.sync_status || params.syncStatus) query.set("sync_status", String(params.sync_status || params.syncStatus));
   const value = query.toString();
   return value ? `?${value}` : "";
+}
+
+function canonicalize(value) {
+  if (Array.isArray(value)) {
+    return value.map(canonicalize);
+  }
+  if (value && typeof value === "object") {
+    return Object.keys(value)
+      .sort()
+      .reduce((result, key) => {
+        result[key] = canonicalize(value[key]);
+        return result;
+      }, {});
+  }
+  return value;
+}
+
+function canonicalStringify(value) {
+  return JSON.stringify(canonicalize(value));
+}
+
+function sha256Hex(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
 }
 
 class VorliqSDK {
@@ -905,7 +929,70 @@ class VorliqSDK {
   async getAnalyticsSummary() {
     return this.request("/api/analytics/summary");
   }
+
+  /**
+   * Gets the public audit manifest with export hashes.
+   *
+   * @returns {Promise<object>} Public audit manifest.
+   */
+  async getAuditManifest() {
+    return this.request("/api/audit/manifest");
+  }
+
+  async getAuditChain() {
+    return this.request("/api/audit/chain");
+  }
+
+  async getAuditTreasury() {
+    return this.request("/api/audit/treasury");
+  }
+
+  async getAuditGovernance() {
+    return this.request("/api/audit/governance");
+  }
+
+  async getAuditLending() {
+    return this.request("/api/audit/lending");
+  }
+
+  async getAuditExchange() {
+    return this.request("/api/audit/exchange");
+  }
+
+  async getAuditRegistry() {
+    return this.request("/api/audit/registry");
+  }
+
+  /**
+   * Verifies manifest SHA-256 hashes against the listed public audit exports.
+   *
+   * @returns {Promise<{success: boolean, verified: boolean, results: Array<object>}>} Verification result.
+   */
+  async verifyAuditManifest() {
+    const manifest = await this.getAuditManifest();
+    const results = [];
+
+    for (const entry of manifest.exports || []) {
+      const exportPayload = await this.request(entry.endpoint);
+      const actualHash = sha256Hex(canonicalStringify(exportPayload));
+      results.push({
+        name: entry.name,
+        endpoint: entry.endpoint,
+        expected_sha256: entry.sha256,
+        actual_sha256: actualHash,
+        matches: actualHash === entry.sha256,
+      });
+    }
+
+    return {
+      success: true,
+      verified: results.length > 0 && results.every((result) => result.matches),
+      manifest,
+      results,
+    };
+  }
 }
 
 module.exports = VorliqSDK;
 module.exports.VorliqSDK = VorliqSDK;
+module.exports.canonicalStringify = canonicalStringify;

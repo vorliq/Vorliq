@@ -28,6 +28,7 @@ const adminRoutes = require("./routes/admin");
 const systemRoutes = require("./routes/system");
 const analyticsRoutes = require("./routes/analytics");
 const storageRoutes = require("./routes/storage");
+const auditRoutes = require("./routes/audit");
 const { pruneAnalytics } = require("./analytics");
 const { logError, logInfo } = require("./logger");
 const { sendWeeklyReport } = require("./reports");
@@ -210,6 +211,7 @@ app.use(reportsRoutes);
 app.use(manifestRoutes);
 app.use(systemRoutes);
 app.use(storageRoutes);
+app.use(auditRoutes);
 app.use(adminRoutes);
 
 app.use((req, res) => {

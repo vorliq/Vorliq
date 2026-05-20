@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Public Audit Exports</title>
+    <meta name="description" content="Public audit exports and independent verification guidance for the Vorliq network." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      :root { --bg:#020817; --card:rgba(8,14,28,.72); --accent:#18d7c9; --green:#86e33b; --blue:#1479ff; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.25); --yellow:#ffd166; }
+      * { box-sizing:border-box; }
+      body { margin:0; min-width:320px; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 10% 12%,rgba(134,227,59,.16),transparent 28rem),radial-gradient(circle at 88% 18%,rgba(20,121,255,.22),transparent 32rem),linear-gradient(180deg,#020817,#061326 58%,#020817); color:var(--text); }
+      a { color:inherit; }
+      .wrap { width:min(1120px,calc(100% - 32px)); margin:0 auto; }
+      header, footer { border-color:var(--border); background:rgba(8,14,28,.78); backdrop-filter:blur(16px); }
+      header { border-bottom:1px solid var(--border); padding:20px 0; }
+      footer { border-top:1px solid var(--border); padding:28px 0; color:var(--muted); }
+      nav, .links, .button-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+      nav { justify-content:space-between; }
+      .brand { font-weight:900; text-decoration:none; }
+      .button { display:inline-flex; min-height:44px; align-items:center; justify-content:center; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,.045); color:var(--muted); font-weight:900; padding:10px 13px; text-decoration:none; }
+      .button.primary { border-color:transparent; background:linear-gradient(90deg,var(--green),var(--accent),var(--blue)); color:#03101b; }
+      main { padding:52px 0 70px; }
+      .hero { display:grid; gap:14px; margin-bottom:28px; }
+      .eyebrow { color:var(--green); font-size:.8rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+      h1, h2, h3, p { margin:0; }
+      h1 { font-size:clamp(2.4rem,7vw,4.6rem); line-height:1; }
+      h2 { font-size:clamp(1.35rem,3vw,2rem); }
+      p { color:var(--muted); line-height:1.75; }
+      .subtitle { max-width:860px; font-size:1.08rem; }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+      .card { display:grid; gap:12px; border:1px solid var(--border); border-radius:12px; background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015)),var(--card); box-shadow:0 22px 70px rgba(0,0,0,.24); padding:22px; }
+      .full { grid-column:1 / -1; }
+      .warning { border-color:rgba(255,209,102,.45); background:linear-gradient(180deg,rgba(255,209,102,.1),rgba(255,255,255,.02)),var(--card); }
+      code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:#e7f7ff; overflow-wrap:anywhere; }
+      ul { color:var(--muted); line-height:1.8; margin:0; padding-left:20px; }
+      @media (max-width:780px) { nav { align-items:flex-start; flex-direction:column; } .grid { grid-template-columns:1fr; } .button { width:100%; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a class="brand" href="index.html">Vorliq Audit</a>
+        <div class="links">
+          <a class="button" href="index.html">Home</a>
+          <a class="button" href="transparency.html">Transparency</a>
+          <a class="button" href="api.html">API</a>
+          <a class="button primary" href="https://vorliq.org/audit">Open Audit Page</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <section class="hero">
+        <span class="eyebrow">Public State Verification</span>
+        <h1>Public Audit Exports</h1>
+        <p class="subtitle">Vorliq audit exports let community members and developers verify public network state consistency without needing server access, backend logs, private credentials, or invasive tracking data.</p>
+        <div class="button-row">
+          <a class="button primary" href="https://vorliq.org/api/audit/manifest">Live Audit Manifest</a>
+          <a class="button" href="https://vorliq.org/api/audit/chain">Chain Export</a>
+          <a class="button" href="https://vorliq.org/api/audit/treasury">Treasury Export</a>
+          <a class="button" href="https://vorliq.org/api/audit/governance">Governance Export</a>
+          <a class="button" href="https://vorliq.org/api/audit/lending">Lending Export</a>
+          <a class="button" href="https://vorliq.org/api/audit/exchange">Exchange Export</a>
+          <a class="button" href="https://vorliq.org/api/audit/registry">Registry Export</a>
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>What Is Included</h2>
+          <p>The exports include public blockchain blocks, chain validity metadata, treasury balance and ledger entries, public treasury proposals, governance proposals and rule changes, lending lifecycle records, exchange lifecycle records, and public node registry state.</p>
+        </article>
+
+        <article class="card warning">
+          <h2>What Is Never Included</h2>
+          <p>Audit exports must not include private wallet keys, wallet passwords, seed phrases, admin tokens, raw IP addresses, server paths, backend logs, SSH keys, or private operational credentials.</p>
+        </article>
+
+        <article class="card">
+          <h2>Manifest Hashing</h2>
+          <p>The manifest lists every audit export and a SHA-256 hash of the canonical JSON payload. Keys are sorted before hashing, and arrays are kept in stable public order where practical, so independent tools can fetch each export and verify the hashes.</p>
+        </article>
+
+        <article class="card">
+          <h2>Verification Tool</h2>
+          <p>From a checkout of the repository, run <code>node tools/verify_audit.js https://vorliq.org</code>. The tool fetches the manifest and exports, recalculates SHA-256 hashes, verifies chain links and latest hash consistency, checks treasury ledger totals when possible, and scans for forbidden secret markers.</p>
+        </article>
+
+        <article class="card full">
+          <h2>Historical Blocks</h2>
+          <p>Audit exports do not rewrite historical blocks or change block hashes. Older blocks are exported as public chain data exactly for consistency checks. If legacy serialization prevents full hash reproduction in a future version, verification still checks block links, stored hashes, chain validity flags, and latest hash consistency.</p>
+        </article>
+
+        <article class="card full">
+          <h2>Reporting Inconsistencies</h2>
+          <p>If an export hash, chain link, latest block hash, or public ledger check fails, report the exact URL, timestamp, manifest hash entry, and verifier output in the Vorliq GitHub issue tracker or community channels. Audit verification checks public network state consistency only; it does not prove legal, financial, or market value.</p>
+        </article>
+      </section>
+    </main>
+
+    <footer><div class="wrap">2026 Vorliq. Public audit exports are for public state verification only.</div></footer>
+  </body>
+</html>

@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "verify:audit": "node ../tools/verify_audit.js",
+    "export:audit": "node audit_export.js"
   },
   "keywords": [],
   "author": "Vorliq <Vorliq@gmail.com>",
