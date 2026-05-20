@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
+import SocialLinks from "../components/SocialLinks";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
@@ -351,6 +352,7 @@ function Dashboard() {
           Follow official Vorliq channels for project updates, support discussions, network
           announcements, and community feedback.
         </p>
+        <SocialLinks className="dashboard-social-links" />
         <div className="button-row">
           <Link className="button secondary brand-button-secondary" to="/forum">Open Forum</Link>
           <Link className="button secondary brand-button-secondary" to="/chat">Open Chat</Link>

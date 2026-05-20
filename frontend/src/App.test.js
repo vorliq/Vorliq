@@ -958,6 +958,20 @@ test("Dashboard shows a first-user Get Started section with core actions", async
   expect(screen.getByText(/treasury per block/i)).toBeInTheDocument();
 });
 
+test("Dashboard shows branded official social icon links", async () => {
+  const { container } = renderWithProviders(<Dashboard />);
+
+  expect(await screen.findByRole("heading", { name: /join the conversation/i })).toBeInTheDocument();
+  const socialLinks = container.querySelector(".dashboard-social-links");
+
+  expect(socialLinks.querySelectorAll(".social-brand-link")).toHaveLength(5);
+  expect(socialLinks.querySelector(".discord")).toHaveAttribute("href", "https://discord.gg/qpX5sHD4pC");
+  expect(socialLinks.querySelector(".telegram")).toHaveAttribute("href", "https://t.me/Vorliq");
+  expect(socialLinks.querySelector(".reddit")).toHaveAttribute("href", "https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS");
+  expect(socialLinks.querySelector(".github")).toHaveAttribute("href", "https://github.com/vorliq/Vorliq");
+  expect(socialLinks.querySelector(".x")).toHaveAttribute("href", "https://x.com/vorliq");
+});
+
 test("mobile hamburger announces expanded state when opened", async () => {
   window.localStorage.setItem(ONBOARDING_KEY, "true");
 

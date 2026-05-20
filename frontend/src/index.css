@@ -97,6 +97,18 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 body.mobile-nav-open {
   overflow: hidden;
 }
@@ -2228,6 +2240,17 @@ summary {
     grid-template-columns: 1fr;
   }
 
+  .brand-social-links {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .brand-social-links .social-brand-link,
+  .brand-social-links.compact .social-brand-link {
+    width: 44px;
+    min-width: 44px;
+  }
+
   .inline-form,
   .forum-controls {
     grid-template-columns: 1fr;
@@ -2946,6 +2969,64 @@ a:focus-visible {
   border-color: var(--border-strong);
   background: var(--primary-soft);
   color: var(--accent-cyan);
+}
+
+.brand-social-links {
+  align-items: center;
+}
+
+.brand-social-links .social-brand-link,
+.brand-social-links.compact .social-brand-link {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  color: var(--brand-link-color, var(--text-primary));
+}
+
+.brand-social-links.compact .social-brand-link {
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.social-brand-link.discord {
+  --brand-link-color: #5865f2;
+  --brand-link-glow: rgba(88, 101, 242, 0.26);
+}
+
+.social-brand-link.telegram {
+  --brand-link-color: #229ed9;
+  --brand-link-glow: rgba(34, 158, 217, 0.26);
+}
+
+.social-brand-link.reddit {
+  --brand-link-color: #ff4500;
+  --brand-link-glow: rgba(255, 69, 0, 0.24);
+}
+
+.social-brand-link.github {
+  --brand-link-color: #f5f7fb;
+  --brand-link-glow: rgba(245, 247, 251, 0.18);
+}
+
+.social-brand-link.x {
+  --brand-link-color: #ffffff;
+  --brand-link-glow: rgba(255, 255, 255, 0.16);
+}
+
+.brand-social-links .social-brand-link:hover,
+.brand-social-links .social-brand-link:focus-visible {
+  border-color: color-mix(in srgb, var(--brand-link-color) 70%, transparent);
+  background: color-mix(in srgb, var(--brand-link-color) 14%, transparent);
+  box-shadow: 0 0 24px var(--brand-link-glow);
+  color: var(--brand-link-color);
+}
+
+.dashboard-social-links {
+  margin-top: 6px;
 }
 
 .data-table-wrap,

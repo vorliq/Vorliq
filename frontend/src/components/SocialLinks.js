@@ -1,20 +1,28 @@
 const socialLinks = [
-  { label: "Discord", href: "https://discord.gg/qpX5sHD4pC", icon: DiscordIcon },
-  { label: "Telegram", href: "https://t.me/Vorliq", icon: TelegramIcon },
-  { label: "Reddit", href: "https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS", icon: RedditIcon },
-  { label: "GitHub", href: "https://github.com/vorliq/Vorliq", icon: GitHubIcon },
-  { label: "X", href: "https://x.com/vorliq", icon: XIcon },
+  { label: "Discord", href: "https://discord.gg/qpX5sHD4pC", icon: DiscordIcon, brand: "discord" },
+  { label: "Telegram", href: "https://t.me/Vorliq", icon: TelegramIcon, brand: "telegram" },
+  { label: "Reddit", href: "https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS", icon: RedditIcon, brand: "reddit" },
+  { label: "GitHub", href: "https://github.com/vorliq/Vorliq", icon: GitHubIcon, brand: "github" },
+  { label: "X", href: "https://x.com/vorliq", icon: XIcon, brand: "x" },
 ];
 
-function SocialLinks({ compact = false }) {
+function SocialLinks({ compact = false, className = "" }) {
   return (
-    <div className={`social-links ${compact ? "compact" : ""}`}>
+    <div className={`social-links brand-social-links ${compact ? "compact" : ""} ${className}`}>
       {socialLinks.map((link) => {
         const Icon = link.icon;
         return (
-          <a href={link.href} target="_blank" rel="noopener noreferrer" key={link.href} aria-label={`Open Vorliq on ${link.label}`}>
+          <a
+            className={`social-brand-link ${link.brand}`}
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            key={link.href}
+            aria-label={`Open Vorliq on ${link.label}`}
+            title={link.label}
+          >
             <Icon />
-            <span>{link.label}</span>
+            <span className="sr-only">{link.label}</span>
           </a>
         );
       })}
