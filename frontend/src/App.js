@@ -38,6 +38,8 @@ import Ambassador from "./pages/Ambassador";
 import Chat from "./pages/Chat";
 import Achievements from "./pages/Achievements";
 import Transparency from "./pages/Transparency";
+import Roadmap from "./pages/Roadmap";
+import Releases from "./pages/Releases";
 import Admin from "./pages/Admin";
 import Notifications from "./pages/Notifications";
 import TransactionDetail from "./pages/TransactionDetail";
@@ -71,6 +73,8 @@ const moreLinks = [
   { to: "/stats", label: "Stats" },
   { to: "/health", label: "Health" },
   { to: "/growth", label: "Growth" },
+  { to: "/roadmap", label: "Roadmap" },
+  { to: "/releases", label: "Releases" },
   { to: "/transparency", label: "Transparency" },
   { to: "/whitepaper", label: "Whitepaper" },
 ];
@@ -107,6 +111,8 @@ const mobileNavSections = [
       { to: "/stats", label: "Stats" },
       { to: "/leaderboard", label: "Leaderboard" },
       { to: "/health", label: "Health" },
+      { to: "/roadmap", label: "Roadmap" },
+      { to: "/releases", label: "Releases" },
     ],
   },
   {
@@ -491,6 +497,8 @@ function AppShell() {
           <Route path="/registry" element={<Registry />} />
           <Route path="/health" element={<Health />} />
           <Route path="/growth" element={<Growth />} />
+          <Route path="/roadmap" element={<Roadmap />} />
+          <Route path="/releases" element={<Releases />} />
           <Route path="/audit" element={<Audit />} />
           <Route path="/transparency" element={<Transparency />} />
           <Route path="/login" element={<Login />} />

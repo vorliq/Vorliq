@@ -1,0 +1,91 @@
+{
+  "success": true,
+  "generated_from": "docs/roadmap.json",
+  "disclaimer": "This roadmap is a public planning aid. It can change based on community needs, technical findings, security work, and operational reality. It is not a promise of dates, financial outcomes, listings, app-store approval, or legal status.",
+  "items": [
+    {
+      "id": "network-reliability-v1",
+      "category": "Network reliability",
+      "status": "completed",
+      "title": "Public node monitoring, audit exports, storage health, and deployment checks",
+      "summary": "Production health endpoints, storage validation, public audit manifests, E2E checks, and deployment metadata are live."
+    },
+    {
+      "id": "wallet-safety-v2",
+      "category": "Security audits",
+      "status": "completed",
+      "title": "Wallet and transaction safety v2",
+      "summary": "Send review, address validation, duplicate-send protection, pending status clarity, and backup education are live."
+    },
+    {
+      "id": "community-moderation-v2",
+      "category": "Community governance",
+      "status": "completed",
+      "title": "Community identity and moderation v2",
+      "summary": "Wallet-control profile verification, trust labels, reports, and protected moderation tools are live."
+    },
+    {
+      "id": "developer-compatibility-v1",
+      "category": "Developer ecosystem",
+      "status": "completed",
+      "title": "API versioning and SDK compatibility layer",
+      "summary": "API v1 aliases, request IDs, stable error metadata, and SDK v1 defaults are live."
+    },
+    {
+      "id": "release-management-v1",
+      "category": "Developer ecosystem",
+      "status": "in_progress",
+      "title": "Public roadmap, releases, changelog API, and upgrade guidance",
+      "summary": "Canonical version metadata, roadmap and release pages, changelog API, and operator upgrade docs are being added."
+    },
+    {
+      "id": "mobile-hardening",
+      "category": "Mobile app hardening",
+      "status": "planned",
+      "title": "Mobile backup, verification, and release-readiness improvements",
+      "summary": "Improve mobile backup clarity, verification flows, and device QA before broader distribution."
+    },
+    {
+      "id": "operator-tooling",
+      "category": "Node operator tooling",
+      "status": "planned",
+      "title": "Self-hosted node upgrade and diagnostics workflow",
+      "summary": "Expand operator guidance, node health checks, and safer update instructions for self-hosted nodes."
+    },
+    {
+      "id": "public-node-growth",
+      "category": "Public node growth",
+      "status": "planned",
+      "title": "Community node onboarding and registry trust signals",
+      "summary": "Support more public nodes with clear registry metadata, reliability signals, and safe setup docs."
+    },
+    {
+      "id": "performance-scalability",
+      "category": "Performance and scalability",
+      "status": "research",
+      "title": "Scale chain reads and public API caching",
+      "summary": "Research safer pagination, caching, and read performance as public chain and community activity grow."
+    },
+    {
+      "id": "security-audit-process",
+      "category": "Security audits",
+      "status": "research",
+      "title": "Independent security review process",
+      "summary": "Define scope and process for future independent review without claiming a completed external audit before it exists."
+    },
+    {
+      "id": "app-store-readiness",
+      "category": "App Store and Google Play readiness",
+      "status": "research",
+      "title": "App-store readiness review",
+      "summary": "Research store policy, privacy disclosures, wallet-safety messaging, and mobile build requirements."
+    },
+    {
+      "id": "community-pilots",
+      "category": "Community pilots",
+      "status": "research",
+      "title": "Small community pilot programs",
+      "summary": "Explore low-risk community testing with clear experimental disclosures and no promise of financial outcomes."
+    }
+  ]
+}

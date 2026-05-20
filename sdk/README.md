@@ -44,6 +44,8 @@ main().catch((error) => {
 
 The SDK handles both structured v1 errors such as `{ error: { code, message }, request_id }` and legacy top-level `message` errors. Use `new VorliqSDK({ apiVersion: "legacy" })` if an older integration must keep calling `/api/...` directly.
 
+Release metadata, changelog entries, and roadmap items are available through `getVersionMetadata()`, `getChangelog()`, and `getRoadmap()`. Roadmap items are planning signals only and are not promises of dates, app-store approval, listings, financial outcomes, or legal status.
+
 Production applications should prefer the lightweight and paginated methods when they do not need the entire blockchain. The `getChain` method remains available for compatibility and local tooling, but it downloads the full chain and can become expensive as the network grows. For dashboards, explorers, and account history, use `getChainSummary`, `getBlocks`, `getTransactions`, `getPendingTransactions`, `getTransaction`, `getBlock`, `getAddressHistory`, and `getLeaderboard`.
 
 ```js

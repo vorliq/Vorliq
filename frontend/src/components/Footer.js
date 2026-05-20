@@ -16,6 +16,8 @@ function Footer() {
         { label: "Transparency", href: "/transparency", internal: true },
         { label: "Growth", href: "/growth", internal: true },
         { label: "Audit", href: "/audit", internal: true },
+        { label: "Roadmap", href: "/roadmap", internal: true },
+        { label: "Releases", href: "/releases", internal: true },
         { label: "Profiles", href: "/profile", internal: true },
       ],
     },
@@ -47,6 +49,7 @@ function Footer() {
             <h2>Vorliq</h2>
           </div>
           <p>Your Community Your Coin</p>
+          <p className="footer-version">Vorliq 1.0.0 - API v1 - stable</p>
           <SocialLinks compact />
         </div>
 

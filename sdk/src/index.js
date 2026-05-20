@@ -181,6 +181,18 @@ class VorliqSDK {
     return this.request("/api/version");
   }
 
+  async getVersionMetadata() {
+    return this.request("/api/version/metadata");
+  }
+
+  async getChangelog() {
+    return this.request("/api/changelog");
+  }
+
+  async getRoadmap() {
+    return this.request("/api/roadmap");
+  }
+
   /**
    * Gets the full blockchain from the configured Vorliq node.
    *

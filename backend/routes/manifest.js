@@ -89,6 +89,25 @@ router.get("/api/network/manifest", async (req, res) => {
       return "unknown";
     }
   })();
+  const releaseMetadata = (() => {
+    try {
+      const metadata = require("../../version.json");
+      return {
+        current_version: metadata.current_version,
+        release_channel: metadata.release_channel,
+        api_version: metadata.api_version,
+        recommended_node_version: metadata.recommended_node_version,
+        metadata_url: "https://vorliq.org/api/version/metadata",
+        changelog_url: "https://vorliq.org/api/changelog",
+        roadmap_url: "https://vorliq.org/api/roadmap",
+      };
+    } catch (error) {
+      return {
+        current_version: "unknown",
+        release_channel: "unknown",
+      };
+    }
+  })();
 
   res.json({
     success: true,
@@ -140,6 +159,7 @@ router.get("/api/network/manifest", async (req, res) => {
       supported_version: sdkVersion,
       docs_url: "https://github.com/vorliq/Vorliq/tree/main/sdk#readme",
     },
+    release: releaseMetadata,
     incidents: {
       active: activeIncidents.length > 0,
       active_count: activeIncidents.length,

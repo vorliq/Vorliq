@@ -19,6 +19,9 @@ assert.strictEqual(typeof sdk.getProfileVerificationChallenge, "function");
 assert.strictEqual(typeof sdk.submitProfileVerification, "function");
 assert.strictEqual(typeof sdk.reportContent, "function");
 assert.strictEqual(typeof sdk.getAPIVersion, "function");
+assert.strictEqual(typeof sdk.getVersionMetadata, "function");
+assert.strictEqual(typeof sdk.getChangelog, "function");
+assert.strictEqual(typeof sdk.getRoadmap, "function");
 assert.strictEqual(typeof sdk.setRequestId, "function");
 sdk
   .sendTransaction("SYSTEM", "not-used", "not-used", validAddress, 1)
@@ -54,6 +57,15 @@ global.fetch = async (url, options = {}) => {
       if (String(url).endsWith("/api/v1/version")) {
         return { success: true, api_version: 1, supported_versions: [1] };
       }
+      if (String(url).endsWith("/api/v1/version/metadata")) {
+        return { success: true, current_version: "1.0.0", release_channel: "stable" };
+      }
+      if (String(url).endsWith("/api/v1/changelog")) {
+        return { success: true, entries: [{ version: "1.0.0", title: "Compatibility" }] };
+      }
+      if (String(url).endsWith("/api/v1/roadmap")) {
+        return { success: true, items: [{ status: "completed", title: "API v1" }] };
+      }
       return { success: true, summary: { height: 1 } };
     },
   };
@@ -64,16 +76,25 @@ global.fetch = async (url, options = {}) => {
   v1Client.setRequestId("sdk-smoke");
   const version = await v1Client.getAPIVersion();
   assert.strictEqual(version.api_version, 1);
+  const metadata = await v1Client.getVersionMetadata();
+  assert.strictEqual(metadata.current_version, "1.0.0");
+  const changelog = await v1Client.getChangelog();
+  assert.strictEqual(changelog.entries[0].version, "1.0.0");
+  const roadmap = await v1Client.getRoadmap();
+  assert.strictEqual(roadmap.items[0].status, "completed");
   const summary = await v1Client.getChainSummary();
   assert.strictEqual(summary.height, 1);
   assert.strictEqual(calls[0].url, "https://example.invalid/api/v1/version");
-  assert.strictEqual(calls[1].url, "https://example.invalid/api/v1/chain/summary");
-  assert.strictEqual(calls[1].options.headers["X-Request-ID"], "sdk-smoke");
+  assert.strictEqual(calls[1].url, "https://example.invalid/api/v1/version/metadata");
+  assert.strictEqual(calls[2].url, "https://example.invalid/api/v1/changelog");
+  assert.strictEqual(calls[3].url, "https://example.invalid/api/v1/roadmap");
+  assert.strictEqual(calls[4].url, "https://example.invalid/api/v1/chain/summary");
+  assert.strictEqual(calls[4].options.headers["X-Request-ID"], "sdk-smoke");
   assert.strictEqual(v1Client.lastRequestId, "sdk-smoke-request");
 
   const legacyClient = new VorliqSDK({ nodeUrl: "https://example.invalid", apiVersion: "legacy" });
   await legacyClient.getChainSummary();
-  assert.strictEqual(calls[2].url, "https://example.invalid/api/chain/summary");
+  assert.strictEqual(calls[5].url, "https://example.invalid/api/chain/summary");
 
   try {
     await v1Client.reportContent({ target_type: "profile", target_id: "x", reason: "other" });

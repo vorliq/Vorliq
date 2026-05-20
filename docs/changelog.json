@@ -1,0 +1,72 @@
+{
+  "latest_version": "1.0.0",
+  "release_channel": "stable",
+  "docs_url": "https://vorliq.github.io/Vorliq/release-notes.html",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "title": "API versioning and developer compatibility",
+      "date": "2026-05-20",
+      "summary": "Added API v1 aliases, request IDs, consistent error metadata, SDK v1 defaults, and developer compatibility documentation.",
+      "major_changes": [
+        "Added /api/version and /api/v1 route aliases without removing existing /api routes.",
+        "Added X-Request-ID, X-Vorliq-API-Version, and X-Vorliq-API-Stability response headers.",
+        "Updated the JavaScript SDK to default to API v1 while supporting legacy mode."
+      ],
+      "compatibility_notes": [
+        "Unversioned /api routes remain supported.",
+        "New integrations should prefer /api/v1.",
+        "Structured errors include a top-level message during the transition."
+      ],
+      "docs_url": "https://vorliq.github.io/Vorliq/api-versioning.html"
+    },
+    {
+      "version": "1.0.0",
+      "title": "Community identity verification and moderation tools",
+      "date": "2026-05-20",
+      "summary": "Added wallet-control profile verification, non-KYC trust labels, public reports, and protected moderation queues.",
+      "major_changes": [
+        "Wallet verification proves control of a Vorliq wallet only.",
+        "Reports create a moderation review queue and do not automatically delete content.",
+        "Forum and chat moderation controls avoid exposing private data."
+      ],
+      "compatibility_notes": [
+        "Profile labels are factual community signals, not legal identity verification.",
+        "Existing public profile and forum APIs remain available."
+      ],
+      "docs_url": "https://vorliq.github.io/Vorliq/moderation.html"
+    },
+    {
+      "version": "1.0.0",
+      "title": "Wallet and transaction safety v2",
+      "date": "2026-05-20",
+      "summary": "Added safer address validation, send review steps, duplicate-send protection, pending-status clarity, and wallet backup education.",
+      "major_changes": [
+        "Web and mobile send flows show review and irreversible transaction warnings.",
+        "Backend validation rejects invalid amounts, same sender and receiver, and unsafe public sender addresses.",
+        "SDK sendTransaction validates before signing."
+      ],
+      "compatibility_notes": [
+        "Wallet signing material remains local and is never sent to the backend.",
+        "Existing blockchain history is unchanged."
+      ],
+      "docs_url": "https://vorliq.github.io/Vorliq/wallet-safety.html"
+    },
+    {
+      "version": "1.0.0",
+      "title": "Official 1.0 release",
+      "date": null,
+      "summary": "Delivered the full Vorliq platform with blockchain, web app, backend API, mobile app, lending, exchange, governance, peer networking, monitoring, tests, and documentation.",
+      "major_changes": [
+        "Independent proof-of-work VLQ blockchain with SECP256K1 wallets and signed transactions.",
+        "React web app, Node backend API, and React Native Expo mobile app.",
+        "Community lending, exchange, governance, treasury, registry, diagnostics, and public documentation."
+      ],
+      "compatibility_notes": [
+        "Vorliq is experimental community blockchain software.",
+        "VLQ has no guaranteed market value and should not be represented as an investment promise."
+      ],
+      "docs_url": "https://vorliq.github.io/Vorliq/release-notes.html"
+    }
+  ]
+}

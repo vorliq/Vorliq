@@ -1,0 +1,29 @@
+{
+  "project_name": "Vorliq",
+  "current_version": "1.0.0",
+  "release_channel": "stable",
+  "release_date": "2026-05-20",
+  "deployment_commit": null,
+  "api_version": 1,
+  "sdk_version": "1.0.0",
+  "mobile_version": "1.0.0",
+  "web_version": "0.1.0",
+  "minimum_supported_node_version": "1.0.0",
+  "recommended_node_version": "1.0.0",
+  "status_page_url": "https://status.vorliq.org",
+  "website_url": "https://vorliq.org",
+  "docs_url": "https://vorliq.github.io/Vorliq",
+  "github_url": "https://github.com/vorliq/Vorliq",
+  "support_links": {
+    "discord": "https://discord.gg/qpX5sHD4pC",
+    "telegram": "https://t.me/Vorliq",
+    "reddit": "https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS",
+    "x": "https://x.com/vorliq"
+  },
+  "compatibility_notes": [
+    "Vorliq API v1 is stable and available at /api/v1 while unversioned /api remains supported.",
+    "The JavaScript SDK defaults to API v1 and supports legacy /api paths with apiVersion: \"legacy\".",
+    "Self-hosted nodes should keep storage backups before upgrading and verify health after updating.",
+    "Vorliq remains experimental community blockchain software and does not provide legal, banking, investment, custody, or guaranteed financial outcomes."
+  ]
+}

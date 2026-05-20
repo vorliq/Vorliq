@@ -20,6 +20,7 @@ function getPublicNodeDisplayUrl(nodeUrl) {
 function Health() {
   const [diagnostics, setDiagnostics] = useState(null);
   const [deployment, setDeployment] = useState(null);
+  const [versionMetadata, setVersionMetadata] = useState(null);
   const [securityStatus, setSecurityStatus] = useState(null);
   const [backupStatus, setBackupStatus] = useState(null);
   const [storageHealth, setStorageHealth] = useState(null);
@@ -45,6 +46,7 @@ function Health() {
         const registryRequest = api.get("/registry/nodes");
         const registrySummaryRequest = api.get("/registry/summary");
         const deploymentRequest = api.get("/deployment");
+        const versionRequest = api.get("/version/metadata");
         const securityRequest = api.get("/security/status");
         const backupRequest = api.get("/backup/status");
         const storageRequest = api.get("/storage/health");
@@ -56,6 +58,7 @@ function Health() {
           registryResponse,
           registrySummaryResponse,
           deploymentResponse,
+          versionResponse,
           securityResponse,
           backupResponse,
           storageResponse,
@@ -67,6 +70,7 @@ function Health() {
           registryRequest,
           registrySummaryRequest,
           deploymentRequest,
+          versionRequest,
           securityRequest,
           backupRequest,
           storageRequest,
@@ -100,6 +104,7 @@ function Health() {
         if (mounted) {
           setDiagnostics(diagnosticsResponse.data);
           setDeployment(deploymentResponse.data);
+          setVersionMetadata(versionResponse.data);
           setSecurityStatus(securityResponse.data);
           setBackupStatus(backupResponse.data);
           setStorageHealth(storageResponse.data);
@@ -322,6 +327,42 @@ function Health() {
           </div>
         ) : (
           <div className="empty-state">Deployment information is unavailable right now.</div>
+        )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <h2>Version Metadata</h2>
+        {loading ? (
+          <Spinner label="Loading version metadata..." />
+        ) : versionMetadata?.success ? (
+          <div className="table-wrap">
+            <table className="stats-table">
+              <tbody>
+                <tr>
+                  <th>Current Version</th>
+                  <td>{versionMetadata.current_version}</td>
+                </tr>
+                <tr>
+                  <th>Release Channel</th>
+                  <td>{versionMetadata.release_channel}</td>
+                </tr>
+                <tr>
+                  <th>API Version</th>
+                  <td>v{versionMetadata.api_version}</td>
+                </tr>
+                <tr>
+                  <th>Deployment Commit</th>
+                  <td>{versionMetadata.deployment_commit || "Unavailable"}</td>
+                </tr>
+                <tr>
+                  <th>Recommended Node Version</th>
+                  <td>{versionMetadata.recommended_node_version}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">Version metadata is unavailable right now.</div>
         )}
       </section>
 

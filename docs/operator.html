@@ -79,7 +79,8 @@ sudo systemctl restart vorliq-backend.service</code></pre>
 
       <section class="glass">
         <h2>Post-Deploy Checks</h2>
-        <p>After deployment, verify the public app, <code>/api/health</code>, <code>/api/deployment</code>, <code>/api/system/self-check</code>, <code>/api/storage/health</code>, the registry summary, and the status page. CI also runs read-only Playwright browser tests against production so route loading, mobile navigation, layout overflow, safe API responses, and non-destructive user journeys are checked before the deploy workflow runs.</p>
+        <p>After deployment, verify the public app, <code>/api/health</code>, <code>/api/deployment</code>, <code>/api/version/metadata</code>, <code>/api/system/self-check</code>, <code>/api/storage/health</code>, the registry summary, and the status page. CI also runs read-only Playwright browser tests against production so route loading, mobile navigation, layout overflow, safe API responses, and non-destructive user journeys are checked before the deploy workflow runs.</p>
+        <p>Use the <a href="upgrades.html">Upgrade Guide</a> before updating self-hosted nodes.</p>
       </section>
 
       <section class="glass">

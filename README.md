@@ -14,6 +14,8 @@ Public docs: https://vorliq.github.io/Vorliq
 
 Testing guide: https://vorliq.github.io/Vorliq/testing.html
 
+Current public version: 1.0.0 stable. Release metadata, roadmap, changelog, and upgrade guidance are available at https://vorliq.org/releases, https://vorliq.org/roadmap, https://vorliq.org/api/version/metadata, and https://vorliq.github.io/Vorliq/upgrades.html.
+
 What is Vorliq
 --------------
 
@@ -52,7 +54,7 @@ Vorliq is live software, but it is still an early cryptocurrency-style network. 
 
 Vorliq is self-custody. The server stores public blockchain data, forum posts, governance activity, exchange offers, lending records, and operational state, but it does not store user private keys or wallet passwords. Lost private keys cannot be recovered by Vorliq, so users should read the wallet safety guide before using real wallets: https://vorliq.github.io/Vorliq/wallet-safety.html.
 
-Public network proof is available through the status page, the recovery guide, the storage reliability guide, public audit exports, and the machine-readable network manifest. Users and developers can check https://status.vorliq.org, https://vorliq.github.io/Vorliq/recovery.html, https://vorliq.github.io/Vorliq/storage.html, https://vorliq.github.io/Vorliq/audit.html, https://vorliq.github.io/Vorliq/api-versioning.html, https://vorliq.github.io/Vorliq/examples.html, https://vorliq.org/api/audit/manifest, and https://vorliq.org/api/network/manifest. The build and deployment process is public through GitHub Actions at https://github.com/vorliq/Vorliq/actions.
+Public network proof is available through the status page, the recovery guide, the upgrade guide, the storage reliability guide, public audit exports, and the machine-readable network manifest. Users and developers can check https://status.vorliq.org, https://vorliq.github.io/Vorliq/recovery.html, https://vorliq.github.io/Vorliq/upgrades.html, https://vorliq.github.io/Vorliq/storage.html, https://vorliq.github.io/Vorliq/audit.html, https://vorliq.github.io/Vorliq/api-versioning.html, https://vorliq.github.io/Vorliq/examples.html, https://vorliq.org/api/audit/manifest, https://vorliq.org/api/version/metadata, and https://vorliq.org/api/network/manifest. The build and deployment process is public through GitHub Actions at https://github.com/vorliq/Vorliq/actions.
 
 How to Run
 ----------

@@ -50,6 +50,44 @@ test("/api/version returns stable version metadata", async () => {
   expect(response.body.stability).toBe("stable");
   expect(response.body.supported_versions).toEqual([1]);
   expect(response.body.deprecation_policy_url).toMatch(/api-versioning\.html$/);
+  expect(response.body.metadata_url).toMatch(/\/api\/version\/metadata$/);
+});
+
+test("/api/version/metadata returns safe canonical release metadata", async () => {
+  const response = await request(app).get("/api/version/metadata");
+
+  expect(response.status).toBe(200);
+  expect(response.body.success).toBe(true);
+  expect(response.body.project_name).toBe("Vorliq");
+  expect(response.body.current_version).toBe("1.0.0");
+  expect(response.body.release_channel).toBe("stable");
+  expect(response.body.api_version).toBe(1);
+  expect(response.body.recommended_node_version).toBeTruthy();
+  expect(JSON.stringify(response.body)).not.toMatch(/PRIVATE KEY|ADMIN_TOKEN|SERVER_SSH_KEY|\/home\/vorliq/i);
+});
+
+test("/api/changelog returns structured safe entries", async () => {
+  const response = await request(app).get("/api/changelog");
+
+  expect(response.status).toBe(200);
+  expect(response.body.success).toBe(true);
+  expect(response.body.latest_version).toBe("1.0.0");
+  expect(Array.isArray(response.body.entries)).toBe(true);
+  expect(response.body.entries.length).toBeGreaterThan(0);
+  expect(response.body.entries[0]).toHaveProperty("compatibility_notes");
+  expect(JSON.stringify(response.body)).not.toMatch(/PRIVATE KEY|ADMIN_TOKEN|SERVER_SSH_KEY|\/home\/vorliq/i);
+});
+
+test("/api/roadmap returns grouped public roadmap data", async () => {
+  const response = await request(app).get("/api/roadmap");
+
+  expect(response.status).toBe(200);
+  expect(response.body.success).toBe(true);
+  expect(Array.isArray(response.body.items)).toBe(true);
+  expect(response.body.items.some((item) => item.status === "completed")).toBe(true);
+  expect(response.body.items.some((item) => item.status === "planned" || item.status === "research")).toBe(true);
+  expect(response.body.disclaimer).toMatch(/can change/i);
+  expect(JSON.stringify(response.body)).not.toMatch(/PRIVATE KEY|ADMIN_TOKEN|SERVER_SSH_KEY|\/home\/vorliq/i);
 });
 
 test("/api/v1 aliases reuse stable public read routes", async () => {

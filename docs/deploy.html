@@ -114,6 +114,11 @@ Environment=VORLIQ_OPERATOR_WALLET=VLQ_PUBLIC_OPERATOR_ADDRESS</pre>
       </section>
 
       <section>
+        <h2>Upgrade Existing Nodes</h2>
+        <p>If you already operate a Vorliq node, read the <a href="upgrades.html">Upgrade Guide</a> before pulling new code. Back up first, update with the server script when available, then verify <code>/api/version/metadata</code>, <code>/api/storage/health</code>, and <code>/api/audit/manifest</code>.</p>
+      </section>
+
+      <section>
         <h2>Operator Admin Token</h2>
         <p>Production incident and operator dashboard routes are protected by <code>ADMIN_TOKEN</code>. The automated deployment creates a strong random token in <code>/etc/vorliq/backend.env</code> when one is not already present and loads it through the backend systemd service. Do not commit this token, print it in logs, or share it publicly.</p>
         <pre>sudo mkdir -p /etc/vorliq

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vorliq Upgrade Guide</title>
+  <style>
+    body { margin:0; font-family:Inter,Arial,sans-serif; background:#020817; color:#fff; }
+    a { color:#18d7c9; }
+    .wrap { width:min(100% - 32px,960px); margin:0 auto; padding:38px 0 64px; }
+    header, section { border-bottom:1px solid rgba(24,215,201,.24); padding:26px 0; }
+    p, li { color:#c7d2e4; line-height:1.75; }
+    code, pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+    pre { overflow:auto; background:#061326; border:1px solid rgba(24,215,201,.24); border-radius:10px; padding:14px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <a href="index.html">Vorliq Docs</a>
+      <h1>Upgrade Guide</h1>
+      <p>Use this guide to update a self-hosted Vorliq node carefully, verify health after upgrade, and recover safely if an update fails.</p>
+    </header>
+    <section>
+      <h2>Before Upgrading</h2>
+      <p>Back up the node before changing code or dependencies. Server backups protect public node state, not user private keys. Users must keep their own wallet backups.</p>
+      <pre>curl -fsS https://vorliq.org/api/version/metadata
+curl -fsS https://vorliq.org/api/storage/health
+curl -fsS https://vorliq.org/api/audit/manifest</pre>
+    </section>
+    <section>
+      <h2>Public Node Deployment</h2>
+      <p>The official public node is deployed through the Vorliq Deploy GitHub Actions workflow after CI passes. It fetches the latest main branch, updates the server checkout, and restarts the managed services.</p>
+    </section>
+    <section>
+      <h2>Self-Hosted Node Update</h2>
+      <p>Self-hosted operators should update from their server checkout and run the repository update script when available.</p>
+      <pre>cd /path/to/vorliq
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+sudo bash deployment/update_server.sh</pre>
+      <p>If your install path differs, adjust the working directory. Do not print admin tokens, SSH keys, private keys, or wallet passwords while updating.</p>
+    </section>
+    <section>
+      <h2>Verify After Upgrade</h2>
+      <pre>curl -fsS https://your-node.example/api/health
+curl -fsS https://your-node.example/api/version/metadata
+curl -fsS https://your-node.example/api/system/self-check
+curl -fsS https://your-node.example/api/storage/health
+curl -fsS https://your-node.example/api/audit/manifest</pre>
+      <p>Confirm the deployment commit, API version, storage health, chain validity, and audit manifest before announcing an upgrade is complete.</p>
+    </section>
+    <section>
+      <h2>If Upgrade Fails</h2>
+      <ul>
+        <li>Stop and preserve logs; do not delete public chain or state files.</li>
+        <li>Check service status with systemd and review safe application logs.</li>
+        <li>Verify the latest backup before restoring anything.</li>
+        <li>Use the recovery guide if a restore is required.</li>
+        <li>Report the failing endpoint, timestamp, commit, and request ID. Never include private keys, admin tokens, raw user agents, IP addresses, or server paths.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Compatibility</h2>
+      <p>Vorliq API v1 is stable at <code>/api/v1</code>, and unversioned <code>/api</code> remains supported for now. Use <a href="api-versioning.html">API Versioning</a>, <a href="examples.html">Developer Examples</a>, and <a href="operator.html">Operator Dashboard</a> for related guidance.</p>
+    </section>
+  </main>
+</body>
+</html>
