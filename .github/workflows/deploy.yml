@@ -35,6 +35,17 @@ jobs:
           ssh-keygen -lf ~/.ssh/vorliq_deploy_key.pub
           ssh-keyscan -H 159.65.24.177 >> ~/.ssh/known_hosts
 
+      - name: Build frontend artifact
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+          tar -C build -czf ../frontend-build.tar.gz .
+
+      - name: Upload frontend artifact
+        run: |
+          scp -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes frontend-build.tar.gz root@159.65.24.177:/tmp/vorliq-frontend-build.tar.gz
+
       - name: Deploy to production server
         run: |
           ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes root@159.65.24.177 <<'EOF'
@@ -105,8 +116,18 @@ jobs:
               systemctl disable vorliq-miner.service >/dev/null 2>&1 || true
             fi
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/backend && npm install'
-            sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm install'
-            sudo -u vorliq -H bash -lc 'cd /home/vorliq/app/frontend && npm run build'
+            test -s /tmp/vorliq-frontend-build.tar.gz
+            rm -rf /home/vorliq/app/frontend/build.next
+            mkdir -p /home/vorliq/app/frontend/build.next
+            tar -xzf /tmp/vorliq-frontend-build.tar.gz -C /home/vorliq/app/frontend/build.next
+            test -f /home/vorliq/app/frontend/build.next/index.html
+            rm -rf /home/vorliq/app/frontend/build.previous
+            if [ -d /home/vorliq/app/frontend/build ]; then
+              mv /home/vorliq/app/frontend/build /home/vorliq/app/frontend/build.previous
+            fi
+            mv /home/vorliq/app/frontend/build.next /home/vorliq/app/frontend/build
+            chown -R vorliq:vorliq /home/vorliq/app/frontend/build
+            rm -f /tmp/vorliq-frontend-build.tar.gz
             bash -n /home/vorliq/app/deployment/alert.sh
             bash -n /home/vorliq/app/deployment/backup.sh
             bash -n /home/vorliq/app/deployment/monitor.sh
