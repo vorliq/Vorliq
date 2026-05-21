@@ -322,14 +322,29 @@ async function buildReadiness(options = {}) {
   const registrySummary = registryResult.value?.summary || {};
   const activeNodeCount = numberOrNull(registrySummary.active_node_count);
   const syncedNodeCount = numberOrNull(registrySummary.synced_node_count);
+  const diagnosticsNodeActive = diagnosticsResult.ok
+    && diagnosticsResult.value?.success !== false
+    && diagnosticsResult.value?.chain_valid === true
+    && numberOrNull(diagnosticsResult.value?.block_height) !== null;
+  const registryNodeActive = registryResult.ok
+    && (activeNodeCount || 0) > 0
+    && (syncedNodeCount === null || syncedNodeCount > 0);
   addCheck(checks, {
     id: "public_node_active",
     name: "Public node active",
     category: "Network",
-    status: registryResult.ok && (activeNodeCount || 0) > 0 && (syncedNodeCount === null || syncedNodeCount > 0) ? "pass" : "fail",
+    status: registryNodeActive || diagnosticsNodeActive ? "pass" : "fail",
     severity: "critical",
-    message: registryResult.ok && (activeNodeCount || 0) > 0 ? "At least one public node is active." : "No active public node is visible.",
-    safe_metadata: { active_node_count: activeNodeCount, synced_node_count: syncedNodeCount },
+    message: registryNodeActive
+      ? "At least one registry-listed public node is active."
+      : diagnosticsNodeActive
+        ? "The public node API is active; registry heartbeat visibility needs attention."
+        : "No active public node is visible.",
+    safe_metadata: {
+      active_node_count: activeNodeCount,
+      synced_node_count: syncedNodeCount,
+      diagnostics_available: diagnosticsResult.ok,
+    },
   });
 
   addCheck(checks, {

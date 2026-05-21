@@ -45,9 +45,9 @@ function mockFlask(options = {}) {
         data: {
           success: true,
           summary: {
-            active_node_count: 1,
+            active_node_count: options.registryInactive ? 0 : 1,
             total_registered_node_count: 1,
-            synced_node_count: 1,
+            synced_node_count: options.registryInactive ? 0 : 1,
           },
         },
       });
@@ -181,5 +181,17 @@ describe("production readiness", () => {
     expect(response.body.success).toBe(true);
     const storageCheck = response.body.checks.find((check) => check.id === "storage_health_ok");
     expect(storageCheck.status).toBe("fail");
+  });
+
+  test("public node can pass while registry heartbeat is stale", async () => {
+    mockFlask({ registryInactive: true });
+    const response = await request(app).get("/api/readiness");
+
+    expect(response.status).toBe(200);
+    const publicNodeCheck = response.body.checks.find((check) => check.id === "public_node_active");
+    const registryCheck = response.body.checks.find((check) => check.id === "registry_active_node_count");
+    expect(publicNodeCheck.status).toBe("pass");
+    expect(publicNodeCheck.message).toMatch(/registry heartbeat visibility needs attention/i);
+    expect(registryCheck.status).toBe("warning");
   });
 });
