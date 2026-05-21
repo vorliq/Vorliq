@@ -220,7 +220,15 @@ jobs:
           EOF
 
       - name: Run public production readiness gate
-        run: node tools/check_readiness.js https://vorliq.org --allow-warning
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if node tools/check_readiness.js https://vorliq.org --allow-warning; then
+              exit 0
+            fi
+            echo "Readiness gate failed on attempt ${attempt}; waiting for services to settle."
+            sleep 15
+          done
+          node tools/check_readiness.js https://vorliq.org --allow-warning
 
       - name: Print deployment success
         run: echo "Deployment successful for commit ${{ github.event.workflow_run.head_sha }}"
