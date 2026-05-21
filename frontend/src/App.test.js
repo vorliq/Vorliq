@@ -1819,18 +1819,18 @@ test("Health page renders registry summary section", async () => {
   renderWithProviders(<Health />, "/health");
 
   expect(await screen.findByRole("heading", { name: /network registry health/i })).toBeInTheDocument();
-  expect(screen.getByText(/average reliability/i)).toBeInTheDocument();
-  expect(screen.getByText(/98%/i)).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: /mining operations/i })).toBeInTheDocument();
-  expect(screen.getByText(/block production status/i)).toBeInTheDocument();
+  expect(await screen.findByText(/average reliability/i)).toBeInTheDocument();
+  expect(await screen.findByText(/98%/i)).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /mining operations/i })).toBeInTheDocument();
+  expect(await screen.findByText(/block production status/i)).toBeInTheDocument();
 });
 
 test("Health page renders Storage Health", async () => {
   renderWithProviders(<Health />, "/health");
 
   expect(await screen.findByRole("heading", { name: /storage health/i })).toBeInTheDocument();
-  expect(screen.getByText(/critical files ok/i)).toBeInTheDocument();
-  expect(screen.getByText(/backup available/i)).toBeInTheDocument();
+  expect(await screen.findByText(/critical files ok/i)).toBeInTheDocument();
+  expect(await screen.findByText(/backup available/i)).toBeInTheDocument();
 });
 
 test("IncidentBanner does not render when no active incidents are returned", async () => {

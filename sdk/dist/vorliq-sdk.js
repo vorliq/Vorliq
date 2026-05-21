@@ -193,6 +193,10 @@ class VorliqSDK {
     return this.request("/api/roadmap");
   }
 
+  async getReadiness() {
+    return this.request("/api/readiness");
+  }
+
   /**
    * Gets the full blockchain from the configured Vorliq node.
    *

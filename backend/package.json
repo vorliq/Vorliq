@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "test": "jest --runInBand",
+    "check:readiness": "node ../tools/check_readiness.js",
     "verify:audit": "node ../tools/verify_audit.js",
     "export:audit": "node audit_export.js"
   },

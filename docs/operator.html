@@ -66,6 +66,7 @@ sudo systemctl restart vorliq-backend.service</code></pre>
         <h2>Use The Dashboard Safely</h2>
         <ul>
           <li>Use Overview to verify deployment, block height, chain validity, pending transactions, incidents, backups, and service state.</li>
+          <li>Use Readiness to review the combined production gate, score, failing checks, warning checks, latest backup age, storage counts, incident counts, registry counts, deployment commit, and safe service names.</li>
           <li>Use Storage to review JSON validity, backup availability, warning counts, and corruption signals without exposing server paths or secrets.</li>
           <li>Use Security to confirm rate limits, CORS, Helmet, CSP, public write protection, and admin route protection.</li>
           <li>Use Backups to run a backup and verify the latest archive. Verification never restores production data.</li>
@@ -79,7 +80,8 @@ sudo systemctl restart vorliq-backend.service</code></pre>
 
       <section class="glass">
         <h2>Post-Deploy Checks</h2>
-        <p>After deployment, verify the public app, <code>/api/health</code>, <code>/api/deployment</code>, <code>/api/version/metadata</code>, <code>/api/system/self-check</code>, <code>/api/storage/health</code>, the registry summary, and the status page. CI also runs read-only Playwright browser tests against production so route loading, mobile navigation, layout overflow, safe API responses, and non-destructive user journeys are checked before the deploy workflow runs.</p>
+        <p>After deployment, verify the public app, <code>/api/health</code>, <code>/api/deployment</code>, <code>/api/version/metadata</code>, <code>/api/system/self-check</code>, <code>/api/storage/health</code>, <code>/api/readiness</code>, the registry summary, and the status page. CI also runs read-only Playwright browser tests against production so route loading, mobile navigation, layout overflow, safe API responses, and non-destructive user journeys are checked before the deploy workflow runs. The deploy workflow then runs the public readiness CLI; a fail result blocks the workflow.</p>
+        <p>Operators with the admin token can review <code>/api/admin/readiness</code> or the Admin Readiness tab for deeper safe metadata. Do not paste admin tokens into public reports, screenshots, or issue comments.</p>
         <p>Use the <a href="upgrades.html">Upgrade Guide</a> before updating self-hosted nodes.</p>
       </section>
 

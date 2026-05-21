@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 
 import Footer from "../components/Footer";
 import Health from "./Health";
+import Readiness from "./Readiness";
 import Releases from "./Releases";
 import Roadmap from "./Roadmap";
 import api from "../helpers/api";
@@ -63,10 +64,38 @@ const roadmap = {
   ],
 };
 
+const readiness = {
+  success: true,
+  overall_status: "warning",
+  score: 86,
+  checked_at: "2026-05-21T12:00:00.000Z",
+  checks: [
+    {
+      id: "backend_health",
+      name: "Backend health",
+      category: "Core",
+      status: "pass",
+      severity: "critical",
+      message: "Backend API responded.",
+      safe_metadata: { endpoint: "/api/health" },
+    },
+    {
+      id: "backup_recent",
+      name: "Recent backup",
+      category: "Storage",
+      status: "warning",
+      severity: "high",
+      message: "Latest backup is older than the preferred window.",
+      safe_metadata: { age_hours: 52 },
+    },
+  ],
+};
+
 function mockApiGet(path) {
   if (path === "/version/metadata") return Promise.resolve({ data: versionMetadata });
   if (path === "/changelog") return Promise.resolve({ data: changelog });
   if (path === "/roadmap") return Promise.resolve({ data: roadmap });
+  if (path === "/readiness") return Promise.resolve({ data: readiness });
   if (path === "/diagnostics") {
     return Promise.resolve({
       data: {
@@ -198,4 +227,28 @@ test("Health page renders version metadata", async () => {
   expect(await screen.findByRole("heading", { level: 2, name: /version metadata/i })).toBeInTheDocument();
   expect(await screen.findByText("Current Version")).toBeInTheDocument();
   expect(await screen.findByText("Recommended Node Version")).toBeInTheDocument();
+});
+
+test("Readiness page renders score, status, and checks", async () => {
+  render(
+    <MemoryRouter>
+      <Readiness />
+    </MemoryRouter>
+  );
+
+  expect(await screen.findByRole("heading", { level: 1, name: /readiness/i })).toBeInTheDocument();
+  expect(await screen.findByText("86")).toBeInTheDocument();
+  expect(await screen.findByText("Backend health")).toBeInTheDocument();
+  expect(await screen.findByText(/technical readiness signal only/i)).toBeInTheDocument();
+});
+
+test("Health page renders readiness summary", async () => {
+  render(
+    <MemoryRouter>
+      <Health />
+    </MemoryRouter>
+  );
+
+  expect(await screen.findByRole("heading", { level: 2, name: /production readiness/i })).toBeInTheDocument();
+  expect((await screen.findAllByText("Warnings")).length).toBeGreaterThan(0);
 });

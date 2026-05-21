@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Production Readiness</title>
+    <meta name="description" content="How Vorliq calculates technical production readiness before and after deployment." />
+    <style>
+      body { margin:0; min-width:320px; font-family:Inter,Arial,sans-serif; color:#fff; background:#020817; }
+      a { color:#18d7c9; }
+      .wrap { width:min(980px,calc(100% - 32px)); margin:0 auto; }
+      header, footer { border-color:rgba(24,215,201,.26); background:rgba(8,14,28,.82); }
+      nav { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:16px 0; }
+      main { padding:48px 0; }
+      section { border:1px solid rgba(24,215,201,.26); border-radius:16px; background:rgba(255,255,255,.04); padding:22px; margin-bottom:22px; }
+      h1 { font-size:clamp(2.2rem,7vw,4rem); line-height:1; margin:0 0 12px; }
+      h2 { margin-top:0; }
+      p, li { color:#c7d2e4; line-height:1.75; }
+      code, pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+      pre { overflow:auto; border:1px solid rgba(24,215,201,.26); border-radius:12px; padding:16px; background:rgba(0,0,0,.32); }
+      footer { padding:24px 0; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a href="index.html">Vorliq Docs</a>
+        <a href="https://vorliq.org/readiness">Live Readiness</a>
+      </nav>
+    </header>
+    <main class="wrap">
+      <section>
+        <h1>Production Readiness</h1>
+        <p>Vorliq readiness is a technical quality gate that combines health, deployment, security, storage, backup, incident, audit, API, node, and release signals into one pass, warning, or fail result.</p>
+      </section>
+
+      <section>
+        <h2>Included Checks</h2>
+        <ul>
+          <li>Backend health, API version, version metadata, and deployment commit availability.</li>
+          <li>Security status, admin route protection, storage health, backup freshness, and incident state.</li>
+          <li>Audit manifest availability and server-side hash-shape verification.</li>
+          <li>Network manifest source metadata, registry active node count, public node activity, chain validity, mining status, treasury, faucet, and analytics availability.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Status Meaning</h2>
+        <ul>
+          <li><strong>Pass:</strong> score is at least 90 and no critical or high-severity gate failed.</li>
+          <li><strong>Warning:</strong> score is at least 70 with no critical failure. Operators should review the warning checks before release confidence is claimed.</li>
+          <li><strong>Fail:</strong> a critical gate failed or the score is below 70. Operators should not claim production is ready until the failing checks are fixed.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Run the CLI Gate</h2>
+        <pre><code>node tools/check_readiness.js https://vorliq.org
+node tools/check_readiness.js https://vorliq.org --allow-warning</code></pre>
+        <p>The command exits with code <code>0</code> on pass, <code>1</code> on warning unless <code>--allow-warning</code> is provided, and <code>2</code> on fail.</p>
+      </section>
+
+      <section>
+        <h2>Operator Response</h2>
+        <p>For a warning, review the named checks and decide whether the release should proceed. For a failure, pause the release, fix the underlying service or configuration, rerun tests, and rerun the readiness gate. Readiness is technical quality evidence only; it is not a promise of legal status, banking safety, investment value, or financial outcome.</p>
+      </section>
+    </main>
+    <footer><div class="wrap">Vorliq readiness reports are public-safe and never include private keys, admin tokens, raw logs, IP addresses, raw user agents, or full server paths.</div></footer>
+  </body>
+</html>

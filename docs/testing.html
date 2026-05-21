@@ -54,7 +54,8 @@
           <li><strong>Frontend tests</strong> verify React rendering, onboarding, navigation, theme behavior, wallet safety, risk notices, and major page states.</li>
           <li><strong>SDK checks</strong> build the JavaScript SDK and run a bounded smoke call against safe public endpoints.</li>
           <li><strong>Mobile Expo export</strong> confirms the Expo app bundles for community testing when mobile code changes.</li>
-          <li><strong>Playwright E2E tests</strong> run Chromium browser checks against the live production app using read-only paths. The full suite is run locally before release, and CI runs a smaller production smoke subset to gate deployments without overloading the public node.</li>
+          <li><strong>Playwright E2E tests</strong> run Chromium browser checks against the live production app using read-only paths. The full suite is run locally before release, CI runs a smaller production smoke subset, and the deploy pipeline exposes a visible post-deploy E2E workflow.</li>
+          <li><strong>Production readiness</strong> combines health, deployment, API version, storage, backup, security, audit, registry, chain, mining, faucet, treasury, analytics, incident, and admin-route protection checks into one pass, warning, or fail gate.</li>
         </ul>
       </section>
 
@@ -82,8 +83,16 @@ cd ../e2e
 npm install
 npx playwright install chromium
 npm run e2e
-npm run e2e:ci</code></pre>
+npm run e2e:ci
+
+node ../tools/check_readiness.js https://vorliq.org --allow-warning</code></pre>
         <p>Set <code>E2E_BASE_URL</code> to test another deployed environment. The default is <code>https://vorliq.org</code>.</p>
+      </section>
+
+      <section class="glass">
+        <h2>Readiness Gate</h2>
+        <p>The public readiness endpoint at <code>/api/readiness</code> returns a score from 0 to 100 and an overall status of pass, warning, or fail. A critical failure forces fail. High failures heavily reduce the score. The CLI exits with 0 on pass, 1 on warning unless <code>--allow-warning</code> is supplied, and 2 on fail.</p>
+        <p>The readiness report is public-safe. It should never include private keys, admin tokens, raw logs, raw user agents, IP addresses, full server paths, or environment dumps.</p>
       </section>
 
       <section class="glass">
@@ -94,7 +103,7 @@ npm run e2e:ci</code></pre>
 
       <section class="glass">
         <h2>CI</h2>
-        <p>GitHub Actions runs blockchain, backend, frontend, and read-only Playwright E2E checks. Deployment only proceeds after the CI workflow succeeds. The production deployment workflow still performs server-side health, backup, incident, heartbeat, and deployment checks.</p>
+        <p>GitHub Actions runs blockchain, backend, frontend, and read-only Playwright E2E checks. Deployment only proceeds after the CI workflow succeeds. The production deployment workflow performs server-side health, backup, incident, heartbeat, deployment checks, then runs the public readiness gate with warnings allowed but failures blocked.</p>
       </section>
     </main>
     <footer><div class="wrap">2026 Vorliq. Tests improve confidence, but users should still understand the experimental nature of VLQ software.</div></footer>

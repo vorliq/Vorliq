@@ -21,6 +21,7 @@ function Health() {
   const [diagnostics, setDiagnostics] = useState(null);
   const [deployment, setDeployment] = useState(null);
   const [versionMetadata, setVersionMetadata] = useState(null);
+  const [readiness, setReadiness] = useState(null);
   const [securityStatus, setSecurityStatus] = useState(null);
   const [backupStatus, setBackupStatus] = useState(null);
   const [storageHealth, setStorageHealth] = useState(null);
@@ -47,6 +48,7 @@ function Health() {
         const registrySummaryRequest = api.get("/registry/summary");
         const deploymentRequest = api.get("/deployment");
         const versionRequest = api.get("/version/metadata");
+        const readinessRequest = api.get("/readiness").catch(() => ({ data: null }));
         const securityRequest = api.get("/security/status");
         const backupRequest = api.get("/backup/status");
         const storageRequest = api.get("/storage/health");
@@ -59,6 +61,7 @@ function Health() {
           registrySummaryResponse,
           deploymentResponse,
           versionResponse,
+          readinessResponse,
           securityResponse,
           backupResponse,
           storageResponse,
@@ -71,6 +74,7 @@ function Health() {
           registrySummaryRequest,
           deploymentRequest,
           versionRequest,
+          readinessRequest,
           securityRequest,
           backupRequest,
           storageRequest,
@@ -105,6 +109,7 @@ function Health() {
           setDiagnostics(diagnosticsResponse.data);
           setDeployment(deploymentResponse.data);
           setVersionMetadata(versionResponse.data);
+          setReadiness(readinessResponse.data);
           setSecurityStatus(securityResponse.data);
           setBackupStatus(backupResponse.data);
           setStorageHealth(storageResponse.data);
@@ -163,6 +168,8 @@ function Health() {
     ];
   }, [diagnostics]);
 
+  const readinessChecks = Array.isArray(readiness?.checks) ? readiness.checks : [];
+
   return (
     <div className="page">
       <section className="hero">
@@ -197,6 +204,42 @@ function Health() {
         ) : (
           <div className="empty-state">Diagnostics are unavailable right now.</div>
         )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <div className="section-title">
+          <h2>Production Readiness</h2>
+          <span className={`status-badge ${readiness?.overall_status || "warning"}`}>
+            {readiness?.overall_status || "unknown"}
+          </span>
+        </div>
+        {loading ? (
+          <Spinner label="Loading readiness summary..." />
+        ) : readiness?.success ? (
+          <div className="stats-grid compact-stats">
+            <div className="stat-card">
+              <span>Score</span>
+              <strong>{readiness.score}/100</strong>
+            </div>
+            <div className="stat-card">
+              <span>Failed checks</span>
+              <strong>{readinessChecks.filter((check) => check.status === "fail").length}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Warnings</span>
+              <strong>{readinessChecks.filter((check) => check.status === "warning").length}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Checked</span>
+              <strong>{readiness.checked_at ? new Date(readiness.checked_at).toLocaleTimeString() : "Unknown"}</strong>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">Production readiness is unavailable right now.</div>
+        )}
+        <p className="help-text">
+          <a href="/readiness">Open full readiness report</a>
+        </p>
       </section>
 
       <section className="card card-pad health-section">

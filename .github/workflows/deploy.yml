@@ -20,6 +20,11 @@ jobs:
         with:
           ref: main
 
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
@@ -213,6 +218,9 @@ jobs:
               exit 1
             fi
           EOF
+
+      - name: Run public production readiness gate
+        run: node tools/check_readiness.js https://vorliq.org --allow-warning
 
       - name: Print deployment success
         run: echo "Deployment successful for commit ${{ github.event.workflow_run.head_sha }}"

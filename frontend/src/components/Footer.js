@@ -18,6 +18,7 @@ function Footer() {
         { label: "Audit", href: "/audit", internal: true },
         { label: "Roadmap", href: "/roadmap", internal: true },
         { label: "Releases", href: "/releases", internal: true },
+        { label: "Readiness", href: "/readiness", internal: true },
         { label: "Profiles", href: "/profile", internal: true },
       ],
     },

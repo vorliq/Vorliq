@@ -115,7 +115,14 @@ Environment=VORLIQ_OPERATOR_WALLET=VLQ_PUBLIC_OPERATOR_ADDRESS</pre>
 
       <section>
         <h2>Upgrade Existing Nodes</h2>
-        <p>If you already operate a Vorliq node, read the <a href="upgrades.html">Upgrade Guide</a> before pulling new code. Back up first, update with the server script when available, then verify <code>/api/version/metadata</code>, <code>/api/storage/health</code>, and <code>/api/audit/manifest</code>.</p>
+        <p>If you already operate a Vorliq node, read the <a href="upgrades.html">Upgrade Guide</a> before pulling new code. Back up first, update with the server script when available, then verify <code>/api/version/metadata</code>, <code>/api/storage/health</code>, <code>/api/audit/manifest</code>, and <code>/api/readiness</code>.</p>
+      </section>
+
+      <section>
+        <h2>Production Readiness Gate</h2>
+        <p>After deployment, operators should check the public readiness endpoint and app page. The score combines health, deployment commit, API version, security posture, storage, backups, incidents, audit manifest, network manifest, registry activity, chain validity, mining, treasury, faucet, analytics, admin route protection, and version metadata.</p>
+        <pre>node tools/check_readiness.js https://vorliq.org --allow-warning</pre>
+        <p>A pass result means the technical release gate is healthy. A warning means operators should review the listed checks before declaring the release complete. A fail result should block release promotion until the critical or high-risk issue is corrected. Readiness is not a legal, banking, financial, or investment guarantee.</p>
       </section>
 
       <section>

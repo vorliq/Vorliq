@@ -26,6 +26,7 @@ const routes = [
   ["/network", /Network/i],
   ["/stats", /Stats|Statistics/i],
   ["/health", /Health/i],
+  ["/readiness", /Readiness/i],
   ["/growth", /Growth/i],
   ["/audit", /Audit/i],
   ["/transparency", /Transparency/i],

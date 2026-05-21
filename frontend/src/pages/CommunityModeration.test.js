@@ -138,3 +138,19 @@ test("Admin moderation remains unauthorized-safe", async () => {
 
   await waitFor(() => expect(screen.getByText("Unauthorized")).toBeInTheDocument());
 });
+
+test("Admin readiness remains unauthorized-safe", async () => {
+  window.sessionStorage.setItem("vorliq_admin_token", "stored-token");
+  api.get.mockImplementation((url) => {
+    if (url === "/admin/overview") {
+      return Promise.resolve({ data: { success: true, deployment: { commit_hash: "abc123" }, diagnostics: {}, incidents: [] } });
+    }
+    if (url === "/admin/readiness") return Promise.reject({ response: { status: 401 } });
+    return Promise.resolve({ data: { success: true } });
+  });
+
+  render(<MemoryRouter><Admin /></MemoryRouter>);
+  await userEvent.click(await screen.findByRole("button", { name: "Readiness" }));
+
+  await waitFor(() => expect(screen.getByText("Unauthorized")).toBeInTheDocument());
+});

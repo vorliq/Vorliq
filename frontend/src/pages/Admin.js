@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../helpers/api";
 
 const ADMIN_TOKEN_KEY = "vorliq_admin_token";
-const tabs = ["Overview", "Analytics", "Storage", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
+const tabs = ["Overview", "Readiness", "Analytics", "Storage", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
 
 function authHeader(token) {
   return { Authorization: `Bearer ${token}` };
@@ -14,6 +14,7 @@ function Admin() {
   const [adminToken, setAdminToken] = useState(() => window.sessionStorage.getItem(ADMIN_TOKEN_KEY) || "");
   const [activeTab, setActiveTab] = useState("Overview");
   const [overview, setOverview] = useState(null);
+  const [readiness, setReadiness] = useState(null);
   const [security, setSecurity] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [storage, setStorage] = useState(null);
@@ -44,6 +45,11 @@ function Admin() {
   const loadSecurity = useCallback(async () => {
     const response = await api.get("/admin/security", { headers });
     setSecurity(response.data);
+  }, [headers]);
+
+  const loadReadiness = useCallback(async () => {
+    const response = await api.get("/admin/readiness", { headers });
+    setReadiness(response.data);
   }, [headers]);
 
   const loadAnalytics = useCallback(async () => {
@@ -89,6 +95,7 @@ function Admin() {
     setError("");
     try {
       if (tab === "Overview") await loadOverview();
+      if (tab === "Readiness") await loadReadiness();
       if (tab === "Analytics") await loadAnalytics();
       if (tab === "Storage") await loadStorage();
       if (tab === "Security") await loadSecurity();
@@ -100,7 +107,7 @@ function Admin() {
     } catch (requestError) {
       setError(requestError.response?.status === 401 ? "Unauthorized" : "Unable to load admin data.");
     }
-  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadOverview, loadReports, loadSecurity, loadStorage]);
+  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadOverview, loadReadiness, loadReports, loadSecurity, loadStorage]);
 
   useEffect(() => {
     if (adminToken) {
@@ -128,6 +135,7 @@ function Admin() {
     window.sessionStorage.removeItem(ADMIN_TOKEN_KEY);
     setAdminToken("");
     setOverview(null);
+    setReadiness(null);
     setSecurity(null);
     setAnalytics(null);
     setStorage(null);
@@ -277,6 +285,7 @@ function Admin() {
       {status && <div className="empty-state">{status}</div>}
 
       {activeTab === "Overview" && <OverviewTab overview={overview} />}
+      {activeTab === "Readiness" && <ReadinessTab readiness={readiness} onLoad={loadReadiness} />}
       {activeTab === "Analytics" && <AnalyticsTab analytics={analytics} onLoad={loadAnalytics} />}
       {activeTab === "Storage" && <StorageTab storage={storage} onLoad={loadStorage} />}
       {activeTab === "Security" && <SecurityTab security={security} onLoad={loadSecurity} />}
@@ -426,6 +435,65 @@ function OverviewTab({ overview }) {
         {Object.entries(overview.services || {}).map(([service, state]) => (
           <div className="admin-row" key={service}><strong>{service}</strong><span>{state}</span></div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function ReadinessTab({ readiness, onLoad }) {
+  useEffect(() => { if (!readiness) onLoad().catch(() => {}); }, [onLoad, readiness]);
+  if (!readiness) return <div className="empty-state">Loading production readiness...</div>;
+
+  const failed = (readiness.checks || []).filter((check) => check.status === "fail");
+  const warnings = (readiness.checks || []).filter((check) => check.status === "warning");
+  const metadata = readiness.operational_metadata || {};
+
+  return (
+    <section className="glass-section card-pad">
+      <p className="risk-box">
+        Admin readiness includes deeper operational metadata, but never exposes tokens, private keys, raw logs, IP addresses, raw user agents, or full server paths.
+      </p>
+      <div className="admin-card-grid">
+        {[
+          ["Overall status", readiness.overall_status],
+          ["Score", `${readiness.score}/100`],
+          ["Failed checks", failed.length],
+          ["Warnings", warnings.length],
+          ["Latest backup", metadata.latest_backup?.file_name || "None visible"],
+          ["Disk free", metadata.disk ? `${metadata.disk.free_percent}%` : "Unavailable"],
+        ].map(([label, value]) => (
+          <div className="stat-card" key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+
+      <h2>Readiness Checks</h2>
+      <div className="table-wrap">
+        <table className="stats-table">
+          <thead><tr><th>Check</th><th>Status</th><th>Severity</th><th>Message</th></tr></thead>
+          <tbody>
+            {(readiness.checks || []).map((check) => (
+              <tr key={check.id}>
+                <td>{check.name}</td>
+                <td>{check.status}</td>
+                <td>{check.severity}</td>
+                <td>{check.message}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Operational Metadata</h2>
+      <div className="admin-list">
+        <div className="admin-row"><strong>Storage warnings</strong><span>{metadata.storage?.warnings_count ?? "Unavailable"}</span></div>
+        <div className="admin-row"><strong>Storage errors</strong><span>{metadata.storage?.errors_count ?? "Unavailable"}</span></div>
+        <div className="admin-row"><strong>Active incidents</strong><span>{metadata.incidents?.total ?? "Unavailable"}</span></div>
+        <div className="admin-row"><strong>Registry active nodes</strong><span>{metadata.registry?.active_node_count ?? "Unavailable"}</span></div>
+        <div className="admin-row"><strong>Deployment commit</strong><span>{metadata.deployment?.commit?.slice(0, 12) || "Unavailable"}</span></div>
+        <div className="admin-row"><strong>Services</strong><span>{(metadata.services || []).join(", ")}</span></div>
       </div>
     </section>
   );

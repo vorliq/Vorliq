@@ -22,6 +22,7 @@ assert.strictEqual(typeof sdk.getAPIVersion, "function");
 assert.strictEqual(typeof sdk.getVersionMetadata, "function");
 assert.strictEqual(typeof sdk.getChangelog, "function");
 assert.strictEqual(typeof sdk.getRoadmap, "function");
+assert.strictEqual(typeof sdk.getReadiness, "function");
 assert.strictEqual(typeof sdk.setRequestId, "function");
 sdk
   .sendTransaction("SYSTEM", "not-used", "not-used", validAddress, 1)
@@ -66,6 +67,9 @@ global.fetch = async (url, options = {}) => {
       if (String(url).endsWith("/api/v1/roadmap")) {
         return { success: true, items: [{ status: "completed", title: "API v1" }] };
       }
+      if (String(url).endsWith("/api/v1/readiness")) {
+        return { success: true, overall_status: "pass", score: 100, checks: [] };
+      }
       return { success: true, summary: { height: 1 } };
     },
   };
@@ -82,19 +86,22 @@ global.fetch = async (url, options = {}) => {
   assert.strictEqual(changelog.entries[0].version, "1.0.0");
   const roadmap = await v1Client.getRoadmap();
   assert.strictEqual(roadmap.items[0].status, "completed");
+  const readiness = await v1Client.getReadiness();
+  assert.strictEqual(readiness.overall_status, "pass");
   const summary = await v1Client.getChainSummary();
   assert.strictEqual(summary.height, 1);
   assert.strictEqual(calls[0].url, "https://example.invalid/api/v1/version");
   assert.strictEqual(calls[1].url, "https://example.invalid/api/v1/version/metadata");
   assert.strictEqual(calls[2].url, "https://example.invalid/api/v1/changelog");
   assert.strictEqual(calls[3].url, "https://example.invalid/api/v1/roadmap");
-  assert.strictEqual(calls[4].url, "https://example.invalid/api/v1/chain/summary");
-  assert.strictEqual(calls[4].options.headers["X-Request-ID"], "sdk-smoke");
+  assert.strictEqual(calls[4].url, "https://example.invalid/api/v1/readiness");
+  assert.strictEqual(calls[5].url, "https://example.invalid/api/v1/chain/summary");
+  assert.strictEqual(calls[5].options.headers["X-Request-ID"], "sdk-smoke");
   assert.strictEqual(v1Client.lastRequestId, "sdk-smoke-request");
 
   const legacyClient = new VorliqSDK({ nodeUrl: "https://example.invalid", apiVersion: "legacy" });
   await legacyClient.getChainSummary();
-  assert.strictEqual(calls[5].url, "https://example.invalid/api/chain/summary");
+  assert.strictEqual(calls[6].url, "https://example.invalid/api/chain/summary");
 
   try {
     await v1Client.reportContent({ target_type: "profile", target_id: "x", reason: "other" });
