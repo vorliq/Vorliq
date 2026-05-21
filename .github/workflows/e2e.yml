@@ -19,7 +19,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
@@ -33,6 +33,27 @@ jobs:
       - name: Install Chromium browser
         working-directory: e2e
         run: npx playwright install --with-deps chromium
+
+      - name: Wait for deployed production commit
+        env:
+          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+
+          for attempt in {1..20}; do
+            commit="$(node -e "fetch('https://vorliq.org/api/deployment').then(r => r.json()).then(j => process.stdout.write(String(j.commit_hash || ''))).catch(() => process.exit(1))" || true)"
+            if [ "$commit" = "$EXPECTED_SHA" ]; then
+              echo "Production deployment is serving $commit."
+              node tools/check_readiness.js https://vorliq.org --allow-warning
+              exit 0
+            fi
+
+            echo "Waiting for production deployment $EXPECTED_SHA; current is ${commit:-unavailable} (attempt $attempt/20)."
+            sleep 15
+          done
+
+          echo "::error title=Production deployment not ready::vorliq.org did not report $EXPECTED_SHA before E2E."
+          exit 1
 
       - name: Run read-only production E2E smoke tests
         working-directory: e2e
