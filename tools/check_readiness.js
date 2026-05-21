@@ -78,20 +78,27 @@ function formatReport(readiness) {
 }
 
 async function fetchReadiness(baseUrl) {
-  const response = await fetch(`${baseUrl}/api/readiness`, {
-    headers: { Accept: "application/json" },
-  });
-  const text = await response.text();
-  let json;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
   try {
-    json = JSON.parse(text);
-  } catch (error) {
-    throw new Error(`Readiness endpoint returned non-JSON response with status ${response.status}.`);
+    const response = await fetch(`${baseUrl}/api/readiness`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (error) {
+      throw new Error(`Readiness endpoint returned non-JSON response with status ${response.status}.`);
+    }
+    if (!response.ok || json.success !== true) {
+      throw new Error(json.message || `Readiness endpoint returned status ${response.status}.`);
+    }
+    return json;
+  } finally {
+    clearTimeout(timeout);
   }
-  if (!response.ok || json.success !== true) {
-    throw new Error(json.message || `Readiness endpoint returned status ${response.status}.`);
-  }
-  return json;
 }
 
 async function main(argv = process.argv.slice(2)) {

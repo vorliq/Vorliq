@@ -222,13 +222,13 @@ jobs:
       - name: Run public production readiness gate
         run: |
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
-            if ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes root@159.65.24.177 "sudo -u vorliq -H bash -lc 'cd /home/vorliq/app && node tools/check_readiness.js https://vorliq.org --allow-warning'"; then
+            if ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 root@159.65.24.177 "timeout 45s sudo -u vorliq -H bash -lc 'cd /home/vorliq/app && node tools/check_readiness.js https://vorliq.org --allow-warning'"; then
               exit 0
             fi
             echo "Readiness gate failed on attempt ${attempt}; waiting for services to settle."
             sleep 30
           done
-          ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes root@159.65.24.177 "sudo -u vorliq -H bash -lc 'cd /home/vorliq/app && node tools/check_readiness.js https://vorliq.org --allow-warning'"
+          ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 root@159.65.24.177 "timeout 45s sudo -u vorliq -H bash -lc 'cd /home/vorliq/app && node tools/check_readiness.js https://vorliq.org --allow-warning'"
 
       - name: Print deployment success
         run: echo "Deployment successful for commit ${{ github.event.workflow_run.head_sha }}"
