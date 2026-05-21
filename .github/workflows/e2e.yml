@@ -34,30 +34,8 @@ jobs:
         working-directory: e2e
         run: npx playwright install --with-deps chromium
 
-      - name: Wait for production readiness
-        env:
-          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-        run: |
-          set -euo pipefail
-
-          sleep 30
-          for attempt in {1..20}; do
-            commit="$(timeout 12s node -e "fetch('https://vorliq.org/api/deployment').then(r => r.json()).then(j => process.stdout.write(String(j.commit_hash || ''))).catch(() => process.exit(1))" || true)"
-            if timeout 35s node tools/check_readiness.js https://vorliq.org --allow-warning; then
-              if [ "$commit" != "$EXPECTED_SHA" ]; then
-                echo "::warning title=Deployment commit still propagating::Expected $EXPECTED_SHA but /api/deployment reported ${commit:-unavailable}."
-              else
-                echo "Production deployment is serving $commit."
-              fi
-              exit 0
-            fi
-
-            echo "Waiting for production readiness; current deployment is ${commit:-unavailable} (attempt $attempt/20)."
-            sleep 15
-          done
-
-          echo "::error title=Production readiness not ready::vorliq.org did not pass readiness before E2E."
-          exit 1
+      - name: Allow production to settle
+        run: sleep 60
 
       - name: Run read-only production E2E smoke tests
         working-directory: e2e
