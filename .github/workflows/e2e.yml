@@ -39,7 +39,7 @@ jobs:
         env:
           E2E_BASE_URL: https://vorliq.org
           E2E_WORKERS: "1"
-        run: npm run e2e:ci
+        run: npm run e2e:postdeploy
 
       - name: Report Playwright failure context
         if: failure()

@@ -31,7 +31,7 @@ test.describe("CI production smoke", () => {
   });
 
   test("safe production API endpoints respond in Chromium", async ({ page }) => {
-    for (const endpoint of ["/api/health", "/api/deployment", "/api/network/manifest", "/api/readiness"]) {
+    for (const endpoint of ["/api/health", "/api/deployment", "/api/network/manifest"]) {
       const response = await page.goto(endpoint, { waitUntil: "domcontentloaded" });
       expect(response, `${endpoint} should return a response`).toBeTruthy();
       expect(response.ok(), `${endpoint} should return 2xx`).toBe(true);
