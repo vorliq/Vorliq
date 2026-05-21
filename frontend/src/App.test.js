@@ -833,6 +833,12 @@ function defaultApiGet(path) {
         success: true,
         storage_backend: "json",
         database_enabled: false,
+        future_database_target: "postgresql",
+        postgres_schema_present: true,
+        postgres_active: false,
+        migration_phase: "preparation",
+        rollback_plan_required: true,
+        migration_tools_available: true,
         migration_supported: "dry_run_only",
         chain_source_of_truth: "chain.json",
         pending_source_of_truth: "pending.json",
@@ -843,6 +849,9 @@ function defaultApiGet(path) {
         last_index_health: { status: "ok", rebuild_needed: false, index_chain_match: true },
         docs_url: "https://vorliq.github.io/Vorliq/storage-adapters.html",
         schema_map_url: "https://vorliq.github.io/Vorliq/schema-map.html",
+        postgres_readiness_url: "https://vorliq.github.io/Vorliq/postgres-readiness.html",
+        database_migration_plan_url: "https://vorliq.github.io/Vorliq/database-migration-plan.html",
+        database_rollback_plan_url: "https://vorliq.github.io/Vorliq/database-rollback-plan.html",
         message: "Production storage is intentionally still hardened JSON. Database migration support is dry-run preparation only.",
       },
     });
@@ -861,6 +870,12 @@ function defaultApiGet(path) {
         migration_readiness_available: true,
         storage_backend: "json",
         database_enabled: false,
+        future_database_target: "postgresql",
+        postgres_schema_present: true,
+        postgres_active: false,
+        migration_phase: "preparation",
+        rollback_plan_required: true,
+        migration_tools_available: true,
         checks: [
           {
             id: "index_health_ok",
@@ -877,6 +892,22 @@ function defaultApiGet(path) {
             status: "pass",
             severity: "medium",
             message: "Migration readiness metadata is available.",
+          },
+          {
+            id: "postgres_schema_present",
+            name: "PostgreSQL schema present",
+            category: "Storage",
+            status: "pass",
+            severity: "medium",
+            message: "Preparation-only PostgreSQL schema files are present.",
+          },
+          {
+            id: "postgres_not_active_expected",
+            name: "PostgreSQL not active expected",
+            category: "Storage",
+            status: "pass",
+            severity: "critical",
+            message: "PostgreSQL is not active in production, as expected for this preparation release.",
           },
         ],
       },
@@ -2066,7 +2097,12 @@ test("Migration Readiness page renders current JSON storage preparation state", 
   renderWithProviders(<MigrationReadiness />, "/migration-readiness");
 
   expect(await screen.findByRole("heading", { name: /migration readiness/i })).toBeInTheDocument();
-  expect(await screen.findByText(/storage backend/i)).toBeInTheDocument();
+  expect(await screen.findByText(/future database target/i)).toBeInTheDocument();
+  expect((await screen.findAllByText(/postgresql/i)).length).toBeGreaterThan(0);
+  expect(await screen.findByText(/current production storage/i)).toBeInTheDocument();
+  expect(await screen.findByText(/postgresql active/i)).toBeInTheDocument();
+  expect(await screen.findByText(/schema files present/i)).toBeInTheDocument();
+  expect(await screen.findByText(/rollback required/i)).toBeInTheDocument();
   expect(await screen.findByText(/chain\.json/i)).toBeInTheDocument();
   expect(screen.getByText(/production storage is intentionally still hardened json/i)).toBeInTheDocument();
 });
@@ -2077,7 +2113,8 @@ test("Health page renders Migration Readiness summary", async () => {
   renderWithProviders(<Health />, "/health");
 
   expect(await screen.findByRole("heading", { name: /migration readiness/i })).toBeInTheDocument();
-  expect(await screen.findByText(/storage backend/i)).toBeInTheDocument();
+  expect(await screen.findByText(/future target/i)).toBeInTheDocument();
+  expect(await screen.findByText(/schema files/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /open migration readiness/i })).toHaveAttribute("href", "/migration-readiness");
 });
 
@@ -2097,6 +2134,8 @@ test("Readiness page includes index checks", async () => {
   expect(await screen.findByText(/index rebuild needed/i)).toBeInTheDocument();
   expect(await screen.findByText(/index health is ok/i)).toBeInTheDocument();
   expect(await screen.findByText(/migration readiness metadata is available/i)).toBeInTheDocument();
+  expect(await screen.findByText(/preparation-only postgresql schema files are present/i)).toBeInTheDocument();
+  expect(await screen.findByText(/postgresql is not active in production/i)).toBeInTheDocument();
 });
 
 test("Admin Indexes section stays protected and renders safe rebuild controls after token", async () => {
@@ -2183,6 +2222,11 @@ test("Admin Migration section stays protected and renders dry-run metadata after
           success: true,
           storage_backend: "json",
           database_enabled: false,
+          future_database_target: "postgresql",
+          postgres_schema_present: true,
+          postgres_active: false,
+          migration_phase: "preparation",
+          migration_tools_available: true,
           migration_supported: "dry_run_only",
           chain_source_of_truth: "chain.json",
           indexes_derived: true,
@@ -2192,6 +2236,8 @@ test("Admin Migration section stays protected and renders dry-run metadata after
           last_index_health: { status: "ok" },
           operator_metadata: {
             dry_run_tool: "tools/migration_dry_run.py",
+            postgres_schema_check_tool: "tools/postgres_schema_check.py",
+            import_simulation_tool: "tools/simulate_postgres_import.py",
             rollback_required: true,
           },
         },

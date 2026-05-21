@@ -15,7 +15,7 @@
     <p>The active adapter is JSON persistence under <code>blockchain/data</code> and <code>backend/data</code>. The chain uses atomic writes, backup-before-write behavior, storage health checks, audit exports, and derived read indexes.</p>
 
     <h2>Future Adapters</h2>
-    <p>Future adapters may target SQLite for single-node deployments or Postgres for multi-process service deployments. Any future adapter must preserve public API behavior, chain validation behavior, and audit export parity before it can become active.</p>
+    <p>Future adapters may target SQLite for single-node deployments or PostgreSQL for managed multi-process production deployments. PostgreSQL is the preferred future production option because it provides transactional imports, JSONB compatibility, mature managed backups, replicas, and strong relational indexing. Any future adapter must preserve public API behavior, chain validation behavior, and audit export parity before it can become active.</p>
 
     <h2>Immutable Chain Rule</h2>
     <p>Historical chain blocks are immutable. A database adapter must store the original block fields without rewriting transactions, recalculating historical hashes, or changing proof data. Block hashes remain the compatibility contract.</p>
@@ -38,6 +38,9 @@
     <h2>Related</h2>
     <ul>
       <li><a href="schema-map.html">Schema map</a></li>
+      <li><a href="postgres-readiness.html">PostgreSQL readiness</a></li>
+      <li><a href="database-migration-plan.html">Database migration plan</a></li>
+      <li><a href="database-rollback-plan.html">Database rollback plan</a></li>
       <li><a href="storage.html">Storage reliability</a></li>
       <li><a href="indexes.html">Derived indexes</a></li>
       <li><a href="recovery.html">Recovery guide</a></li>

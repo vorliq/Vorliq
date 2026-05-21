@@ -20,7 +20,15 @@ test("stable v1 API compatibility endpoints return safe JSON", async ({ request 
 });
 
 test("developer compatibility docs load", async ({ page }) => {
-  for (const path of ["/api-versioning.html", "/examples.html", "/upgrades.html", "/readiness.html"]) {
+  for (const path of [
+    "/api-versioning.html",
+    "/examples.html",
+    "/upgrades.html",
+    "/readiness.html",
+    "/postgres-readiness.html",
+    "/database-migration-plan.html",
+    "/database-rollback-plan.html",
+  ]) {
     await page.goto(`${docsBaseUrl()}${path}`, { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).toContainText(/Vorliq|API|Developer/i);
     await expectNoCrashText(page);

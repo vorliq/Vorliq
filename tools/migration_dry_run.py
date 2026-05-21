@@ -41,6 +41,39 @@ BACKEND_FILES = {
     "reports": "reports.json",
 }
 
+POSTGRES_READY_TABLES = [
+    "blocks",
+    "confirmed_transactions",
+    "pending_transactions",
+    "peers",
+    "registry_nodes",
+    "lending_loans",
+    "exchange_offers",
+    "governance_proposals",
+    "governance_rule_changes",
+    "treasury_proposals",
+    "treasury_ledger",
+    "price_signals",
+    "forum_posts",
+    "forum_replies",
+    "reports",
+    "achievements",
+    "profiles",
+    "faucet_claims",
+    "analytics_events",
+    "incidents",
+    "audit_exports_metadata",
+    "storage_health_snapshots",
+]
+
+LEGACY_COMPATIBILITY_NOTES = [
+    "Confirmed transactions keep raw_transaction_json so legacy transactions without tx_id remain importable.",
+    "Blocks keep raw_block_json and original hash fields; historical block hashes must not be recalculated or rewritten.",
+    "Pending transactions remain separate from confirmed transactions until mined.",
+    "Derived indexes are not imported as source of truth; they should be rebuilt after a future cutover.",
+    "JSON backups remain the rollback source until database parity and smoke tests pass.",
+]
+
 
 def iso_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -233,6 +266,8 @@ def future_tables(files: dict[str, Any]) -> dict[str, dict[str, Any]]:
         "incidents": len(incidents.get("incidents", []) or []),
         "reports": len(reports.get("reports", []) or []),
         "indexes_cache": 1 if indexes else 0,
+        "audit_exports_metadata": 0,
+        "storage_health_snapshots": 0,
     }
 
     return {
@@ -242,6 +277,21 @@ def future_tables(files: dict[str, Any]) -> dict[str, dict[str, Any]]:
         }
         for table, count in table_counts.items()
     }
+
+
+def postgres_ready_tables(table_summary: dict[str, dict[str, Any]]) -> tuple[list[str], list[str]]:
+    available = set(table_summary)
+    ready = [table for table in POSTGRES_READY_TABLES if table in available]
+    missing = [table for table in POSTGRES_READY_TABLES if table not in available]
+    return ready, missing
+
+
+def risk_score(errors: list[str], warnings: list[str], missing_optional: list[str]) -> str:
+    if errors:
+        return "high"
+    if len(warnings) >= 3 or len(missing_optional) >= 8:
+        return "medium"
+    return "low"
 
 
 def build_report(data_dir: Path, strict: bool = False) -> dict[str, Any]:
@@ -272,6 +322,12 @@ def build_report(data_dir: Path, strict: bool = False) -> dict[str, Any]:
 
     record_counts = {name: count_records(name, data) for name, data in files.items()}
     table_summary = future_tables(files)
+    ready_tables, missing_postgres_tables = postgres_ready_tables(table_summary)
+    estimated_rows = {
+        table: int(summary.get("record_count", 0))
+        for table, summary in table_summary.items()
+        if table in POSTGRES_READY_TABLES
+    }
     if files.get("indexes") is not None:
         warnings.append("indexes.json is derived and should be rebuilt after any real database migration.")
 
@@ -291,6 +347,12 @@ def build_report(data_dir: Path, strict: bool = False) -> dict[str, Any]:
         "warnings": warnings,
         "errors": errors,
         "future_tables_summary": table_summary,
+        "postgres_ready_tables": ready_tables,
+        "missing_postgres_tables": missing_postgres_tables,
+        "estimated_rows_by_future_table": estimated_rows,
+        "legacy_compatibility_notes": LEGACY_COMPATIBILITY_NOTES,
+        "migration_risk_score": risk_score(errors, warnings, missing_optional),
+        "rollback_required": True,
     }
 
 
@@ -312,6 +374,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Chain height: {report['chain_height']}")
     print(f"Latest block hash: {report['latest_block_hash'] or 'unavailable'}")
     print(f"Future tables: {len(report['future_tables_summary'])}")
+    print(f"PostgreSQL-ready tables: {len(report['postgres_ready_tables'])}")
+    print(f"Migration risk score: {report['migration_risk_score']}")
+    print("Rollback required: yes")
     if report["missing_optional_files"]:
         print(f"Missing optional files: {', '.join(report['missing_optional_files'])}")
     if report["warnings"]:

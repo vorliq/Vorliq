@@ -509,6 +509,10 @@ function Health() {
         ) : migrationReadiness?.success ? (
           <div className="stats-grid compact-stats">
             <div className="stat-card">
+              <span>Future target</span>
+              <strong>{migrationReadiness.future_database_target || "unknown"}</strong>
+            </div>
+            <div className="stat-card">
               <span>Storage backend</span>
               <strong>{migrationReadiness.storage_backend}</strong>
             </div>
@@ -517,12 +521,28 @@ function Health() {
               <strong>{migrationReadiness.database_enabled ? "Yes" : "No"}</strong>
             </div>
             <div className="stat-card">
+              <span>PostgreSQL active</span>
+              <strong>{migrationReadiness.postgres_active ? "Yes" : "No"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Schema files</span>
+              <strong>{migrationReadiness.postgres_schema_present ? "Present" : "Missing"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Migration phase</span>
+              <strong>{migrationReadiness.migration_phase || "unknown"}</strong>
+            </div>
+            <div className="stat-card">
               <span>Chain source</span>
               <strong>{migrationReadiness.chain_source_of_truth}</strong>
             </div>
             <div className="stat-card">
               <span>Indexes derived</span>
               <strong>{migrationReadiness.indexes_derived ? "Yes" : "No"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Rollback required</span>
+              <strong>{migrationReadiness.rollback_plan_required ? "Yes" : "No"}</strong>
             </div>
           </div>
         ) : (

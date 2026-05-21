@@ -64,7 +64,11 @@ function MigrationReadiness() {
             </div>
             <div className="stats-grid compact-stats">
               <div className="stat-card">
-                <span>Storage backend</span>
+                <span>Future database target</span>
+                <strong>{display(readiness.future_database_target)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Current production storage</span>
                 <strong>{display(readiness.storage_backend)}</strong>
               </div>
               <div className="stat-card">
@@ -72,8 +76,24 @@ function MigrationReadiness() {
                 <strong>{display(readiness.database_enabled)}</strong>
               </div>
               <div className="stat-card">
+                <span>PostgreSQL active</span>
+                <strong>{display(readiness.postgres_active)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Migration phase</span>
+                <strong>{display(readiness.migration_phase)}</strong>
+              </div>
+              <div className="stat-card">
                 <span>Migration support</span>
                 <strong>{display(readiness.migration_supported).replaceAll("_", " ")}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Schema files present</span>
+                <strong>{display(readiness.postgres_schema_present)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Migration tools</span>
+                <strong>{display(readiness.migration_tools_available)}</strong>
               </div>
               <div className="stat-card">
                 <span>Chain source</span>
@@ -82,6 +102,10 @@ function MigrationReadiness() {
               <div className="stat-card">
                 <span>Indexes derived</span>
                 <strong>{display(readiness.indexes_derived)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Rollback required</span>
+                <strong>{display(readiness.rollback_plan_required)}</strong>
               </div>
               <div className="stat-card">
                 <span>Chain height</span>
@@ -118,6 +142,18 @@ function MigrationReadiness() {
                     <th>Index rebuild needed</th>
                     <td>{display(readiness.last_index_health?.rebuild_needed)}</td>
                   </tr>
+                  <tr>
+                    <th>Migration dry-run tool</th>
+                    <td>{readiness.migration_tools_available ? "Available" : "Unavailable"}</td>
+                  </tr>
+                  <tr>
+                    <th>Import simulation tool</th>
+                    <td>{readiness.migration_tools_available ? "Available" : "Unavailable"}</td>
+                  </tr>
+                  <tr>
+                    <th>Last schema check</th>
+                    <td>{display(readiness.last_schema_check?.status)}</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -131,6 +167,15 @@ function MigrationReadiness() {
               </a>
               <a href="https://vorliq.github.io/Vorliq/schema-map.html" target="_blank" rel="noreferrer">
                 Schema Map
+              </a>
+              <a href="https://vorliq.github.io/Vorliq/postgres-readiness.html" target="_blank" rel="noreferrer">
+                PostgreSQL Readiness
+              </a>
+              <a href="https://vorliq.github.io/Vorliq/database-migration-plan.html" target="_blank" rel="noreferrer">
+                Migration Plan
+              </a>
+              <a href="https://vorliq.github.io/Vorliq/database-rollback-plan.html" target="_blank" rel="noreferrer">
+                Rollback Plan
               </a>
               <a href="https://vorliq.github.io/Vorliq/recovery.html" target="_blank" rel="noreferrer">
                 Recovery

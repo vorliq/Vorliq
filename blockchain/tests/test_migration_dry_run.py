@@ -49,6 +49,11 @@ def test_migration_dry_run_works_on_temp_data(tmp_path):
     assert report["chain_height"] == 0
     assert report["record_counts"]["chain"] == 1
     assert "blocks" in report["future_tables_summary"]
+    assert "blocks" in report["postgres_ready_tables"]
+    assert report["missing_postgres_tables"] == []
+    assert report["estimated_rows_by_future_table"]["blocks"] == 1
+    assert report["migration_risk_score"] in {"low", "medium", "high"}
+    assert report["rollback_required"] is True
 
 
 def test_missing_optional_files_are_reported_without_failing(tmp_path):
@@ -116,3 +121,4 @@ def test_report_contains_future_table_summary(tmp_path):
     assert tables["forum_replies"]["record_count"] == 1
     assert tables["profiles"]["record_count"] == 1
     assert tables["indexes_cache"]["write_mode"] == "derived_cache"
+    assert report["legacy_compatibility_notes"]

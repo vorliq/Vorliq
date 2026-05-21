@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vorliq Database Rollback Plan</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>Database Rollback Plan</h1>
+    <p>This rollback plan is preparation only. Production is currently already on JSON, so no database rollback is needed today.</p>
+
+    <h2>Rollback Source</h2>
+    <p>Verified JSON backups remain the rollback source. <code>chain.json</code>, <code>pending.json</code>, domain JSON files, backend app-state JSON, and audit exports must be preserved during any future migration window.</p>
+
+    <h2>Rollback Requirements</h2>
+    <ul>
+      <li>Keep a verified pre-migration backup archive.</li>
+      <li>Keep the previous JSON-based deployment artifact available.</li>
+      <li>Do not delete JSON files after cutover until parity and observation windows pass.</li>
+      <li>Document the final JSON latest block hash and chain height before cutover.</li>
+      <li>Confirm no private wallet keys or secrets entered database logs or reports.</li>
+    </ul>
+
+    <h2>Rollback Steps For A Future Cutover</h2>
+    <ol>
+      <li>Stop database-backed writes.</li>
+      <li>Restore the previous JSON-backed service configuration.</li>
+      <li>Restore verified JSON files only if the active files were changed during cutover.</li>
+      <li>Restart services and verify <code>/api/storage/health</code>, <code>/api/indexes/health</code>, <code>/api/readiness</code>, and public explorer routes.</li>
+      <li>Rebuild derived indexes from JSON if needed.</li>
+      <li>Publish an incident note if users were affected.</li>
+    </ol>
+
+    <h2>Never Rewrite</h2>
+    <p>Never rewrite historical blocks, block hashes, transaction order, proof data, or raw historical transaction payloads while rolling back.</p>
+
+    <h2>Related</h2>
+    <ul>
+      <li><a href="recovery.html">Recovery guide</a></li>
+      <li><a href="storage.html">Storage reliability</a></li>
+      <li><a href="postgres-readiness.html">PostgreSQL readiness</a></li>
+    </ul>
+  </main>
+</body>
+</html>
+

@@ -52,6 +52,14 @@ curl -fsS https://your-node.example/api/audit/manifest</pre>
       <p>Confirm the deployment commit, API version, storage health, chain validity, and audit manifest before announcing an upgrade is complete.</p>
     </section>
     <section>
+      <h2>Database Migration Preparation</h2>
+      <p>Normal upgrades must not switch production storage to PostgreSQL. PostgreSQL files are preparation-only until a future migration window is planned, rehearsed, and rollback-approved.</p>
+      <pre>python tools/postgres_schema_check.py
+python tools/migration_dry_run.py --output migration-dry-run-report.json
+python tools/simulate_postgres_import.py --input migration-dry-run-report.json --output import-simulation.json</pre>
+      <p>Do not commit real production reports. Read <a href="postgres-readiness.html">PostgreSQL Readiness</a>, <a href="database-migration-plan.html">Database Migration Plan</a>, and <a href="database-rollback-plan.html">Database Rollback Plan</a> before any future adapter work.</p>
+    </section>
+    <section>
       <h2>If Upgrade Fails</h2>
       <ul>
         <li>Stop and preserve logs; do not delete public chain or state files.</li>

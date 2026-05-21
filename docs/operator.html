@@ -93,7 +93,7 @@ sudo systemctl restart vorliq-backend.service</code></pre>
         <p>Derived index health is available at <code>/api/indexes/health</code>. Protected operators can call <code>/api/admin/indexes/rebuild</code> to rebuild <code>indexes.json</code> without rewriting <code>chain.json</code> or changing block hashes.</p>
         <p>Migration readiness is available at <code>/api/migration/readiness</code>. Protected operators can review deeper safe metadata at <code>/api/admin/migration/readiness</code>. Production should continue to report <code>storage_backend: json</code> and <code>database_enabled: false</code> until a future migration is explicitly planned and verified.</p>
         <p>Read the <a href="storage.html">Storage Reliability</a> guide before responding to corruption warnings or restoring from backup.</p>
-        <p>Read <a href="storage-adapters.html">Storage Adapters</a> and <a href="schema-map.html">Schema Map</a> before planning any database migration.</p>
+        <p>Read <a href="storage-adapters.html">Storage Adapters</a>, <a href="schema-map.html">Schema Map</a>, <a href="postgres-readiness.html">PostgreSQL Readiness</a>, <a href="database-migration-plan.html">Database Migration Plan</a>, and <a href="database-rollback-plan.html">Database Rollback Plan</a> before planning any database migration.</p>
       </section>
 
       <section class="glass">

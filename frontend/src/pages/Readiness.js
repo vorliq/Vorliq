@@ -117,6 +117,22 @@ function Readiness() {
                 <span>Database enabled</span>
                 <strong>{readiness.database_enabled ? "Yes" : "No"}</strong>
               </div>
+              <div className="stat-card">
+                <span>Future database</span>
+                <strong>{readiness.future_database_target || "unknown"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>PostgreSQL active</span>
+                <strong>{readiness.postgres_active ? "Yes" : "No"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>PostgreSQL schema</span>
+                <strong>{readiness.postgres_schema_present ? "Present" : "Missing"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Migration tools</span>
+                <strong>{readiness.migration_tools_available ? "Available" : "Unavailable"}</strong>
+              </div>
             </div>
           </section>
 

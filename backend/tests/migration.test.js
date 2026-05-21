@@ -88,6 +88,12 @@ describe("migration readiness routes", () => {
     expect(response.body.success).toBe(true);
     expect(response.body.storage_backend).toBe("json");
     expect(response.body.database_enabled).toBe(false);
+    expect(response.body.future_database_target).toBe("postgresql");
+    expect(response.body.postgres_schema_present).toBe(true);
+    expect(response.body.postgres_active).toBe(false);
+    expect(response.body.migration_phase).toBe("preparation");
+    expect(response.body.rollback_plan_required).toBe(true);
+    expect(response.body.migration_tools_available).toBe(true);
     expect(response.body.migration_supported).toBe("dry_run_only");
     expect(response.body.chain_source_of_truth).toBe("chain.json");
     expect(response.body.indexes_derived).toBe(true);
@@ -110,6 +116,9 @@ describe("migration readiness routes", () => {
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
     expect(response.body.operator_metadata.dry_run_tool).toBe("tools/migration_dry_run.py");
+    expect(response.body.operator_metadata.postgres_schema_check_tool).toBe("tools/postgres_schema_check.py");
+    expect(response.body.operator_metadata.import_simulation_tool).toBe("tools/simulate_postgres_import.py");
+    expect(response.body.operator_metadata.schema_files.some((file) => file.name === "schema.sql")).toBe(true);
     expect(response.body.operator_metadata.private_wallet_keys_stored_server_side).toBe(false);
     expect(JSON.stringify(response.body)).not.toContain("migration-admin-token");
   });

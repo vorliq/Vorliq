@@ -447,11 +447,16 @@ function MigrationTab({ migration, onLoad }) {
         <>
           <div className="admin-card-grid">
             {[
+              ["Future target", migration.future_database_target || "unknown"],
               ["Storage backend", migration.storage_backend],
               ["Database enabled", migration.database_enabled ? "Yes" : "No"],
+              ["PostgreSQL active", migration.postgres_active ? "Yes" : "No"],
+              ["Schema files", migration.postgres_schema_present ? "Present" : "Missing"],
+              ["Migration phase", migration.migration_phase || "unknown"],
               ["Migration support", String(migration.migration_supported || "unknown").replaceAll("_", " ")],
               ["Chain source", migration.chain_source_of_truth],
               ["Indexes derived", migration.indexes_derived ? "Yes" : "No"],
+              ["Migration tools", migration.migration_tools_available ? "Available" : "Unavailable"],
               ["Chain height", migration.latest_chain_height],
             ].map(([label, value]) => (
               <div className="stat-card" key={label}>
@@ -467,6 +472,8 @@ function MigrationTab({ migration, onLoad }) {
                 <tr><th>Storage health</th><td>{migration.last_storage_health?.overall_status || "unknown"}</td></tr>
                 <tr><th>Index health</th><td>{migration.last_index_health?.status || "unknown"}</td></tr>
                 <tr><th>Dry-run tool</th><td>{migration.operator_metadata?.dry_run_tool || "tools/migration_dry_run.py"}</td></tr>
+                <tr><th>Schema check tool</th><td>{migration.operator_metadata?.postgres_schema_check_tool || "tools/postgres_schema_check.py"}</td></tr>
+                <tr><th>Import simulation tool</th><td>{migration.operator_metadata?.import_simulation_tool || "tools/simulate_postgres_import.py"}</td></tr>
                 <tr><th>Rollback required</th><td>{migration.operator_metadata?.rollback_required ? "Yes" : "No"}</td></tr>
               </tbody>
             </table>

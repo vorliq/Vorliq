@@ -45,11 +45,13 @@
         <tr><td>Analytics events</td><td>backend/data/analytics.json</td><td>analytics_events</td><td>event_id</td><td>event_type, route, category, timestamp, anonymous_session_id, metadata</td><td>Operational logs</td><td>Retention pruning and privacy rules must carry over.</td></tr>
         <tr><td>Incidents</td><td>backend/data/incidents.json</td><td>incidents</td><td>id</td><td>title, description, severity, status, affected_services, created_at, updated_at</td><td>Operational state</td><td>Resolved history should remain public and ordered.</td></tr>
         <tr><td>Reports</td><td>backend/data/reports.json</td><td>reports</td><td>report_id</td><td>target_type, target_id, reported_by, reason, description, status, moderator_note</td><td>Operational moderation state</td><td>Sanitize unsafe text and secrets during any export.</td></tr>
+        <tr><td>Audit export metadata</td><td>Generated audit exports</td><td>audit_exports_metadata</td><td>export_id</td><td>export_type, chain_height, latest_block_hash, sha256, generated_at</td><td>Operational metadata</td><td>Keep export hashes tied to immutable chain snapshots.</td></tr>
+        <tr><td>Storage health snapshots</td><td>Health/readiness endpoints</td><td>storage_health_snapshots</td><td>snapshot_id</td><td>overall_status, chain_height, latest_block_hash, warnings_count, errors_count, checked_at</td><td>Operational metadata</td><td>Never expose full server paths or raw file contents.</td></tr>
         <tr><td>Indexes</td><td>indexes.json</td><td>indexes_cache</td><td>schema_version plus chain height/hash</td><td>built_at, chain_height, latest_block_hash, indexes</td><td>Derived cache</td><td>Always rebuild after migration; never treat as source of truth.</td></tr>
       </tbody>
     </table>
 
-    <p>See <a href="storage-adapters.html">storage adapters</a> for the adapter policy and <a href="indexes.html">derived indexes</a> for cache behavior.</p>
+    <p>The PostgreSQL schema draft in the repository is preparation only and keeps raw JSONB columns for blocks and transactions so historical compatibility is preserved. See <a href="storage-adapters.html">storage adapters</a>, <a href="postgres-readiness.html">PostgreSQL readiness</a>, and <a href="indexes.html">derived indexes</a> for cache behavior.</p>
   </main>
 </body>
 </html>

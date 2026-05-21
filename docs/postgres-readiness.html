@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vorliq PostgreSQL Readiness</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>PostgreSQL Readiness</h1>
+    <p>Vorliq production storage is still hardened JSON. PostgreSQL is documented here as the preferred future managed database target, not as an active production backend.</p>
+
+    <h2>Why PostgreSQL Later</h2>
+    <p>PostgreSQL is the best future managed database option for Vorliq because it supports durable relational constraints, JSONB compatibility for legacy payloads, strong indexing, transactional imports, backups, replication, and mature managed hosting. That lets Vorliq keep immutable chain records while scaling public reads and operational state.</p>
+
+    <h2>Why Not Now</h2>
+    <p>The current JSON layer has atomic writes, backups, storage health checks, audit exports, and derived read indexes. Switching too early would add risk without enough migration rehearsal. The next safe step is validation, simulation, parity testing, and rollback planning.</p>
+
+    <h2>Preparation Artifacts</h2>
+    <ul>
+      <li><code>database/schema.sql</code> maps future tables.</li>
+      <li><code>database/indexes.sql</code> drafts future read indexes.</li>
+      <li><code>database/constraints.sql</code> documents future safety constraints.</li>
+      <li><code>tools/postgres_schema_check.py</code> checks files without connecting to PostgreSQL.</li>
+      <li><code>tools/simulate_postgres_import.py</code> simulates import ordering without database writes.</li>
+    </ul>
+
+    <h2>Immutable History</h2>
+    <p>Block hash, previous hash, nonce, timestamp, miner address, proof data, transaction order, and raw block JSON must be preserved. Confirmed transactions keep raw JSON so legacy entries without <code>tx_id</code> remain compatible.</p>
+
+    <h2>Operator Checks</h2>
+    <p>Check <code>/api/migration/readiness</code>, <code>/api/readiness</code>, and the live <a href="https://vorliq.org/migration-readiness">Migration Readiness</a> page. Run schema validation locally before any future migration rehearsal.</p>
+
+    <h2>Related</h2>
+    <ul>
+      <li><a href="database-migration-plan.html">Database migration plan</a></li>
+      <li><a href="database-rollback-plan.html">Database rollback plan</a></li>
+      <li><a href="schema-map.html">Schema map</a></li>
+      <li><a href="storage-adapters.html">Storage adapters</a></li>
+    </ul>
+  </main>
+</body>
+</html>
+

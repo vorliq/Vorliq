@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vorliq Database Migration Plan</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>Database Migration Plan</h1>
+    <p>This is a future planning document. Vorliq has not migrated to PostgreSQL and production still uses hardened JSON as the source of truth.</p>
+
+    <h2>Pre-Migration Rehearsal</h2>
+    <ol>
+      <li>Verify the latest JSON backup and storage health.</li>
+      <li>Run <code>python tools/postgres_schema_check.py</code>.</li>
+      <li>Run <code>python tools/migration_dry_run.py --output migration-dry-run-report.json</code>.</li>
+      <li>Run <code>python tools/simulate_postgres_import.py --input migration-dry-run-report.json --output import-simulation.json</code>.</li>
+      <li>Compare counts, latest block hash, and public API behavior in a staging environment.</li>
+    </ol>
+
+    <h2>Future Migration Window</h2>
+    <p>A future migration window should pause writes, snapshot JSON, run a final dry run, import into a managed PostgreSQL instance, run parity checks, switch a staged adapter, smoke test public routes, then cut traffic only after readiness passes.</p>
+
+    <h2>Block Hash Preservation</h2>
+    <p>The import must store original raw block JSON and raw transaction JSON. It must not normalize historical blocks in a way that changes block hash inputs or transaction ordering.</p>
+
+    <h2>Managed Database Recommendation</h2>
+    <p>Use a managed PostgreSQL provider with point-in-time recovery, encrypted backups, monitoring, read replicas if needed, and a tested restore workflow. Do not store server-side private wallet keys.</p>
+
+    <h2>Exit Criteria</h2>
+    <ul>
+      <li>Dry run status is ok or warnings are explicitly accepted.</li>
+      <li>Import simulation passes ordering checks.</li>
+      <li>Chain height and latest block hash match JSON.</li>
+      <li>Explorer, account, transaction, leaderboard, readiness, health, audit, and SDK smoke tests pass.</li>
+      <li>Rollback plan has been rehearsed.</li>
+    </ul>
+  </main>
+</body>
+</html>
+

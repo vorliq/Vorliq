@@ -56,7 +56,7 @@
 
       <section>
         <h2>Migration Readiness</h2>
-        <p>Database migration preparation is expected to pass while <code>storage_backend</code> is <code>json</code> and <code>database_enabled</code> is <code>false</code>. That is intentional: production has not migrated. The public endpoint <code>/api/migration/readiness</code> and the live <a href="https://vorliq.org/migration-readiness">Migration Readiness</a> page describe dry-run support.</p>
+        <p>Database migration preparation is expected to pass while <code>storage_backend</code> is <code>json</code>, <code>database_enabled</code> is <code>false</code>, and <code>postgres_active</code> is <code>false</code>. That is intentional: production has not migrated. The public endpoint <code>/api/migration/readiness</code> and the live <a href="https://vorliq.org/migration-readiness">Migration Readiness</a> page describe dry-run support, PostgreSQL schema presence, import simulation tooling, and rollback requirements.</p>
       </section>
 
       <section>

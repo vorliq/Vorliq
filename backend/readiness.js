@@ -322,6 +322,52 @@ async function buildReadiness(options = {}) {
     },
   });
 
+  addCheck(checks, {
+    id: "postgres_schema_present",
+    name: "PostgreSQL schema present",
+    category: "Storage",
+    status: migrationResult.ok && migration.postgres_schema_present === true ? "pass" : "warning",
+    severity: "medium",
+    message: migration.postgres_schema_present === true
+      ? "Preparation-only PostgreSQL schema files are present."
+      : "PostgreSQL preparation schema files are missing or unavailable.",
+    safe_metadata: {
+      future_database_target: migration.future_database_target || "unknown",
+      postgres_schema_present: Boolean(migration.postgres_schema_present),
+      migration_phase: migration.migration_phase || "unknown",
+    },
+  });
+
+  addCheck(checks, {
+    id: "postgres_not_active_expected",
+    name: "PostgreSQL not active expected",
+    category: "Storage",
+    status: migrationResult.ok && migration.postgres_active === false ? "pass" : "fail",
+    severity: "critical",
+    message: migration.postgres_active === false
+      ? "PostgreSQL is not active in production, as expected for this preparation release."
+      : "PostgreSQL appears active unexpectedly.",
+    safe_metadata: {
+      postgres_active: Boolean(migration.postgres_active),
+      storage_backend: migration.storage_backend || "unknown",
+    },
+  });
+
+  addCheck(checks, {
+    id: "migration_tools_available",
+    name: "Migration tools available",
+    category: "Storage",
+    status: migrationResult.ok && migration.migration_tools_available === true ? "pass" : "warning",
+    severity: "medium",
+    message: migration.migration_tools_available === true
+      ? "Migration dry-run, schema check, and import simulation tooling are available."
+      : "One or more migration preparation tools are unavailable.",
+    safe_metadata: {
+      migration_tools_available: Boolean(migration.migration_tools_available),
+      rollback_plan_required: Boolean(migration.rollback_plan_required),
+    },
+  });
+
   const backup = backupResult.value || {};
   const ageHours = backupAgeHours(backup);
   addCheck(checks, {
@@ -531,6 +577,12 @@ async function buildReadiness(options = {}) {
     migration_readiness_available: Boolean(migrationResult.ok && migration.success),
     storage_backend: migration.storage_backend || "unknown",
     database_enabled: Boolean(migration.database_enabled),
+    future_database_target: migration.future_database_target || "unknown",
+    postgres_schema_present: Boolean(migration.postgres_schema_present),
+    postgres_active: Boolean(migration.postgres_active),
+    migration_phase: migration.migration_phase || "unknown",
+    rollback_plan_required: Boolean(migration.rollback_plan_required),
+    migration_tools_available: Boolean(migration.migration_tools_available),
     checks,
   };
 
@@ -561,6 +613,12 @@ async function buildReadiness(options = {}) {
       migration: {
         storage_backend: migration.storage_backend || "unknown",
         database_enabled: Boolean(migration.database_enabled),
+        future_database_target: migration.future_database_target || "unknown",
+        postgres_schema_present: Boolean(migration.postgres_schema_present),
+        postgres_active: Boolean(migration.postgres_active),
+        migration_phase: migration.migration_phase || "unknown",
+        rollback_plan_required: Boolean(migration.rollback_plan_required),
+        migration_tools_available: Boolean(migration.migration_tools_available),
         migration_supported: migration.migration_supported || "unknown",
         chain_source_of_truth: migration.chain_source_of_truth || "unknown",
         indexes_derived: Boolean(migration.indexes_derived),

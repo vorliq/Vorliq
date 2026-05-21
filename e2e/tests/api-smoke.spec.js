@@ -73,4 +73,16 @@ test.describe("read-only API smoke tests", () => {
     expect(json.success).toBe(false);
     safeApiJson(json);
   });
+
+  test("migration readiness reports PostgreSQL preparation without activation", async ({ request }) => {
+    const response = await request.get("/api/migration/readiness");
+    expect(response.ok()).toBe(true);
+    const json = await response.json();
+    expect(json.future_database_target).toBe("postgresql");
+    expect(json.storage_backend).toBe("json");
+    expect(json.database_enabled).toBe(false);
+    expect(json.postgres_active).toBe(false);
+    expect(json.migration_phase).toBe("preparation");
+    safeApiJson(json);
+  });
 });
