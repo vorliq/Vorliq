@@ -42,8 +42,8 @@ jobs:
 
           sleep 30
           for attempt in {1..20}; do
-            commit="$(node -e "fetch('https://vorliq.org/api/deployment').then(r => r.json()).then(j => process.stdout.write(String(j.commit_hash || ''))).catch(() => process.exit(1))" || true)"
-            if node tools/check_readiness.js https://vorliq.org --allow-warning; then
+            commit="$(timeout 12s node -e "fetch('https://vorliq.org/api/deployment').then(r => r.json()).then(j => process.stdout.write(String(j.commit_hash || ''))).catch(() => process.exit(1))" || true)"
+            if timeout 35s node tools/check_readiness.js https://vorliq.org --allow-warning; then
               if [ "$commit" != "$EXPECTED_SHA" ]; then
                 echo "::warning title=Deployment commit still propagating::Expected $EXPECTED_SHA but /api/deployment reported ${commit:-unavailable}."
               else
