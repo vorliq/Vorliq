@@ -221,12 +221,12 @@ jobs:
 
       - name: Run public production readiness gate
         run: |
-          for attempt in 1 2 3 4 5 6; do
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
             if node tools/check_readiness.js https://vorliq.org --allow-warning; then
               exit 0
             fi
             echo "Readiness gate failed on attempt ${attempt}; waiting for services to settle."
-            sleep 15
+            sleep 30
           done
           node tools/check_readiness.js https://vorliq.org --allow-warning
 
