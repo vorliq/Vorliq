@@ -153,7 +153,13 @@ describe("production readiness", () => {
     expect(response.body.index_health).toBe("ok");
     expect(response.body.index_rebuild_needed).toBe(false);
     expect(response.body.index_chain_match).toBe(true);
+    expect(response.body.migration_readiness_available).toBe(true);
+    expect(response.body.storage_backend).toBe("json");
+    expect(response.body.database_enabled).toBe(false);
     expect(response.body.checks.some((check) => check.id === "index_health_ok")).toBe(true);
+    expect(response.body.checks.some((check) => check.id === "migration_readiness_available")).toBe(true);
+    expect(response.body.checks.some((check) => check.id === "storage_backend_json")).toBe(true);
+    expect(response.body.checks.some((check) => check.id === "database_not_enabled_expected")).toBe(true);
   });
 
   test("critical fail logic forces overall fail", () => {

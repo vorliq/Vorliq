@@ -1489,6 +1489,25 @@ summary {
   margin-bottom: 22px;
 }
 
+.resource-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.resource-grid a {
+  align-items: center;
+  background: var(--surface-glass);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  display: flex;
+  font-weight: 700;
+  min-height: 56px;
+  padding: 14px;
+  text-decoration: none;
+}
+
 .admin-row,
 .admin-moderation-card {
   align-items: center;

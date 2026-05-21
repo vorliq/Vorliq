@@ -26,6 +26,7 @@ function Health() {
   const [backupStatus, setBackupStatus] = useState(null);
   const [storageHealth, setStorageHealth] = useState(null);
   const [indexHealth, setIndexHealth] = useState(null);
+  const [migrationReadiness, setMigrationReadiness] = useState(null);
   const [activeIncidents, setActiveIncidents] = useState([]);
   const [weeklyReport, setWeeklyReport] = useState(null);
   const [registryNodes, setRegistryNodes] = useState([]);
@@ -54,6 +55,7 @@ function Health() {
         const backupRequest = api.get("/backup/status");
         const storageRequest = api.get("/storage/health");
         const indexRequest = api.get("/indexes/health");
+        const migrationRequest = api.get("/migration/readiness");
         const incidentsRequest = api.get("/incidents/active");
         const weeklyReportRequest = api.get("/reports/weekly");
         const miningRequest = api.get("/mining/status");
@@ -68,6 +70,7 @@ function Health() {
           backupResponse,
           storageResponse,
           indexResponse,
+          migrationResponse,
           incidentsResponse,
           weeklyReportResponse,
           miningResponse,
@@ -82,6 +85,7 @@ function Health() {
           backupRequest,
           storageRequest,
           indexRequest,
+          migrationRequest,
           incidentsRequest,
           weeklyReportRequest,
           miningRequest,
@@ -118,6 +122,7 @@ function Health() {
           setBackupStatus(backupResponse.data);
           setStorageHealth(storageResponse.data);
           setIndexHealth(indexResponse.data);
+          setMigrationReadiness(migrationResponse.data);
           setActiveIncidents(incidentsResponse.data.incidents || []);
           setWeeklyReport(weeklyReportResponse.data);
           setRegistryNodes(nodes);
@@ -490,6 +495,42 @@ function Health() {
         ) : (
           <div className="empty-state">Index health is unavailable right now.</div>
         )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <div className="section-title">
+          <h2>Migration Readiness</h2>
+          <span className="status-badge pass">
+            {migrationReadiness?.migration_supported?.replaceAll("_", " ") || "unknown"}
+          </span>
+        </div>
+        {loading ? (
+          <Spinner label="Loading migration readiness..." />
+        ) : migrationReadiness?.success ? (
+          <div className="stats-grid compact-stats">
+            <div className="stat-card">
+              <span>Storage backend</span>
+              <strong>{migrationReadiness.storage_backend}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Database enabled</span>
+              <strong>{migrationReadiness.database_enabled ? "Yes" : "No"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Chain source</span>
+              <strong>{migrationReadiness.chain_source_of_truth}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Indexes derived</span>
+              <strong>{migrationReadiness.indexes_derived ? "Yes" : "No"}</strong>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">Migration readiness is unavailable right now.</div>
+        )}
+        <p className="help-text">
+          <a href="/migration-readiness">Open migration readiness</a>
+        </p>
       </section>
 
       <section className="card card-pad health-section">

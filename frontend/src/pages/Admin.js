@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../helpers/api";
 
 const ADMIN_TOKEN_KEY = "vorliq_admin_token";
-const tabs = ["Overview", "Readiness", "Analytics", "Storage", "Indexes", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
+const tabs = ["Overview", "Readiness", "Analytics", "Storage", "Indexes", "Migration", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
 
 function authHeader(token) {
   return { Authorization: `Bearer ${token}` };
@@ -19,6 +19,7 @@ function Admin() {
   const [analytics, setAnalytics] = useState(null);
   const [storage, setStorage] = useState(null);
   const [indexes, setIndexes] = useState(null);
+  const [migration, setMigration] = useState(null);
   const [backups, setBackups] = useState(null);
   const [incidents, setIncidents] = useState({ active: [], recent: [] });
   const [reports, setReports] = useState([]);
@@ -73,6 +74,11 @@ function Admin() {
     setIndexes(response.data);
   }, [headers]);
 
+  const loadMigration = useCallback(async () => {
+    const response = await api.get("/admin/migration/readiness", { headers });
+    setMigration(response.data);
+  }, [headers]);
+
   const loadIncidents = useCallback(async () => {
     const [active, recent] = await Promise.all([api.get("/incidents/active"), api.get("/incidents")]);
     setIncidents({
@@ -105,6 +111,7 @@ function Admin() {
       if (tab === "Analytics") await loadAnalytics();
       if (tab === "Storage") await loadStorage();
       if (tab === "Indexes") await loadIndexes();
+      if (tab === "Migration") await loadMigration();
       if (tab === "Security") await loadSecurity();
       if (tab === "Backups") await loadBackups();
       if (tab === "Incidents") await loadIncidents();
@@ -114,7 +121,7 @@ function Admin() {
     } catch (requestError) {
       setError(requestError.response?.status === 401 ? "Unauthorized" : "Unable to load admin data.");
     }
-  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadOverview, loadReadiness, loadReports, loadSecurity, loadStorage]);
+  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadMigration, loadOverview, loadReadiness, loadReports, loadSecurity, loadStorage]);
 
   useEffect(() => {
     if (adminToken) {
@@ -147,6 +154,7 @@ function Admin() {
     setAnalytics(null);
     setStorage(null);
     setIndexes(null);
+    setMigration(null);
     setBackups(null);
     setReports([]);
     setForumPosts([]);
@@ -308,6 +316,7 @@ function Admin() {
       {activeTab === "Analytics" && <AnalyticsTab analytics={analytics} onLoad={loadAnalytics} />}
       {activeTab === "Storage" && <StorageTab storage={storage} onLoad={loadStorage} />}
       {activeTab === "Indexes" && <IndexesTab indexes={indexes} onLoad={loadIndexes} onRebuild={rebuildIndexes} />}
+      {activeTab === "Migration" && <MigrationTab migration={migration} onLoad={loadMigration} />}
       {activeTab === "Security" && <SecurityTab security={security} onLoad={loadSecurity} />}
       {activeTab === "Backups" && <BackupsTab backups={backups} onLoad={loadBackups} onRun={runBackup} onVerify={verifyBackup} />}
       {activeTab === "Incidents" && (
@@ -418,6 +427,50 @@ function IndexesTab({ indexes, onLoad, onRebuild }) {
           <button className="button brand-button" type="button" onClick={onRebuild}>
             Rebuild Indexes
           </button>
+        </>
+      )}
+    </section>
+  );
+}
+
+function MigrationTab({ migration, onLoad }) {
+  useEffect(() => { if (!migration) onLoad(); }, [migration, onLoad]);
+
+  return (
+    <section className="glass-section card-pad">
+      <p className="risk-box">
+        Migration readiness is dry-run preparation only. Production remains on hardened JSON storage and no database adapter is active.
+      </p>
+      {!migration ? (
+        <div className="empty-state">Loading migration readiness...</div>
+      ) : (
+        <>
+          <div className="admin-card-grid">
+            {[
+              ["Storage backend", migration.storage_backend],
+              ["Database enabled", migration.database_enabled ? "Yes" : "No"],
+              ["Migration support", String(migration.migration_supported || "unknown").replaceAll("_", " ")],
+              ["Chain source", migration.chain_source_of_truth],
+              ["Indexes derived", migration.indexes_derived ? "Yes" : "No"],
+              ["Chain height", migration.latest_chain_height],
+            ].map(([label, value]) => (
+              <div className="stat-card" key={label}>
+                <span>{label}</span>
+                <strong>{value ?? "Unavailable"}</strong>
+              </div>
+            ))}
+          </div>
+          <div className="table-wrap">
+            <table className="stats-table">
+              <tbody>
+                <tr><th>Latest hash</th><td>{migration.latest_block_hash || "Unavailable"}</td></tr>
+                <tr><th>Storage health</th><td>{migration.last_storage_health?.overall_status || "unknown"}</td></tr>
+                <tr><th>Index health</th><td>{migration.last_index_health?.status || "unknown"}</td></tr>
+                <tr><th>Dry-run tool</th><td>{migration.operator_metadata?.dry_run_tool || "tools/migration_dry_run.py"}</td></tr>
+                <tr><th>Rollback required</th><td>{migration.operator_metadata?.rollback_required ? "Yes" : "No"}</td></tr>
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </section>

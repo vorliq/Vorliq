@@ -343,6 +343,17 @@ class VorliqSDK {
   }
 
   /**
+   * Gets database migration preparation metadata.
+   *
+   * Production currently remains on JSON storage; this endpoint reports dry-run readiness only.
+   *
+   * @returns {Promise<object>} Safe migration readiness metadata.
+   */
+  async getMigrationReadiness() {
+    return this.request("/api/migration/readiness");
+  }
+
+  /**
    * Gets the public Vorliq network manifest for transparency and integration checks.
    *
    * @returns {Promise<object>} Safe public network metadata including URLs, deployment commit, chain summary, diagnostics, SDK version, incident activity, and generated timestamp.

@@ -105,6 +105,18 @@ function Readiness() {
                 <span>Index chain match</span>
                 <strong>{readiness.index_chain_match ? "Yes" : "No"}</strong>
               </div>
+              <div className="stat-card">
+                <span>Migration readiness</span>
+                <strong>{readiness.migration_readiness_available ? "Yes" : "No"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Storage backend</span>
+                <strong>{readiness.storage_backend || "unknown"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Database enabled</span>
+                <strong>{readiness.database_enabled ? "Yes" : "No"}</strong>
+              </div>
             </div>
           </section>
 

@@ -31,6 +31,7 @@ const systemRoutes = require("./routes/system");
 const analyticsRoutes = require("./routes/analytics");
 const storageRoutes = require("./routes/storage");
 const auditRoutes = require("./routes/audit");
+const migrationRoutes = require("./routes/migration");
 const adminAuth = require("./middleware/adminAuth");
 const { sendError } = require("./utils/apiResponse");
 const { pruneAnalytics } = require("./analytics");
@@ -253,6 +254,7 @@ app.use(readinessRoutes);
 app.use(systemRoutes);
 app.use(storageRoutes);
 app.use(auditRoutes);
+app.use(migrationRoutes);
 app.use(adminRoutes);
 
 app.use((req, res) => {

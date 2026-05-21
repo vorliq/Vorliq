@@ -46,7 +46,7 @@ The SDK handles both structured v1 errors such as `{ error: { code, message }, r
 
 Release metadata, changelog entries, and roadmap items are available through `getVersionMetadata()`, `getChangelog()`, and `getRoadmap()`. Roadmap items are planning signals only and are not promises of dates, app-store approval, listings, financial outcomes, or legal status.
 
-Production readiness is available through `getReadiness()`. It reports a technical pass/warning/fail score for release, API, audit, storage, derived index, backup, security, deployment, and node signals; it is not a legal, banking, investment, or financial safety guarantee. Derived index health is available through `getIndexHealth()`.
+Production readiness is available through `getReadiness()`. It reports a technical pass/warning/fail score for release, API, audit, storage, derived index, migration readiness, backup, security, deployment, and node signals; it is not a legal, banking, investment, or financial safety guarantee. Derived index health is available through `getIndexHealth()`. Database migration preparation metadata is available through `getMigrationReadiness()`; production remains on JSON storage and migration support is dry-run only.
 
 Production applications should prefer the lightweight and paginated methods when they do not need the entire blockchain. The `getChain` method remains available for compatibility and local tooling, but it downloads the full chain and can become expensive as the network grows. For dashboards, explorers, and account history, use `getChainSummary`, `getBlocks`, `getTransactions`, `getPendingTransactions`, `getTransaction`, `getBlock`, `getAddressHistory`, and `getLeaderboard`.
 
@@ -61,6 +61,7 @@ async function main() {
   const pending = await vorliq.getPendingTransactions({ limit: 10 });
   const leaderboard = await vorliq.getLeaderboard(10, 0);
   const indexHealth = await vorliq.getIndexHealth();
+  const migrationReadiness = await vorliq.getMigrationReadiness();
 
   console.log("Height:", summary.block_height);
   console.log("Newest blocks:", firstPage.blocks.length);
@@ -68,6 +69,7 @@ async function main() {
   console.log("Pending transactions:", pending.transactions.length);
   console.log("Top holders:", leaderboard.holders);
   console.log("Index status:", indexHealth.status);
+  console.log("Storage backend:", migrationReadiness.storage_backend);
 }
 
 main().catch(console.error);

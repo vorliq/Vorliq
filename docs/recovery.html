@@ -51,6 +51,7 @@
           <a class="button" href="index.html">Home</a>
           <a class="button" href="deploy.html">Deploy</a>
           <a class="button" href="storage.html">Storage</a>
+          <a class="button" href="storage-adapters.html">Adapters</a>
           <a class="button" href="upgrades.html">Upgrades</a>
           <a class="button" href="status.html">Status</a>
           <a class="button primary" href="https://github.com/vorliq/Vorliq">GitHub</a>
@@ -103,6 +104,13 @@
         <h2>Verify A Backup</h2>
         <p>Before restoring, verify that the archive opens cleanly and that every critical JSON file and useful <code>.bak</code> file inside the backup is valid JSON. This command does not modify live data.</p>
         <pre><code>sudo /home/vorliq/app/deployment/verify_backup.sh /home/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz</code></pre>
+      </section>
+
+      <section class="section card">
+        <h2>Migration Dry Run Before Any Adapter Change</h2>
+        <p>Recovery and migration are separate operations. Before any future SQLite or Postgres adapter cutover, run the migration dry-run against the restored JSON data and keep rollback to JSON available.</p>
+        <pre><code>python tools/migration_dry_run.py --output migration-dry-run-report.json</code></pre>
+        <p>The dry run never creates a database and never rewrites <code>chain.json</code>, <code>pending.json</code>, or <code>indexes.json</code>.</p>
       </section>
 
       <section class="section card">

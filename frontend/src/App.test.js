@@ -32,6 +32,8 @@ import Blockchain from "./pages/Blockchain";
 import Registry from "./pages/Registry";
 import Health from "./pages/Health";
 import Readiness from "./pages/Readiness";
+import MigrationReadiness from "./pages/MigrationReadiness";
+import Footer from "./components/Footer";
 
 jest.mock("./helpers/api", () => ({
   get: jest.fn(),
@@ -825,6 +827,27 @@ function defaultApiGet(path) {
     });
   }
 
+  if (path === "/migration/readiness") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        storage_backend: "json",
+        database_enabled: false,
+        migration_supported: "dry_run_only",
+        chain_source_of_truth: "chain.json",
+        pending_source_of_truth: "pending.json",
+        indexes_derived: true,
+        latest_chain_height: 12,
+        latest_block_hash: "0000latestblock",
+        last_storage_health: { overall_status: "ok", warnings_count: 0, errors_count: 0 },
+        last_index_health: { status: "ok", rebuild_needed: false, index_chain_match: true },
+        docs_url: "https://vorliq.github.io/Vorliq/storage-adapters.html",
+        schema_map_url: "https://vorliq.github.io/Vorliq/schema-map.html",
+        message: "Production storage is intentionally still hardened JSON. Database migration support is dry-run preparation only.",
+      },
+    });
+  }
+
   if (path === "/readiness") {
     return Promise.resolve({
       data: {
@@ -835,6 +858,9 @@ function defaultApiGet(path) {
         index_health: "ok",
         index_rebuild_needed: false,
         index_chain_match: true,
+        migration_readiness_available: true,
+        storage_backend: "json",
+        database_enabled: false,
         checks: [
           {
             id: "index_health_ok",
@@ -843,6 +869,14 @@ function defaultApiGet(path) {
             status: "pass",
             severity: "medium",
             message: "Index health is ok.",
+          },
+          {
+            id: "migration_readiness_available",
+            name: "Migration readiness available",
+            category: "Storage",
+            status: "pass",
+            severity: "medium",
+            message: "Migration readiness metadata is available.",
           },
         ],
       },
@@ -2026,6 +2060,33 @@ test("Health page renders Index Health section", async () => {
   expect(screen.getByText(/chain match/i)).toBeInTheDocument();
 });
 
+test("Migration Readiness page renders current JSON storage preparation state", async () => {
+  api.get.mockImplementation(defaultApiGet);
+
+  renderWithProviders(<MigrationReadiness />, "/migration-readiness");
+
+  expect(await screen.findByRole("heading", { name: /migration readiness/i })).toBeInTheDocument();
+  expect(await screen.findByText(/storage backend/i)).toBeInTheDocument();
+  expect(await screen.findByText(/chain\.json/i)).toBeInTheDocument();
+  expect(screen.getByText(/production storage is intentionally still hardened json/i)).toBeInTheDocument();
+});
+
+test("Health page renders Migration Readiness summary", async () => {
+  api.get.mockImplementation(defaultApiGet);
+
+  renderWithProviders(<Health />, "/health");
+
+  expect(await screen.findByRole("heading", { name: /migration readiness/i })).toBeInTheDocument();
+  expect(await screen.findByText(/storage backend/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /open migration readiness/i })).toHaveAttribute("href", "/migration-readiness");
+});
+
+test("Footer includes Storage Roadmap link", () => {
+  render(<Footer />);
+
+  expect(screen.getByRole("link", { name: /storage roadmap/i })).toHaveAttribute("href", "/migration-readiness");
+});
+
 test("Readiness page includes index checks", async () => {
   api.get.mockImplementation(defaultApiGet);
 
@@ -2035,6 +2096,7 @@ test("Readiness page includes index checks", async () => {
   expect((await screen.findAllByText(/index health/i)).length).toBeGreaterThan(0);
   expect(await screen.findByText(/index rebuild needed/i)).toBeInTheDocument();
   expect(await screen.findByText(/index health is ok/i)).toBeInTheDocument();
+  expect(await screen.findByText(/migration readiness metadata is available/i)).toBeInTheDocument();
 });
 
 test("Admin Indexes section stays protected and renders safe rebuild controls after token", async () => {
@@ -2096,5 +2158,58 @@ test("Admin Indexes section stays protected and renders safe rebuild controls af
   await waitFor(() => {
     expect(api.post).toHaveBeenCalledWith("/admin/indexes/rebuild", {}, expect.objectContaining({ headers: expect.any(Object) }));
   });
+  expect(screen.queryByText("good-token")).not.toBeInTheDocument();
+});
+
+test("Admin Migration section stays protected and renders dry-run metadata after token", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/admin/overview") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          deployment: { commit_hash: "abcdef1234567890" },
+          blockchain: { height: 218, chain_valid: true, pending_transaction_count: 2 },
+          treasury: { balance: 25 },
+          backups: { latest_backup: null },
+          incidents: { active_count: 0 },
+          services: {},
+          server_uptime_seconds: 10,
+        },
+      });
+    }
+    if (path === "/admin/migration/readiness") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          storage_backend: "json",
+          database_enabled: false,
+          migration_supported: "dry_run_only",
+          chain_source_of_truth: "chain.json",
+          indexes_derived: true,
+          latest_chain_height: 218,
+          latest_block_hash: "0000hash",
+          last_storage_health: { overall_status: "ok" },
+          last_index_health: { status: "ok" },
+          operator_metadata: {
+            dry_run_tool: "tools/migration_dry_run.py",
+            rollback_required: true,
+          },
+        },
+      });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Admin />, "/admin");
+
+  expect(screen.getByRole("heading", { name: /admin access/i })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /^migration$/i })).not.toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText(/admin token/i), { target: { value: "good-token" } });
+  await userEvent.click(screen.getByRole("button", { name: /open operator dashboard/i }));
+  await userEvent.click(await screen.findByRole("button", { name: /^migration$/i }));
+
+  expect(await screen.findByText(/migration readiness is dry-run preparation only/i)).toBeInTheDocument();
+  expect(await screen.findByText(/tools\/migration_dry_run.py/i)).toBeInTheDocument();
   expect(screen.queryByText("good-token")).not.toBeInTheDocument();
 });

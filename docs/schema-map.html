@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vorliq Schema Map</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>Schema Map</h1>
+    <p>This map documents future table-style storage for a database migration dry run. Production still uses JSON as the active source of truth.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Dataset</th>
+          <th>Source JSON</th>
+          <th>Future table</th>
+          <th>Primary key</th>
+          <th>Important fields</th>
+          <th>Truth</th>
+          <th>Migration risks</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Blocks</td><td>chain.json</td><td>blocks</td><td>hash</td><td>index, timestamp, previous_hash, nonce, difficulty, miner_address, hash</td><td>Source of truth</td><td>Never rewrite fields used by block hash calculation.</td></tr>
+        <tr><td>Confirmed transactions</td><td>chain.json</td><td>confirmed_transactions</td><td>tx_id plus block_index/transaction_index for legacy rows</td><td>sender_address, receiver_address, amount, timestamp, type, category, signature, sender_public_key, metadata</td><td>Source of truth</td><td>Legacy transactions may not have tx_id; preserve original transaction object.</td></tr>
+        <tr><td>Pending transactions</td><td>pending.json</td><td>pending_transactions</td><td>tx_id or pending sequence</td><td>sender_address, receiver_address, amount, timestamp, signature, sender_public_key, metadata</td><td>Source of truth for mempool</td><td>Keep separate from confirmed transactions until mined.</td></tr>
+        <tr><td>Peers</td><td>peers.json</td><td>peers</td><td>peer_url</td><td>url</td><td>App state</td><td>Stale peers should not affect chain validity.</td></tr>
+        <tr><td>Registry nodes</td><td>registry.json</td><td>registry_nodes</td><td>node_url</td><td>display_name, region, operator_wallet_address, last_seen, last_chain_height, reliability_score</td><td>App state</td><td>Heartbeat timestamps are mutable operational state.</td></tr>
+        <tr><td>Lending loans</td><td>lending.json</td><td>lending_loans</td><td>loan_id</td><td>requester_address, amount, repayment_amount, status, votes, due_block, status_history</td><td>App state</td><td>Nested votes and history need deterministic serialization.</td></tr>
+        <tr><td>Exchange offers</td><td>exchange.json</td><td>exchange_offers</td><td>offer_id</td><td>creator_address, acceptor_address, offer_type, amount, price, status, status_history</td><td>App state</td><td>Lifecycle transitions must keep public trade history intact.</td></tr>
+        <tr><td>Governance proposals</td><td>governance.json</td><td>governance_proposals</td><td>proposal_id</td><td>proposer_address, category, parameter, votes, status, voting_deadline, status_history</td><td>App state</td><td>Vote weights must match chain balance rules used at decision time.</td></tr>
+        <tr><td>Governance rule changes</td><td>governance.json</td><td>governance_rule_changes</td><td>rule_change_id</td><td>proposal_id, category, old_value, new_value, applied_block_height, status</td><td>App state</td><td>Rule history affects later behavior and must remain ordered.</td></tr>
+        <tr><td>Treasury proposals</td><td>treasury.json</td><td>treasury_proposals</td><td>proposal_id</td><td>proposer_address, requested_amount, recipient_address, votes, status, payout_tx_id</td><td>App state</td><td>Payout links must match confirmed chain transactions.</td></tr>
+        <tr><td>Treasury ledger</td><td>chain.json and indexes.json</td><td>treasury_ledger</td><td>ledger_id or tx_id/block tuple</td><td>type, amount, from_address, to_address, tx_id, block_index, proposal_id</td><td>Derived from chain and treasury state</td><td>Do not use indexes as authority; rebuild ledger from confirmed chain.</td></tr>
+        <tr><td>Price signals</td><td>price.json</td><td>price_signals</td><td>signal_id</td><td>address, amount, currency, timestamp, expires_at</td><td>App state</td><td>Expired signals may be pruned by current loaders.</td></tr>
+        <tr><td>Forum posts</td><td>forum.json</td><td>forum_posts</td><td>post_id</td><td>author_address, title, body, timestamp, vote_count, moderation_status</td><td>App state</td><td>Moderation state is mutable while post IDs remain stable.</td></tr>
+        <tr><td>Forum replies</td><td>forum.json</td><td>forum_replies</td><td>reply_id</td><td>post_id, author_address, body, timestamp, moderation_status</td><td>App state</td><td>Nested replies need parent post linkage.</td></tr>
+        <tr><td>Forum reports/moderation</td><td>forum.json and backend/data/reports.json</td><td>forum_reports_moderation</td><td>report_id or moderation_event_id</td><td>target_type, target_id, reason, status, moderator_note, timestamp</td><td>Operational moderation state</td><td>Reports must not expose secrets submitted by users.</td></tr>
+        <tr><td>Achievements</td><td>achievements.json</td><td>achievements</td><td>wallet_address plus achievement_id</td><td>wallet_address, achievement_id, earned_at, metadata</td><td>App state</td><td>Nested earned records need stable composite keys.</td></tr>
+        <tr><td>Profiles</td><td>profiles.json</td><td>profiles</td><td>wallet_address</td><td>display_name, bio, avatar, location, verified_wallet, reputation_score</td><td>App state</td><td>Profile content is public; do not add private key storage.</td></tr>
+        <tr><td>Faucet claims</td><td>faucet.json</td><td>faucet_claims</td><td>claim_id</td><td>wallet_address, amount, status, tx_id, requested_at, completed_at</td><td>App state</td><td>Claim state must match treasury transaction lifecycle.</td></tr>
+        <tr><td>Analytics events</td><td>backend/data/analytics.json</td><td>analytics_events</td><td>event_id</td><td>event_type, route, category, timestamp, anonymous_session_id, metadata</td><td>Operational logs</td><td>Retention pruning and privacy rules must carry over.</td></tr>
+        <tr><td>Incidents</td><td>backend/data/incidents.json</td><td>incidents</td><td>id</td><td>title, description, severity, status, affected_services, created_at, updated_at</td><td>Operational state</td><td>Resolved history should remain public and ordered.</td></tr>
+        <tr><td>Reports</td><td>backend/data/reports.json</td><td>reports</td><td>report_id</td><td>target_type, target_id, reported_by, reason, description, status, moderator_note</td><td>Operational moderation state</td><td>Sanitize unsafe text and secrets during any export.</td></tr>
+        <tr><td>Indexes</td><td>indexes.json</td><td>indexes_cache</td><td>schema_version plus chain height/hash</td><td>built_at, chain_height, latest_block_hash, indexes</td><td>Derived cache</td><td>Always rebuild after migration; never treat as source of truth.</td></tr>
+      </tbody>
+    </table>
+
+    <p>See <a href="storage-adapters.html">storage adapters</a> for the adapter policy and <a href="indexes.html">derived indexes</a> for cache behavior.</p>
+  </main>
+</body>
+</html>

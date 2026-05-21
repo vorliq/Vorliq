@@ -41,6 +41,7 @@ import Transparency from "./pages/Transparency";
 import Roadmap from "./pages/Roadmap";
 import Releases from "./pages/Releases";
 import Readiness from "./pages/Readiness";
+import MigrationReadiness from "./pages/MigrationReadiness";
 import Admin from "./pages/Admin";
 import Notifications from "./pages/Notifications";
 import TransactionDetail from "./pages/TransactionDetail";
@@ -77,6 +78,7 @@ const moreLinks = [
   { to: "/roadmap", label: "Roadmap" },
   { to: "/releases", label: "Releases" },
   { to: "/readiness", label: "Readiness" },
+  { to: "/migration-readiness", label: "Migration Readiness" },
   { to: "/transparency", label: "Transparency" },
   { to: "/whitepaper", label: "Whitepaper" },
 ];
@@ -116,6 +118,7 @@ const mobileNavSections = [
       { to: "/roadmap", label: "Roadmap" },
       { to: "/releases", label: "Releases" },
       { to: "/readiness", label: "Readiness" },
+      { to: "/migration-readiness", label: "Migration Readiness" },
     ],
   },
   {
@@ -503,6 +506,7 @@ function AppShell() {
           <Route path="/roadmap" element={<Roadmap />} />
           <Route path="/releases" element={<Releases />} />
           <Route path="/readiness" element={<Readiness />} />
+          <Route path="/migration-readiness" element={<MigrationReadiness />} />
           <Route path="/audit" element={<Audit />} />
           <Route path="/transparency" element={<Transparency />} />
           <Route path="/login" element={<Login />} />

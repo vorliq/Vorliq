@@ -44,6 +44,8 @@
         <a class="brand" href="index.html"><img src="logo.png" alt="Vorliq logo" />Vorliq</a>
         <div class="links">
           <a class="button" href="storage.html">Storage</a>
+          <a class="button" href="storage-adapters.html">Adapters</a>
+          <a class="button" href="schema-map.html">Schema Map</a>
           <a class="button" href="operator.html">Operator</a>
           <a class="button" href="readiness.html">Readiness</a>
           <a class="button" href="api.html">API</a>
@@ -98,6 +100,7 @@
       <section class="card">
         <h2>Future Database Migration</h2>
         <p>The index layer keeps route code moving toward explicit read models while preserving JSON persistence. A later database migration can map these same read models to tables or materialized views, but this pass intentionally keeps <code>chain.json</code> and historical block hashes unchanged.</p>
+        <p>See <a href="storage-adapters.html">Storage Adapters</a> for the adapter policy and <a href="schema-map.html">Schema Map</a> for future table mappings. Index tables should be rebuilt from canonical data after migration, not imported as authority.</p>
       </section>
     </main>
 

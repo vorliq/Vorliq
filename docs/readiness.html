@@ -31,7 +31,7 @@
     <main class="wrap">
       <section>
         <h1>Production Readiness</h1>
-        <p>Vorliq readiness is a technical quality gate that combines health, deployment, security, storage, derived index, backup, incident, audit, API, node, and release signals into one pass, warning, or fail result.</p>
+        <p>Vorliq readiness is a technical quality gate that combines health, deployment, security, storage, derived index, migration readiness, backup, incident, audit, API, node, and release signals into one pass, warning, or fail result.</p>
       </section>
 
       <section>
@@ -39,6 +39,7 @@
         <ul>
           <li>Backend health, API version, version metadata, and deployment commit availability.</li>
           <li>Security status, admin route protection, storage health, derived index health, backup freshness, and incident state.</li>
+          <li>Migration readiness metadata, expected JSON backend status, and confirmation that no database adapter is active in production.</li>
           <li>Audit manifest availability and server-side hash-shape verification.</li>
           <li>Network manifest source metadata, registry active node count, public node activity, chain validity, mining status, treasury, faucet, and analytics availability.</li>
         </ul>
@@ -51,6 +52,11 @@
           <li><strong>Warning:</strong> score is at least 70 with no critical failure. Operators should review the warning checks before release confidence is claimed.</li>
           <li><strong>Fail:</strong> a critical gate failed or the score is below 70. Operators should not claim production is ready until the failing checks are fixed.</li>
         </ul>
+      </section>
+
+      <section>
+        <h2>Migration Readiness</h2>
+        <p>Database migration preparation is expected to pass while <code>storage_backend</code> is <code>json</code> and <code>database_enabled</code> is <code>false</code>. That is intentional: production has not migrated. The public endpoint <code>/api/migration/readiness</code> and the live <a href="https://vorliq.org/migration-readiness">Migration Readiness</a> page describe dry-run support.</p>
       </section>
 
       <section>

@@ -13,6 +13,7 @@ const { listActiveIncidents } = require("./incidents");
 const { securityStatus } = require("./middleware/security");
 const { API_VERSION, API_STABILITY } = require("./utils/apiResponse");
 const { logError } = require("./logger");
+const { buildMigrationReadiness } = require("./migrationReadiness");
 
 const execFileAsync = promisify(execFile);
 const repoRoot = path.resolve(__dirname, "..");
@@ -170,6 +171,7 @@ async function buildReadiness(options = {}) {
     analyticsResult,
     versionResult,
     networkManifestResult,
+    migrationResult,
   ] = await Promise.all([
     safeCall("deployment commit", deploymentCommit),
     safeCall("diagnostics", () => flaskGet("/diagnostics")),
@@ -189,6 +191,7 @@ async function buildReadiness(options = {}) {
       const commit = await deploymentCommit().catch(() => null);
       return { success: true, project: metadata.project_name, api_version: metadata.api_version, deployment_commit: commit };
     }),
+    safeCall("migration readiness", () => buildMigrationReadiness()),
   ]);
 
   addCheck(checks, {
@@ -267,6 +270,55 @@ async function buildReadiness(options = {}) {
       built_at: indexHealth.built_at || null,
       index_rebuild_needed: Boolean(indexHealth.rebuild_needed),
       index_chain_match: Boolean(indexChainMatch),
+    },
+  });
+
+  const migration = migrationResult.value || {};
+  addCheck(checks, {
+    id: "migration_readiness_available",
+    name: "Migration readiness available",
+    category: "Storage",
+    status: migrationResult.ok && migration.success ? "pass" : "warning",
+    severity: "medium",
+    message: migrationResult.ok
+      ? "Migration readiness metadata is available."
+      : "Migration readiness metadata is unavailable.",
+    safe_metadata: {
+      storage_backend: migration.storage_backend || "unknown",
+      database_enabled: Boolean(migration.database_enabled),
+      migration_supported: migration.migration_supported || "unknown",
+      chain_source_of_truth: migration.chain_source_of_truth || "unknown",
+      indexes_derived: Boolean(migration.indexes_derived),
+    },
+  });
+
+  addCheck(checks, {
+    id: "storage_backend_json",
+    name: "Storage backend JSON",
+    category: "Storage",
+    status: migrationResult.ok && migration.storage_backend === "json" ? "pass" : "fail",
+    severity: "critical",
+    message: migration.storage_backend === "json"
+      ? "Production storage backend is intentionally JSON."
+      : "Production storage backend is not reporting JSON as expected.",
+    safe_metadata: {
+      storage_backend: migration.storage_backend || "unknown",
+      chain_source_of_truth: migration.chain_source_of_truth || "unknown",
+    },
+  });
+
+  addCheck(checks, {
+    id: "database_not_enabled_expected",
+    name: "Database not enabled expected",
+    category: "Storage",
+    status: migrationResult.ok && migration.database_enabled === false ? "pass" : "fail",
+    severity: "critical",
+    message: migration.database_enabled === false
+      ? "No database adapter is active in production, as expected for this release."
+      : "A database adapter appears enabled unexpectedly.",
+    safe_metadata: {
+      database_enabled: Boolean(migration.database_enabled),
+      migration_supported: migration.migration_supported || "unknown",
     },
   });
 
@@ -476,6 +528,9 @@ async function buildReadiness(options = {}) {
     index_health: indexHealth.status || "unknown",
     index_rebuild_needed: Boolean(indexHealth.rebuild_needed),
     index_chain_match: Boolean(indexChainMatch),
+    migration_readiness_available: Boolean(migrationResult.ok && migration.success),
+    storage_backend: migration.storage_backend || "unknown",
+    database_enabled: Boolean(migration.database_enabled),
     checks,
   };
 
@@ -502,6 +557,15 @@ async function buildReadiness(options = {}) {
         chain_height: numberOrNull(indexHealth.chain_height),
         latest_block_hash: indexHealth.latest_block_hash || null,
         built_at: indexHealth.built_at || null,
+      },
+      migration: {
+        storage_backend: migration.storage_backend || "unknown",
+        database_enabled: Boolean(migration.database_enabled),
+        migration_supported: migration.migration_supported || "unknown",
+        chain_source_of_truth: migration.chain_source_of_truth || "unknown",
+        indexes_derived: Boolean(migration.indexes_derived),
+        latest_chain_height: numberOrNull(migration.latest_chain_height),
+        latest_block_hash: migration.latest_block_hash || null,
       },
       incidents: counts,
       registry: {
