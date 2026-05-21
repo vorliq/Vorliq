@@ -24,22 +24,23 @@
       <li><code>database/constraints.sql</code> documents future safety constraints.</li>
       <li><code>tools/postgres_schema_check.py</code> checks files without connecting to PostgreSQL.</li>
       <li><code>tools/simulate_postgres_import.py</code> simulates import ordering without database writes.</li>
+      <li><code>tools/run_shadow_migration_rehearsal.py</code> runs a guarded local or CI-only PostgreSQL shadow import and parity check.</li>
     </ul>
 
     <h2>Immutable History</h2>
     <p>Block hash, previous hash, nonce, timestamp, miner address, proof data, transaction order, and raw block JSON must be preserved. Confirmed transactions keep raw JSON so legacy entries without <code>tx_id</code> remain compatible.</p>
 
     <h2>Operator Checks</h2>
-    <p>Check <code>/api/migration/readiness</code>, <code>/api/readiness</code>, and the live <a href="https://vorliq.org/migration-readiness">Migration Readiness</a> page. Run schema validation locally before any future migration rehearsal.</p>
+    <p>Check <code>/api/migration/readiness</code>, <code>/api/readiness</code>, and the live <a href="https://vorliq.org/migration-readiness">Migration Readiness</a> page. Run schema validation and the shadow rehearsal locally before any future migration rehearsal window. Production should continue to report <code>postgres_active: false</code>.</p>
 
     <h2>Related</h2>
     <ul>
       <li><a href="database-migration-plan.html">Database migration plan</a></li>
       <li><a href="database-rollback-plan.html">Database rollback plan</a></li>
+      <li><a href="postgres-shadow-migration.html">PostgreSQL shadow migration</a></li>
       <li><a href="schema-map.html">Schema map</a></li>
       <li><a href="storage-adapters.html">Storage adapters</a></li>
     </ul>
   </main>
 </body>
 </html>
-

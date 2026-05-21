@@ -836,10 +836,13 @@ function defaultApiGet(path) {
         future_database_target: "postgresql",
         postgres_schema_present: true,
         postgres_active: false,
+        postgres_shadow_rehearsal_available: true,
+        postgres_shadow_ci_enabled: true,
+        postgres_shadow_fixture_available: true,
         migration_phase: "preparation",
         rollback_plan_required: true,
         migration_tools_available: true,
-        migration_supported: "dry_run_only",
+        migration_supported: "shadow_rehearsal_available",
         chain_source_of_truth: "chain.json",
         pending_source_of_truth: "pending.json",
         indexes_derived: true,
@@ -852,7 +855,8 @@ function defaultApiGet(path) {
         postgres_readiness_url: "https://vorliq.github.io/Vorliq/postgres-readiness.html",
         database_migration_plan_url: "https://vorliq.github.io/Vorliq/database-migration-plan.html",
         database_rollback_plan_url: "https://vorliq.github.io/Vorliq/database-rollback-plan.html",
-        message: "Production storage is intentionally still hardened JSON. Database migration support is dry-run preparation only.",
+        postgres_shadow_migration_url: "https://vorliq.github.io/Vorliq/postgres-shadow-migration.html",
+        message: "Production storage is intentionally still hardened JSON. PostgreSQL support is shadow rehearsal preparation only.",
       },
     });
   }
@@ -873,6 +877,8 @@ function defaultApiGet(path) {
         future_database_target: "postgresql",
         postgres_schema_present: true,
         postgres_active: false,
+        postgres_shadow_rehearsal_available: true,
+        postgres_shadow_ci_enabled: true,
         migration_phase: "preparation",
         rollback_plan_required: true,
         migration_tools_available: true,
@@ -908,6 +914,14 @@ function defaultApiGet(path) {
             status: "pass",
             severity: "critical",
             message: "PostgreSQL is not active in production, as expected for this preparation release.",
+          },
+          {
+            id: "postgres_shadow_rehearsal_available",
+            name: "PostgreSQL shadow rehearsal available",
+            category: "Storage",
+            status: "pass",
+            severity: "medium",
+            message: "PostgreSQL shadow migration rehearsal tooling is available for local and CI-only validation.",
           },
         ],
       },
@@ -2100,8 +2114,11 @@ test("Migration Readiness page renders current JSON storage preparation state", 
   expect(await screen.findByText(/future database target/i)).toBeInTheDocument();
   expect((await screen.findAllByText(/postgresql/i)).length).toBeGreaterThan(0);
   expect(await screen.findByText(/current production storage/i)).toBeInTheDocument();
-  expect(await screen.findByText(/postgresql active/i)).toBeInTheDocument();
+  expect((await screen.findAllByText(/postgresql active/i)).length).toBeGreaterThan(0);
   expect(await screen.findByText(/schema files present/i)).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /shadow migration rehearsal/i })).toBeInTheDocument();
+  expect((await screen.findAllByText(/ci enabled/i)).length).toBeGreaterThan(0);
+  expect(await screen.findByText(/production postgresql active/i)).toBeInTheDocument();
   expect(await screen.findByText(/rollback required/i)).toBeInTheDocument();
   expect(await screen.findByText(/chain\.json/i)).toBeInTheDocument();
   expect(screen.getByText(/production storage is intentionally still hardened json/i)).toBeInTheDocument();
@@ -2200,7 +2217,7 @@ test("Admin Indexes section stays protected and renders safe rebuild controls af
   expect(screen.queryByText("good-token")).not.toBeInTheDocument();
 });
 
-test("Admin Migration section stays protected and renders dry-run metadata after token", async () => {
+test("Admin Migration section stays protected and renders shadow rehearsal metadata after token", async () => {
   api.get.mockImplementation((path) => {
     if (path === "/admin/overview") {
       return Promise.resolve({
@@ -2225,9 +2242,11 @@ test("Admin Migration section stays protected and renders dry-run metadata after
           future_database_target: "postgresql",
           postgres_schema_present: true,
           postgres_active: false,
+          postgres_shadow_rehearsal_available: true,
+          postgres_shadow_ci_enabled: true,
           migration_phase: "preparation",
           migration_tools_available: true,
-          migration_supported: "dry_run_only",
+          migration_supported: "shadow_rehearsal_available",
           chain_source_of_truth: "chain.json",
           indexes_derived: true,
           latest_chain_height: 218,
@@ -2238,6 +2257,7 @@ test("Admin Migration section stays protected and renders dry-run metadata after
             dry_run_tool: "tools/migration_dry_run.py",
             postgres_schema_check_tool: "tools/postgres_schema_check.py",
             import_simulation_tool: "tools/simulate_postgres_import.py",
+            shadow_rehearsal_tool: "tools/run_shadow_migration_rehearsal.py",
             rollback_required: true,
           },
         },
@@ -2255,7 +2275,8 @@ test("Admin Migration section stays protected and renders dry-run metadata after
   await userEvent.click(screen.getByRole("button", { name: /open operator dashboard/i }));
   await userEvent.click(await screen.findByRole("button", { name: /^migration$/i }));
 
-  expect(await screen.findByText(/migration readiness is dry-run preparation only/i)).toBeInTheDocument();
+  expect(await screen.findByText(/migration readiness is shadow rehearsal preparation only/i)).toBeInTheDocument();
   expect(await screen.findByText(/tools\/migration_dry_run.py/i)).toBeInTheDocument();
+  expect(await screen.findByText(/tools\/run_shadow_migration_rehearsal.py/i)).toBeInTheDocument();
   expect(screen.queryByText("good-token")).not.toBeInTheDocument();
 });

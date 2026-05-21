@@ -1,0 +1,13 @@
+{
+  "proposals": {
+    "fixture-treasury-1": {
+      "created_at": 1710000170.0,
+      "proposal_id": "fixture-treasury-1",
+      "proposer_address": "VLQ_FAKE_TREASURER_0001",
+      "recipient_address": "VLQ_FAKE_RECIPIENT_0001",
+      "requested_amount": 1.5,
+      "status": "active",
+      "votes": {}
+    }
+  }
+}

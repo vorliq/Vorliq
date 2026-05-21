@@ -69,7 +69,7 @@ sudo systemctl restart vorliq-backend.service</code></pre>
           <li>Use Readiness to review the combined production gate, score, failing checks, warning checks, latest backup age, storage counts, incident counts, registry counts, deployment commit, and safe service names.</li>
           <li>Use Storage to review JSON validity, backup availability, warning counts, and corruption signals without exposing server paths or secrets.</li>
           <li>Use Indexes to review derived read-index status, chain match, build time, and to trigger a safe rebuild from <code>chain.json</code> when needed.</li>
-          <li>Use Migration to confirm production is still on JSON storage, database mode is disabled, and dry-run migration preparation is available.</li>
+          <li>Use Migration to confirm production is still on JSON storage, database mode is disabled, and dry-run plus shadow rehearsal migration preparation is available.</li>
           <li>Use Security to confirm rate limits, CORS, Helmet, CSP, public write protection, and admin route protection.</li>
           <li>Use Backups to run a backup and verify the latest archive. Verification never restores production data.</li>
           <li>Use Incidents to create and resolve public incident records when users need visibility.</li>
@@ -91,9 +91,9 @@ sudo systemctl restart vorliq-backend.service</code></pre>
         <h2>Storage Reliability</h2>
         <p>Vorliq JSON state is protected with atomic writes, backup-before-write <code>.bak</code> files, lightweight write locks, safe JSON loading, and storage health reporting. The public and admin storage endpoints return file names and health metadata only, never raw file contents, full server paths, private keys, wallet passwords, or admin tokens.</p>
         <p>Derived index health is available at <code>/api/indexes/health</code>. Protected operators can call <code>/api/admin/indexes/rebuild</code> to rebuild <code>indexes.json</code> without rewriting <code>chain.json</code> or changing block hashes.</p>
-        <p>Migration readiness is available at <code>/api/migration/readiness</code>. Protected operators can review deeper safe metadata at <code>/api/admin/migration/readiness</code>. Production should continue to report <code>storage_backend: json</code> and <code>database_enabled: false</code> until a future migration is explicitly planned and verified.</p>
+        <p>Migration readiness is available at <code>/api/migration/readiness</code>. Protected operators can review deeper safe metadata at <code>/api/admin/migration/readiness</code>. Production should continue to report <code>storage_backend: json</code>, <code>database_enabled: false</code>, and <code>postgres_active: false</code> until a future migration is explicitly planned and verified.</p>
         <p>Read the <a href="storage.html">Storage Reliability</a> guide before responding to corruption warnings or restoring from backup.</p>
-        <p>Read <a href="storage-adapters.html">Storage Adapters</a>, <a href="schema-map.html">Schema Map</a>, <a href="postgres-readiness.html">PostgreSQL Readiness</a>, <a href="database-migration-plan.html">Database Migration Plan</a>, and <a href="database-rollback-plan.html">Database Rollback Plan</a> before planning any database migration.</p>
+        <p>Read <a href="storage-adapters.html">Storage Adapters</a>, <a href="schema-map.html">Schema Map</a>, <a href="postgres-readiness.html">PostgreSQL Readiness</a>, <a href="postgres-shadow-migration.html">PostgreSQL Shadow Migration</a>, <a href="database-migration-plan.html">Database Migration Plan</a>, and <a href="database-rollback-plan.html">Database Rollback Plan</a> before planning any database migration.</p>
       </section>
 
       <section class="glass">

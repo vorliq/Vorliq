@@ -439,7 +439,7 @@ function MigrationTab({ migration, onLoad }) {
   return (
     <section className="glass-section card-pad">
       <p className="risk-box">
-        Migration readiness is dry-run preparation only. Production remains on hardened JSON storage and no database adapter is active.
+        Migration readiness is shadow rehearsal preparation only. Production remains on hardened JSON storage and no database adapter is active.
       </p>
       {!migration ? (
         <div className="empty-state">Loading migration readiness...</div>
@@ -451,6 +451,8 @@ function MigrationTab({ migration, onLoad }) {
               ["Storage backend", migration.storage_backend],
               ["Database enabled", migration.database_enabled ? "Yes" : "No"],
               ["PostgreSQL active", migration.postgres_active ? "Yes" : "No"],
+              ["Shadow rehearsal", migration.postgres_shadow_rehearsal_available ? "Available" : "Unavailable"],
+              ["Shadow CI", migration.postgres_shadow_ci_enabled ? "Enabled" : "Disabled"],
               ["Schema files", migration.postgres_schema_present ? "Present" : "Missing"],
               ["Migration phase", migration.migration_phase || "unknown"],
               ["Migration support", String(migration.migration_supported || "unknown").replaceAll("_", " ")],
@@ -474,6 +476,7 @@ function MigrationTab({ migration, onLoad }) {
                 <tr><th>Dry-run tool</th><td>{migration.operator_metadata?.dry_run_tool || "tools/migration_dry_run.py"}</td></tr>
                 <tr><th>Schema check tool</th><td>{migration.operator_metadata?.postgres_schema_check_tool || "tools/postgres_schema_check.py"}</td></tr>
                 <tr><th>Import simulation tool</th><td>{migration.operator_metadata?.import_simulation_tool || "tools/simulate_postgres_import.py"}</td></tr>
+                <tr><th>Shadow rehearsal tool</th><td>{migration.operator_metadata?.shadow_rehearsal_tool || "tools/run_shadow_migration_rehearsal.py"}</td></tr>
                 <tr><th>Rollback required</th><td>{migration.operator_metadata?.rollback_required ? "Yes" : "No"}</td></tr>
               </tbody>
             </table>

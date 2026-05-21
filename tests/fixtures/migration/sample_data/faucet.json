@@ -1,0 +1,12 @@
+{
+  "claims": {
+    "fixture-claim-1": {
+      "amount": 1,
+      "claim_id": "fixture-claim-1",
+      "requested_at": 1710000190.0,
+      "status": "pending",
+      "tx_id": "fixture-pending-1",
+      "wallet_address": "VLQ_FAKE_PENDING_0001"
+    }
+  }
+}

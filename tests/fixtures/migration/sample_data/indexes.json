@@ -1,0 +1,21 @@
+{
+  "built_at": "2024-03-09T16:00:00Z",
+  "chain_height": 1,
+  "indexes": {
+    "treasury_ledger_index": [
+      {
+        "amount": 2.5,
+        "block_hash": "000097098851f6ce52a31cabe3f33a9f636221eef996a5698b6e422687345284",
+        "block_index": 1,
+        "ledger_id": "fixture-ledger-1",
+        "receiver_address": "VORLIQ_TREASURY",
+        "sender_address": "SYSTEM",
+        "timestamp": 1710000061.0,
+        "tx_id": "fixture-treasury-reward-1",
+        "type": "treasury_reward"
+      }
+    ]
+  },
+  "latest_block_hash": "000097098851f6ce52a31cabe3f33a9f636221eef996a5698b6e422687345284",
+  "schema_version": 1
+}

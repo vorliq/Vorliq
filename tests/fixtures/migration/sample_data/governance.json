@@ -1,0 +1,36 @@
+{
+  "governance_settings": {
+    "difficulty": 4
+  },
+  "proposals": {
+    "fixture-governance-1": {
+      "category": "difficulty",
+      "created_at": 1710000140.0,
+      "parameter": "difficulty",
+      "proposal_id": "fixture-governance-1",
+      "proposer_address": "VLQ_FAKE_GOVERNOR_0001",
+      "status": "active",
+      "status_history": [
+        {
+          "status": "active",
+          "timestamp": 1710000140.0
+        }
+      ],
+      "title": "Fixture rule proposal",
+      "votes": {},
+      "voting_deadline": 1710010000
+    }
+  },
+  "rule_changes": [
+    {
+      "applied_block_height": 1,
+      "category": "difficulty",
+      "new_value": 4,
+      "old_value": 4,
+      "parameter": "difficulty",
+      "proposal_id": "fixture-governance-1",
+      "rule_change_id": "fixture-rule-change-1",
+      "status": "simulated"
+    }
+  ]
+}

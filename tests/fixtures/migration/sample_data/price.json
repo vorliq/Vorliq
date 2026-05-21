@@ -1,0 +1,13 @@
+{
+  "signals": {
+    "fixture-price-1": {
+      "address": "VLQ_FAKE_SIGNALER_0001",
+      "currency": "USD",
+      "expires_at": 1710003600.0,
+      "price": 0,
+      "signal_id": "fixture-price-1",
+      "status": "test",
+      "timestamp": 1710000200.0
+    }
+  }
+}

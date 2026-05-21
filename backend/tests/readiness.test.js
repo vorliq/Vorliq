@@ -159,6 +159,8 @@ describe("production readiness", () => {
     expect(response.body.future_database_target).toBe("postgresql");
     expect(response.body.postgres_schema_present).toBe(true);
     expect(response.body.postgres_active).toBe(false);
+    expect(response.body.postgres_shadow_rehearsal_available).toBe(true);
+    expect(response.body.postgres_shadow_ci_enabled).toBe(true);
     expect(response.body.migration_phase).toBe("preparation");
     expect(response.body.rollback_plan_required).toBe(true);
     expect(response.body.migration_tools_available).toBe(true);
@@ -169,6 +171,8 @@ describe("production readiness", () => {
     expect(response.body.checks.some((check) => check.id === "postgres_schema_present")).toBe(true);
     expect(response.body.checks.some((check) => check.id === "postgres_not_active_expected")).toBe(true);
     expect(response.body.checks.some((check) => check.id === "migration_tools_available")).toBe(true);
+    expect(response.body.checks.some((check) => check.id === "postgres_shadow_rehearsal_available")).toBe(true);
+    expect(response.body.checks.some((check) => check.id === "postgres_shadow_ci_enabled")).toBe(true);
   });
 
   test("critical fail logic forces overall fail", () => {

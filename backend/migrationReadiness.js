@@ -17,6 +17,12 @@ const REQUIRED_POSTGRES_FILES = [
   "tools/postgres_schema_check.py",
   "tools/simulate_postgres_import.py",
   "tools/migration_dry_run.py",
+  "tools/postgres_shadow_migrate.py",
+  "tools/postgres_shadow_verify.py",
+  "tools/run_shadow_migration_rehearsal.py",
+  "database/docker-compose.shadow.yml",
+  "database/.env.shadow.example",
+  "tests/fixtures/migration/sample_data/chain.json",
 ];
 
 function numberOrNull(value) {
@@ -65,8 +71,15 @@ function postgresPreparationStatus() {
   const missing = files.filter((file) => !file.present).map((file) => file.relative_path);
 
   return {
-    postgres_schema_present: missing.filter((file) => file.startsWith("database/")).length === 0,
+    postgres_schema_present: missing.filter((file) => file.startsWith("database/") && file.endsWith(".sql")).length === 0,
     migration_tools_available: missing.filter((file) => file.startsWith("tools/")).length === 0,
+    postgres_shadow_rehearsal_available: missing.filter((file) => (
+      file.includes("postgres_shadow")
+      || file.includes("run_shadow_migration_rehearsal")
+      || file.includes("docker-compose.shadow")
+      || file.includes(".env.shadow")
+    )).length === 0,
+    postgres_shadow_fixture_available: missing.filter((file) => file.startsWith("tests/fixtures/migration/sample_data")).length === 0,
     missing_required_files: missing,
     schema_files: files
       .filter((file) => file.relative_path.startsWith("database/"))
@@ -105,8 +118,11 @@ async function buildMigrationReadiness(options = {}) {
     future_database_target: "postgresql",
     postgres_schema_present: postgres.postgres_schema_present,
     postgres_active: false,
+    postgres_shadow_rehearsal_available: postgres.postgres_shadow_rehearsal_available,
+    postgres_shadow_ci_enabled: true,
+    postgres_shadow_fixture_available: postgres.postgres_shadow_fixture_available,
     migration_phase: "preparation",
-    migration_supported: "dry_run_only",
+    migration_supported: "shadow_rehearsal_available",
     rollback_plan_required: true,
     chain_source_of_truth: "chain.json",
     pending_source_of_truth: "pending.json",
@@ -126,7 +142,8 @@ async function buildMigrationReadiness(options = {}) {
     postgres_readiness_url: "https://vorliq.github.io/Vorliq/postgres-readiness.html",
     database_migration_plan_url: "https://vorliq.github.io/Vorliq/database-migration-plan.html",
     database_rollback_plan_url: "https://vorliq.github.io/Vorliq/database-rollback-plan.html",
-    message: "Production storage is intentionally still hardened JSON. Database migration support is dry-run preparation only.",
+    postgres_shadow_migration_url: "https://vorliq.github.io/Vorliq/postgres-shadow-migration.html",
+    message: "Production storage is intentionally still hardened JSON. PostgreSQL support is shadow rehearsal preparation only.",
   };
 
   if (options.deep) {
@@ -137,9 +154,18 @@ async function buildMigrationReadiness(options = {}) {
       postgres_schema_check_command: "python tools/postgres_schema_check.py",
       import_simulation_tool: "tools/simulate_postgres_import.py",
       import_simulation_command: "python tools/simulate_postgres_import.py --input migration-dry-run-report.json --output import-simulation.json",
+      shadow_migration_tool: "tools/postgres_shadow_migrate.py",
+      shadow_migration_command: "python tools/postgres_shadow_migrate.py --data-dir tests/fixtures/migration/sample_data --database-url \"$SHADOW_DATABASE_URL\"",
+      shadow_verify_tool: "tools/postgres_shadow_verify.py",
+      shadow_verify_command: "python tools/postgres_shadow_verify.py --data-dir tests/fixtures/migration/sample_data --database-url \"$SHADOW_DATABASE_URL\"",
+      shadow_rehearsal_tool: "tools/run_shadow_migration_rehearsal.py",
+      shadow_rehearsal_command: "python tools/run_shadow_migration_rehearsal.py --data-dir tests/fixtures/migration/sample_data --database-url \"$SHADOW_DATABASE_URL\"",
       rollback_required: true,
       immutable_chain_required: true,
       private_wallet_keys_stored_server_side: false,
+      postgres_active_expected: false,
+      shadow_rehearsal_available: postgres.postgres_shadow_rehearsal_available,
+      shadow_ci_enabled: true,
       schema_files: postgres.schema_files,
       missing_required_files: postgres.missing_required_files,
       notes: [

@@ -82,6 +82,8 @@ test.describe("read-only API smoke tests", () => {
     expect(json.storage_backend).toBe("json");
     expect(json.database_enabled).toBe(false);
     expect(json.postgres_active).toBe(false);
+    expect(json.postgres_shadow_rehearsal_available).toBe(true);
+    expect(json.postgres_shadow_ci_enabled).toBe(true);
     expect(json.migration_phase).toBe("preparation");
     safeApiJson(json);
   });

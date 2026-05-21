@@ -80,6 +80,14 @@ function MigrationReadiness() {
                 <strong>{display(readiness.postgres_active)}</strong>
               </div>
               <div className="stat-card">
+                <span>Shadow rehearsal</span>
+                <strong>{display(readiness.postgres_shadow_rehearsal_available)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Shadow CI</span>
+                <strong>{display(readiness.postgres_shadow_ci_enabled)}</strong>
+              </div>
+              <div className="stat-card">
                 <span>Migration phase</span>
                 <strong>{display(readiness.migration_phase)}</strong>
               </div>
@@ -114,6 +122,34 @@ function MigrationReadiness() {
             </div>
             <p className="help-text">
               {readiness.message}
+            </p>
+          </section>
+
+          <section className="card card-pad">
+            <div className="section-title">
+              <h2>Shadow Migration Rehearsal</h2>
+              <span className="status-badge pass">CI Enabled</span>
+            </div>
+            <div className="stats-grid compact-stats">
+              <div className="stat-card">
+                <span>Proves temporary import</span>
+                <strong>{display(readiness.postgres_shadow_rehearsal_available)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>CI fixture data</span>
+                <strong>{display(readiness.postgres_shadow_fixture_available)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>CI enabled</span>
+                <strong>{display(readiness.postgres_shadow_ci_enabled)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Production PostgreSQL active</span>
+                <strong>{display(readiness.postgres_active)}</strong>
+              </div>
+            </div>
+            <p className="help-text">
+              The rehearsal imports copied JSON state into a guarded PostgreSQL shadow database, verifies parity, then cleans up. It does not switch production storage away from JSON.
             </p>
           </section>
 
@@ -176,6 +212,9 @@ function MigrationReadiness() {
               </a>
               <a href="https://vorliq.github.io/Vorliq/database-rollback-plan.html" target="_blank" rel="noreferrer">
                 Rollback Plan
+              </a>
+              <a href="https://vorliq.github.io/Vorliq/postgres-shadow-migration.html" target="_blank" rel="noreferrer">
+                Shadow Migration
               </a>
               <a href="https://vorliq.github.io/Vorliq/recovery.html" target="_blank" rel="noreferrer">
                 Recovery

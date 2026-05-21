@@ -91,10 +91,13 @@ describe("migration readiness routes", () => {
     expect(response.body.future_database_target).toBe("postgresql");
     expect(response.body.postgres_schema_present).toBe(true);
     expect(response.body.postgres_active).toBe(false);
+    expect(response.body.postgres_shadow_rehearsal_available).toBe(true);
+    expect(response.body.postgres_shadow_ci_enabled).toBe(true);
+    expect(response.body.postgres_shadow_fixture_available).toBe(true);
     expect(response.body.migration_phase).toBe("preparation");
     expect(response.body.rollback_plan_required).toBe(true);
     expect(response.body.migration_tools_available).toBe(true);
-    expect(response.body.migration_supported).toBe("dry_run_only");
+    expect(response.body.migration_supported).toBe("shadow_rehearsal_available");
     expect(response.body.chain_source_of_truth).toBe("chain.json");
     expect(response.body.indexes_derived).toBe(true);
     expect(response.body.latest_chain_height).toBe(44);
@@ -118,6 +121,11 @@ describe("migration readiness routes", () => {
     expect(response.body.operator_metadata.dry_run_tool).toBe("tools/migration_dry_run.py");
     expect(response.body.operator_metadata.postgres_schema_check_tool).toBe("tools/postgres_schema_check.py");
     expect(response.body.operator_metadata.import_simulation_tool).toBe("tools/simulate_postgres_import.py");
+    expect(response.body.operator_metadata.shadow_migration_tool).toBe("tools/postgres_shadow_migrate.py");
+    expect(response.body.operator_metadata.shadow_verify_tool).toBe("tools/postgres_shadow_verify.py");
+    expect(response.body.operator_metadata.shadow_rehearsal_tool).toBe("tools/run_shadow_migration_rehearsal.py");
+    expect(response.body.operator_metadata.postgres_active_expected).toBe(false);
+    expect(response.body.operator_metadata.shadow_ci_enabled).toBe(true);
     expect(response.body.operator_metadata.schema_files.some((file) => file.name === "schema.sql")).toBe(true);
     expect(response.body.operator_metadata.private_wallet_keys_stored_server_side).toBe(false);
     expect(JSON.stringify(response.body)).not.toContain("migration-admin-token");

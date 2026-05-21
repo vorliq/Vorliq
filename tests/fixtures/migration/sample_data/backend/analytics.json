@@ -1,0 +1,11 @@
+{
+  "events": [
+    {
+      "category": "fixture",
+      "event_id": "fixture-analytics-1",
+      "event_type": "route_view",
+      "route": "/migration-readiness",
+      "timestamp": 1710000220.0
+    }
+  ]
+}

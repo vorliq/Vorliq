@@ -14,6 +14,9 @@
     <h2>Rollback Source</h2>
     <p>Verified JSON backups remain the rollback source. <code>chain.json</code>, <code>pending.json</code>, domain JSON files, backend app-state JSON, and audit exports must be preserved during any future migration window.</p>
 
+    <h2>Shadow Rehearsal</h2>
+    <p>The PostgreSQL shadow rehearsal does not need production rollback because it never switches production storage and never writes to source JSON files. If a rehearsal fails, drop the temporary shadow database objects and keep production on JSON.</p>
+
     <h2>Rollback Requirements</h2>
     <ul>
       <li>Keep a verified pre-migration backup archive.</li>
@@ -41,8 +44,8 @@
       <li><a href="recovery.html">Recovery guide</a></li>
       <li><a href="storage.html">Storage reliability</a></li>
       <li><a href="postgres-readiness.html">PostgreSQL readiness</a></li>
+      <li><a href="postgres-shadow-migration.html">PostgreSQL shadow migration</a></li>
     </ul>
   </main>
 </body>
 </html>
-

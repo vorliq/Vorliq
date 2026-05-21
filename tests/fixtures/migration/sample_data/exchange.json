@@ -1,0 +1,20 @@
+{
+  "offers": {
+    "fixture-offer-1": {
+      "acceptor_address": null,
+      "amount": 5,
+      "created_at": 1710000150.0,
+      "creator_address": "VLQ_FAKE_SELLER_0001",
+      "offer_id": "fixture-offer-1",
+      "offer_type": "sell",
+      "price": "fixture goods",
+      "status": "open",
+      "status_history": [
+        {
+          "status": "open",
+          "timestamp": 1710000150.0
+        }
+      ]
+    }
+  }
+}

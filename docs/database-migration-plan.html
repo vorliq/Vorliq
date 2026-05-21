@@ -17,6 +17,7 @@
       <li>Run <code>python tools/postgres_schema_check.py</code>.</li>
       <li>Run <code>python tools/migration_dry_run.py --output migration-dry-run-report.json</code>.</li>
       <li>Run <code>python tools/simulate_postgres_import.py --input migration-dry-run-report.json --output import-simulation.json</code>.</li>
+      <li>Run <code>python tools/run_shadow_migration_rehearsal.py --data-dir tests/fixtures/migration/sample_data --database-url "$SHADOW_DATABASE_URL" --output temp-shadow-report.json</code> against a local or CI-only shadow database.</li>
       <li>Compare counts, latest block hash, and public API behavior in a staging environment.</li>
     </ol>
 
@@ -33,6 +34,7 @@
     <ul>
       <li>Dry run status is ok or warnings are explicitly accepted.</li>
       <li>Import simulation passes ordering checks.</li>
+      <li>Shadow migration rehearsal passes count, block hash, transaction ID, balance, and secret-scan parity checks.</li>
       <li>Chain height and latest block hash match JSON.</li>
       <li>Explorer, account, transaction, leaderboard, readiness, health, audit, and SDK smoke tests pass.</li>
       <li>Rollback plan has been rehearsed.</li>
@@ -40,4 +42,3 @@
   </main>
 </body>
 </html>
-

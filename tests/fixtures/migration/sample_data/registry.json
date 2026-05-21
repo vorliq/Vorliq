@@ -1,0 +1,14 @@
+{
+  "registered_nodes": {
+    "https://fixture-node.example.invalid": {
+      "display_name": "Fixture Node",
+      "last_chain_height": 1,
+      "last_seen": 1710000180.0,
+      "node_url": "https://fixture-node.example.invalid",
+      "operator_wallet_address": "VLQ_FAKE_OPERATOR_0001",
+      "region": "fixture",
+      "reliability_score": 99,
+      "status": "synced"
+    }
+  }
+}

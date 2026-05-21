@@ -1,0 +1,25 @@
+# Vorliq PostgreSQL shadow migration rehearsal only.
+# Not for production. Do not use these local-only credentials for any live service.
+
+services:
+  postgres-shadow:
+    image: postgres:16-alpine
+    container_name: vorliq-postgres-shadow
+    restart: "no"
+    environment:
+      POSTGRES_DB: vorliq_shadow
+      POSTGRES_USER: vorliq_shadow
+      POSTGRES_PASSWORD: vorliq_shadow_password
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vorliq_shadow -d vorliq_shadow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - vorliq_shadow_pgdata:/var/lib/postgresql/data
+
+volumes:
+  vorliq_shadow_pgdata:
+    name: vorliq_shadow_pgdata

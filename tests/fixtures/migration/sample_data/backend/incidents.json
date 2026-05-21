@@ -1,0 +1,12 @@
+{
+  "incidents": [
+    {
+      "created_at": 1710000230.0,
+      "incident_id": "fixture-incident-1",
+      "severity": "minor",
+      "status": "resolved",
+      "title": "Fixture incident",
+      "updated_at": 1710000240.0
+    }
+  ]
+}

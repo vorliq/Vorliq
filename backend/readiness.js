@@ -289,6 +289,8 @@ async function buildReadiness(options = {}) {
       migration_supported: migration.migration_supported || "unknown",
       chain_source_of_truth: migration.chain_source_of_truth || "unknown",
       indexes_derived: Boolean(migration.indexes_derived),
+      postgres_shadow_rehearsal_available: Boolean(migration.postgres_shadow_rehearsal_available),
+      postgres_shadow_ci_enabled: Boolean(migration.postgres_shadow_ci_enabled),
     },
   });
 
@@ -360,11 +362,42 @@ async function buildReadiness(options = {}) {
     status: migrationResult.ok && migration.migration_tools_available === true ? "pass" : "warning",
     severity: "medium",
     message: migration.migration_tools_available === true
-      ? "Migration dry-run, schema check, and import simulation tooling are available."
+      ? "Migration dry-run, schema check, import simulation, and shadow rehearsal tooling are available."
       : "One or more migration preparation tools are unavailable.",
     safe_metadata: {
       migration_tools_available: Boolean(migration.migration_tools_available),
       rollback_plan_required: Boolean(migration.rollback_plan_required),
+    },
+  });
+
+  addCheck(checks, {
+    id: "postgres_shadow_rehearsal_available",
+    name: "PostgreSQL shadow rehearsal available",
+    category: "Storage",
+    status: migrationResult.ok && migration.postgres_shadow_rehearsal_available === true ? "pass" : "warning",
+    severity: "medium",
+    message: migration.postgres_shadow_rehearsal_available === true
+      ? "PostgreSQL shadow migration rehearsal tooling is available for local and CI-only validation."
+      : "PostgreSQL shadow migration rehearsal tooling is unavailable.",
+    safe_metadata: {
+      postgres_shadow_rehearsal_available: Boolean(migration.postgres_shadow_rehearsal_available),
+      postgres_shadow_ci_enabled: Boolean(migration.postgres_shadow_ci_enabled),
+      postgres_active: Boolean(migration.postgres_active),
+    },
+  });
+
+  addCheck(checks, {
+    id: "postgres_shadow_ci_enabled",
+    name: "PostgreSQL shadow CI enabled",
+    category: "Storage",
+    status: migrationResult.ok && migration.postgres_shadow_ci_enabled === true ? "pass" : "warning",
+    severity: "medium",
+    message: migration.postgres_shadow_ci_enabled === true
+      ? "CI is configured to run the shadow migration rehearsal against fake fixture data."
+      : "CI shadow migration rehearsal is not reporting enabled.",
+    safe_metadata: {
+      postgres_shadow_ci_enabled: Boolean(migration.postgres_shadow_ci_enabled),
+      postgres_shadow_fixture_available: Boolean(migration.postgres_shadow_fixture_available),
     },
   });
 
@@ -583,6 +616,8 @@ async function buildReadiness(options = {}) {
     migration_phase: migration.migration_phase || "unknown",
     rollback_plan_required: Boolean(migration.rollback_plan_required),
     migration_tools_available: Boolean(migration.migration_tools_available),
+    postgres_shadow_rehearsal_available: Boolean(migration.postgres_shadow_rehearsal_available),
+    postgres_shadow_ci_enabled: Boolean(migration.postgres_shadow_ci_enabled),
     checks,
   };
 
@@ -619,6 +654,9 @@ async function buildReadiness(options = {}) {
         migration_phase: migration.migration_phase || "unknown",
         rollback_plan_required: Boolean(migration.rollback_plan_required),
         migration_tools_available: Boolean(migration.migration_tools_available),
+        postgres_shadow_rehearsal_available: Boolean(migration.postgres_shadow_rehearsal_available),
+        postgres_shadow_ci_enabled: Boolean(migration.postgres_shadow_ci_enabled),
+        postgres_shadow_fixture_available: Boolean(migration.postgres_shadow_fixture_available),
         migration_supported: migration.migration_supported || "unknown",
         chain_source_of_truth: migration.chain_source_of_truth || "unknown",
         indexes_derived: Boolean(migration.indexes_derived),

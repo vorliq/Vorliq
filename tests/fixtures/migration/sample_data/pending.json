@@ -1,0 +1,14 @@
+[
+  {
+    "amount": 1.0,
+    "category": "faucet",
+    "metadata": {},
+    "receiver_address": "VLQ_FAKE_PENDING_0001",
+    "sender_address": "SYSTEM",
+    "sender_public_key": null,
+    "signature": null,
+    "timestamp": 1710000120.0,
+    "tx_id": "fixture-pending-1",
+    "type": "faucet"
+  }
+]

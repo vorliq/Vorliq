@@ -39,7 +39,7 @@
         <ul>
           <li>Backend health, API version, version metadata, and deployment commit availability.</li>
           <li>Security status, admin route protection, storage health, derived index health, backup freshness, and incident state.</li>
-          <li>Migration readiness metadata, expected JSON backend status, and confirmation that no database adapter is active in production.</li>
+          <li>Migration readiness metadata, expected JSON backend status, PostgreSQL shadow rehearsal availability, and confirmation that no database adapter is active in production.</li>
           <li>Audit manifest availability and server-side hash-shape verification.</li>
           <li>Network manifest source metadata, registry active node count, public node activity, chain validity, mining status, treasury, faucet, and analytics availability.</li>
         </ul>
@@ -56,7 +56,7 @@
 
       <section>
         <h2>Migration Readiness</h2>
-        <p>Database migration preparation is expected to pass while <code>storage_backend</code> is <code>json</code>, <code>database_enabled</code> is <code>false</code>, and <code>postgres_active</code> is <code>false</code>. That is intentional: production has not migrated. The public endpoint <code>/api/migration/readiness</code> and the live <a href="https://vorliq.org/migration-readiness">Migration Readiness</a> page describe dry-run support, PostgreSQL schema presence, import simulation tooling, and rollback requirements.</p>
+        <p>Database migration preparation is expected to pass while <code>storage_backend</code> is <code>json</code>, <code>database_enabled</code> is <code>false</code>, and <code>postgres_active</code> is <code>false</code>. That is intentional: production has not migrated. The public endpoint <code>/api/migration/readiness</code> and the live <a href="https://vorliq.org/migration-readiness">Migration Readiness</a> page describe dry-run support, PostgreSQL schema presence, shadow rehearsal tooling, CI fixture rehearsal, import simulation tooling, and rollback requirements.</p>
       </section>
 
       <section>

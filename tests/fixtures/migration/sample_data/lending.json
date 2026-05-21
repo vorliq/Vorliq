@@ -1,0 +1,20 @@
+{
+  "loan_requests": {
+    "fixture-loan-1": {
+      "amount": 3,
+      "created_at": 1710000160.0,
+      "due_block": 100,
+      "loan_id": "fixture-loan-1",
+      "repayment_amount": 3.3,
+      "requester_address": "VLQ_FAKE_BORROWER_0001",
+      "status": "pending_vote",
+      "status_history": [
+        {
+          "status": "pending_vote",
+          "timestamp": 1710000160.0
+        }
+      ],
+      "votes": {}
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "VLQ_FAKE_MINER_0001": {
+      "avatar": "fixture",
+      "bio": "Deterministic fake profile for migration tests.",
+      "display_name": "Fixture Miner",
+      "reputation_score": 10
+    }
+  }
+}
