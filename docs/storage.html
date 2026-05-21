@@ -62,7 +62,8 @@
 
       <section class="card">
         <h2>Critical State Files</h2>
-        <p>The critical blockchain data files are <code>chain.json</code>, <code>pending.json</code>, <code>peers.json</code>, <code>registry.json</code>, <code>lending.json</code>, <code>exchange.json</code>, <code>governance.json</code>, <code>treasury.json</code>, <code>price.json</code>, <code>forum.json</code>, <code>achievements.json</code>, <code>profiles.json</code>, and <code>faucet.json</code>. These files affect balances, pending transactions, community records, public node state, and user-visible application state.</p>
+        <p>The critical blockchain data files are <code>chain.json</code>, <code>indexes.json</code>, <code>pending.json</code>, <code>peers.json</code>, <code>registry.json</code>, <code>lending.json</code>, <code>exchange.json</code>, <code>governance.json</code>, <code>treasury.json</code>, <code>price.json</code>, <code>forum.json</code>, <code>achievements.json</code>, <code>profiles.json</code>, and <code>faucet.json</code>. These files affect balances, pending transactions, community records, public node state, and user-visible application state.</p>
+        <p><code>indexes.json</code> is derived from <code>chain.json</code>. It can be rebuilt safely and is never the canonical source for historical blocks or transaction hashes. See <a href="indexes.html">Derived Indexes</a>.</p>
         <p>Backend JSON files such as <code>analytics.json</code> and <code>incidents.json</code> are also protected. Analytics is useful for product insight but is not required to reconstruct blockchain balances.</p>
       </section>
 

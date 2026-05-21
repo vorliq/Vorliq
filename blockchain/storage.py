@@ -26,6 +26,7 @@ from treasury import Treasury
 
 CRITICAL_JSON_FILES = [
     "chain.json",
+    "indexes.json",
     "pending.json",
     "peers.json",
     "registry.json",
@@ -50,6 +51,7 @@ class Storage:
         self.data_dir = Path(data_dir) if data_dir else Path(__file__).resolve().parent / "data"
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.chain_file = self.data_dir / "chain.json"
+        self.indexes_file = self.data_dir / "indexes.json"
         self.pending_file = self.data_dir / "pending.json"
         self.lending_file = self.data_dir / "lending.json"
         self.exchange_file = self.data_dir / "exchange.json"
@@ -116,6 +118,34 @@ class Storage:
 
         vorliq_logger.info("Loaded blockchain from disk with %s blocks", len(blockchain.chain))
         return blockchain
+
+    def save_indexes(self, indexes: Any) -> None:
+        payload = indexes.to_payload() if hasattr(indexes, "to_payload") else indexes
+        self._write_json(self.indexes_file, payload)
+        vorliq_logger.info(
+            "Saved blockchain indexes for height %s",
+            payload.get("chain_height") if isinstance(payload, dict) else "unknown",
+        )
+
+    def load_indexes(self, blockchain: Blockchain) -> Any | None:
+        if not self.indexes_file.exists():
+            vorliq_logger.info("No saved blockchain indexes found on disk")
+            return None
+
+        data = self._read_json(self.indexes_file, default=None)
+        if data is None:
+            vorliq_logger.warning("Blockchain indexes could not be read and will be rebuilt")
+            return None
+
+        try:
+            from indexes import BlockchainIndexes
+
+            indexes = BlockchainIndexes.from_payload(data, blockchain)
+            vorliq_logger.info("Loaded blockchain indexes for height %s", indexes.chain_height)
+            return indexes
+        except Exception as error:
+            vorliq_logger.warning("Saved blockchain indexes are invalid and will be rebuilt: %s", error)
+            return None
 
     def save_pending(self, pending_transactions: list[Any]) -> None:
         pending_data = [self._transaction_to_dict(transaction) for transaction in pending_transactions]

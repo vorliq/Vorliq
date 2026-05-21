@@ -72,6 +72,28 @@ describe("scalable chain routes", () => {
     expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/chain/summary");
   });
 
+  test("returns index health through the public safe endpoint", async () => {
+    axios.get.mockResolvedValue({
+      status: 200,
+      data: {
+        success: true,
+        exists: true,
+        valid: true,
+        status: "ok",
+        chain_height: 3,
+        latest_block_hash: "0000abc",
+        rebuild_needed: false,
+      },
+    });
+
+    const response = await request(app).get("/api/indexes/health");
+
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe("ok");
+    expect(JSON.stringify(response.body)).not.toMatch(/ADMIN_TOKEN|secret|\/home\/vorliq/i);
+    expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/indexes/health");
+  });
+
   test("forwards address transaction lookup with pagination", async () => {
     axios.get.mockResolvedValue({
       status: 200,
@@ -174,5 +196,19 @@ describe("scalable chain routes", () => {
     expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/leaderboard", {
       params: { limit: 10, offset: 0 },
     });
+  });
+
+  test("admin index health requires token", async () => {
+    const response = await request(app).get("/api/admin/indexes");
+
+    expect(response.status).toBe(401);
+    expect(axios.get).not.toHaveBeenCalled();
+  });
+
+  test("admin index rebuild requires token", async () => {
+    const response = await request(app).post("/api/admin/indexes/rebuild");
+
+    expect(response.status).toBe(401);
+    expect(axios.post).not.toHaveBeenCalled();
   });
 });

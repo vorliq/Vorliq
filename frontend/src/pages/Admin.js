@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../helpers/api";
 
 const ADMIN_TOKEN_KEY = "vorliq_admin_token";
-const tabs = ["Overview", "Readiness", "Analytics", "Storage", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
+const tabs = ["Overview", "Readiness", "Analytics", "Storage", "Indexes", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
 
 function authHeader(token) {
   return { Authorization: `Bearer ${token}` };
@@ -18,6 +18,7 @@ function Admin() {
   const [security, setSecurity] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [storage, setStorage] = useState(null);
+  const [indexes, setIndexes] = useState(null);
   const [backups, setBackups] = useState(null);
   const [incidents, setIncidents] = useState({ active: [], recent: [] });
   const [reports, setReports] = useState([]);
@@ -67,6 +68,11 @@ function Admin() {
     setStorage(response.data);
   }, [headers]);
 
+  const loadIndexes = useCallback(async () => {
+    const response = await api.get("/admin/indexes", { headers });
+    setIndexes(response.data);
+  }, [headers]);
+
   const loadIncidents = useCallback(async () => {
     const [active, recent] = await Promise.all([api.get("/incidents/active"), api.get("/incidents")]);
     setIncidents({
@@ -98,6 +104,7 @@ function Admin() {
       if (tab === "Readiness") await loadReadiness();
       if (tab === "Analytics") await loadAnalytics();
       if (tab === "Storage") await loadStorage();
+      if (tab === "Indexes") await loadIndexes();
       if (tab === "Security") await loadSecurity();
       if (tab === "Backups") await loadBackups();
       if (tab === "Incidents") await loadIncidents();
@@ -107,7 +114,7 @@ function Admin() {
     } catch (requestError) {
       setError(requestError.response?.status === 401 ? "Unauthorized" : "Unable to load admin data.");
     }
-  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadOverview, loadReadiness, loadReports, loadSecurity, loadStorage]);
+  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadOverview, loadReadiness, loadReports, loadSecurity, loadStorage]);
 
   useEffect(() => {
     if (adminToken) {
@@ -139,6 +146,7 @@ function Admin() {
     setSecurity(null);
     setAnalytics(null);
     setStorage(null);
+    setIndexes(null);
     setBackups(null);
     setReports([]);
     setForumPosts([]);
@@ -164,6 +172,17 @@ function Admin() {
       await loadBackups();
     } catch (requestError) {
       setStatus(requestError.response?.data?.message || "Backup verification failed.");
+    }
+  }
+
+  async function rebuildIndexes() {
+    setStatus("Rebuilding derived indexes...");
+    try {
+      const response = await api.post("/admin/indexes/rebuild", {}, { headers });
+      setStatus(response.data.success ? "Index rebuild completed." : "Index rebuild reported a warning.");
+      await loadIndexes();
+    } catch (requestError) {
+      setStatus(requestError.response?.data?.message || "Index rebuild failed.");
     }
   }
 
@@ -288,6 +307,7 @@ function Admin() {
       {activeTab === "Readiness" && <ReadinessTab readiness={readiness} onLoad={loadReadiness} />}
       {activeTab === "Analytics" && <AnalyticsTab analytics={analytics} onLoad={loadAnalytics} />}
       {activeTab === "Storage" && <StorageTab storage={storage} onLoad={loadStorage} />}
+      {activeTab === "Indexes" && <IndexesTab indexes={indexes} onLoad={loadIndexes} onRebuild={rebuildIndexes} />}
       {activeTab === "Security" && <SecurityTab security={security} onLoad={loadSecurity} />}
       {activeTab === "Backups" && <BackupsTab backups={backups} onLoad={loadBackups} onRun={runBackup} onVerify={verifyBackup} />}
       {activeTab === "Incidents" && (
@@ -354,6 +374,52 @@ function StorageTab({ storage, onLoad }) {
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+function IndexesTab({ indexes, onLoad, onRebuild }) {
+  useEffect(() => { if (!indexes) onLoad(); }, [indexes, onLoad]);
+  const health = indexes?.index_health || indexes || {};
+
+  return (
+    <section className="glass-section card-pad">
+      <p className="risk-box">
+        Indexes are derived from chain.json. Rebuilding them is non-destructive and does not rewrite historical blocks.
+      </p>
+      {!indexes ? (
+        <div className="empty-state">Loading index health...</div>
+      ) : (
+        <>
+          <div className="admin-card-grid">
+            {[
+              ["Status", health.status || "unknown"],
+              ["Valid", health.valid ? "Yes" : "No"],
+              ["Rebuild needed", health.rebuild_needed ? "Yes" : "No"],
+              ["Chain match", health.index_chain_match ? "Yes" : "No"],
+              ["Chain height", health.chain_height],
+              ["Built at", health.built_at || "Unavailable"],
+            ].map(([label, value]) => (
+              <div className="stat-card" key={label}>
+                <span>{label}</span>
+                <strong>{value}</strong>
+              </div>
+            ))}
+          </div>
+          <div className="table-wrap">
+            <table className="stats-table">
+              <tbody>
+                <tr><th>Schema version</th><td>{health.schema_version || "Unavailable"}</td></tr>
+                <tr><th>Latest hash</th><td>{health.latest_block_hash || "Unavailable"}</td></tr>
+                <tr><th>Message</th><td>{health.message || indexes.note || "Indexes are available."}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <button className="button brand-button" type="button" onClick={onRebuild}>
+            Rebuild Indexes
+          </button>
+        </>
+      )}
     </section>
   );
 }

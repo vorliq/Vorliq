@@ -8,6 +8,7 @@ const endpoints = [
   "/api/changelog",
   "/api/roadmap",
   "/api/readiness",
+  "/api/indexes/health",
   "/api/v1/health",
   "/api/deployment",
   "/api/system/self-check",
@@ -50,6 +51,14 @@ test.describe("read-only API smoke tests", () => {
 
   test("admin readiness stays protected without a token", async ({ request }) => {
     const response = await request.get("/api/admin/readiness");
+    expect(response.status()).toBe(401);
+    const json = await response.json();
+    expect(json.success).toBe(false);
+    safeApiJson(json);
+  });
+
+  test("admin indexes stay protected without a token", async ({ request }) => {
+    const response = await request.get("/api/admin/indexes");
     expect(response.status()).toBe(401);
     const json = await response.json();
     expect(json.success).toBe(false);

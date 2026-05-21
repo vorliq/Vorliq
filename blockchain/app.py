@@ -214,6 +214,20 @@ def _profile_dependencies() -> dict:
     }
 
 
+INDEX_STARTUP_STATUS = {
+    "loaded_from_disk": False,
+    "rebuilt_on_startup": False,
+    "last_rebuild_error": None,
+}
+
+
+def _rebuild_indexes(save: bool = True) -> dict:
+    indexes = node.blockchain.rebuild_indexes()
+    if save:
+        storage.save_indexes(indexes)
+    return indexes.health(node.blockchain, exists=storage.indexes_file.exists())
+
+
 def _public_forum_post(post: dict, *, include_hidden_replies: bool = False) -> dict:
     public_post = dict(post)
     replies = list(public_post.get("replies", []))
@@ -268,6 +282,7 @@ def _sync_treasury(save: bool = True) -> bool:
     if changed and save:
         storage.save_treasury(treasury)
         storage.save_pending(node.blockchain.pending_transactions)
+        _rebuild_indexes(save=True)
     return changed
 
 
@@ -282,6 +297,27 @@ def _sync_faucet(save: bool = True) -> bool:
 
 
 _sync_faucet(save=True)
+
+
+def _load_or_rebuild_indexes() -> None:
+    try:
+        loaded_indexes = storage.load_indexes(node.blockchain)
+        if loaded_indexes is not None:
+            node.blockchain.set_indexes(loaded_indexes)
+            INDEX_STARTUP_STATUS["loaded_from_disk"] = True
+            return
+        INDEX_STARTUP_STATUS["rebuilt_on_startup"] = True
+        _rebuild_indexes(save=True)
+    except Exception as exc:
+        INDEX_STARTUP_STATUS["last_rebuild_error"] = str(exc)
+        vorliq_logger.warning("Index startup maintenance failed without blocking node startup: %s", exc)
+        try:
+            node.blockchain.rebuild_indexes()
+        except Exception as rebuild_error:
+            vorliq_logger.error("In-memory index rebuild failed: %s", rebuild_error)
+
+
+_load_or_rebuild_indexes()
 
 
 def _is_private_hostname(hostname: str) -> bool:
@@ -331,6 +367,46 @@ def health():
 @app.get("/storage/health")
 def storage_health():
     return jsonify(storage.storage_health())
+
+
+@app.get("/indexes/health")
+def indexes_health():
+    try:
+        exists = storage.indexes_file.exists()
+        indexes = node.blockchain.get_indexes()
+        health = indexes.health(node.blockchain, exists=exists)
+        health["loaded_from_disk"] = INDEX_STARTUP_STATUS["loaded_from_disk"]
+        health["rebuilt_on_startup"] = INDEX_STARTUP_STATUS["rebuilt_on_startup"]
+        if INDEX_STARTUP_STATUS["last_rebuild_error"]:
+            health["status"] = "warning"
+            health["message"] = "Indexes are available in memory but the last startup rebuild reported a warning."
+        return jsonify(health)
+    except Exception as exc:
+        vorliq_logger.error("Index health endpoint failed: %s", exc)
+        return jsonify(
+            {
+                "success": False,
+                "exists": storage.indexes_file.exists(),
+                "valid": False,
+                "schema_version": None,
+                "chain_height": node.blockchain.get_block_height(),
+                "latest_block_hash": node.blockchain.get_latest_block().hash,
+                "built_at": None,
+                "status": "error",
+                "rebuild_needed": True,
+                "index_chain_match": False,
+                "message": "Index health is unavailable.",
+            }
+        ), 200
+
+
+@app.post("/indexes/rebuild")
+def rebuild_indexes_endpoint():
+    try:
+        return jsonify(_rebuild_indexes(save=True))
+    except Exception as exc:
+        vorliq_logger.error("Index rebuild endpoint failed: %s", exc)
+        return jsonify({"success": False, "status": "error", "message": "Index rebuild failed."}), 500
 
 
 @app.get("/chain")
@@ -489,6 +565,7 @@ def create_transaction():
         node.submit_transaction(transaction)
         achievements.check_and_award(transaction.sender_address, "first_transaction", node.blockchain)
         storage.save_pending(node.blockchain.pending_transactions)
+        _rebuild_indexes(save=True)
         storage.save_achievements(achievements)
         if not data.get("_broadcasted"):
             network.broadcast_transaction({**transaction.to_dict(), "_broadcasted": True})
@@ -518,6 +595,7 @@ def mine_block():
         _sync_faucet(save=False)
         storage.save_chain(node.blockchain)
         storage.save_pending(node.blockchain.pending_transactions)
+        _rebuild_indexes(save=True)
         storage.save_lending_pool(lending_pool)
         storage.save_exchange(exchange)
         storage.save_treasury(treasury)
@@ -941,6 +1019,7 @@ def vote_on_treasury_proposal():
         achievements.check_and_award(voter_address, "treasury_voter", node.blockchain)
         storage.save_treasury(treasury)
         storage.save_pending(node.blockchain.pending_transactions)
+        _rebuild_indexes(save=True)
         storage.save_achievements(achievements)
         return jsonify({"success": True, "proposal": proposal})
     except Exception as exc:
@@ -998,6 +1077,7 @@ def claim_faucet():
         )
         storage.save_faucet(faucet)
         storage.save_pending(node.blockchain.pending_transactions)
+        _rebuild_indexes(save=True)
         status = claim.get("status")
         if status == "rate_limited":
             return jsonify({"success": False, "claim": claim, "message": claim.get("reason")}), 429
@@ -1286,6 +1366,7 @@ def receive_block():
             _sync_faucet(save=False)
             storage.save_chain(node.blockchain)
             storage.save_pending(node.blockchain.pending_transactions)
+            _rebuild_indexes(save=True)
             storage.save_lending_pool(lending_pool)
             storage.save_exchange(exchange)
             storage.save_treasury(treasury)
@@ -1299,6 +1380,7 @@ def receive_block():
             _sync_treasury(save=False)
             _sync_faucet(save=False)
             storage.save_chain(node.blockchain)
+            _rebuild_indexes(save=True)
             storage.save_lending_pool(lending_pool)
             storage.save_exchange(exchange)
             storage.save_treasury(treasury)
@@ -1318,6 +1400,7 @@ def receive_block():
             _sync_treasury(save=False)
             _sync_faucet(save=False)
             storage.save_chain(node.blockchain)
+            _rebuild_indexes(save=True)
             storage.save_lending_pool(lending_pool)
             storage.save_exchange(exchange)
             storage.save_treasury(treasury)
@@ -1335,6 +1418,7 @@ def sync_peers():
         _sync_treasury(save=False)
         _sync_faucet(save=False)
         storage.save_chain(node.blockchain)
+        _rebuild_indexes(save=True)
         storage.save_lending_pool(lending_pool)
         storage.save_exchange(exchange)
         storage.save_treasury(treasury)
@@ -1539,6 +1623,7 @@ def vote_on_lending_loan():
         achievements.check_and_award(voter_address, "first_loan", node.blockchain)
         storage.save_lending_pool(lending_pool)
         storage.save_pending(node.blockchain.pending_transactions)
+        _rebuild_indexes(save=True)
         storage.save_achievements(achievements)
         return jsonify({
             "success": True,
@@ -1561,6 +1646,7 @@ def repay_lending_loan():
         achievements.check_and_award(repayer_address, "first_repayment", node.blockchain)
         storage.save_lending_pool(lending_pool)
         storage.save_pending(node.blockchain.pending_transactions)
+        _rebuild_indexes(save=True)
         storage.save_achievements(achievements)
         return jsonify(
             {
@@ -1956,6 +2042,7 @@ def tip_forum_post():
         achievements.check_and_award(sender_address, "first_tip", node.blockchain)
         storage.save_forum(forum)
         storage.save_pending(node.blockchain.pending_transactions)
+        _rebuild_indexes(save=True)
         storage.save_achievements(achievements)
         return jsonify({"success": True, "tip": tip}), 201
     except Exception as exc:
@@ -1986,6 +2073,7 @@ def tip_forum_reply():
         achievements.check_and_award(sender_address, "first_tip", node.blockchain)
         storage.save_forum(forum)
         storage.save_pending(node.blockchain.pending_transactions)
+        _rebuild_indexes(save=True)
         storage.save_achievements(achievements)
         return jsonify({"success": True, "tip": tip}), 201
     except Exception as exc:
@@ -2101,6 +2189,7 @@ def vote_on_governance_proposal():
         achievements.check_and_award(voter_address, "first_vote", node.blockchain)
         storage.save_governance(governance)
         storage.save_chain(node.blockchain)
+        _rebuild_indexes(save=True)
         storage.save_achievements(achievements)
         return jsonify({"success": True, "proposal": proposal})
     except Exception as exc:
@@ -2155,23 +2244,16 @@ def get_leaderboard():
     try:
         limit, offset = _pagination(default_limit=20)
         excluded_addresses = set(SYSTEM_ADDRESSES) | {TREASURY_ADDRESS}
-        balances: dict[str, float] = {}
-        miners: dict[str, int] = {}
+        index_payload = node.blockchain.get_indexes().indexes
+        balances = {
+            address: float(value)
+            for address, value in index_payload.get("confirmed_balances_by_address", {}).items()
+        }
+        miners = {
+            address: int(stats.get("blocks_mined", 0))
+            for address, stats in index_payload.get("miner_stats", {}).items()
+        }
         lenders: dict[str, int] = {}
-
-        for block in node.blockchain.chain:
-            miner_address = getattr(block, "miner_address", None)
-            if miner_address and miner_address not in excluded_addresses:
-                miners[miner_address] = miners.get(miner_address, 0) + 1
-
-            for transaction in block.transactions or []:
-                if isinstance(transaction, dict):
-                    transaction = Transaction.from_dict(transaction)
-                sender = transaction.sender_address
-                receiver = transaction.receiver_address
-                amount = float(transaction.amount)
-                balances[sender] = balances.get(sender, 0.0) - amount
-                balances[receiver] = balances.get(receiver, 0.0) + amount
 
         for loan in lending_pool.get_all_loans():
             if loan.get("status") == "repaid" and loan.get("requester_address"):

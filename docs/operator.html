@@ -68,6 +68,7 @@ sudo systemctl restart vorliq-backend.service</code></pre>
           <li>Use Overview to verify deployment, block height, chain validity, pending transactions, incidents, backups, and service state.</li>
           <li>Use Readiness to review the combined production gate, score, failing checks, warning checks, latest backup age, storage counts, incident counts, registry counts, deployment commit, and safe service names.</li>
           <li>Use Storage to review JSON validity, backup availability, warning counts, and corruption signals without exposing server paths or secrets.</li>
+          <li>Use Indexes to review derived read-index status, chain match, build time, and to trigger a safe rebuild from <code>chain.json</code> when needed.</li>
           <li>Use Security to confirm rate limits, CORS, Helmet, CSP, public write protection, and admin route protection.</li>
           <li>Use Backups to run a backup and verify the latest archive. Verification never restores production data.</li>
           <li>Use Incidents to create and resolve public incident records when users need visibility.</li>
@@ -88,6 +89,7 @@ sudo systemctl restart vorliq-backend.service</code></pre>
       <section class="glass">
         <h2>Storage Reliability</h2>
         <p>Vorliq JSON state is protected with atomic writes, backup-before-write <code>.bak</code> files, lightweight write locks, safe JSON loading, and storage health reporting. The public and admin storage endpoints return file names and health metadata only, never raw file contents, full server paths, private keys, wallet passwords, or admin tokens.</p>
+        <p>Derived index health is available at <code>/api/indexes/health</code>. Protected operators can call <code>/api/admin/indexes/rebuild</code> to rebuild <code>indexes.json</code> without rewriting <code>chain.json</code> or changing block hashes.</p>
         <p>Read the <a href="storage.html">Storage Reliability</a> guide before responding to corruption warnings or restoring from backup.</p>
       </section>
 

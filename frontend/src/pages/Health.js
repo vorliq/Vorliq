@@ -25,6 +25,7 @@ function Health() {
   const [securityStatus, setSecurityStatus] = useState(null);
   const [backupStatus, setBackupStatus] = useState(null);
   const [storageHealth, setStorageHealth] = useState(null);
+  const [indexHealth, setIndexHealth] = useState(null);
   const [activeIncidents, setActiveIncidents] = useState([]);
   const [weeklyReport, setWeeklyReport] = useState(null);
   const [registryNodes, setRegistryNodes] = useState([]);
@@ -52,6 +53,7 @@ function Health() {
         const securityRequest = api.get("/security/status");
         const backupRequest = api.get("/backup/status");
         const storageRequest = api.get("/storage/health");
+        const indexRequest = api.get("/indexes/health");
         const incidentsRequest = api.get("/incidents/active");
         const weeklyReportRequest = api.get("/reports/weekly");
         const miningRequest = api.get("/mining/status");
@@ -65,6 +67,7 @@ function Health() {
           securityResponse,
           backupResponse,
           storageResponse,
+          indexResponse,
           incidentsResponse,
           weeklyReportResponse,
           miningResponse,
@@ -78,6 +81,7 @@ function Health() {
           securityRequest,
           backupRequest,
           storageRequest,
+          indexRequest,
           incidentsRequest,
           weeklyReportRequest,
           miningRequest,
@@ -113,6 +117,7 @@ function Health() {
           setSecurityStatus(securityResponse.data);
           setBackupStatus(backupResponse.data);
           setStorageHealth(storageResponse.data);
+          setIndexHealth(indexResponse.data);
           setActiveIncidents(incidentsResponse.data.incidents || []);
           setWeeklyReport(weeklyReportResponse.data);
           setRegistryNodes(nodes);
@@ -443,6 +448,47 @@ function Health() {
           </div>
         ) : (
           <div className="empty-state">Storage health is unavailable right now.</div>
+        )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <div className="section-title">
+          <h2>Index Health</h2>
+          <span className={`status-badge ${indexHealth?.status || "warning"}`}>
+            {indexHealth?.status || "unknown"}
+          </span>
+        </div>
+        {loading ? (
+          <Spinner label="Loading index health..." />
+        ) : indexHealth?.success ? (
+          <div className="stats-grid compact-stats">
+            <div className="stat-card">
+              <span>Exists</span>
+              <strong>{indexHealth.exists ? "Yes" : "No"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Valid</span>
+              <strong>{indexHealth.valid ? "Yes" : "No"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Chain match</span>
+              <strong>{indexHealth.index_chain_match ? "Yes" : "No"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Rebuild needed</span>
+              <strong>{indexHealth.rebuild_needed ? "Yes" : "No"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Chain height</span>
+              <strong>{indexHealth.chain_height}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Built</span>
+              <strong>{indexHealth.built_at || "Unavailable"}</strong>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">Index health is unavailable right now.</div>
         )}
       </section>
 

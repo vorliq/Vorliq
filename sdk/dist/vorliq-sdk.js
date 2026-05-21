@@ -334,6 +334,15 @@ class VorliqSDK {
   }
 
   /**
+   * Gets derived index health for public read performance checks.
+   *
+   * @returns {Promise<object>} Safe index health metadata.
+   */
+  async getIndexHealth() {
+    return this.request("/api/indexes/health");
+  }
+
+  /**
    * Gets the public Vorliq network manifest for transparency and integration checks.
    *
    * @returns {Promise<object>} Safe public network metadata including URLs, deployment commit, chain summary, diagnostics, SDK version, incident activity, and generated timestamp.

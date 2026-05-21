@@ -160,6 +160,7 @@ async function buildReadiness(options = {}) {
     diagnosticsResult,
     chainSummaryResult,
     storageResult,
+    indexResult,
     backupResult,
     auditResult,
     registryResult,
@@ -174,6 +175,7 @@ async function buildReadiness(options = {}) {
     safeCall("diagnostics", () => flaskGet("/diagnostics")),
     safeCall("chain summary", () => flaskGet("/chain/summary")),
     safeCall("storage health", loadStorageHealth),
+    safeCall("index health", () => flaskGet("/indexes/health")),
     safeCall("backup status", () => Promise.resolve(publicBackupStatus())),
     safeCall("audit manifest", () => buildAuditSnapshot()),
     safeCall("registry summary", () => flaskGet("/registry/summary")),
@@ -242,6 +244,29 @@ async function buildReadiness(options = {}) {
       warnings_count: numberOrNull(storage.warnings_count),
       errors_count: numberOrNull(storage.errors_count),
       backup_available: Boolean(storage.backup_available),
+    },
+  });
+
+  const indexHealth = indexResult.value || {};
+  const indexChainMatch = indexHealth.index_chain_match === true || indexHealth.chain_match === true;
+  addCheck(checks, {
+    id: "index_health_ok",
+    name: "Index health ok",
+    category: "Storage",
+    status: indexResult.ok && indexHealth.status === "ok" && indexHealth.rebuild_needed !== true ? "pass" : indexResult.ok ? "warning" : "fail",
+    severity: "medium",
+    message: indexResult.ok
+      ? `Index health is ${indexHealth.status || "unknown"}.`
+      : "Index health could not be loaded.",
+    safe_metadata: {
+      exists: Boolean(indexHealth.exists),
+      valid: Boolean(indexHealth.valid),
+      schema_version: numberOrNull(indexHealth.schema_version),
+      chain_height: numberOrNull(indexHealth.chain_height),
+      latest_block_hash: indexHealth.latest_block_hash || null,
+      built_at: indexHealth.built_at || null,
+      index_rebuild_needed: Boolean(indexHealth.rebuild_needed),
+      index_chain_match: Boolean(indexChainMatch),
     },
   });
 
@@ -448,6 +473,9 @@ async function buildReadiness(options = {}) {
     overall_status: scored.overall_status,
     score: scored.score,
     checked_at: checkedAt,
+    index_health: indexHealth.status || "unknown",
+    index_rebuild_needed: Boolean(indexHealth.rebuild_needed),
+    index_chain_match: Boolean(indexChainMatch),
     checks,
   };
 
@@ -466,6 +494,14 @@ async function buildReadiness(options = {}) {
         warnings_count: numberOrNull(storage.warnings_count),
         errors_count: numberOrNull(storage.errors_count),
         backup_available: Boolean(storage.backup_available),
+      },
+      index_health: {
+        status: indexHealth.status || "unknown",
+        rebuild_needed: Boolean(indexHealth.rebuild_needed),
+        index_chain_match: Boolean(indexChainMatch),
+        chain_height: numberOrNull(indexHealth.chain_height),
+        latest_block_hash: indexHealth.latest_block_hash || null,
+        built_at: indexHealth.built_at || null,
       },
       incidents: counts,
       registry: {

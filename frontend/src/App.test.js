@@ -31,6 +31,7 @@ import BlockDetail from "./pages/BlockDetail";
 import Blockchain from "./pages/Blockchain";
 import Registry from "./pages/Registry";
 import Health from "./pages/Health";
+import Readiness from "./pages/Readiness";
 
 jest.mock("./helpers/api", () => ({
   get: jest.fn(),
@@ -803,6 +804,47 @@ function defaultApiGet(path) {
         errors_count: 0,
         backup_available: true,
         files: [{ file_name: "chain.json", status: "ok", valid_json: true, has_backup: true }],
+      },
+    });
+  }
+
+  if (path === "/indexes/health") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        exists: true,
+        valid: true,
+        status: "ok",
+        schema_version: 1,
+        chain_height: 12,
+        latest_block_hash: "0000latestblock",
+        built_at: "2026-05-21T00:00:00Z",
+        rebuild_needed: false,
+        index_chain_match: true,
+      },
+    });
+  }
+
+  if (path === "/readiness") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        overall_status: "pass",
+        score: 98,
+        checked_at: "2026-05-21T00:00:00Z",
+        index_health: "ok",
+        index_rebuild_needed: false,
+        index_chain_match: true,
+        checks: [
+          {
+            id: "index_health_ok",
+            name: "Index health ok",
+            category: "Storage",
+            status: "pass",
+            severity: "medium",
+            message: "Index health is ok.",
+          },
+        ],
       },
     });
   }
@@ -1972,4 +2014,87 @@ test("Admin page renders storage section after token", async () => {
 
   expect(await screen.findByText(/overall status/i)).toBeInTheDocument();
   expect(screen.getByText("chain.json")).toBeInTheDocument();
+});
+
+test("Health page renders Index Health section", async () => {
+  api.get.mockImplementation(defaultApiGet);
+
+  renderWithProviders(<Health />, "/health");
+
+  expect(await screen.findByRole("heading", { name: /index health/i })).toBeInTheDocument();
+  expect(await screen.findByText(/rebuild needed/i)).toBeInTheDocument();
+  expect(screen.getByText(/chain match/i)).toBeInTheDocument();
+});
+
+test("Readiness page includes index checks", async () => {
+  api.get.mockImplementation(defaultApiGet);
+
+  renderWithProviders(<Readiness />, "/readiness");
+
+  expect(await screen.findByRole("heading", { name: /readiness/i })).toBeInTheDocument();
+  expect((await screen.findAllByText(/index health/i)).length).toBeGreaterThan(0);
+  expect(await screen.findByText(/index rebuild needed/i)).toBeInTheDocument();
+  expect(await screen.findByText(/index health is ok/i)).toBeInTheDocument();
+});
+
+test("Admin Indexes section stays protected and renders safe rebuild controls after token", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/admin/overview") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          deployment: { commit_hash: "abcdef1234567890" },
+          blockchain: { height: 218, chain_valid: true, pending_transaction_count: 2 },
+          treasury: { balance: 25 },
+          backups: { latest_backup: null },
+          incidents: { active_count: 0 },
+          services: {},
+          server_uptime_seconds: 10,
+        },
+      });
+    }
+    if (path === "/admin/indexes") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          index_health: {
+            success: true,
+            exists: true,
+            valid: true,
+            status: "ok",
+            schema_version: 1,
+            chain_height: 218,
+            latest_block_hash: "0000hash",
+            built_at: "2026-05-21T00:00:00Z",
+            rebuild_needed: false,
+            index_chain_match: true,
+          },
+          note: "Indexes are derived from chain.json.",
+        },
+      });
+    }
+    return defaultApiGet(path);
+  });
+  api.post.mockResolvedValueOnce({
+    data: { success: true, status: "ok", rebuild_needed: false },
+  });
+
+  renderWithProviders(<Admin />, "/admin");
+
+  expect(screen.getByRole("heading", { name: /admin access/i })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /indexes/i })).not.toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText(/admin token/i), { target: { value: "good-token" } });
+  await userEvent.click(screen.getByRole("button", { name: /open operator dashboard/i }));
+  await userEvent.click(await screen.findByRole("button", { name: /indexes/i }));
+
+  expect(await screen.findByText(/indexes are derived from chain\.json/i)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /rebuild indexes/i })).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole("button", { name: /rebuild indexes/i }));
+
+  await waitFor(() => {
+    expect(api.post).toHaveBeenCalledWith("/admin/indexes/rebuild", {}, expect.objectContaining({ headers: expect.any(Object) }));
+  });
+  expect(screen.queryByText("good-token")).not.toBeInTheDocument();
 });

@@ -31,6 +31,7 @@ class Blockchain:
         self.proof_target = "0" * self.difficulty
         self.chain: list[Block] = [self.create_genesis_block()]
         self.pending_transactions: list[Transaction] = []
+        self._indexes = None
 
     def create_genesis_block(self) -> Block:
         genesis_block = Block(
@@ -76,6 +77,7 @@ class Blockchain:
             return False
 
         self.chain.append(block)
+        self._indexes = None
         self.adjust_difficulty()
         return True
 
@@ -136,6 +138,7 @@ class Blockchain:
             raise ValueError("sender does not have enough confirmed VLQ for this transaction")
 
         self.pending_transactions.append(transaction)
+        self._indexes = None
         vorliq_logger.info(
             "Transaction added to pending pool from %s to %s for %s VLQ",
             transaction.sender_address,
@@ -190,6 +193,7 @@ class Blockchain:
         self.pending_transactions = (
             [reward_transaction, treasury_transaction] if mining_reward > 0 else []
         )
+        self._indexes = None
         vorliq_logger.info("Mined block %s with hash %s", block.index, block.hash)
 
         return block
@@ -246,16 +250,46 @@ class Blockchain:
     def get_pending_transactions(self) -> list[dict[str, Any]]:
         return [self.safe_transaction_record(transaction, status="pending") for transaction in self.pending_transactions]
 
+    def set_indexes(self, indexes: Any | None) -> None:
+        self._indexes = indexes
+
+    def rebuild_indexes(self) -> Any:
+        from indexes import BlockchainIndexes
+
+        self._indexes = BlockchainIndexes.build(self)
+        return self._indexes
+
+    def get_indexes(self) -> Any:
+        if self._indexes is None:
+            return self.rebuild_indexes()
+        latest_block = self.get_latest_block()
+        if (
+            getattr(self._indexes, "chain_height", None) != self.get_block_height()
+            or getattr(self._indexes, "latest_block_hash", None) != latest_block.hash
+        ):
+            return self.rebuild_indexes()
+        return self._indexes
+
+    def index_health(self, *, exists: bool = True, valid: bool = True, message: str | None = None) -> dict[str, Any]:
+        indexes = self.get_indexes()
+        return indexes.health(self, exists=exists, valid=valid, message=message)
+
     def get_chain_data(self) -> list[dict[str, Any]]:
         return [block.to_dict() for block in self.chain]
 
     def get_blocks_page(self, limit: int, offset: int) -> tuple[list[dict[str, Any]], int, bool]:
+        if self._indexes is not None:
+            return self.get_indexes().blocks_page(limit, offset)
         blocks = [self.safe_block_record(block, include_transactions=True) for block in reversed(self.chain)]
         total = len(blocks)
         page = blocks[offset : offset + limit]
         return page, total, offset + limit < total
 
     def get_chain_summary(self) -> dict[str, Any]:
+        if self._indexes is not None:
+            summary = dict(self.get_indexes().indexes.get("chain_summary", {}))
+            if summary:
+                return summary
         last_block = self.get_latest_block()
         return {
             "block_height": self.get_block_height(),
@@ -412,6 +446,9 @@ class Blockchain:
     def _transaction_matches_address(self, transaction: Transaction, address: str | None) -> bool:
         return not address or transaction.sender_address == address or transaction.receiver_address == address
 
+    def _record_matches_address(self, record: dict[str, Any], address: str | None) -> bool:
+        return not address or record.get("sender_address") == address or record.get("receiver_address") == address
+
     def _transaction_matches_type(self, transaction: Transaction, tx_type: str | None) -> bool:
         if not tx_type:
             return True
@@ -462,6 +499,20 @@ class Blockchain:
         address: str | None = None,
         tx_type: str | None = None,
     ) -> list[dict[str, Any]]:
+        if self._indexes is not None and not tx_type:
+            indexes = self.get_indexes()
+            if address:
+                records = [
+                    record for record in indexes.transactions_for_address(address)
+                    if record.get("status") == "pending"
+                ]
+            else:
+                records = [
+                    record
+                    for record in indexes.indexes.get("transactions_by_id", {}).values()
+                    if record.get("status") == "pending"
+                ]
+            return sorted(records, key=lambda item: float(item.get("timestamp") or 0), reverse=True)
         records = []
         for index, transaction in enumerate(self.pending_transactions or []):
             tx = self._coerce_transaction(transaction)
@@ -474,6 +525,20 @@ class Blockchain:
         address: str | None = None,
         tx_type: str | None = None,
     ) -> list[dict[str, Any]]:
+        if self._indexes is not None and not tx_type:
+            indexes = self.get_indexes()
+            if address:
+                records = [
+                    record for record in indexes.transactions_for_address(address)
+                    if record.get("status") == "confirmed"
+                ]
+            else:
+                records = [
+                    record
+                    for record in indexes.indexes.get("transactions_by_id", {}).values()
+                    if record.get("status") == "confirmed"
+                ]
+            return sorted(records, key=lambda item: float(item.get("timestamp") or 0), reverse=True)
         records: list[dict[str, Any]] = []
         for block in reversed(self.chain):
             for index, transaction in enumerate(block.transactions or []):
@@ -509,6 +574,16 @@ class Blockchain:
     ) -> tuple[list[dict[str, Any]], int, bool]:
         if status not in {"pending", "confirmed", "all"}:
             raise ValueError("status must be pending, confirmed, or all")
+        if self._indexes is not None and not tx_type:
+            indexed_records = list(self.get_indexes().indexes.get("transactions_by_id", {}).values())
+            records = [
+                record for record in indexed_records
+                if (status == "all" or record.get("status") == status)
+                and self._record_matches_address(record, address)
+            ]
+            records.sort(key=lambda item: float(item.get("timestamp") or 0), reverse=True)
+            total = len(records)
+            return records[offset : offset + limit], total, offset + limit < total
         records: list[dict[str, Any]] = []
         if status in {"pending", "all"}:
             records.extend(self._pending_transaction_records(address=address, tx_type=tx_type))
@@ -521,6 +596,10 @@ class Blockchain:
     def get_transaction_detail(self, tx_id: str) -> dict[str, Any] | None:
         if not tx_id:
             raise ValueError("transaction ID is required")
+        if self._indexes is not None:
+            record = self.get_indexes().transaction_detail(tx_id)
+            if record:
+                return record
         for record in self._pending_transaction_records():
             if record["tx_id"] == tx_id:
                 return record
@@ -556,6 +635,8 @@ class Blockchain:
         if index_or_hash is None or str(index_or_hash).strip() == "":
             raise ValueError("block index or hash is required")
         term = str(index_or_hash).strip()
+        if self._indexes is not None:
+            return self.get_indexes().block_detail(term)
         target_index: int | None = None
         if term.isdigit():
             target_index = int(term)
@@ -567,6 +648,40 @@ class Blockchain:
     def get_address_history(self, address: str, limit: int, offset: int) -> dict[str, Any]:
         if not address:
             raise ValueError("address is required")
+        if self._indexes is not None:
+            all_records = self.get_indexes().transactions_for_address(address)
+            confirmed = [tx for tx in all_records if tx["status"] == "confirmed"]
+            pending = [tx for tx in all_records if tx["status"] == "pending"]
+            confirmed_incoming = [tx for tx in confirmed if tx["receiver_address"] == address]
+            confirmed_outgoing = [tx for tx in confirmed if tx["sender_address"] == address]
+            pending_incoming = [tx for tx in pending if tx["receiver_address"] == address]
+            pending_outgoing = [tx for tx in pending if tx["sender_address"] == address]
+            mined_rewards = [
+                tx for tx in confirmed_incoming
+                if tx["sender_address"] == SYSTEM_ADDRESS and tx["type"] in {"mining_reward", "treasury_reward"}
+            ]
+            page = all_records[offset : offset + limit]
+            confirmed_balance = self.get_indexes().confirmed_balance(address)
+            return {
+                "address": address,
+                "balance": self.get_indexes().balance(address),
+                "confirmed_balance": confirmed_balance,
+                "pending_incoming": pending_incoming,
+                "pending_outgoing": pending_outgoing,
+                "confirmed_incoming": confirmed_incoming,
+                "confirmed_outgoing": confirmed_outgoing,
+                "mined_rewards": mined_rewards,
+                "total_sent": sum(float(tx["amount"]) for tx in confirmed_outgoing),
+                "total_received": sum(float(tx["amount"]) for tx in confirmed_incoming),
+                "pending_incoming_total": sum(float(tx["amount"]) for tx in pending_incoming),
+                "pending_outgoing_total": sum(float(tx["amount"]) for tx in pending_outgoing),
+                "transaction_count": len(all_records),
+                "transactions": page,
+                "total": len(all_records),
+                "limit": limit,
+                "offset": offset,
+                "has_more": offset + limit < len(all_records),
+            }
         confirmed = self._confirmed_transaction_records(address=address)
         pending = self._pending_transaction_records(address=address)
         confirmed_incoming = [tx for tx in confirmed if tx["receiver_address"] == address]
@@ -644,6 +759,8 @@ class Blockchain:
     def get_balance(self, address: str) -> float:
         if not address:
             raise ValueError("address is required")
+        if self._indexes is not None:
+            return self.get_indexes().balance(address)
 
         balance = 0.0
         transactions = []
@@ -696,6 +813,7 @@ class Blockchain:
         if removed:
             vorliq_logger.info("Pruned %s confirmed or invalid pending transactions", removed)
         self.pending_transactions = retained_transactions
+        self._indexes = None
 
     def to_dict(self) -> dict[str, Any]:
         return {

@@ -115,10 +115,13 @@ chown root:vorliq /home/vorliq/alert.sh
 cp /home/vorliq/app/deployment/monitor.sh /home/vorliq/monitor.sh
 chmod 750 /home/vorliq/monitor.sh
 chown root:vorliq /home/vorliq/monitor.sh
+chmod 750 /home/vorliq/app/backend/maintenance.js
 printf '15 2 * * * root /home/vorliq/backup.sh >/dev/null 2>&1\n' >/etc/cron.d/vorliq-backup
 chmod 644 /etc/cron.d/vorliq-backup
 printf '*/5 * * * * root /home/vorliq/monitor.sh >/dev/null 2>&1\n' >/etc/cron.d/vorliq-monitor
 chmod 644 /etc/cron.d/vorliq-monitor
+printf '*/15 * * * * root set -a; . /etc/vorliq/backend.env 2>/dev/null || true; set +a; cd /home/vorliq/app/backend && /usr/bin/node maintenance.js >/dev/null 2>&1\n' >/etc/cron.d/vorliq-maintenance
+chmod 644 /etc/cron.d/vorliq-maintenance
 
 systemctl restart vorliq-blockchain.service
 systemctl restart vorliq-backend.service

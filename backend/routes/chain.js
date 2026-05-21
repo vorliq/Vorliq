@@ -64,6 +64,15 @@ router.get("/api/chain/summary", async (req, res) => {
   }
 });
 
+router.get("/api/indexes/health", async (req, res) => {
+  try {
+    const response = await axios.get(`${flaskUrl}/indexes/health`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    return handleRouteError(res, error, "GET /api/indexes/health", "Unable to load index health.");
+  }
+});
+
 router.get("/api/chain/address", async (req, res) => {
   try {
     const params = {

@@ -351,6 +351,31 @@ router.get("/api/admin/backups", (req, res) => {
   }
 });
 
+router.get("/api/admin/indexes", async (req, res) => {
+  try {
+    const health = await flaskGet("/indexes/health");
+    return res.json({
+      success: true,
+      index_health: health,
+      note: "Indexes are derived from chain.json and can be rebuilt safely without changing historical blocks.",
+    });
+  } catch (error) {
+    logError(`GET /api/admin/indexes failed: ${sanitizeText(error.message)}`);
+    return res.status(503).json({ success: false, message: "Index health is unavailable." });
+  }
+});
+
+router.post("/api/admin/indexes/rebuild", async (req, res) => {
+  try {
+    const response = await axios.post(`${flaskUrl}/indexes/rebuild`, {});
+    return res.status(response.status).json(response.data);
+  } catch (error) {
+    logError(`POST /api/admin/indexes/rebuild failed: ${sanitizeText(error.message)}`);
+    const status = error.response?.status || 503;
+    return res.status(status).json({ success: false, message: "Index rebuild failed." });
+  }
+});
+
 router.post("/api/admin/backups/run", async (req, res) => {
   try {
     await execFileAsync("bash", [scriptPath("VORLIQ_BACKUP_SCRIPT", "backup.sh")], { timeout: 120000 });

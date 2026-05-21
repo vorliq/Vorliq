@@ -92,6 +92,20 @@ function Readiness() {
                 </p>
               </div>
             </div>
+            <div className="stats-grid compact-stats">
+              <div className="stat-card">
+                <span>Index health</span>
+                <strong>{readiness.index_health || "unknown"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Index rebuild needed</span>
+                <strong>{readiness.index_rebuild_needed ? "Yes" : "No"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Index chain match</span>
+                <strong>{readiness.index_chain_match ? "Yes" : "No"}</strong>
+              </div>
+            </div>
           </section>
 
           {(failingChecks.length > 0 || warningChecks.length > 0) && (

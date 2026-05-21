@@ -75,6 +75,22 @@ function mockFlask(options = {}) {
         },
       });
     }
+    if (url.endsWith("/indexes/health")) {
+      return Promise.resolve({
+        data: {
+          success: true,
+          exists: true,
+          valid: true,
+          status: "ok",
+          schema_version: 1,
+          chain_height: 42,
+          latest_block_hash: "0000hash",
+          built_at: "2026-05-21T00:00:00Z",
+          rebuild_needed: false,
+          index_chain_match: true,
+        },
+      });
+    }
     if (url.endsWith("/audit/chain")) {
       return Promise.resolve({ data: { success: true, block_count: 2, latest_block_hash: "hash", blocks: [{ index: 0 }] } });
     }
@@ -134,6 +150,10 @@ describe("production readiness", () => {
     expect(Array.isArray(response.body.checks)).toBe(true);
     expect(response.body.checks.some((check) => check.id === "backend_health")).toBe(true);
     expect(response.body.checks.some((check) => check.id === "admin_routes_protected")).toBe(true);
+    expect(response.body.index_health).toBe("ok");
+    expect(response.body.index_rebuild_needed).toBe(false);
+    expect(response.body.index_chain_match).toBe(true);
+    expect(response.body.checks.some((check) => check.id === "index_health_ok")).toBe(true);
   });
 
   test("critical fail logic forces overall fail", () => {
