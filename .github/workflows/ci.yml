@@ -126,3 +126,11 @@ jobs:
 
       - name: Verify PostgreSQL shadow parity
         run: python tools/postgres_shadow_verify.py --data-dir tests/fixtures/migration/sample_data --database-url "$SHADOW_DATABASE_URL"
+
+      - name: Run PostgreSQL shadow rehearsal with adapter parity
+        run: python tools/run_shadow_migration_rehearsal.py --data-dir tests/fixtures/migration/sample_data --database-url "$SHADOW_DATABASE_URL" --check-adapter
+
+      - name: Run PostgreSQL adapter integration tests
+        env:
+          PYTHONPATH: blockchain:tools
+        run: python -m pytest blockchain/tests/test_storage_adapters.py blockchain/tests/test_postgres_shadow_migration.py -v

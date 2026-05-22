@@ -155,8 +155,14 @@ describe("production readiness", () => {
     expect(response.body.index_chain_match).toBe(true);
     expect(response.body.migration_readiness_available).toBe(true);
     expect(response.body.storage_backend).toBe("json");
+    expect(response.body.storage_adapter_interface_available).toBe(true);
+    expect(response.body.active_storage_adapter).toBe("json");
     expect(response.body.database_enabled).toBe(false);
     expect(response.body.future_database_target).toBe("postgresql");
+    expect(response.body.postgres_adapter_available).toBe(true);
+    expect(response.body.postgres_adapter_enabled).toBe(false);
+    expect(response.body.postgres_write_mode).toBe("disabled");
+    expect(response.body.postgres_runtime_blocked_in_production).toBe(true);
     expect(response.body.postgres_schema_present).toBe(true);
     expect(response.body.postgres_active).toBe(false);
     expect(response.body.postgres_shadow_rehearsal_available).toBe(true);
@@ -170,6 +176,7 @@ describe("production readiness", () => {
     expect(response.body.checks.some((check) => check.id === "database_not_enabled_expected")).toBe(true);
     expect(response.body.checks.some((check) => check.id === "postgres_schema_present")).toBe(true);
     expect(response.body.checks.some((check) => check.id === "postgres_not_active_expected")).toBe(true);
+    expect(response.body.checks.some((check) => check.id === "postgres_adapter_disabled_expected")).toBe(true);
     expect(response.body.checks.some((check) => check.id === "migration_tools_available")).toBe(true);
     expect(response.body.checks.some((check) => check.id === "postgres_shadow_rehearsal_available")).toBe(true);
     expect(response.body.checks.some((check) => check.id === "postgres_shadow_ci_enabled")).toBe(true);

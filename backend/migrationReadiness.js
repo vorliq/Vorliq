@@ -20,6 +20,11 @@ const REQUIRED_POSTGRES_FILES = [
   "tools/postgres_shadow_migrate.py",
   "tools/postgres_shadow_verify.py",
   "tools/run_shadow_migration_rehearsal.py",
+  "blockchain/storage_adapters/__init__.py",
+  "blockchain/storage_adapters/base.py",
+  "blockchain/storage_adapters/json_adapter.py",
+  "blockchain/storage_adapters/postgres_adapter.py",
+  "blockchain/storage_adapters/factory.py",
   "database/docker-compose.shadow.yml",
   "database/.env.shadow.example",
   "tests/fixtures/migration/sample_data/chain.json",
@@ -71,6 +76,11 @@ function postgresPreparationStatus() {
   const missing = files.filter((file) => !file.present).map((file) => file.relative_path);
 
   return {
+    storage_adapter_interface_available: missing.filter((file) => (
+      file.startsWith("blockchain/storage_adapters/")
+      && !file.endsWith("postgres_adapter.py")
+    )).length === 0,
+    postgres_adapter_available: missing.filter((file) => file === "blockchain/storage_adapters/postgres_adapter.py").length === 0,
     postgres_schema_present: missing.filter((file) => file.startsWith("database/") && file.endsWith(".sql")).length === 0,
     migration_tools_available: missing.filter((file) => file.startsWith("tools/")).length === 0,
     postgres_shadow_rehearsal_available: missing.filter((file) => (
@@ -114,8 +124,14 @@ async function buildMigrationReadiness(options = {}) {
   const response = {
     success: true,
     storage_backend: "json",
+    storage_adapter_interface_available: postgres.storage_adapter_interface_available,
+    active_storage_adapter: "json",
     database_enabled: false,
     future_database_target: "postgresql",
+    postgres_adapter_available: postgres.postgres_adapter_available,
+    postgres_adapter_enabled: false,
+    postgres_write_mode: "disabled",
+    postgres_runtime_blocked_in_production: true,
     postgres_schema_present: postgres.postgres_schema_present,
     postgres_active: false,
     postgres_shadow_rehearsal_available: postgres.postgres_shadow_rehearsal_available,
@@ -138,6 +154,8 @@ async function buildMigrationReadiness(options = {}) {
     },
     migration_tools_available: postgres.migration_tools_available,
     docs_url: "https://vorliq.github.io/Vorliq/storage-adapters.html",
+    storage_adapter_interface_url: "https://vorliq.github.io/Vorliq/storage-adapter-interface.html",
+    postgres_adapter_url: "https://vorliq.github.io/Vorliq/postgres-adapter.html",
     schema_map_url: "https://vorliq.github.io/Vorliq/schema-map.html",
     postgres_readiness_url: "https://vorliq.github.io/Vorliq/postgres-readiness.html",
     database_migration_plan_url: "https://vorliq.github.io/Vorliq/database-migration-plan.html",
@@ -164,6 +182,10 @@ async function buildMigrationReadiness(options = {}) {
       immutable_chain_required: true,
       private_wallet_keys_stored_server_side: false,
       postgres_active_expected: false,
+      active_storage_adapter: "json",
+      postgres_adapter_enabled_expected: false,
+      postgres_write_mode_expected: "disabled",
+      postgres_runtime_blocked_in_production: true,
       shadow_rehearsal_available: postgres.postgres_shadow_rehearsal_available,
       shadow_ci_enabled: true,
       schema_files: postgres.schema_files,

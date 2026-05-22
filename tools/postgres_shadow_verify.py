@@ -282,6 +282,15 @@ def main(argv: list[str] | None = None) -> int:
                 "warnings": [],
                 "errors": [str(exc)],
             }
+        except Exception:
+            report = {
+                "success": False,
+                "status": "fail",
+                "checked_at": iso_now(),
+                "counts": {},
+                "warnings": [],
+                "errors": ["PostgreSQL shadow verification failed; check the local shadow database configuration."],
+            }
 
     if args.output:
         Path(args.output).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

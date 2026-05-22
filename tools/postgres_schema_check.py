@@ -136,7 +136,7 @@ def check_schema(database_dir: Path = DEFAULT_DATABASE_DIR) -> dict[str, Any]:
         "success": status == "pass",
         "status": status,
         "checked_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "database_dir": str(database_dir),
+        "database_dir": "[redacted]",
         "required_sql_files": REQUIRED_SQL_FILES,
         "required_tables": REQUIRED_TABLES,
         "required_indexes": REQUIRED_INDEXES,
@@ -185,4 +185,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -46,7 +46,7 @@ The SDK handles both structured v1 errors such as `{ error: { code, message }, r
 
 Release metadata, changelog entries, and roadmap items are available through `getVersionMetadata()`, `getChangelog()`, and `getRoadmap()`. Roadmap items are planning signals only and are not promises of dates, app-store approval, listings, financial outcomes, or legal status.
 
-Production readiness is available through `getReadiness()`. It reports a technical pass/warning/fail score for release, API, audit, storage, derived index, migration readiness, PostgreSQL preparation checks, backup, security, deployment, and node signals; it is not a legal, banking, investment, or financial safety guarantee. Derived index health is available through `getIndexHealth()`. Database migration preparation metadata is available through `getMigrationReadiness()`; production remains on JSON storage, PostgreSQL is only the future target, and migration support is dry-run only.
+Production readiness is available through `getReadiness()`. It reports a technical pass/warning/fail score for release, API, audit, storage, derived index, migration readiness, PostgreSQL preparation checks, adapter safety checks, backup, security, deployment, and node signals; it is not a legal, banking, investment, or financial safety guarantee. Derived index health is available through `getIndexHealth()`. Database migration preparation metadata is available through `getMigrationReadiness()`; production remains on JSON storage, the active adapter is JSON, the PostgreSQL adapter is shadow/test preparation only, and production PostgreSQL writes are blocked.
 
 Production applications should prefer the lightweight and paginated methods when they do not need the entire blockchain. The `getChain` method remains available for compatibility and local tooling, but it downloads the full chain and can become expensive as the network grows. For dashboards, explorers, and account history, use `getChainSummary`, `getBlocks`, `getTransactions`, `getPendingTransactions`, `getTransaction`, `getBlock`, `getAddressHistory`, and `getLeaderboard`.
 
@@ -70,7 +70,9 @@ async function main() {
   console.log("Top holders:", leaderboard.holders);
   console.log("Index status:", indexHealth.status);
   console.log("Storage backend:", migrationReadiness.storage_backend);
+  console.log("Active adapter:", migrationReadiness.active_storage_adapter);
   console.log("Future database target:", migrationReadiness.future_database_target);
+  console.log("PostgreSQL adapter enabled:", migrationReadiness.postgres_adapter_enabled);
   console.log("PostgreSQL active:", migrationReadiness.postgres_active);
 }
 

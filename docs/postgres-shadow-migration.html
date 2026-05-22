@@ -18,6 +18,7 @@
       <li>The source JSON files are read only and are not updated or deleted.</li>
       <li>Blocks and transactions keep raw JSON so historical hashes and legacy payloads are preserved.</li>
       <li>The public runtime is not connected to PostgreSQL by this rehearsal.</li>
+      <li>The PostgreSQL storage adapter is read in shadow mode only and write methods are blocked by default.</li>
     </ul>
 
     <h2>Run Locally</h2>
@@ -25,7 +26,7 @@
       <li>Copy <code>database/.env.shadow.example</code> into your shell environment.</li>
       <li>Start PostgreSQL with <code>docker compose -f database/docker-compose.shadow.yml up -d</code>.</li>
       <li>Install the optional Python PostgreSQL client with <code>python -m pip install "psycopg[binary]"</code>.</li>
-      <li>Run <code>python tools/run_shadow_migration_rehearsal.py --data-dir tests/fixtures/migration/sample_data --database-url "$SHADOW_DATABASE_URL" --output temp-shadow-report.json</code>.</li>
+      <li>Run <code>python tools/run_shadow_migration_rehearsal.py --data-dir tests/fixtures/migration/sample_data --database-url "$SHADOW_DATABASE_URL" --check-adapter --output temp-shadow-report.json</code>.</li>
     </ol>
 
     <h2>CI Fixture Data</h2>
@@ -40,6 +41,7 @@
       <li>Address balances for indexed addresses and treasury balance when present.</li>
       <li>Profile, forum, governance, exchange, lending, and treasury proposal counts.</li>
       <li>Secret-like text scans for private keys, passwords, admin tokens, SSH keys, and server paths in imported public rows.</li>
+      <li>Adapter read parity for chain metadata, table counts, domain counts, confirmed transactions, and default write blocking.</li>
     </ul>
 
     <h2>Before Any Real Migration</h2>
@@ -48,6 +50,7 @@
     <h2>Related</h2>
     <ul>
       <li><a href="postgres-readiness.html">PostgreSQL readiness</a></li>
+      <li><a href="postgres-adapter.html">PostgreSQL adapter</a></li>
       <li><a href="database-migration-plan.html">Database migration plan</a></li>
       <li><a href="database-rollback-plan.html">Database rollback plan</a></li>
       <li><a href="readiness.html">Readiness gate</a></li>

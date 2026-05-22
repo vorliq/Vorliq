@@ -22,20 +22,26 @@
       <li><code>database/schema.sql</code> maps future tables.</li>
       <li><code>database/indexes.sql</code> drafts future read indexes.</li>
       <li><code>database/constraints.sql</code> documents future safety constraints.</li>
+      <li><code>blockchain/storage_adapters/postgres_adapter.py</code> provides experimental shadow reads.</li>
       <li><code>tools/postgres_schema_check.py</code> checks files without connecting to PostgreSQL.</li>
       <li><code>tools/simulate_postgres_import.py</code> simulates import ordering without database writes.</li>
-      <li><code>tools/run_shadow_migration_rehearsal.py</code> runs a guarded local or CI-only PostgreSQL shadow import and parity check.</li>
+      <li><code>tools/run_shadow_migration_rehearsal.py --check-adapter</code> runs a guarded local or CI-only PostgreSQL shadow import, parity check, and adapter read parity check.</li>
     </ul>
+
+    <h2>Adapter Flags</h2>
+    <p><code>VORLIQ_STORAGE_BACKEND=json</code> is the default and production setting. PostgreSQL runtime selection is blocked in production. Non-production tests require <code>VORLIQ_ALLOW_EXPERIMENTAL_POSTGRES=true</code> and <code>VORLIQ_POSTGRES_SHADOW_ONLY=true</code>, and write attempts remain disabled unless <code>VORLIQ_POSTGRES_WRITE_MODE=shadow_test</code> is explicitly set for a shadow test.</p>
 
     <h2>Immutable History</h2>
     <p>Block hash, previous hash, nonce, timestamp, miner address, proof data, transaction order, and raw block JSON must be preserved. Confirmed transactions keep raw JSON so legacy entries without <code>tx_id</code> remain compatible.</p>
 
     <h2>Operator Checks</h2>
-    <p>Check <code>/api/migration/readiness</code>, <code>/api/readiness</code>, and the live <a href="https://vorliq.org/migration-readiness">Migration Readiness</a> page. Run schema validation and the shadow rehearsal locally before any future migration rehearsal window. Production should continue to report <code>postgres_active: false</code>.</p>
+    <p>Check <code>/api/migration/readiness</code>, <code>/api/readiness</code>, and the live <a href="https://vorliq.org/migration-readiness">Migration Readiness</a> page. Run schema validation and the shadow rehearsal locally before any future migration rehearsal window. Production should continue to report <code>active_storage_adapter: json</code>, <code>postgres_active: false</code>, <code>postgres_adapter_enabled: false</code>, and <code>postgres_write_mode: disabled</code>.</p>
 
     <h2>Related</h2>
     <ul>
       <li><a href="database-migration-plan.html">Database migration plan</a></li>
+      <li><a href="storage-adapter-interface.html">Storage adapter interface</a></li>
+      <li><a href="postgres-adapter.html">PostgreSQL adapter</a></li>
       <li><a href="database-rollback-plan.html">Database rollback plan</a></li>
       <li><a href="postgres-shadow-migration.html">PostgreSQL shadow migration</a></li>
       <li><a href="schema-map.html">Schema map</a></li>

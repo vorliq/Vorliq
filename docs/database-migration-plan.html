@@ -17,12 +17,15 @@
       <li>Run <code>python tools/postgres_schema_check.py</code>.</li>
       <li>Run <code>python tools/migration_dry_run.py --output migration-dry-run-report.json</code>.</li>
       <li>Run <code>python tools/simulate_postgres_import.py --input migration-dry-run-report.json --output import-simulation.json</code>.</li>
-      <li>Run <code>python tools/run_shadow_migration_rehearsal.py --data-dir tests/fixtures/migration/sample_data --database-url "$SHADOW_DATABASE_URL" --output temp-shadow-report.json</code> against a local or CI-only shadow database.</li>
+      <li>Run <code>python tools/run_shadow_migration_rehearsal.py --data-dir tests/fixtures/migration/sample_data --database-url "$SHADOW_DATABASE_URL" --check-adapter --output temp-shadow-report.json</code> against a local or CI-only shadow database.</li>
       <li>Compare counts, latest block hash, and public API behavior in a staging environment.</li>
     </ol>
 
     <h2>Future Migration Window</h2>
-    <p>A future migration window should pause writes, snapshot JSON, run a final dry run, import into a managed PostgreSQL instance, run parity checks, switch a staged adapter, smoke test public routes, then cut traffic only after readiness passes.</p>
+    <p>A future migration window should pause writes, snapshot JSON, run a final dry run, import into a managed PostgreSQL instance, run parity checks, switch a staged adapter, smoke test public routes, then cut traffic only after readiness passes. This release does not perform that cutover.</p>
+
+    <h2>Adapter Gates</h2>
+    <p>Until a future approved cutover, production must keep <code>VORLIQ_STORAGE_BACKEND=json</code>. The PostgreSQL adapter may be exercised only in non-production shadow tests with <code>VORLIQ_ALLOW_EXPERIMENTAL_POSTGRES=true</code> and <code>VORLIQ_POSTGRES_SHADOW_ONLY=true</code>, and readiness must show <code>postgres_adapter_enabled: false</code> and <code>postgres_write_mode: disabled</code>.</p>
 
     <h2>Block Hash Preservation</h2>
     <p>The import must store original raw block JSON and raw transaction JSON. It must not normalize historical blocks in a way that changes block hash inputs or transaction ordering.</p>
@@ -35,6 +38,7 @@
       <li>Dry run status is ok or warnings are explicitly accepted.</li>
       <li>Import simulation passes ordering checks.</li>
       <li>Shadow migration rehearsal passes count, block hash, transaction ID, balance, and secret-scan parity checks.</li>
+      <li>PostgreSQL adapter read parity passes against the shadow database while default writes remain blocked.</li>
       <li>Chain height and latest block hash match JSON.</li>
       <li>Explorer, account, transaction, leaderboard, readiness, health, audit, and SDK smoke tests pass.</li>
       <li>Rollback plan has been rehearsed.</li>

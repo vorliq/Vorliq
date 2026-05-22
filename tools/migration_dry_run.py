@@ -336,7 +336,7 @@ def build_report(data_dir: Path, strict: bool = False) -> dict[str, Any]:
         "success": status == "ok",
         "status": status,
         "checked_at": iso_now(),
-        "data_dir": str(data_dir),
+        "data_dir": "[redacted]",
         "storage_backend": "json",
         "database_enabled": False,
         "chain_height": chain_height,
@@ -370,7 +370,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print("Vorliq migration dry run")
     print(f"Status: {report['status']}")
-    print(f"Data directory: {report['data_dir']}")
+    print("Data directory: [redacted]")
     print(f"Chain height: {report['chain_height']}")
     print(f"Latest block hash: {report['latest_block_hash'] or 'unavailable'}")
     print(f"Future tables: {len(report['future_tables_summary'])}")

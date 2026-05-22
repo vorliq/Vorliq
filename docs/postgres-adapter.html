@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vorliq PostgreSQL Adapter</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>PostgreSQL Adapter</h1>
+    <p>The PostgreSQL adapter is experimental, shadow-only code for tests and migration rehearsal. It is not active production storage, it does not replace JSON, and production writes remain blocked.</p>
+
+    <h2>Feature Flags</h2>
+    <ul>
+      <li><code>VORLIQ_STORAGE_BACKEND=json</code> is the default and production setting.</li>
+      <li><code>VORLIQ_STORAGE_BACKEND=postgres</code> is refused in production.</li>
+      <li>Non-production adapter tests require <code>VORLIQ_ALLOW_EXPERIMENTAL_POSTGRES=true</code>.</li>
+      <li>Shadow/test runtime selection also requires <code>VORLIQ_POSTGRES_SHADOW_ONLY=true</code>.</li>
+      <li>PostgreSQL writes are disabled unless <code>VORLIQ_POSTGRES_WRITE_MODE=shadow_test</code> is explicitly set, and current imports still use the guarded shadow migration tool.</li>
+    </ul>
+
+    <h2>What It Can Read</h2>
+    <p>When pointed at a shadow database, the adapter can read chain blocks, confirmed transactions, pending transactions, profiles, forum posts, governance proposals, exchange offers, lending loans, treasury proposals, registry nodes, faucet claims, price signals, achievements, table counts, and latest block metadata from the preparation schema.</p>
+
+    <h2>What It Cannot Do</h2>
+    <p>It must not connect production runtime to a production database, mutate production JSON, rewrite historical blocks, change block hashes, expose database credentials, or become active storage without a future approved cutover. Write methods are blocked by default.</p>
+
+    <h2>Parity</h2>
+    <p>The shadow rehearsal supports <code>--check-adapter</code>, which loads the PostgreSQL adapter after verification and compares adapter-read counts with the verification report. This is additional evidence only; it is not a migration.</p>
+
+    <h2>Related</h2>
+    <ul>
+      <li><a href="storage-adapter-interface.html">Storage adapter interface</a></li>
+      <li><a href="postgres-readiness.html">PostgreSQL readiness</a></li>
+      <li><a href="database-migration-plan.html">Database migration plan</a></li>
+      <li><a href="database-rollback-plan.html">Database rollback plan</a></li>
+    </ul>
+  </main>
+</body>
+</html>

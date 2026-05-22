@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import time
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +32,7 @@ SHADOW_TABLES = [
     "forum_replies",
     "forum_posts",
     "price_signals",
+    "profiles",
     "treasury_ledger",
     "treasury_proposals",
     "governance_rule_changes",
@@ -91,16 +91,8 @@ def iso_now() -> str:
 
 def redact_database_url(database_url: str) -> str:
     parsed = urlparse(database_url)
-    netloc = parsed.netloc
-    if "@" in netloc:
-        credentials, host = netloc.rsplit("@", 1)
-        if ":" in credentials:
-            user, _password = credentials.split(":", 1)
-            netloc = f"{user}:***@{host}"
-        else:
-            netloc = f"***@{host}"
-    query = urlencode([(key, "***" if "password" in key.lower() else value) for key, value in parse_qsl(parsed.query)])
-    return urlunparse(parsed._replace(netloc=netloc, query=query))
+    scheme = parsed.scheme or "postgresql"
+    return urlunparse((scheme, "[redacted]", "/[redacted]", "", "", ""))
 
 
 def parse_database_url(database_url: str) -> dict[str, str]:

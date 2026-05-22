@@ -87,8 +87,14 @@ describe("migration readiness routes", () => {
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
     expect(response.body.storage_backend).toBe("json");
+    expect(response.body.storage_adapter_interface_available).toBe(true);
+    expect(response.body.active_storage_adapter).toBe("json");
     expect(response.body.database_enabled).toBe(false);
     expect(response.body.future_database_target).toBe("postgresql");
+    expect(response.body.postgres_adapter_available).toBe(true);
+    expect(response.body.postgres_adapter_enabled).toBe(false);
+    expect(response.body.postgres_write_mode).toBe("disabled");
+    expect(response.body.postgres_runtime_blocked_in_production).toBe(true);
     expect(response.body.postgres_schema_present).toBe(true);
     expect(response.body.postgres_active).toBe(false);
     expect(response.body.postgres_shadow_rehearsal_available).toBe(true);
@@ -125,6 +131,10 @@ describe("migration readiness routes", () => {
     expect(response.body.operator_metadata.shadow_verify_tool).toBe("tools/postgres_shadow_verify.py");
     expect(response.body.operator_metadata.shadow_rehearsal_tool).toBe("tools/run_shadow_migration_rehearsal.py");
     expect(response.body.operator_metadata.postgres_active_expected).toBe(false);
+    expect(response.body.operator_metadata.active_storage_adapter).toBe("json");
+    expect(response.body.operator_metadata.postgres_adapter_enabled_expected).toBe(false);
+    expect(response.body.operator_metadata.postgres_write_mode_expected).toBe("disabled");
+    expect(response.body.operator_metadata.postgres_runtime_blocked_in_production).toBe(true);
     expect(response.body.operator_metadata.shadow_ci_enabled).toBe(true);
     expect(response.body.operator_metadata.schema_files.some((file) => file.name === "schema.sql")).toBe(true);
     expect(response.body.operator_metadata.private_wallet_keys_stored_server_side).toBe(false);

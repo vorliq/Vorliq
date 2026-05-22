@@ -27,8 +27,16 @@ describe("storage health routes", () => {
         critical_files_ok: 13,
         warnings_count: 0,
         errors_count: 0,
-        backup_available: false,
-        files: [{ file_name: "chain.json", exists: true, valid_json: true, has_backup: false, status: "ok" }],
+          backup_available: false,
+          storage_adapter_interface_available: true,
+          storage_backend: "json",
+          active_storage_adapter: "json",
+          postgres_adapter_available: true,
+          postgres_adapter_enabled: false,
+          postgres_active: false,
+          postgres_write_mode: "disabled",
+          postgres_runtime_blocked_in_production: true,
+          files: [{ file_name: "chain.json", exists: true, valid_json: true, has_backup: false, status: "ok" }],
       },
     });
   });
@@ -49,6 +57,10 @@ describe("storage health routes", () => {
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
     expect(response.body.files.map((file) => file.file_name)).toContain("chain.json");
+    expect(response.body.storage_backend).toBe("json");
+    expect(response.body.active_storage_adapter).toBe("json");
+    expect(response.body.postgres_adapter_enabled).toBe(false);
+    expect(response.body.postgres_write_mode).toBe("disabled");
     expect(JSON.stringify(response.body)).not.toContain(tempDir);
     expect(JSON.stringify(response.body)).not.toContain("/home/vorliq");
   });

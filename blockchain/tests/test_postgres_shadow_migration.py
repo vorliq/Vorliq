@@ -16,7 +16,8 @@ from postgres_schema_check import check_schema
 from postgres_shadow_common import load_psycopg, load_shadow_source, validate_shadow_database_url
 from postgres_shadow_migrate import main as migrate_main, run_shadow_migration
 from postgres_shadow_verify import run_shadow_verify
-from run_shadow_migration_rehearsal import main as rehearsal_main, run_rehearsal
+from run_shadow_migration_rehearsal import main as rehearsal_main, run_adapter_parity_check, run_rehearsal
+from storage_adapters.postgres_adapter import PostgresStorageAdapter, PostgresWriteBlockedError
 
 
 def shadow_database_url():
@@ -65,7 +66,9 @@ def test_shadow_migrate_handles_missing_optional_files_without_strict_failure():
     assert any("peers.json" in warning for warning in source["warnings"])
 
 
-def test_run_rehearsal_refuses_missing_database_url():
+def test_run_rehearsal_refuses_missing_database_url(monkeypatch):
+    monkeypatch.delenv("SHADOW_DATABASE_URL", raising=False)
+
     result = rehearsal_main(["--data-dir", str(FIXTURE_DIR)])
 
     assert result == 1
@@ -99,6 +102,7 @@ def test_shadow_verify_fails_on_wrong_latest_hash_when_postgres_available():
         conn.autocommit = True
         with conn.cursor() as cursor:
             cursor.execute("DELETE FROM confirmed_transactions WHERE block_index = 1")
+            cursor.execute("DELETE FROM treasury_ledger WHERE block_index = 1")
             cursor.execute("UPDATE blocks SET block_hash = '0000wronglatesthashfixture0000' WHERE block_index = 1")
 
     verification = run_shadow_verify(data_dir=FIXTURE_DIR, database_url=url)
@@ -117,3 +121,60 @@ def test_run_rehearsal_works_when_postgres_available(tmp_path):
     assert report["status"] in {"pass", "warning"}
     assert report["errors"] == []
     assert json.loads(output.read_text(encoding="utf-8"))["success"] is True
+
+
+def test_postgres_adapter_reads_shadow_fixture_when_postgres_available():
+    url = require_shadow_database()
+
+    run_shadow_migration(data_dir=FIXTURE_DIR, database_url=url)
+    verification = run_shadow_verify(data_dir=FIXTURE_DIR, database_url=url)
+    adapter = PostgresStorageAdapter(database_url=url)
+    health = adapter.health()
+    chain = adapter.load_chain()
+    counts = adapter.table_counts()
+
+    assert health["status"] == "ok"
+    assert health["write_mode"] == "disabled"
+    assert "vorliq_shadow_password" not in json.dumps(health)
+    assert chain is not None
+    assert chain.get_block_height() == verification["chain"]["postgres_height"]
+    assert chain.get_latest_block().hash == verification["chain"]["postgres_latest_block_hash"]
+    assert len(adapter.load_blocks()) == verification["counts"]["blocks"]["postgres"]
+    assert len(adapter.load_confirmed_transactions()) == verification["counts"]["confirmed_transactions"]["postgres"]
+    assert len(adapter.load_pending()) == verification["counts"]["pending_transactions"]["postgres"]
+    assert len(adapter.load_profiles().profiles) == verification["counts"]["profiles"]["postgres"]
+    assert len(adapter.load_forum().posts) == verification["counts"]["forum_posts"]["postgres"]
+    assert len(adapter.load_governance().proposals) == verification["counts"]["governance_proposals"]["postgres"]
+    assert len(adapter.load_exchange().offers) == verification["counts"]["exchange_offers"]["postgres"]
+    assert len(adapter.load_lending_pool().loan_requests) == verification["counts"]["lending_loans"]["postgres"]
+    assert len(adapter.load_treasury().proposals) == verification["counts"]["treasury_proposals"]["postgres"]
+    assert len(adapter.load_registry().registered_nodes) == verification["counts"]["registry_nodes"]["postgres"]
+    assert len(adapter.load_faucet().claims) == verification["counts"]["faucet_claims"]["postgres"]
+    assert len(adapter.load_price().signals) == verification["counts"]["price_signals"]["postgres"]
+    assert sum(len(records) for records in adapter.load_achievements().earned.values()) == verification["counts"]["achievements"]["postgres"]
+    assert counts["blocks"] == 2
+    with pytest.raises(PostgresWriteBlockedError):
+        adapter.save_pending([])
+
+
+def test_run_rehearsal_adapter_parity_when_postgres_available():
+    url = require_shadow_database()
+
+    report = run_rehearsal(data_dir=FIXTURE_DIR, database_url=url, check_adapter=True)
+
+    assert report["status"] in {"pass", "warning"}
+    assert report["errors"] == []
+    assert report["adapter_parity"]["status"] == "pass"
+    assert report["adapter_parity"]["write_blocked_by_default"] is True
+
+
+def test_adapter_parity_helper_compares_verification_counts_when_postgres_available():
+    url = require_shadow_database()
+
+    run_shadow_migration(data_dir=FIXTURE_DIR, database_url=url)
+    verification = run_shadow_verify(data_dir=FIXTURE_DIR, database_url=url)
+    parity = run_adapter_parity_check(url, verification)
+
+    assert parity["status"] == "pass"
+    assert parity["errors"] == []
+    assert parity["counts"]["blocks"]["adapter"] == 2

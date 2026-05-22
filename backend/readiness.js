@@ -285,10 +285,14 @@ async function buildReadiness(options = {}) {
       : "Migration readiness metadata is unavailable.",
     safe_metadata: {
       storage_backend: migration.storage_backend || "unknown",
+      active_storage_adapter: migration.active_storage_adapter || migration.storage_backend || "unknown",
+      storage_adapter_interface_available: Boolean(migration.storage_adapter_interface_available),
       database_enabled: Boolean(migration.database_enabled),
       migration_supported: migration.migration_supported || "unknown",
       chain_source_of_truth: migration.chain_source_of_truth || "unknown",
       indexes_derived: Boolean(migration.indexes_derived),
+      postgres_adapter_available: Boolean(migration.postgres_adapter_available),
+      postgres_adapter_enabled: Boolean(migration.postgres_adapter_enabled),
       postgres_shadow_rehearsal_available: Boolean(migration.postgres_shadow_rehearsal_available),
       postgres_shadow_ci_enabled: Boolean(migration.postgres_shadow_ci_enabled),
     },
@@ -305,6 +309,7 @@ async function buildReadiness(options = {}) {
       : "Production storage backend is not reporting JSON as expected.",
     safe_metadata: {
       storage_backend: migration.storage_backend || "unknown",
+      active_storage_adapter: migration.active_storage_adapter || "unknown",
       chain_source_of_truth: migration.chain_source_of_truth || "unknown",
     },
   });
@@ -351,7 +356,30 @@ async function buildReadiness(options = {}) {
       : "PostgreSQL appears active unexpectedly.",
     safe_metadata: {
       postgres_active: Boolean(migration.postgres_active),
+      postgres_adapter_enabled: Boolean(migration.postgres_adapter_enabled),
       storage_backend: migration.storage_backend || "unknown",
+    },
+  });
+
+  addCheck(checks, {
+    id: "postgres_adapter_disabled_expected",
+    name: "PostgreSQL adapter disabled expected",
+    category: "Storage",
+    status: migrationResult.ok
+      && migration.postgres_adapter_available === true
+      && migration.postgres_adapter_enabled === false
+      && migration.postgres_write_mode === "disabled"
+      ? "pass"
+      : "fail",
+    severity: "critical",
+    message: migration.postgres_adapter_enabled === false
+      ? "PostgreSQL adapter code is available but disabled for production runtime."
+      : "PostgreSQL adapter appears enabled unexpectedly.",
+    safe_metadata: {
+      postgres_adapter_available: Boolean(migration.postgres_adapter_available),
+      postgres_adapter_enabled: Boolean(migration.postgres_adapter_enabled),
+      postgres_write_mode: migration.postgres_write_mode || "unknown",
+      postgres_runtime_blocked_in_production: Boolean(migration.postgres_runtime_blocked_in_production),
     },
   });
 
@@ -609,8 +637,14 @@ async function buildReadiness(options = {}) {
     index_chain_match: Boolean(indexChainMatch),
     migration_readiness_available: Boolean(migrationResult.ok && migration.success),
     storage_backend: migration.storage_backend || "unknown",
+    storage_adapter_interface_available: Boolean(migration.storage_adapter_interface_available),
+    active_storage_adapter: migration.active_storage_adapter || "unknown",
     database_enabled: Boolean(migration.database_enabled),
     future_database_target: migration.future_database_target || "unknown",
+    postgres_adapter_available: Boolean(migration.postgres_adapter_available),
+    postgres_adapter_enabled: Boolean(migration.postgres_adapter_enabled),
+    postgres_write_mode: migration.postgres_write_mode || "disabled",
+    postgres_runtime_blocked_in_production: Boolean(migration.postgres_runtime_blocked_in_production),
     postgres_schema_present: Boolean(migration.postgres_schema_present),
     postgres_active: Boolean(migration.postgres_active),
     migration_phase: migration.migration_phase || "unknown",
@@ -647,8 +681,14 @@ async function buildReadiness(options = {}) {
       },
       migration: {
         storage_backend: migration.storage_backend || "unknown",
+        storage_adapter_interface_available: Boolean(migration.storage_adapter_interface_available),
+        active_storage_adapter: migration.active_storage_adapter || "unknown",
         database_enabled: Boolean(migration.database_enabled),
         future_database_target: migration.future_database_target || "unknown",
+        postgres_adapter_available: Boolean(migration.postgres_adapter_available),
+        postgres_adapter_enabled: Boolean(migration.postgres_adapter_enabled),
+        postgres_write_mode: migration.postgres_write_mode || "disabled",
+        postgres_runtime_blocked_in_production: Boolean(migration.postgres_runtime_blocked_in_production),
         postgres_schema_present: Boolean(migration.postgres_schema_present),
         postgres_active: Boolean(migration.postgres_active),
         migration_phase: migration.migration_phase || "unknown",

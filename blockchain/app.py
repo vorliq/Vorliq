@@ -21,6 +21,11 @@ from price import PriceDiscovery
 from profiles import Profiles
 from registry import NodeRegistry
 from storage import Storage
+from storage_adapters.factory import (
+    StorageAdapterConfigurationError,
+    storage_adapter_runtime_metadata,
+    validate_storage_backend_config,
+)
 from transaction import SYSTEM_ADDRESSES, TREASURY_ADDRESS, Transaction
 from treasury import Treasury
 from wallet import Wallet, address_from_public_key_pem, is_reserved_address, validate_address, verify_digest_signature
@@ -57,6 +62,12 @@ MAX_TEXT_LENGTHS = {
 }
 
 app = Flask(__name__)
+try:
+    validate_storage_backend_config()
+except StorageAdapterConfigurationError as exc:
+    vorliq_logger.critical("Unsafe storage backend configuration refused at startup: %s", exc)
+    raise
+STORAGE_ADAPTER_METADATA = storage_adapter_runtime_metadata()
 storage = Storage(os.environ.get("VORLIQ_DATA_DIR"))
 node = Node()
 saved_blockchain = storage.load_chain()
@@ -366,7 +377,7 @@ def health():
 
 @app.get("/storage/health")
 def storage_health():
-    return jsonify(storage.storage_health())
+    return jsonify({**storage.storage_health(), **STORAGE_ADAPTER_METADATA})
 
 
 @app.get("/indexes/health")

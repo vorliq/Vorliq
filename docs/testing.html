@@ -49,13 +49,13 @@
       <section class="glass">
         <h2>Test Layers</h2>
         <ul>
-          <li><strong>Python tests</strong> verify blockchain blocks, transactions, wallets, storage, profiles, faucet, lending, exchange, governance, treasury, mining status, registry, and security behavior.</li>
+          <li><strong>Python tests</strong> verify blockchain blocks, transactions, wallets, storage, storage adapters, profiles, faucet, lending, exchange, governance, treasury, mining status, registry, and security behavior.</li>
           <li><strong>Backend Jest tests</strong> verify Node API routes, validation, safe error handling, admin protection, incidents, backups, manifests, heartbeat, faucet, mining, and lifecycle route proxies.</li>
           <li><strong>Frontend tests</strong> verify React rendering, onboarding, navigation, theme behavior, wallet safety, risk notices, and major page states.</li>
           <li><strong>SDK checks</strong> build the JavaScript SDK and run a bounded smoke call against safe public endpoints.</li>
           <li><strong>Mobile Expo export</strong> confirms the Expo app bundles for community testing when mobile code changes.</li>
           <li><strong>Playwright E2E tests</strong> run Chromium browser checks against the live production app using read-only paths. The full suite is run locally before release, CI runs a smaller production smoke subset, and the deploy pipeline exposes a visible post-deploy E2E workflow.</li>
-          <li><strong>Production readiness</strong> combines health, deployment, API version, storage, backup, security, audit, registry, chain, mining, faucet, treasury, analytics, incident, and admin-route protection checks into one pass, warning, or fail gate.</li>
+          <li><strong>Production readiness</strong> combines health, deployment, API version, storage, adapter safety, backup, security, audit, registry, chain, mining, faucet, treasury, analytics, incident, and admin-route protection checks into one pass, warning, or fail gate.</li>
         </ul>
       </section>
 

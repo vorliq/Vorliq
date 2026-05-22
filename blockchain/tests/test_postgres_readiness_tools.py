@@ -11,7 +11,8 @@ if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from migration_dry_run import build_report
-from postgres_schema_check import check_schema
+from postgres_schema_check import REQUIRED_TABLES, check_schema
+from postgres_shadow_common import SHADOW_TABLES
 from simulate_postgres_import import build_insert_plan, main as simulate_main
 
 from test_migration_dry_run import make_data_dir, write_json
@@ -25,6 +26,12 @@ def test_postgres_schema_check_passes():
     assert "blocks" in result["tables_found"]
     assert "confirmed_transactions" in result["tables_found"]
     assert "idx_confirmed_transactions_tx_id" in result["indexes_found"]
+
+
+def test_shadow_cleanup_table_list_covers_required_schema_tables():
+    missing = set(REQUIRED_TABLES) - set(SHADOW_TABLES)
+
+    assert missing == set()
 
 
 def test_postgres_schema_check_fails_on_missing_required_table(tmp_path):

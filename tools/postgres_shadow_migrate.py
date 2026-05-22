@@ -452,9 +452,9 @@ def run_shadow_migration(
         "success": True,
         "status": "pass",
         "checked_at": iso_now(),
-        "source_data_dir": str(data_dir.resolve()),
-        "backend_data_dir": source.get("backend_data_dir"),
-        "database": {"host": info["host"], "database": info["database"]},
+        "source_data_dir": "[redacted]",
+        "backend_data_dir": "[redacted]" if source.get("backend_data_dir") else None,
+        "database": {"configured": True, "shadow_or_test": True},
         "postgres_active": False,
         "production_storage_unchanged": True,
         "json_source_modified": False,
@@ -500,6 +500,14 @@ def main(argv: list[str] | None = None) -> int:
             "counts": {},
             "warnings": [],
             "errors": [str(exc)],
+        }
+    except Exception:
+        result = {
+            "success": False,
+            "status": "fail",
+            "counts": {},
+            "warnings": [],
+            "errors": ["PostgreSQL shadow migration failed; check the local shadow database configuration."],
         }
     print("Vorliq PostgreSQL shadow migration")
     print(f"Status: {result['status']}")

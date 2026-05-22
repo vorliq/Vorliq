@@ -72,8 +72,32 @@ function MigrationReadiness() {
                 <strong>{display(readiness.storage_backend)}</strong>
               </div>
               <div className="stat-card">
+                <span>Storage adapter interface</span>
+                <strong>{display(readiness.storage_adapter_interface_available)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Active adapter</span>
+                <strong>{display(readiness.active_storage_adapter)}</strong>
+              </div>
+              <div className="stat-card">
                 <span>Database enabled</span>
                 <strong>{display(readiness.database_enabled)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>PostgreSQL adapter</span>
+                <strong>
+                  {readiness.postgres_adapter_available
+                    ? readiness.postgres_adapter_enabled ? "Enabled" : "Available, disabled"
+                    : "Unavailable"}
+                </strong>
+              </div>
+              <div className="stat-card">
+                <span>Production PostgreSQL writes</span>
+                <strong>{readiness.postgres_write_mode === "disabled" ? "Blocked" : display(readiness.postgres_write_mode)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Shadow-only status</span>
+                <strong>{readiness.postgres_runtime_blocked_in_production ? "Production blocked" : "Unknown"}</strong>
               </div>
               <div className="stat-card">
                 <span>PostgreSQL active</span>
@@ -147,6 +171,14 @@ function MigrationReadiness() {
                 <span>Production PostgreSQL active</span>
                 <strong>{display(readiness.postgres_active)}</strong>
               </div>
+              <div className="stat-card">
+                <span>Production PostgreSQL writes</span>
+                <strong>{readiness.postgres_write_mode === "disabled" ? "Blocked" : display(readiness.postgres_write_mode)}</strong>
+              </div>
+              <div className="stat-card">
+                <span>PostgreSQL adapter</span>
+                <strong>{readiness.postgres_adapter_enabled ? "Enabled" : "Disabled"}</strong>
+              </div>
             </div>
             <p className="help-text">
               The rehearsal imports copied JSON state into a guarded PostgreSQL shadow database, verifies parity, then cleans up. It does not switch production storage away from JSON.
@@ -200,6 +232,12 @@ function MigrationReadiness() {
             <div className="resource-grid">
               <a href="https://vorliq.github.io/Vorliq/storage-adapters.html" target="_blank" rel="noreferrer">
                 Storage Adapters
+              </a>
+              <a href="https://vorliq.github.io/Vorliq/storage-adapter-interface.html" target="_blank" rel="noreferrer">
+                Adapter Interface
+              </a>
+              <a href="https://vorliq.github.io/Vorliq/postgres-adapter.html" target="_blank" rel="noreferrer">
+                PostgreSQL Adapter
               </a>
               <a href="https://vorliq.github.io/Vorliq/schema-map.html" target="_blank" rel="noreferrer">
                 Schema Map

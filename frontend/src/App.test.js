@@ -832,8 +832,14 @@ function defaultApiGet(path) {
       data: {
         success: true,
         storage_backend: "json",
+        storage_adapter_interface_available: true,
+        active_storage_adapter: "json",
         database_enabled: false,
         future_database_target: "postgresql",
+        postgres_adapter_available: true,
+        postgres_adapter_enabled: false,
+        postgres_write_mode: "disabled",
+        postgres_runtime_blocked_in_production: true,
         postgres_schema_present: true,
         postgres_active: false,
         postgres_shadow_rehearsal_available: true,
@@ -851,6 +857,8 @@ function defaultApiGet(path) {
         last_storage_health: { overall_status: "ok", warnings_count: 0, errors_count: 0 },
         last_index_health: { status: "ok", rebuild_needed: false, index_chain_match: true },
         docs_url: "https://vorliq.github.io/Vorliq/storage-adapters.html",
+        storage_adapter_interface_url: "https://vorliq.github.io/Vorliq/storage-adapter-interface.html",
+        postgres_adapter_url: "https://vorliq.github.io/Vorliq/postgres-adapter.html",
         schema_map_url: "https://vorliq.github.io/Vorliq/schema-map.html",
         postgres_readiness_url: "https://vorliq.github.io/Vorliq/postgres-readiness.html",
         database_migration_plan_url: "https://vorliq.github.io/Vorliq/database-migration-plan.html",
@@ -873,8 +881,14 @@ function defaultApiGet(path) {
         index_chain_match: true,
         migration_readiness_available: true,
         storage_backend: "json",
+        storage_adapter_interface_available: true,
+        active_storage_adapter: "json",
         database_enabled: false,
         future_database_target: "postgresql",
+        postgres_adapter_available: true,
+        postgres_adapter_enabled: false,
+        postgres_write_mode: "disabled",
+        postgres_runtime_blocked_in_production: true,
         postgres_schema_present: true,
         postgres_active: false,
         postgres_shadow_rehearsal_available: true,
@@ -2114,6 +2128,11 @@ test("Migration Readiness page renders current JSON storage preparation state", 
   expect(await screen.findByText(/future database target/i)).toBeInTheDocument();
   expect((await screen.findAllByText(/postgresql/i)).length).toBeGreaterThan(0);
   expect(await screen.findByText(/current production storage/i)).toBeInTheDocument();
+  expect(await screen.findByText(/storage adapter interface/i)).toBeInTheDocument();
+  expect(await screen.findByText(/active adapter/i)).toBeInTheDocument();
+  expect(await screen.findByText(/available, disabled/i)).toBeInTheDocument();
+  expect((await screen.findAllByText(/production postgresql writes/i)).length).toBeGreaterThan(0);
+  expect(await screen.findByText(/shadow-only status/i)).toBeInTheDocument();
   expect((await screen.findAllByText(/postgresql active/i)).length).toBeGreaterThan(0);
   expect(await screen.findByText(/schema files present/i)).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: /shadow migration rehearsal/i })).toBeInTheDocument();

@@ -23,6 +23,14 @@ function summarize(blockchainHealth, backendHealth) {
     warning_count: warnings,
     error_count: errors,
     backup_available: Boolean(blockchainHealth.backup_available || backendHealth.backup_available),
+    storage_adapter_interface_available: Boolean(blockchainHealth.storage_adapter_interface_available),
+    storage_backend: blockchainHealth.storage_backend || "json",
+    active_storage_adapter: blockchainHealth.active_storage_adapter || blockchainHealth.storage_backend || "json",
+    postgres_adapter_available: Boolean(blockchainHealth.postgres_adapter_available),
+    postgres_adapter_enabled: Boolean(blockchainHealth.postgres_adapter_enabled),
+    postgres_active: Boolean(blockchainHealth.postgres_active),
+    postgres_write_mode: blockchainHealth.postgres_write_mode || "disabled",
+    postgres_runtime_blocked_in_production: Boolean(blockchainHealth.postgres_runtime_blocked_in_production),
     files,
   };
 }
