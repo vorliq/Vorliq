@@ -19,7 +19,7 @@ process.env.NODE_ENV = "production";
 
 jest.mock("axios");
 const axios = require("axios");
-const { scoreReadiness } = require("../readiness");
+const { buildReadiness, scoreReadiness } = require("../readiness");
 const app = require("../index");
 
 function tempDir() {
@@ -208,6 +208,18 @@ describe("production readiness", () => {
 
     expect(result.overall_status).toBe("fail");
     expect(result.score).toBeLessThan(90);
+  });
+
+  test("embedded readiness skipSnapshot does not fail secret scan", async () => {
+    const readiness = await buildReadiness({ skipSnapshot: true });
+
+    expect(readiness.success).toBe(true);
+    expect(readiness.overall_status).not.toBe("fail");
+    expect(readiness.snapshot_endpoint_available).toBe(true);
+    expect(readiness.snapshot_verify_passed).toBe(true);
+    expect(readiness.snapshot_secret_scan_passed).toBe(true);
+    const secretScan = readiness.checks.find((check) => check.id === "snapshot_secret_scan_passed");
+    expect(secretScan.status).toBe("pass");
   });
 
   test("admin readiness requires token", async () => {
