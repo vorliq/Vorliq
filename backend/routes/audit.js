@@ -80,6 +80,8 @@ function sanitizePublicPayload(value) {
 }
 
 async function getCommitHash() {
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
+  if (process.env.VORLIQ_COMMIT) return process.env.VORLIQ_COMMIT;
   try {
     const result = await execFileAsync("git", ["rev-parse", "HEAD"], {
       cwd: process.env.VORLIQ_APP_DIR || repoRoot,

@@ -133,6 +133,18 @@ function Readiness() {
                 <span>Migration tools</span>
                 <strong>{readiness.migration_tools_available ? "Available" : "Unavailable"}</strong>
               </div>
+              <div className="stat-card">
+                <span>Snapshot endpoint</span>
+                <strong>{readiness.snapshot_endpoint_available ? "Available" : "Unavailable"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Snapshot verified</span>
+                <strong>{readiness.snapshot_verify_passed ? "Yes" : "No"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Snapshot secret scan</span>
+                <strong>{readiness.snapshot_secret_scan_passed ? "Passed" : "Review"}</strong>
+              </div>
             </div>
           </section>
 

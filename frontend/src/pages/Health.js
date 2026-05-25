@@ -26,6 +26,7 @@ function Health() {
   const [backupStatus, setBackupStatus] = useState(null);
   const [storageHealth, setStorageHealth] = useState(null);
   const [indexHealth, setIndexHealth] = useState(null);
+  const [snapshotVerification, setSnapshotVerification] = useState(null);
   const [migrationReadiness, setMigrationReadiness] = useState(null);
   const [activeIncidents, setActiveIncidents] = useState([]);
   const [weeklyReport, setWeeklyReport] = useState(null);
@@ -55,6 +56,7 @@ function Health() {
         const backupRequest = api.get("/backup/status");
         const storageRequest = api.get("/storage/health");
         const indexRequest = api.get("/indexes/health");
+        const snapshotRequest = api.get("/snapshot/verify").catch(() => ({ data: null }));
         const migrationRequest = api.get("/migration/readiness");
         const incidentsRequest = api.get("/incidents/active");
         const weeklyReportRequest = api.get("/reports/weekly");
@@ -70,6 +72,7 @@ function Health() {
           backupResponse,
           storageResponse,
           indexResponse,
+          snapshotResponse,
           migrationResponse,
           incidentsResponse,
           weeklyReportResponse,
@@ -85,6 +88,7 @@ function Health() {
           backupRequest,
           storageRequest,
           indexRequest,
+          snapshotRequest,
           migrationRequest,
           incidentsRequest,
           weeklyReportRequest,
@@ -122,6 +126,7 @@ function Health() {
           setBackupStatus(backupResponse.data);
           setStorageHealth(storageResponse.data);
           setIndexHealth(indexResponse.data);
+          setSnapshotVerification(snapshotResponse.data);
           setMigrationReadiness(migrationResponse.data);
           setActiveIncidents(incidentsResponse.data.incidents || []);
           setWeeklyReport(weeklyReportResponse.data);
@@ -249,6 +254,42 @@ function Health() {
         )}
         <p className="help-text">
           <a href="/readiness">Open full readiness report</a>
+        </p>
+      </section>
+
+      <section className="card card-pad health-section">
+        <div className="section-title">
+          <h2>Snapshot Verification</h2>
+          <span className={`status-badge ${snapshotVerification?.verified ? "pass" : "warning"}`}>
+            {snapshotVerification?.verified ? "verified" : "review"}
+          </span>
+        </div>
+        {loading ? (
+          <Spinner label="Loading snapshot verification..." />
+        ) : snapshotVerification?.success ? (
+          <div className="stats-grid compact-stats">
+            <div className="stat-card">
+              <span>Chain height</span>
+              <strong>{snapshotVerification.snapshot?.chain_height ?? "Unknown"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Latest block</span>
+              <strong className="mono-wrap compact-stat">{snapshotVerification.snapshot?.latest_block_hash || "Unavailable"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Checks passed</span>
+              <strong>{(snapshotVerification.checks || []).filter((check) => check.passed).length}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Warnings</span>
+              <strong>{snapshotVerification.warnings?.length || 0}</strong>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">Snapshot verification is unavailable right now.</div>
+        )}
+        <p className="help-text">
+          <a href="/snapshot">Open snapshot verification</a>
         </p>
       </section>
 

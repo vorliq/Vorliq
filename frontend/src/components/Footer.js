@@ -19,6 +19,7 @@ function Footer() {
         { label: "Roadmap", href: "/roadmap", internal: true },
         { label: "Releases", href: "/releases", internal: true },
         { label: "Readiness", href: "/readiness", internal: true },
+        { label: "Snapshot Verification", href: "/snapshot", internal: true },
         { label: "Storage Roadmap", href: "/migration-readiness", internal: true },
         { label: "Profiles", href: "/profile", internal: true },
       ],

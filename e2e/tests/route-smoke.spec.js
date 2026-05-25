@@ -28,6 +28,7 @@ const routes = [
   ["/health", /Health/i],
   ["/readiness", /Readiness/i],
   ["/migration-readiness", /Migration Readiness|Current Storage/i],
+  ["/snapshot", /Snapshot/i],
   ["/growth", /Growth/i],
   ["/audit", /Audit/i],
   ["/transparency", /Transparency/i],

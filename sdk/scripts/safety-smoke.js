@@ -25,6 +25,8 @@ assert.strictEqual(typeof sdk.getRoadmap, "function");
 assert.strictEqual(typeof sdk.getReadiness, "function");
 assert.strictEqual(typeof sdk.getIndexHealth, "function");
 assert.strictEqual(typeof sdk.getMigrationReadiness, "function");
+assert.strictEqual(typeof sdk.getLatestSnapshot, "function");
+assert.strictEqual(typeof sdk.verifySnapshot, "function");
 assert.strictEqual(typeof sdk.setRequestId, "function");
 sdk
   .sendTransaction("SYSTEM", "not-used", "not-used", validAddress, 1)
@@ -78,6 +80,12 @@ global.fetch = async (url, options = {}) => {
       if (String(url).endsWith("/api/v1/migration/readiness")) {
         return { success: true, storage_backend: "json", database_enabled: false, migration_supported: "dry_run_only" };
       }
+      if (String(url).endsWith("/api/v1/snapshot/latest")) {
+        return { success: true, snapshot: { chain_height: 42, latest_block_hash: "0000snapshot" } };
+      }
+      if (String(url).endsWith("/api/v1/snapshot/verify")) {
+        return { success: true, verified: true, snapshot: { chain_height: 42, latest_block_hash: "0000snapshot" }, checks: [] };
+      }
       return { success: true, summary: { height: 1 } };
     },
   };
@@ -103,6 +111,10 @@ global.fetch = async (url, options = {}) => {
   const migrationReadiness = await v1Client.getMigrationReadiness();
   assert.strictEqual(migrationReadiness.storage_backend, "json");
   assert.strictEqual(migrationReadiness.database_enabled, false);
+  const latestSnapshot = await v1Client.getLatestSnapshot();
+  assert.strictEqual(latestSnapshot.snapshot.latest_block_hash, "0000snapshot");
+  const snapshotVerification = await v1Client.verifySnapshot();
+  assert.strictEqual(snapshotVerification.verified, true);
   assert.strictEqual(calls[0].url, "https://example.invalid/api/v1/version");
   assert.strictEqual(calls[1].url, "https://example.invalid/api/v1/version/metadata");
   assert.strictEqual(calls[2].url, "https://example.invalid/api/v1/changelog");
@@ -111,12 +123,14 @@ global.fetch = async (url, options = {}) => {
   assert.strictEqual(calls[5].url, "https://example.invalid/api/v1/chain/summary");
   assert.strictEqual(calls[6].url, "https://example.invalid/api/v1/indexes/health");
   assert.strictEqual(calls[7].url, "https://example.invalid/api/v1/migration/readiness");
+  assert.strictEqual(calls[8].url, "https://example.invalid/api/v1/snapshot/latest");
+  assert.strictEqual(calls[9].url, "https://example.invalid/api/v1/snapshot/verify");
   assert.strictEqual(calls[5].options.headers["X-Request-ID"], "sdk-smoke");
   assert.strictEqual(v1Client.lastRequestId, "sdk-smoke-request");
 
   const legacyClient = new VorliqSDK({ nodeUrl: "https://example.invalid", apiVersion: "legacy" });
   await legacyClient.getChainSummary();
-  assert.strictEqual(calls[8].url, "https://example.invalid/api/chain/summary");
+  assert.strictEqual(calls[10].url, "https://example.invalid/api/chain/summary");
 
   try {
     await v1Client.reportContent({ target_type: "profile", target_id: "x", reason: "other" });

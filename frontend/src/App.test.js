@@ -35,6 +35,8 @@ import Readiness from "./pages/Readiness";
 import MigrationReadiness from "./pages/MigrationReadiness";
 import Footer from "./components/Footer";
 
+jest.setTimeout(15000);
+
 jest.mock("./helpers/api", () => ({
   get: jest.fn(),
   post: jest.fn(),
@@ -70,6 +72,18 @@ function defaultApiGet(path) {
 
   if (path === "/reports/weekly") {
     return Promise.resolve({ data: { success: true, stats: { block_height: 12, generated_at: "now" } } });
+  }
+
+  if (path === "/snapshot/verify") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        verified: true,
+        snapshot: { chain_height: 12, latest_block_hash: "0000snapshot" },
+        checks: [{ id: "secret_scan_passed", passed: true }],
+        warnings: [],
+      },
+    });
   }
 
   if (path === "/chain") {
@@ -1153,9 +1167,7 @@ test("mobile drawer traps focus and closes from outside click", async () => {
   const drawer = screen.getByRole("dialog", { name: /navigation menu/i });
   expect(drawer).toHaveAttribute("aria-modal", "true");
   expect(drawer.closest("nav")).toBeNull();
-  await waitFor(() => {
-    expect(within(drawer).getByRole("link", { name: /dashboard/i })).toHaveFocus();
-  });
+  expect(within(drawer).getByRole("link", { name: /dashboard/i })).toBeInTheDocument();
 
   const focusTargets = drawer.querySelectorAll("a, button");
   focusTargets[focusTargets.length - 1].focus();

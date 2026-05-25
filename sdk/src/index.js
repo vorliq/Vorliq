@@ -363,6 +363,24 @@ class VorliqSDK {
   }
 
   /**
+   * Gets the latest cached public chain integrity snapshot.
+   *
+   * @returns {Promise<object>} Snapshot response with public chain, status, and hash metadata.
+   */
+  async getLatestSnapshot() {
+    return this.request("/api/snapshot/latest");
+  }
+
+  /**
+   * Regenerates and verifies the public chain integrity snapshot.
+   *
+   * @returns {Promise<object>} Verification response with checks, warnings, errors, and snapshot metadata.
+   */
+  async verifySnapshot() {
+    return this.request("/api/snapshot/verify");
+  }
+
+  /**
    * Gets public registry summary counts and node trust signals.
    *
    * @returns {Promise<object>} Registry summary fields.

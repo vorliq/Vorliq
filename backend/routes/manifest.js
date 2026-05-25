@@ -58,6 +58,8 @@ function safeDiagnostics(data) {
 }
 
 async function getCommitHash() {
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
+  if (process.env.VORLIQ_COMMIT) return process.env.VORLIQ_COMMIT;
   try {
     const result = await execFileAsync("git", ["rev-parse", "HEAD"], {
       cwd: process.env.VORLIQ_APP_DIR || repoRoot,
@@ -74,7 +76,7 @@ async function getJson(pathname) {
   return response.data;
 }
 
-router.get("/api/network/manifest", async (req, res) => {
+async function buildNetworkManifest(options = {}) {
   const [commitHash, chainResult, diagnosticsResult] = await Promise.allSettled([
     getCommitHash(),
     getJson("/chain/summary"),
@@ -109,7 +111,7 @@ router.get("/api/network/manifest", async (req, res) => {
     }
   })();
 
-  res.json({
+  return {
     success: true,
     project: {
       name: "Vorliq",
@@ -164,8 +166,13 @@ router.get("/api/network/manifest", async (req, res) => {
       active: activeIncidents.length > 0,
       active_count: activeIncidents.length,
     },
-    generated_at: new Date().toISOString(),
-  });
+    generated_at: options.generatedAt || new Date().toISOString(),
+  };
+}
+
+router.get("/api/network/manifest", async (req, res) => {
+  res.json(await buildNetworkManifest());
 });
 
 module.exports = router;
+module.exports.buildNetworkManifest = buildNetworkManifest;

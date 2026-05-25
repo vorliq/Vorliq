@@ -70,8 +70,29 @@
             <a href="examples.html">Developer Examples</a>
             <a href="operator.html">Operator Dashboard Guide</a>
             <a href="audit.html">Audit Export Guide</a>
+            <a href="snapshot-verification.html">Snapshot Verification</a>
           </div>
         </div>
+        <section>
+          <h2>Snapshot Verification</h2>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method GET">GET</span>
+              <code class="path">/api/snapshot/latest</code>
+              <a class="try" href="https://vorliq.org/api/snapshot/latest">Try it</a>
+            </div>
+            <p>Returns the latest cached public chain integrity snapshot. The snapshot includes chain height, latest block hash, transaction counts, treasury balance, active node count, deployment commit, storage/index/readiness status, and deterministic SHA-256 hashes for public summaries, audit manifest, and network manifest.</p>
+          </div>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method GET">GET</span>
+              <code class="path">/api/snapshot/verify</code>
+              <a class="try" href="https://vorliq.org/api/snapshot/verify">Try it</a>
+            </div>
+            <p>Regenerates the public snapshot, verifies chain validity, latest hash consistency, audit manifest hash, network manifest hash, storage/index/readiness availability, and secret-scan status. It returns <code>verified</code>, <code>checks</code>, <code>warnings</code>, and <code>errors</code>.</p>
+          </div>
+          <p>Snapshots are public integrity aids only. They are not legal, financial, or investment guarantees, and production data remains JSON-backed in this release.</p>
+        </section>
         <section class="compat-grid" aria-label="API compatibility">
           <article class="compat-card">
             <h2>Versioning</h2>

@@ -46,7 +46,7 @@ The SDK handles both structured v1 errors such as `{ error: { code, message }, r
 
 Release metadata, changelog entries, and roadmap items are available through `getVersionMetadata()`, `getChangelog()`, and `getRoadmap()`. Roadmap items are planning signals only and are not promises of dates, app-store approval, listings, financial outcomes, or legal status.
 
-Production readiness is available through `getReadiness()`. It reports a technical pass/warning/fail score for release, API, audit, storage, derived index, migration readiness, PostgreSQL preparation checks, adapter safety checks, backup, security, deployment, and node signals; it is not a legal, banking, investment, or financial safety guarantee. Derived index health is available through `getIndexHealth()`. Database migration preparation metadata is available through `getMigrationReadiness()`; production remains on JSON storage, the active adapter is JSON, the PostgreSQL adapter is shadow/test preparation only, and production PostgreSQL writes are blocked.
+Production readiness is available through `getReadiness()`. It reports a technical pass/warning/fail score for release, API, audit, snapshot verification, storage, derived index, migration readiness, PostgreSQL preparation checks, adapter safety checks, backup, security, deployment, and node signals; it is not a legal, banking, investment, or financial safety guarantee. Derived index health is available through `getIndexHealth()`. Database migration preparation metadata is available through `getMigrationReadiness()`; production remains on JSON storage, the active adapter is JSON, the PostgreSQL adapter is shadow/test preparation only, and production PostgreSQL writes are blocked.
 
 Production applications should prefer the lightweight and paginated methods when they do not need the entire blockchain. The `getChain` method remains available for compatibility and local tooling, but it downloads the full chain and can become expensive as the network grows. For dashboards, explorers, and account history, use `getChainSummary`, `getBlocks`, `getTransactions`, `getPendingTransactions`, `getTransaction`, `getBlock`, `getAddressHistory`, and `getLeaderboard`.
 
@@ -153,6 +153,24 @@ async function main() {
   console.log("Audit schema:", manifest.audit_schema_version);
   console.log("Latest block:", manifest.latest_block_hash);
   console.log("Export hashes verified:", verification.verified);
+}
+
+main().catch(console.error);
+```
+
+Public snapshots gather current public chain state and deterministic hashes into one manifest. Use `getLatestSnapshot()` for the cached snapshot and `verifySnapshot()` when you need the server to regenerate and check the snapshot, audit manifest hash, network manifest hash, status availability, and forbidden secret scan. Snapshots are public integrity aids only; they are not legal, financial, or investment guarantees.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const latest = await vorliq.getLatestSnapshot();
+  const verification = await vorliq.verifySnapshot();
+
+  console.log("Snapshot height:", latest.snapshot.chain_height);
+  console.log("Latest block:", latest.snapshot.latest_block_hash);
+  console.log("Snapshot verified:", verification.verified);
 }
 
 main().catch(console.error);

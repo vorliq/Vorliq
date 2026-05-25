@@ -18,6 +18,8 @@ const endpoints = [
   "/api/registry/summary",
   "/api/faucet/summary",
   "/api/network/manifest",
+  "/api/snapshot/latest",
+  "/api/snapshot/verify",
   "/api/incidents/active",
   "/api/analytics/summary",
 ];

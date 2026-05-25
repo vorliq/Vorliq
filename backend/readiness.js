@@ -14,6 +14,7 @@ const { securityStatus } = require("./middleware/security");
 const { API_VERSION, API_STABILITY } = require("./utils/apiResponse");
 const { logError } = require("./logger");
 const { buildMigrationReadiness } = require("./migrationReadiness");
+const { verifySnapshot } = require("./snapshot");
 
 const execFileAsync = promisify(execFile);
 const repoRoot = path.resolve(__dirname, "..");
@@ -172,6 +173,7 @@ async function buildReadiness(options = {}) {
     versionResult,
     networkManifestResult,
     migrationResult,
+    snapshotResult,
   ] = await Promise.all([
     safeCall("deployment commit", deploymentCommit),
     safeCall("diagnostics", () => flaskGet("/diagnostics")),
@@ -192,6 +194,9 @@ async function buildReadiness(options = {}) {
       return { success: true, project: metadata.project_name, api_version: metadata.api_version, deployment_commit: commit };
     }),
     safeCall("migration readiness", () => buildMigrationReadiness()),
+    options.skipSnapshot
+      ? Promise.resolve({ ok: true, value: { success: true, verified: true, checks: [], warnings: [], errors: [] } })
+      : safeCall("snapshot verification", () => verifySnapshot({ includeReadinessStatus: false })),
   ]);
 
   addCheck(checks, {
@@ -503,6 +508,50 @@ async function buildReadiness(options = {}) {
     },
   });
 
+  const snapshotVerification = snapshotResult.value || {};
+  const snapshotSecretScan = (snapshotVerification.checks || []).find((check) => check.id === "secret_scan_passed");
+  addCheck(checks, {
+    id: "snapshot_endpoint_available",
+    name: "Snapshot endpoint available",
+    category: "Audit",
+    status: snapshotResult.ok && snapshotVerification.success ? "pass" : "fail",
+    severity: "high",
+    message: snapshotResult.ok && snapshotVerification.success ? "Snapshot verification can be generated." : "Snapshot verification is unavailable.",
+    safe_metadata: {
+      chain_height: numberOrNull(snapshotVerification.snapshot?.chain_height),
+      latest_block_hash: snapshotVerification.snapshot?.latest_block_hash || null,
+    },
+  });
+
+  addCheck(checks, {
+    id: "snapshot_verify_passed",
+    name: "Snapshot verify passed",
+    category: "Audit",
+    status: snapshotResult.ok && snapshotVerification.verified === true ? "pass" : "warning",
+    severity: "high",
+    message: snapshotVerification.verified === true
+      ? "Snapshot hashes and public status checks verify."
+      : "Snapshot verification returned warnings or errors.",
+    safe_metadata: {
+      warning_count: numberOrNull(snapshotVerification.warnings?.length),
+      error_count: numberOrNull(snapshotVerification.errors?.length),
+    },
+  });
+
+  addCheck(checks, {
+    id: "snapshot_secret_scan_passed",
+    name: "Snapshot secret scan passed",
+    category: "Security",
+    status: snapshotResult.ok && snapshotSecretScan?.passed === true ? "pass" : "fail",
+    severity: "critical",
+    message: snapshotSecretScan?.passed === true
+      ? "Snapshot payload does not contain forbidden secret markers."
+      : "Snapshot payload secret scan did not pass.",
+    safe_metadata: {
+      secret_scan_passed: snapshotSecretScan?.passed === true,
+    },
+  });
+
   const registrySummary = registryResult.value?.summary || {};
   const activeNodeCount = numberOrNull(registrySummary.active_node_count);
   const syncedNodeCount = numberOrNull(registrySummary.synced_node_count);
@@ -652,6 +701,9 @@ async function buildReadiness(options = {}) {
     migration_tools_available: Boolean(migration.migration_tools_available),
     postgres_shadow_rehearsal_available: Boolean(migration.postgres_shadow_rehearsal_available),
     postgres_shadow_ci_enabled: Boolean(migration.postgres_shadow_ci_enabled),
+    snapshot_endpoint_available: Boolean(snapshotResult.ok && snapshotVerification.success),
+    snapshot_verify_passed: Boolean(snapshotResult.ok && snapshotVerification.verified === true),
+    snapshot_secret_scan_passed: Boolean(snapshotResult.ok && snapshotSecretScan?.passed === true),
     checks,
   };
 

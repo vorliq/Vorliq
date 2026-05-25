@@ -41,6 +41,7 @@
           <li>Security status, admin route protection, storage health, derived index health, backup freshness, and incident state.</li>
           <li>Migration readiness metadata, expected JSON backend status, storage adapter interface availability, PostgreSQL shadow rehearsal availability, and confirmation that no PostgreSQL adapter is active in production.</li>
           <li>Audit manifest availability and server-side hash-shape verification.</li>
+          <li>Snapshot endpoint availability, regenerated snapshot verification, and snapshot secret-scan status.</li>
           <li>Network manifest source metadata, registry active node count, public node activity, chain validity, mining status, treasury, faucet, and analytics availability.</li>
         </ul>
       </section>
@@ -57,6 +58,11 @@
       <section>
         <h2>Migration Readiness</h2>
         <p>Database migration preparation is expected to pass while <code>storage_backend</code> is <code>json</code>, <code>active_storage_adapter</code> is <code>json</code>, <code>database_enabled</code> is <code>false</code>, <code>postgres_active</code> is <code>false</code>, <code>postgres_adapter_enabled</code> is <code>false</code>, and <code>postgres_write_mode</code> is <code>disabled</code>. That is intentional: production has not migrated. The public endpoint <code>/api/migration/readiness</code> and the live <a href="https://vorliq.org/migration-readiness">Migration Readiness</a> page describe dry-run support, PostgreSQL schema presence, shadow rehearsal tooling, adapter parity checks, CI fixture rehearsal, import simulation tooling, and rollback requirements.</p>
+      </section>
+
+      <section>
+        <h2>Snapshot Readiness</h2>
+        <p>Readiness includes <code>snapshot_endpoint_available</code>, <code>snapshot_verify_passed</code>, and <code>snapshot_secret_scan_passed</code>. These confirm that the public snapshot endpoint responds, regenerated hashes and public status checks are coherent, and forbidden secret markers are absent from the snapshot response.</p>
       </section>
 
       <section>

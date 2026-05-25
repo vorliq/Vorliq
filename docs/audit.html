@@ -48,6 +48,7 @@
           <a class="button" href="transparency.html">Transparency</a>
           <a class="button" href="api.html">API</a>
           <a class="button" href="api-versioning.html">API Versioning</a>
+          <a class="button" href="snapshot-verification.html">Snapshot Verification</a>
           <a class="button primary" href="https://vorliq.org/audit">Open Audit Page</a>
         </div>
       </nav>
@@ -83,6 +84,11 @@
         <article class="card">
           <h2>Manifest Hashing</h2>
           <p>The manifest lists every audit export and a SHA-256 hash of the canonical JSON payload. Keys are sorted before hashing, and arrays are kept in stable public order where practical, so independent tools can fetch each export and verify the hashes.</p>
+        </article>
+
+        <article class="card">
+          <h2>Snapshot Layer</h2>
+          <p>The public snapshot endpoint hashes the audit manifest together with the current network manifest, chain summary, latest block, transaction totals, treasury, governance, lending, exchange, registry, storage, index, and readiness status. It complements audit exports by giving users one current integrity manifest to compare.</p>
         </article>
 
         <article class="card">
