@@ -89,6 +89,9 @@ function Snapshot() {
                 {verification?.verified ? "verified" : "review"}
               </span>
             </div>
+            <p className="help-text">
+              Historical signed snapshots are available in the <a href="/snapshot-archive">Snapshot Archive</a>.
+            </p>
             <div className="stats-grid compact-stats">
               <Metric label="Chain height" value={snapshot.chain_height} />
               <Metric label="Confirmed transactions" value={snapshot.confirmed_transaction_count} />

@@ -180,6 +180,26 @@ async function main() {
 main().catch(console.error);
 ```
 
+The signed snapshot archive stores recent signed public snapshots for historical comparison. Use `getSnapshotArchive({ limit, offset })` for metadata, `getLatestArchivedSnapshot()` for the latest archived snapshot, `getArchivedSnapshot(snapshotHash)` for one archive item, `verifyArchivedSnapshot(archiveItem)` for local hash/signature/metadata checks, and `bootstrapVerifyNode(nodeUrl)` for a read-only bootstrap report before trusting a node as a public state source.
+
+```js
+const { VorliqSDK } = require("./dist/vorliq-sdk");
+
+async function main() {
+  const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
+  const archive = await vorliq.getLatestArchivedSnapshot();
+  const archiveVerification = vorliq.verifyArchivedSnapshot(archive.archive);
+  const bootstrap = await vorliq.bootstrapVerifyNode("https://vorliq.org");
+
+  console.log("Archive verified:", archiveVerification.verified);
+  console.log("Archive key:", archiveVerification.public_key_id);
+  console.log("Bootstrap verified:", bootstrap.verified);
+  console.log("Bootstrap latest block:", bootstrap.latest_block_hash);
+}
+
+main().catch(console.error);
+```
+
 ## Node Registry
 
 The public node registry lets applications show active nodes, sync status, reliability, uptime, and safe operator metadata. Registry trust signals are operational signals only; a verified operator flag is not identity verification.

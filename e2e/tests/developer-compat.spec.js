@@ -26,6 +26,8 @@ test("developer compatibility docs load", async ({ page }) => {
     "/upgrades.html",
     "/readiness.html",
     "/snapshot-verification.html",
+    "/snapshot-archive.html",
+    "/bootstrap-verification.html",
     "/postgres-readiness.html",
     "/postgres-shadow-migration.html",
     "/database-migration-plan.html",

@@ -157,6 +157,18 @@ function Readiness() {
                 <span>Signature required</span>
                 <strong>{readiness.snapshot_signature_required ? "Yes" : "No"}</strong>
               </div>
+              <div className="stat-card">
+                <span>Snapshot archive</span>
+                <strong>{readiness.snapshot_archive_available ? "Available" : "Empty"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Archive verified</span>
+                <strong>{readiness.snapshot_archive_latest_verified ? "Yes" : "No"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Archive signature</span>
+                <strong>{readiness.snapshot_archive_signature_valid ? "Valid" : "Review"}</strong>
+              </div>
             </div>
           </section>
 

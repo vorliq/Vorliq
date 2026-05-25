@@ -101,6 +101,7 @@ sudo systemctl restart vorliq-backend.service
 node tools/verify_snapshot.js https://vorliq.org --require-signature
 curl https://vorliq.org/api/snapshot/public-key</code></pre>
         <p>The environment file should be owned by root with mode <code>600</code>, and the backend service should load it with <code>EnvironmentFile=/etc/vorliq/snapshot-signing.env</code> or optional <code>EnvironmentFile=-/etc/vorliq/snapshot-signing.env</code> on new installs. Rotate keys by publishing the new public key id, updating the private/public key secrets, restarting the backend, and keeping old public keys documented for historical verification. In an emergency, set <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=false</code>, restart, and report the reason.</p>
+        <p>Signed snapshot archives are written during deploy after snapshot verification passes and by cron at 04:00 Europe/London. The cron environment loads <code>/etc/vorliq/backend.env</code> and <code>/etc/vorliq/snapshot-signing.env</code>, runs <code>backend/archive_snapshot.js</code>, and keeps the latest 30 public archives. Verify the archive with <code>node tools/verify_snapshot_archive.js https://vorliq.org</code> and bootstrap-check the public node with <code>node tools/bootstrap_verify_node.js https://vorliq.org</code>.</p>
       </section>
 
       <section class="glass">

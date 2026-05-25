@@ -80,6 +80,7 @@ test("Snapshot page renders", async () => {
   expect(await screen.findByText(/chain height/i)).toBeInTheDocument();
   expect(screen.getByText(/0000latest/i)).toBeInTheDocument();
   expect(screen.getByText(/not a legal, financial, or investment guarantee/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /snapshot archive/i })).toHaveAttribute("href", "/snapshot-archive");
   expect(screen.getByText(/unsigned snapshot/i)).toBeInTheDocument();
   expect(screen.getByText(/production snapshot signing is not configured/i)).toBeInTheDocument();
 });

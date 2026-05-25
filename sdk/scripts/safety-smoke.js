@@ -29,6 +29,11 @@ assert.strictEqual(typeof sdk.getMigrationReadiness, "function");
 assert.strictEqual(typeof sdk.getLatestSnapshot, "function");
 assert.strictEqual(typeof sdk.verifySnapshot, "function");
 assert.strictEqual(typeof sdk.getSignedSnapshot, "function");
+assert.strictEqual(typeof sdk.getSnapshotArchive, "function");
+assert.strictEqual(typeof sdk.getLatestArchivedSnapshot, "function");
+assert.strictEqual(typeof sdk.getArchivedSnapshot, "function");
+assert.strictEqual(typeof sdk.verifyArchivedSnapshot, "function");
+assert.strictEqual(typeof sdk.bootstrapVerifyNode, "function");
 assert.strictEqual(typeof sdk.verifySnapshotSignature, "function");
 assert.strictEqual(typeof sdk.setRequestId, "function");
 sdk
@@ -42,6 +47,51 @@ sdk
 
 const originalFetch = global.fetch;
 const calls = [];
+const archiveKeypair = crypto.generateKeyPairSync("ed25519");
+const archivePublicKey = archiveKeypair.publicKey.export({ type: "spki", format: "pem" });
+let signedLatestForBootstrap = false;
+
+function signedSnapshotFixture() {
+  const snapshot = {
+    chain_height: 42,
+    latest_block_hash: "0000archive",
+    confirmed_transaction_count: 9,
+    treasury_balance: 5,
+    active_node_count: 1,
+    deployment_commit: "abc123",
+  };
+  const hash = VorliqSDK.snapshotHash(snapshot);
+  snapshot.signature = {
+    enabled: true,
+    algorithm: "Ed25519",
+    public_key_id: "ed25519:test",
+    public_key: archivePublicKey,
+    snapshot_hash: hash,
+    signature: crypto.sign(null, Buffer.from(hash, "utf8"), archiveKeypair.privateKey).toString("base64"),
+    status: "signed",
+  };
+  return snapshot;
+}
+
+function archiveFixture() {
+  const snapshot = signedSnapshotFixture();
+  return {
+    archive_version: 1,
+    created_at: "2026-05-25T12:00:00.000Z",
+    snapshot_hash: VorliqSDK.snapshotHash(snapshot),
+    signature_status: "signed",
+    signature_verified_at_archive_time: true,
+    public_key_id: "ed25519:test",
+    chain_height: snapshot.chain_height,
+    latest_block_hash: snapshot.latest_block_hash,
+    confirmed_transaction_count: snapshot.confirmed_transaction_count,
+    treasury_balance: snapshot.treasury_balance,
+    active_node_count: snapshot.active_node_count,
+    deployment_commit: snapshot.deployment_commit,
+    snapshot,
+  };
+}
+
 global.fetch = async (url, options = {}) => {
   calls.push({ url, options });
   const ok = !String(url).includes("/api/v1/reports");
@@ -84,6 +134,9 @@ global.fetch = async (url, options = {}) => {
         return { success: true, storage_backend: "json", database_enabled: false, migration_supported: "dry_run_only" };
       }
       if (String(url).endsWith("/api/v1/snapshot/latest")) {
+        if (signedLatestForBootstrap) {
+          return { success: true, snapshot: signedSnapshotFixture() };
+        }
         const snapshot = { chain_height: 42, latest_block_hash: "0000snapshot" };
         snapshot.signature = {
           enabled: false,
@@ -96,6 +149,24 @@ global.fetch = async (url, options = {}) => {
       }
       if (String(url).endsWith("/api/v1/snapshot/verify")) {
         return { success: true, verified: true, snapshot: { chain_height: 42, latest_block_hash: "0000snapshot" }, checks: [] };
+      }
+      if (String(url).endsWith("/api/v1/snapshot/public-key")) {
+        return { success: true, algorithm: "Ed25519", public_key_id: "ed25519:test", public_key: archivePublicKey, signature_required: true, signature_enabled: true };
+      }
+      if (String(url).includes("/api/v1/snapshot/archive/latest")) {
+        return { success: true, archive: archiveFixture() };
+      }
+      if (String(url).includes("/api/v1/snapshot/archive/")) {
+        return { success: true, archive: archiveFixture() };
+      }
+      if (String(url).includes("/api/v1/snapshot/archive")) {
+        return { success: true, snapshots: [VorliqSDK.verifyArchivedSnapshot(archiveFixture()).verified && { snapshot_hash: archiveFixture().snapshot_hash, chain_height: 42 }].filter(Boolean), total: 1, limit: 20, offset: 0 };
+      }
+      if (String(url).includes("/api/v1/registry/node")) {
+        return { success: true, node: { node_url: "https://node.vorliq.org", status: "active", sync_status: "synced" } };
+      }
+      if (String(url).endsWith("/api/v1/health")) {
+        return { success: true, chain_height: 42, latest_block_hash: "0000archive" };
       }
       return { success: true, summary: { height: 1 } };
     },
@@ -130,6 +201,15 @@ global.fetch = async (url, options = {}) => {
   assert.strictEqual(v1Client.verifySnapshotSignature(unsignedSnapshot.snapshot, { requireSignature: true }).verified, false);
   const snapshotVerification = await v1Client.verifySnapshot();
   assert.strictEqual(snapshotVerification.verified, true);
+  const archiveList = await v1Client.getSnapshotArchive();
+  assert.strictEqual(archiveList.total, 1);
+  const latestArchive = await v1Client.getLatestArchivedSnapshot();
+  assert.strictEqual(v1Client.verifyArchivedSnapshot(latestArchive.archive).verified, true);
+  const archiveByHash = await v1Client.getArchivedSnapshot(latestArchive.archive.snapshot_hash);
+  assert.strictEqual(archiveByHash.archive.snapshot_hash, latestArchive.archive.snapshot_hash);
+  signedLatestForBootstrap = true;
+  const bootstrap = await v1Client.bootstrapVerifyNode();
+  assert.strictEqual(bootstrap.verified, true);
 
   const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
   const publicPem = publicKey.export({ type: "spki", format: "pem" });
@@ -163,7 +243,7 @@ global.fetch = async (url, options = {}) => {
 
   const legacyClient = new VorliqSDK({ nodeUrl: "https://example.invalid", apiVersion: "legacy" });
   await legacyClient.getChainSummary();
-  assert.strictEqual(calls[11].url, "https://example.invalid/api/chain/summary");
+  assert.strictEqual(calls[calls.length - 1].url, "https://example.invalid/api/chain/summary");
 
   try {
     await v1Client.reportContent({ target_type: "profile", target_id: "x", reason: "other" });

@@ -284,12 +284,22 @@ function Health() {
               <span>Warnings</span>
               <strong>{snapshotVerification.warnings?.length || 0}</strong>
             </div>
+            <div className="stat-card">
+              <span>Snapshot archive</span>
+              <strong>{readiness?.snapshot_archive_available ? "Available" : "Empty"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Archive signature</span>
+              <strong>{readiness?.snapshot_archive_signature_valid ? "Valid" : "Review"}</strong>
+            </div>
           </div>
         ) : (
           <div className="empty-state">Snapshot verification is unavailable right now.</div>
         )}
         <p className="help-text">
           <a href="/snapshot">Open snapshot verification</a>
+          {" · "}
+          <a href="/snapshot-archive">Open snapshot archive</a>
         </p>
       </section>
 

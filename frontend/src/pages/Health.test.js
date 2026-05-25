@@ -16,7 +16,7 @@ beforeEach(() => {
       "/registry/summary": { success: true, summary: { active_node_count: 3, synced_node_count: 3, behind_node_count: 0, invalid_node_count: 0, average_reliability_score: 98, highest_chain_height: 42 } },
       "/deployment": { success: true, commit_hash: "abcdef123456" },
       "/version/metadata": { success: true, current_version: "1.0.0", release_channel: "stable", api_version: 1, recommended_node_version: "1.0.0" },
-      "/readiness": { success: true, overall_status: "pass", score: 100, checked_at: "2026-05-25T12:00:00.000Z", checks: [] },
+      "/readiness": { success: true, overall_status: "pass", score: 100, checked_at: "2026-05-25T12:00:00.000Z", snapshot_archive_available: true, snapshot_archive_latest_verified: true, snapshot_archive_signature_valid: true, checks: [] },
       "/security/status": { success: true, rate_limiting_enabled: true },
       "/backup/status": { success: true, latest_backup: { file_name: "backup.tar.gz" } },
       "/storage/health": { success: true, overall_status: "ok", critical_files_ok: 8, warnings_count: 0, errors_count: 0, backup_available: true },
@@ -42,5 +42,8 @@ test("Health shows snapshot summary", async () => {
 
   expect(await screen.findByRole("heading", { name: /snapshot verification/i })).toBeInTheDocument();
   expect(await screen.findByText(/0000latest/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/snapshot archive/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/valid/i).length).toBeGreaterThan(0);
   expect(screen.getByRole("link", { name: /open snapshot verification/i })).toHaveAttribute("href", "/snapshot");
+  expect(screen.getByRole("link", { name: /open snapshot archive/i })).toHaveAttribute("href", "/snapshot-archive");
 });

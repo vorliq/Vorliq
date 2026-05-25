@@ -1,11 +1,20 @@
 const request = require("supertest");
 const crypto = require("crypto");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 
 jest.mock("axios");
 const axios = require("axios");
 
 const app = require("../index");
 const { clearSnapshotCache, generateSnapshot, hasForbiddenSecretMarker, verifySnapshot } = require("../snapshot");
+const {
+  createSnapshotArchive,
+  latestArchive,
+  listArchives,
+  verifyArchiveItem,
+} = require("../snapshotArchive");
 const { hashNetworkManifest } = require("../routes/manifest");
 
 jest.setTimeout(15000);
@@ -14,6 +23,8 @@ const originalCommit = process.env.VORLIQ_COMMIT;
 const originalPrivateKey = process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY;
 const originalPublicKey = process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY;
 const originalRequireSignature = process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE;
+const originalArchiveDir = process.env.VORLIQ_SNAPSHOT_ARCHIVE_DIR;
+const originalAdminToken = process.env.ADMIN_TOKEN;
 
 function testKeypair() {
   const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
@@ -158,14 +169,23 @@ function mockSnapshotDependencies(mockOptions = {}) {
 }
 
 describe("chain snapshots", () => {
+  let archiveDir;
+
   beforeEach(() => {
     jest.clearAllMocks();
     clearSnapshotCache();
+    archiveDir = fs.mkdtempSync(path.join(os.tmpdir(), "vorliq-snapshot-archive-"));
+    process.env.VORLIQ_SNAPSHOT_ARCHIVE_DIR = archiveDir;
     process.env.VORLIQ_COMMIT = "snapshot-test-commit";
     delete process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY;
     delete process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY;
     delete process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE;
+    delete process.env.ADMIN_TOKEN;
     mockSnapshotDependencies();
+  });
+
+  afterEach(() => {
+    fs.rmSync(archiveDir, { recursive: true, force: true });
   });
 
   afterAll(() => {
@@ -177,6 +197,10 @@ describe("chain snapshots", () => {
     else process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY = originalPublicKey;
     if (originalRequireSignature === undefined) delete process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE;
     else process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE = originalRequireSignature;
+    if (originalArchiveDir === undefined) delete process.env.VORLIQ_SNAPSHOT_ARCHIVE_DIR;
+    else process.env.VORLIQ_SNAPSHOT_ARCHIVE_DIR = originalArchiveDir;
+    if (originalAdminToken === undefined) delete process.env.ADMIN_TOKEN;
+    else process.env.ADMIN_TOKEN = originalAdminToken;
   });
 
   test("snapshot latest returns safe public metadata", async () => {
@@ -284,6 +308,97 @@ describe("chain snapshots", () => {
     expect(response.body.signature_enabled).toBe(true);
     expect(JSON.stringify(response.body)).not.toContain(keys.privateKey);
     expect(JSON.stringify(response.body)).not.toMatch(/VORLIQ_SNAPSHOT_PRIVATE_KEY|BEGIN PRIVATE KEY/);
+  });
+
+  test("archive generation creates a safe signed archive item", async () => {
+    const keys = testKeypair();
+    process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY = keys.privateKey;
+    process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY = keys.publicKey;
+
+    const item = await createSnapshotArchive({ directory: archiveDir, createdAt: "2026-05-25T12:00:00.000Z" });
+    const verification = verifyArchiveItem(item);
+
+    expect(item.archive_version).toBe(1);
+    expect(item.snapshot_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(item.signature_status).toBe("verified");
+    expect(item.signature_verified_at_archive_time).toBe(true);
+    expect(item.public_key_id).toMatch(/^ed25519:[a-f0-9]{16}$/);
+    expect(item.snapshot.signature.signature).toEqual(expect.any(String));
+    expect(verification.verified).toBe(true);
+    expect(JSON.stringify(item)).not.toContain(keys.privateKey);
+    expect(JSON.stringify(item)).not.toMatch(/BEGIN PRIVATE KEY|ADMIN_TOKEN|server_path|raw_ip|user_agent|ssh-ed25519|\/home\/vorliq/i);
+  });
+
+  test("archive list is paginated and metadata-only", async () => {
+    const keys = testKeypair();
+    process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY = keys.privateKey;
+    process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY = keys.publicKey;
+
+    await createSnapshotArchive({ directory: archiveDir, createdAt: "2026-05-25T12:00:00.000Z" });
+    await createSnapshotArchive({ directory: archiveDir, createdAt: "2026-05-25T13:00:00.000Z" });
+
+    const list = listArchives({ directory: archiveDir, limit: 1, offset: 0 });
+    expect(list.success).toBe(true);
+    expect(list.total).toBe(2);
+    expect(list.archives).toHaveLength(1);
+    expect(list.archives[0].snapshot_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(list.archives[0].snapshot).toBeUndefined();
+    expect(list.archives[0].latest_block_hash).toBe("0000hash");
+  });
+
+  test("archive latest and by hash routes return signed archive", async () => {
+    const keys = testKeypair();
+    process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY = keys.privateKey;
+    process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY = keys.publicKey;
+    const item = await createSnapshotArchive({ directory: archiveDir, createdAt: "2026-05-25T12:00:00.000Z" });
+
+    const latestResponse = await request(app).get("/api/snapshot/archive/latest");
+    const byHashResponse = await request(app).get(`/api/snapshot/archive/${item.snapshot_hash}`);
+
+    expect(latestResponse.status).toBe(200);
+    expect(latestResponse.body.success).toBe(true);
+    expect(latestResponse.body.archive.snapshot_hash).toBe(item.snapshot_hash);
+    expect(latestResponse.body.verification.verified).toBe(true);
+    expect(byHashResponse.status).toBe(200);
+    expect(byHashResponse.body.archive.snapshot_hash).toBe(item.snapshot_hash);
+  });
+
+  test("public archive routes are read-only and admin archive route requires token", async () => {
+    const publicPost = await request(app).post("/api/snapshot/archive");
+    const adminPost = await request(app).post("/api/admin/snapshot/archive");
+
+    expect(publicPost.status).toBe(404);
+    expect(adminPost.status).toBe(401);
+  });
+
+  test("admin archive route creates a signed archive with token", async () => {
+    const keys = testKeypair();
+    process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY = keys.privateKey;
+    process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY = keys.publicKey;
+    process.env.ADMIN_TOKEN = "snapshot-archive-admin";
+
+    const response = await request(app)
+      .post("/api/admin/snapshot/archive")
+      .set("Authorization", "Bearer snapshot-archive-admin");
+
+    expect(response.status).toBe(201);
+    expect(response.body.success).toBe(true);
+    expect(response.body.archive.snapshot_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(response.body.metadata.snapshot).toBeUndefined();
+    expect(response.body.verification.verified).toBe(true);
+    expect(JSON.stringify(response.body)).not.toContain(keys.privateKey);
+  });
+
+  test("daily archive script can run once", async () => {
+    const keys = testKeypair();
+    process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY = keys.privateKey;
+    process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY = keys.publicKey;
+    const archiveScript = require("../archive_snapshot");
+
+    await expect(archiveScript.main()).resolves.toBeUndefined();
+    const item = latestArchive(archiveDir);
+    expect(item.snapshot_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(verifyArchiveItem(item).verified).toBe(true);
   });
 
   test("snapshot latest and verify use the same canonical network manifest hash", async () => {

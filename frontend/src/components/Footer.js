@@ -20,6 +20,7 @@ function Footer() {
         { label: "Releases", href: "/releases", internal: true },
         { label: "Readiness", href: "/readiness", internal: true },
         { label: "Snapshot Verification", href: "/snapshot", internal: true },
+        { label: "Snapshot Archive", href: "/snapshot-archive", internal: true },
         { label: "Storage Roadmap", href: "/migration-readiness", internal: true },
         { label: "Profiles", href: "/profile", internal: true },
       ],

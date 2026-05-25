@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Bootstrap Verification</title>
+    <meta name="description" content="Read-only bootstrap verification for Vorliq nodes." />
+    <style>
+      body { margin:0; min-width:320px; font-family:Inter,Arial,sans-serif; background:#020817; color:#fff; }
+      a { color:#18d7c9; }
+      .wrap { width:min(980px,calc(100% - 32px)); margin:0 auto; }
+      header, footer { border-color:rgba(24,215,201,.24); background:#071427; padding:18px 0; }
+      nav { display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+      main { padding:42px 0 64px; display:grid; gap:22px; }
+      section { border:1px solid rgba(24,215,201,.24); border-radius:14px; padding:22px; background:rgba(255,255,255,.04); }
+      h1 { font-size:clamp(2rem,6vw,3.4rem); margin:0; }
+      h2 { margin:0 0 10px; }
+      p, li { color:#c7d2e4; line-height:1.75; }
+      code, pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+      pre { overflow:auto; white-space:pre-wrap; border:1px solid rgba(24,215,201,.24); border-radius:10px; padding:14px; background:#020817; }
+    </style>
+  </head>
+  <body>
+    <header><nav class="wrap"><strong>Vorliq</strong><a href="snapshot-archive.html">Snapshot Archive</a></nav></header>
+    <main class="wrap">
+      <section>
+        <h1>Node Bootstrap Verification</h1>
+        <p>Bootstrap verification is a read-only check a community member or future node operator can run before trusting a Vorliq node as a source of public state.</p>
+      </section>
+      <section>
+        <h2>Run The Check</h2>
+        <pre><code>node tools/bootstrap_verify_node.js https://vorliq.org</code></pre>
+        <p>The tool fetches health, API version, public snapshot key metadata, the latest snapshot, snapshot verification, readiness, and public-node registry status. It verifies the signed snapshot locally and exits successfully only when the node is reachable and the snapshot signature verifies.</p>
+      </section>
+      <section>
+        <h2>Report Fields</h2>
+        <ul>
+          <li>Node reachable and API version.</li>
+          <li>Deployment commit when public metadata exposes it.</li>
+          <li>Snapshot signed and signature valid.</li>
+          <li>Chain height and latest block hash.</li>
+          <li>Registry active/synced status for the public node when available.</li>
+          <li>Readiness status when available.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Safety</h2>
+        <p>The bootstrap verifier only reads public endpoints. It does not submit transactions, mine blocks, write registry records, claim faucet funds, or mutate node state.</p>
+      </section>
+      <section>
+        <h2>Limits</h2>
+        <p>A successful bootstrap check proves the checked node served a signed public snapshot that verifies against the configured public key. It does not prove legal status, financial value, banking status, investment quality, custody safety, or future network availability.</p>
+      </section>
+    </main>
+    <footer><div class="wrap">Bootstrap verification is a trust aid, not a guarantee.</div></footer>
+  </body>
+</html>

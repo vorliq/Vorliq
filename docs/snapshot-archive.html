@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Snapshot Archive</title>
+    <meta name="description" content="Signed public snapshot archive verification for Vorliq." />
+    <style>
+      body { margin:0; min-width:320px; font-family:Inter,Arial,sans-serif; background:#020817; color:#fff; }
+      a { color:#18d7c9; }
+      .wrap { width:min(980px,calc(100% - 32px)); margin:0 auto; }
+      header, footer { border-color:rgba(24,215,201,.24); background:#071427; padding:18px 0; }
+      nav { display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+      main { padding:42px 0 64px; display:grid; gap:22px; }
+      section { border:1px solid rgba(24,215,201,.24); border-radius:14px; padding:22px; background:rgba(255,255,255,.04); }
+      h1 { font-size:clamp(2rem,6vw,3.4rem); margin:0; }
+      h2 { margin:0 0 10px; }
+      p, li { color:#c7d2e4; line-height:1.75; }
+      code, pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+      pre { overflow:auto; white-space:pre-wrap; border:1px solid rgba(24,215,201,.24); border-radius:10px; padding:14px; background:#020817; }
+    </style>
+  </head>
+  <body>
+    <header><nav class="wrap"><strong>Vorliq</strong><a href="snapshot-verification.html">Snapshot Verification</a></nav></header>
+    <main class="wrap">
+      <section>
+        <h1>Signed Snapshot Archive</h1>
+        <p>Vorliq archives signed public snapshots so community members and future node operators can compare the latest signed state with recent historical signed states.</p>
+      </section>
+      <section>
+        <h2>What Is Archived</h2>
+        <p>Each archive item stores safe public metadata plus the signed public snapshot object: archive version, creation time, snapshot hash, signature status, public key id, chain height, latest block hash, confirmed transaction count, treasury balance, active node count, deployment commit, and the snapshot payload.</p>
+        <p>The archive does not contain private signing keys, admin tokens, environment dumps, raw logs, raw IP addresses, raw user agents, SSH keys, private wallet keys, or server paths.</p>
+      </section>
+      <section>
+        <h2>Schedule And Retention</h2>
+        <p>Production creates an archive during deploy after signed snapshot verification passes and installs a daily archive job for 04:00 Europe/London. The backend keeps the latest 30 archived snapshots.</p>
+      </section>
+      <section>
+        <h2>Verify An Archive</h2>
+        <pre><code>node tools/verify_snapshot_archive.js https://vorliq.org
+node tools/verify_snapshot_archive.js https://vorliq.org --list
+node tools/verify_snapshot_archive.js https://vorliq.org --hash SNAPSHOT_HASH</code></pre>
+        <p>The tool verifies the embedded signed snapshot, checks the archive hash, compares metadata against the embedded snapshot, scans for forbidden secret markers, and fails if the required signature is missing or invalid.</p>
+      </section>
+      <section>
+        <h2>Key Rotation</h2>
+        <p>If the signing key rotates, new archives should show the new public key id. Historical public keys should remain documented so older archived snapshots can still be verified.</p>
+      </section>
+      <section>
+        <h2>Limits</h2>
+        <p>Archived signed snapshots help prove public payload provenance and consistency over time. They do not prove legal status, financial value, banking status, investment quality, custody safety, or future network availability.</p>
+      </section>
+    </main>
+    <footer><div class="wrap">Snapshot archives are public verification aids only.</div></footer>
+  </body>
+</html>

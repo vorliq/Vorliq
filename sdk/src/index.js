@@ -162,6 +162,113 @@ function verifySnapshotSignature(snapshot = {}, options = {}) {
   };
 }
 
+const FORBIDDEN_ARCHIVE_PATTERNS = [
+  /PRIVATE KEY/i,
+  /BEGIN OPENSSH/i,
+  /ADMIN_TOKEN/i,
+  /VORLIQ_SNAPSHOT_PRIVATE_KEY/i,
+  /password/i,
+  /ssh-ed25519/i,
+  /\/home\/[A-Za-z0-9_-]+/i,
+  /[A-Z]:\\Users\\/i,
+  /user-agent/i,
+  /x-forwarded-for/i,
+];
+
+function containsForbiddenArchiveMarker(value) {
+  let serialized = "";
+  try {
+    serialized = JSON.stringify(value);
+  } catch (error) {
+    return true;
+  }
+  return FORBIDDEN_ARCHIVE_PATTERNS.some((pattern) => pattern.test(serialized));
+}
+
+function verifyArchivedSnapshot(archiveItem = {}, options = {}) {
+  const item = archiveItem.archive || archiveItem;
+  const snapshot = item.snapshot || {};
+  const calculatedHash = snapshotHash(snapshot);
+  const signatureVerification = verifySnapshotSignature(snapshot, {
+    requireSignature: options.requireSignature !== false,
+    publicKey: options.publicKey || snapshot.signature?.public_key,
+  });
+  const metadataMatches =
+    item.snapshot_hash === calculatedHash &&
+    item.chain_height === snapshot.chain_height &&
+    item.latest_block_hash === snapshot.latest_block_hash &&
+    item.confirmed_transaction_count === snapshot.confirmed_transaction_count &&
+    item.treasury_balance === snapshot.treasury_balance &&
+    item.active_node_count === snapshot.active_node_count &&
+    item.deployment_commit === snapshot.deployment_commit;
+  const safe = !containsForbiddenArchiveMarker(item);
+
+  return {
+    success: true,
+    verified: Boolean(metadataMatches && signatureVerification.verified && safe),
+    snapshot_hash: calculatedHash,
+    archived_snapshot_hash: item.snapshot_hash || null,
+    hash_matches: item.snapshot_hash === calculatedHash,
+    metadata_matches: metadataMatches,
+    signature_verified: signatureVerification.signature_verified,
+    signature_status: signatureVerification.status,
+    safe,
+    public_key_id: item.public_key_id || snapshot.signature?.public_key_id || null,
+  };
+}
+
+async function bootstrapVerifyNode(nodeUrl = "https://vorliq.org", options = {}) {
+  const client = new VorliqSDK({ nodeUrl, apiVersion: options.apiVersion || "v1" });
+  const publicNodeUrl = options.publicNodeUrl || "https://node.vorliq.org";
+  const [health, version, publicKey, latestSnapshot, snapshotVerification, readiness, registryNode] =
+    await Promise.all([
+      client.request("/api/health"),
+      client.request("/api/version"),
+      client.request("/api/snapshot/public-key"),
+      client.getLatestSnapshot(),
+      client.verifySnapshot(),
+      client.request("/api/readiness").catch(() => null),
+      client
+        .request(`/api/registry/node?node_url=${encodeURIComponent(publicNodeUrl)}`)
+        .catch(() => null),
+    ]);
+
+  const snapshot = latestSnapshot.snapshot || latestSnapshot;
+  const signatureVerification = verifySnapshotSignature(snapshot, {
+    requireSignature: true,
+    publicKey: publicKey.public_key || snapshot.signature?.public_key,
+  });
+  const deploymentCommit =
+    snapshot.deployment_commit ||
+    health.deployment_commit ||
+    version.deployment_commit ||
+    null;
+
+  return {
+    success: true,
+    verified: Boolean(health.success && snapshotVerification.verified && signatureVerification.verified),
+    node_reachable: Boolean(health.success),
+    api_version: version.api_version || version.version || null,
+    deployment_commit: deploymentCommit,
+    snapshot_signed: snapshot.signature?.enabled === true,
+    signature_valid: signatureVerification.verified,
+    public_key_id: publicKey.public_key_id || snapshot.signature?.public_key_id || null,
+    chain_height: snapshot.chain_height ?? health.chain_height ?? null,
+    latest_block_hash: snapshot.latest_block_hash || health.latest_block_hash || null,
+    registry_active: registryNode?.node?.status === "active" || registryNode?.node?.active === true || null,
+    registry_synced: registryNode?.node?.sync_status === "synced" || registryNode?.node?.synced === true || null,
+    readiness_status: readiness?.overall_status || null,
+    health,
+    version,
+    public_key: publicKey,
+    snapshot,
+    snapshot_verification: snapshotVerification,
+    signature_verification: signatureVerification,
+    registry_node: registryNode?.node || null,
+    readiness,
+  };
+}
+
 class VorliqSDK {
   /**
    * Creates a Vorliq SDK client.
@@ -425,6 +532,10 @@ class VorliqSDK {
     return this.request("/api/snapshot/verify");
   }
 
+  async getSnapshotPublicKey() {
+    return this.request("/api/snapshot/public-key");
+  }
+
   async getSignedSnapshot() {
     const data = await this.getLatestSnapshot();
     const snapshot = data.snapshot || data;
@@ -437,6 +548,28 @@ class VorliqSDK {
 
   verifySnapshotSignature(snapshot, options = {}) {
     return verifySnapshotSignature(snapshot, options);
+  }
+
+  async getSnapshotArchive(options = {}) {
+    const limit = options.limit ?? 20;
+    const offset = options.offset ?? 0;
+    return this.request(`/api/snapshot/archive${paginationQuery(limit, offset)}`);
+  }
+
+  async getLatestArchivedSnapshot() {
+    return this.request("/api/snapshot/archive/latest");
+  }
+
+  async getArchivedSnapshot(snapshotHashValue) {
+    return this.request(`/api/snapshot/archive/${encodeURIComponent(snapshotHashValue)}`);
+  }
+
+  verifyArchivedSnapshot(archiveItem, options = {}) {
+    return verifyArchivedSnapshot(archiveItem, options);
+  }
+
+  async bootstrapVerifyNode(nodeUrl = this.nodeUrl, options = {}) {
+    return bootstrapVerifyNode(nodeUrl, { apiVersion: this.apiVersion, ...options });
   }
 
   /**
@@ -1183,9 +1316,11 @@ class VorliqSDK {
 
 module.exports = VorliqSDK;
 module.exports.VorliqSDK = VorliqSDK;
+module.exports.bootstrapVerifyNode = bootstrapVerifyNode;
 module.exports.canonicalStringify = canonicalStringify;
 module.exports.createTransactionReview = createTransactionReview;
 module.exports.isReservedAddress = isReservedAddress;
 module.exports.snapshotHash = snapshotHash;
 module.exports.validateAddress = validateAddress;
+module.exports.verifyArchivedSnapshot = verifyArchivedSnapshot;
 module.exports.verifySnapshotSignature = verifySnapshotSignature;

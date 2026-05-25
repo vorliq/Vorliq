@@ -99,6 +99,36 @@
             </div>
             <p>Returns safe public signing metadata only: <code>success</code>, <code>algorithm</code>, <code>public_key_id</code>, <code>public_key</code>, <code>signature_required</code>, and <code>signature_enabled</code>. It never returns the private signing key, server paths, or environment dumps.</p>
           </div>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method GET">GET</span>
+              <code class="path">/api/snapshot/archive</code>
+              <a class="try" href="https://vorliq.org/api/snapshot/archive">Try it</a>
+            </div>
+            <p>Returns paginated metadata for recent signed snapshot archives, newest first. The list is metadata-only and does not include the embedded snapshot payload.</p>
+          </div>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method GET">GET</span>
+              <code class="path">/api/snapshot/archive/latest</code>
+              <a class="try" href="https://vorliq.org/api/snapshot/archive/latest">Try it</a>
+            </div>
+            <p>Returns the latest archived signed public snapshot and archive verification metadata. If no archive exists yet, the endpoint returns <code>success:true</code> with <code>archive:null</code>.</p>
+          </div>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method GET">GET</span>
+              <code class="path">/api/snapshot/archive/:snapshot_hash</code>
+            </div>
+            <p>Returns one archived signed public snapshot by its snapshot hash. Public archive routes are read-only.</p>
+          </div>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method POST">POST</span>
+              <code class="path">/api/admin/snapshot/archive</code>
+            </div>
+            <p>Protected admin route that creates one archive snapshot. It requires the admin token and never returns private signing keys or environment dumps.</p>
+          </div>
           <p>Snapshots and signatures are public integrity and provenance aids only. They are not legal, financial, banking, or investment guarantees, and production data remains JSON-backed in this release.</p>
         </section>
         <section class="compat-grid" aria-label="API compatibility">

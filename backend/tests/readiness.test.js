@@ -1,6 +1,7 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const crypto = require("crypto");
 const request = require("supertest");
 
 const ORIGINAL_ENV = {
@@ -9,6 +10,7 @@ const ORIGINAL_ENV = {
   VORLIQ_BACKUP_DIR: process.env.VORLIQ_BACKUP_DIR,
   INCIDENTS_FILE: process.env.INCIDENTS_FILE,
   ANALYTICS_FILE: process.env.ANALYTICS_FILE,
+  VORLIQ_SNAPSHOT_ARCHIVE_DIR: process.env.VORLIQ_SNAPSHOT_ARCHIVE_DIR,
   VORLIQ_SNAPSHOT_PRIVATE_KEY: process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY,
   VORLIQ_SNAPSHOT_PUBLIC_KEY: process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY,
   VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE: process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE,
@@ -20,7 +22,17 @@ process.env.NODE_ENV = "production";
 jest.mock("axios");
 const axios = require("axios");
 const { buildReadiness, scoreReadiness } = require("../readiness");
+const { clearSnapshotCache } = require("../snapshot");
+const { createSnapshotArchive } = require("../snapshotArchive");
 const app = require("../index");
+
+function testKeypair() {
+  const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
+  return {
+    publicKey: publicKey.export({ type: "spki", format: "pem" }),
+    privateKey: privateKey.export({ type: "pkcs8", format: "pem" }),
+  };
+}
 
 function tempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "vorliq-readiness-"));
@@ -120,15 +132,19 @@ describe("production readiness", () => {
   let backupDir;
   let incidentsFile;
   let analyticsFile;
+  let archiveDir;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    clearSnapshotCache();
     backupDir = tempDir();
     incidentsFile = path.join(tempDir(), "incidents.json");
     analyticsFile = path.join(tempDir(), "analytics.json");
+    archiveDir = tempDir();
     process.env.VORLIQ_BACKUP_DIR = backupDir;
     process.env.INCIDENTS_FILE = incidentsFile;
     process.env.ANALYTICS_FILE = analyticsFile;
+    process.env.VORLIQ_SNAPSHOT_ARCHIVE_DIR = archiveDir;
     delete process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY;
     delete process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY;
     delete process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE;
@@ -180,6 +196,9 @@ describe("production readiness", () => {
     expect(response.body.snapshot_signature_verified).toBe(false);
     expect(response.body.snapshot_signature_required).toBe(false);
     expect(response.body.snapshot_signature_status).toBe("unsigned");
+    expect(response.body.snapshot_archive_available).toBe(false);
+    expect(response.body.snapshot_archive_latest_verified).toBe(false);
+    expect(response.body.snapshot_archive_signature_valid).toBe(false);
     const signatureCheck = response.body.checks.find((check) => check.id === "snapshot_signature_status");
     expect(signatureCheck.status).toBe("warning");
     expect(signatureCheck.safe_metadata).toMatchObject({
@@ -198,6 +217,7 @@ describe("production readiness", () => {
     expect(response.body.checks.some((check) => check.id === "migration_tools_available")).toBe(true);
     expect(response.body.checks.some((check) => check.id === "postgres_shadow_rehearsal_available")).toBe(true);
     expect(response.body.checks.some((check) => check.id === "postgres_shadow_ci_enabled")).toBe(true);
+    expect(response.body.checks.find((check) => check.id === "snapshot_archive_available").status).toBe("warning");
   });
 
   test("critical fail logic forces overall fail", () => {
@@ -220,6 +240,22 @@ describe("production readiness", () => {
     expect(readiness.snapshot_secret_scan_passed).toBe(true);
     const secretScan = readiness.checks.find((check) => check.id === "snapshot_secret_scan_passed");
     expect(secretScan.status).toBe("pass");
+  });
+
+  test("readiness includes verified snapshot archive checks", async () => {
+    const keys = testKeypair();
+    process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY = keys.privateKey;
+    process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY = keys.publicKey;
+    await createSnapshotArchive({ directory: archiveDir, createdAt: "2026-05-25T12:00:00.000Z" });
+
+    const response = await request(app).get("/api/readiness");
+
+    expect(response.status).toBe(200);
+    expect(response.body.snapshot_archive_available).toBe(true);
+    expect(response.body.snapshot_archive_latest_verified).toBe(true);
+    expect(response.body.snapshot_archive_signature_valid).toBe(true);
+    expect(response.body.checks.find((check) => check.id === "snapshot_archive_latest_verified").status).toBe("pass");
+    expect(response.body.checks.find((check) => check.id === "snapshot_archive_signature_valid").status).toBe("pass");
   });
 
   test("admin readiness requires token", async () => {

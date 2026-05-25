@@ -29,6 +29,7 @@ const routes = [
   ["/readiness", /Readiness/i],
   ["/migration-readiness", /Migration Readiness|Current Storage/i],
   ["/snapshot", /Snapshot/i],
+  ["/snapshot-archive", /Snapshot Archive/i],
   ["/growth", /Growth/i],
   ["/audit", /Audit/i],
   ["/transparency", /Transparency/i],

@@ -26,6 +26,7 @@
       <nav class="wrap">
         <a href="index.html">Vorliq Docs</a>
         <a href="snapshot-verification.html">Snapshot Verification</a>
+        <a href="snapshot-archive.html">Snapshot Archive</a>
         <a href="https://vorliq.org/snapshot">Live Snapshot</a>
       </nav>
     </header>
@@ -45,6 +46,11 @@
 node tools/verify_snapshot.js https://vorliq.org --require-signature</code></pre>
         <p>Vorliq production snapshots are signed. The strict command should pass when the live signature verifies against the published production public key. If signing is disabled during an emergency, the first command can still pass deterministic checks with an unsigned warning, while the strict command fails.</p>
         <p>The safe public key metadata endpoint is <code>GET /api/snapshot/public-key</code>. It returns only the algorithm, public key id, public key, and signature enabled/required flags.</p>
+      </section>
+      <section>
+        <h2>Archive</h2>
+        <p>Production also writes signed snapshot archive records during deploy and once per day at 04:00 Europe/London. The latest 30 archives are kept so users can compare recent public state over time. Verify them with <code>node tools/verify_snapshot_archive.js https://vorliq.org</code>.</p>
+        <p>Archives contain signed public snapshot data and safe metadata only. They do not contain private signing keys, admin tokens, environment dumps, raw logs, raw IP addresses, raw user agents, SSH keys, or server paths.</p>
       </section>
       <section>
         <h2>Generate Keys</h2>

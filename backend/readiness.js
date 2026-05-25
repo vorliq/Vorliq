@@ -15,6 +15,7 @@ const { API_VERSION, API_STABILITY } = require("./utils/apiResponse");
 const { logError } = require("./logger");
 const { buildMigrationReadiness } = require("./migrationReadiness");
 const { verifySnapshot } = require("./snapshot");
+const { archiveMetadata, latestArchive, verifyArchiveItem } = require("./snapshotArchive");
 
 const execFileAsync = promisify(execFile);
 const repoRoot = path.resolve(__dirname, "..");
@@ -174,6 +175,7 @@ async function buildReadiness(options = {}) {
     networkManifestResult,
     migrationResult,
     snapshotResult,
+    archiveResult,
   ] = await Promise.all([
     safeCall("deployment commit", deploymentCommit),
     safeCall("diagnostics", () => flaskGet("/diagnostics")),
@@ -206,6 +208,16 @@ async function buildReadiness(options = {}) {
           },
         })
       : safeCall("snapshot verification", () => verifySnapshot({ includeReadinessStatus: false })),
+    safeCall("snapshot archive", () => {
+      const archive = latestArchive();
+      if (!archive) return { success: true, empty: true, verification: null, metadata: null };
+      return {
+        success: true,
+        empty: false,
+        verification: verifyArchiveItem(archive),
+        metadata: archiveMetadata(archive),
+      };
+    }),
   ]);
 
   addCheck(checks, {
@@ -587,6 +599,64 @@ async function buildReadiness(options = {}) {
     },
   });
 
+  const archiveState = archiveResult.value || {};
+  const archiveVerification = archiveState.verification || {};
+  const archiveExists = archiveResult.ok && archiveState.empty === false;
+  const archiveAvailable = archiveResult.ok && archiveState.success === true;
+  const archiveVerified = archiveExists && archiveVerification.verified === true;
+  const archiveSignatureValid = archiveExists && archiveVerification.signature_verified === true;
+  addCheck(checks, {
+    id: "snapshot_archive_available",
+    name: "Snapshot archive available",
+    category: "Audit",
+    status: archiveExists ? "pass" : archiveAvailable ? "warning" : "fail",
+    severity: archiveExists ? "low" : "medium",
+    message: archiveExists
+      ? "A signed snapshot archive is available."
+      : archiveAvailable
+        ? "Snapshot archive is available but empty."
+        : "Snapshot archive could not be read.",
+    safe_metadata: {
+      archive_empty: archiveAvailable ? !archiveExists : null,
+      latest_snapshot_hash: archiveState.metadata?.snapshot_hash || null,
+      latest_created_at: archiveState.metadata?.created_at || null,
+    },
+  });
+
+  addCheck(checks, {
+    id: "snapshot_archive_latest_verified",
+    name: "Latest archived snapshot verified",
+    category: "Audit",
+    status: archiveExists ? archiveVerified ? "pass" : "fail" : "warning",
+    severity: archiveExists ? "high" : "low",
+    message: archiveExists
+      ? archiveVerified
+        ? "Latest archived snapshot metadata and payload verify."
+        : "Latest archived snapshot failed archive verification."
+      : "No archived snapshot has been created yet.",
+    safe_metadata: {
+      latest_snapshot_hash: archiveState.metadata?.snapshot_hash || null,
+      verification_errors: archiveVerification.errors || [],
+    },
+  });
+
+  addCheck(checks, {
+    id: "snapshot_archive_signature_valid",
+    name: "Archived snapshot signature valid",
+    category: "Audit",
+    status: archiveExists ? archiveSignatureValid ? "pass" : "fail" : "warning",
+    severity: archiveExists ? "high" : "low",
+    message: archiveExists
+      ? archiveSignatureValid
+        ? "Latest archived snapshot signature verifies."
+        : "Latest archived snapshot signature did not verify."
+      : "No archived snapshot has been created yet.",
+    safe_metadata: {
+      public_key_id: archiveVerification.public_key_id || archiveState.metadata?.public_key_id || null,
+      signature_status: archiveVerification.signature_status || archiveState.metadata?.signature_status || null,
+    },
+  });
+
   const registrySummary = registryResult.value?.summary || {};
   const activeNodeCount = numberOrNull(registrySummary.active_node_count);
   const syncedNodeCount = numberOrNull(registrySummary.synced_node_count);
@@ -743,6 +813,9 @@ async function buildReadiness(options = {}) {
     snapshot_signature_verified: signatureVerified,
     snapshot_signature_required: signatureRequired,
     snapshot_signature_status: signatureStatus,
+    snapshot_archive_available: archiveExists,
+    snapshot_archive_latest_verified: archiveVerified,
+    snapshot_archive_signature_valid: archiveSignatureValid,
     checks,
   };
 
