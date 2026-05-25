@@ -55,22 +55,72 @@ if ! grep -q '^EnvironmentFile=-/etc/vorliq/backend.env' /etc/systemd/system/vor
   systemctl daemon-reload
 fi
 
-if [[ -f /etc/systemd/system/vorliq-heartbeat.service ]]; then
-  sed -i 's/^After=network-online.target vorliq-blockchain.service.*/After=network-online.target vorliq-blockchain.service vorliq-backend.service/' /etc/systemd/system/vorliq-heartbeat.service
-  sed -i 's/^Requires=vorliq-blockchain.service.*/Requires=vorliq-blockchain.service vorliq-backend.service/' /etc/systemd/system/vorliq-heartbeat.service
-  sed -i '/^Environment=LOCAL_NODE_URL=/d' /etc/systemd/system/vorliq-heartbeat.service
-  sed -i '/^Environment=NODE_DISPLAY_NAME=/d' /etc/systemd/system/vorliq-heartbeat.service
-  sed -i '/^Environment=HEARTBEAT_API_URL=/d' /etc/systemd/system/vorliq-heartbeat.service
-  sed -i '/^Environment=VORLIQ_NODE_URL=/d' /etc/systemd/system/vorliq-heartbeat.service
-  sed -i '/^Environment="VORLIQ_NODE_NAME=/d' /etc/systemd/system/vorliq-heartbeat.service
-  sed -i '/^Environment=VORLIQ_NODE_NAME=/d' /etc/systemd/system/vorliq-heartbeat.service
-  sed -i '/^Environment=VORLIQ_NODE_REGION=/d' /etc/systemd/system/vorliq-heartbeat.service
-  sed -i '/^Environment="VORLIQ_NODE_COUNTRY=/d' /etc/systemd/system/vorliq-heartbeat.service
-  sed -i '/^Environment=VORLIQ_NODE_COUNTRY=/d' /etc/systemd/system/vorliq-heartbeat.service
-  sed -i '/^Environment=NODE_ENV=production/a Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000\nEnvironment=VORLIQ_NODE_URL=https://node.vorliq.org\nEnvironment="VORLIQ_NODE_NAME=Vorliq Public Node"\nEnvironment=VORLIQ_NODE_REGION=London\nEnvironment="VORLIQ_NODE_COUNTRY=United Kingdom"' /etc/systemd/system/vorliq-heartbeat.service
-  sed -i 's/^Restart=on-failure/Restart=always/' /etc/systemd/system/vorliq-heartbeat.service
-  systemctl daemon-reload
-fi
+cat >/etc/systemd/system/vorliq-heartbeat.service <<'SERVICE'
+[Unit]
+Description=Vorliq Public Registry Heartbeat
+After=network-online.target vorliq-blockchain.service vorliq-backend.service
+Wants=network-online.target
+Requires=vorliq-blockchain.service vorliq-backend.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=vorliq
+Group=vorliq
+WorkingDirectory=/home/vorliq/app/backend
+Environment=NODE_ENV=production
+Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000
+Environment=FLASK_URL=http://127.0.0.1:5001
+Environment=VORLIQ_NODE_URL=https://node.vorliq.org
+Environment="VORLIQ_NODE_NAME=Vorliq Public Node"
+Environment=VORLIQ_NODE_REGION=London
+Environment="VORLIQ_NODE_COUNTRY=United Kingdom"
+Environment=VORLIQ_HEARTBEAT_INTERVAL_MS=300000
+ExecStart=/usr/bin/node heartbeat.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+cat >/etc/systemd/system/vorliq-heartbeat-once.service <<'SERVICE'
+[Unit]
+Description=Vorliq Public Registry Heartbeat Once
+After=network-online.target vorliq-blockchain.service vorliq-backend.service
+Wants=network-online.target
+Requires=vorliq-blockchain.service vorliq-backend.service
+
+[Service]
+Type=oneshot
+User=vorliq
+Group=vorliq
+WorkingDirectory=/home/vorliq/app/backend
+Environment=NODE_ENV=production
+Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000
+Environment=FLASK_URL=http://127.0.0.1:5001
+Environment=VORLIQ_NODE_URL=https://node.vorliq.org
+Environment="VORLIQ_NODE_NAME=Vorliq Public Node"
+Environment=VORLIQ_NODE_REGION=London
+Environment="VORLIQ_NODE_COUNTRY=United Kingdom"
+ExecStart=/usr/bin/node heartbeat.js --once
+SERVICE
+
+cat >/etc/systemd/system/vorliq-heartbeat.timer <<'SERVICE'
+[Unit]
+Description=Run Vorliq public registry heartbeat every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=vorliq-heartbeat-once.service
+
+[Install]
+WantedBy=timers.target
+SERVICE
+systemctl daemon-reload
 
 if [[ ! -f /etc/systemd/system/vorliq-miner.service ]]; then
   cat >/etc/systemd/system/vorliq-miner.service <<'SERVICE'
@@ -133,6 +183,8 @@ for attempt in 1 2 3 4 5; do
 done
 systemctl enable vorliq-heartbeat.service
 systemctl restart vorliq-heartbeat.service
+systemctl enable --now vorliq-heartbeat.timer
+systemctl start vorliq-heartbeat-once.service || true
 if systemctl is-enabled --quiet vorliq-miner.service; then
   systemctl restart vorliq-miner.service
 fi

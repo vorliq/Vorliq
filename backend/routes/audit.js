@@ -1,10 +1,10 @@
 const express = require("express");
 const axios = require("axios");
-const crypto = require("crypto");
 const { execFile } = require("child_process");
 const path = require("path");
 const { promisify } = require("util");
 
+const { canonicalStringify, sha256Hex } = require("../canonicalJson");
 const { listActiveIncidents } = require("../incidents");
 const { logError } = require("../logger");
 const { loadStorageHealth } = require("./storage");
@@ -19,29 +19,6 @@ const FORBIDDEN_KEY_FRAGMENTS = ["private_key", "password", "admin_token", "serv
 const FORBIDDEN_VALUE_PATTERNS = [/BEGIN PRIVATE KEY/gi, /PRIVATE KEY/gi, /ADMIN_TOKEN/gi, /\/home\/vorliq/gi, /ssh-/gi];
 
 let cachedSnapshot = null;
-
-function canonicalize(value) {
-  if (Array.isArray(value)) {
-    return value.map(canonicalize);
-  }
-  if (value && typeof value === "object") {
-    return Object.keys(value)
-      .sort()
-      .reduce((result, key) => {
-        result[key] = canonicalize(value[key]);
-        return result;
-      }, {});
-  }
-  return value;
-}
-
-function canonicalStringify(value) {
-  return JSON.stringify(canonicalize(value));
-}
-
-function sha256Hex(value) {
-  return crypto.createHash("sha256").update(value).digest("hex");
-}
 
 function sortRecords(records, keys) {
   if (!Array.isArray(records)) return [];

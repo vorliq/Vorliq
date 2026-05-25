@@ -1,7 +1,8 @@
 const axios = require("axios");
 
-const { buildAuditSnapshot, canonicalStringify, sha256Hex, sanitizePublicPayload } = require("./routes/audit");
-const { buildNetworkManifest } = require("./routes/manifest");
+const { canonicalStringify, sha256Hex } = require("./canonicalJson");
+const { buildAuditSnapshot, sanitizePublicPayload } = require("./routes/audit");
+const { buildNetworkManifest, hashNetworkManifest } = require("./routes/manifest");
 const { loadStorageHealth } = require("./routes/storage");
 const { listActiveIncidents } = require("./incidents");
 const { logError } = require("./logger");
@@ -133,7 +134,10 @@ function hasForbiddenSecretMarker(value) {
 
 function buildHashes(payloads) {
   return HASH_KEYS.reduce((hashes, key) => {
-    hashes[key] = sha256Hex(canonicalStringify(payloads[key] || {}));
+    hashes[key] =
+      key === "network_manifest"
+        ? hashNetworkManifest(payloads[key] || {})
+        : sha256Hex(canonicalStringify(payloads[key] || {}));
     return hashes;
   }, {});
 }
@@ -282,7 +286,7 @@ async function verifySnapshot(options = {}) {
   const auditSnapshot = await buildAuditSnapshot(generatedAt);
   const networkManifest = await buildNetworkManifest({ generatedAt });
   const auditHash = sha256Hex(canonicalStringify(sanitizePublicPayload(auditSnapshot.manifest)));
-  const networkHash = sha256Hex(canonicalStringify(sanitizePublicPayload(networkManifest)));
+  const networkHash = hashNetworkManifest(sanitizePublicPayload(networkManifest));
 
   const extraChecks = [
     {

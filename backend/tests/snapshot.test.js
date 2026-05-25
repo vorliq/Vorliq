@@ -5,12 +5,14 @@ const axios = require("axios");
 
 const app = require("../index");
 const { clearSnapshotCache, generateSnapshot, hasForbiddenSecretMarker, verifySnapshot } = require("../snapshot");
+const { hashNetworkManifest } = require("../routes/manifest");
 
 jest.setTimeout(15000);
 
 const originalCommit = process.env.VORLIQ_COMMIT;
 
-function mockSnapshotDependencies() {
+function mockSnapshotDependencies(mockOptions = {}) {
+  let diagnosticsCalls = 0;
   axios.get.mockImplementation((url, options = {}) => {
     if (url.endsWith("/chain/summary")) {
       return Promise.resolve({
@@ -28,6 +30,7 @@ function mockSnapshotDependencies() {
       });
     }
     if (url.endsWith("/diagnostics")) {
+      diagnosticsCalls += 1;
       return Promise.resolve({
         data: {
           success: true,
@@ -36,6 +39,7 @@ function mockSnapshotDependencies() {
           pending_transactions: 2,
           active_registry_nodes: 3,
           last_block_hash: "0000hash",
+          uptime_seconds: mockOptions.dynamicDiagnostics ? 1000 + diagnosticsCalls : 1000,
           server_path: "/home/vorliq/app",
         },
       });
@@ -180,12 +184,57 @@ describe("chain snapshots", () => {
     expect(response.body.errors).toEqual([]);
   });
 
+  test("snapshot latest and verify use the same canonical network manifest hash", async () => {
+    mockSnapshotDependencies({ dynamicDiagnostics: true });
+    const generatedAt = "2026-05-25T12:00:00.000Z";
+    const latest = await generateSnapshot({ generatedAt, includeReadinessStatus: false });
+    const verified = await verifySnapshot({ generatedAt, includeReadinessStatus: false });
+
+    expect(verified.verified).toBe(true);
+    expect(verified.snapshot.hashes.network_manifest).toBe(latest.hashes.network_manifest);
+    expect(verified.checks.some((check) => check.id === "network_manifest_hash_matches_current" && check.passed)).toBe(true);
+  });
+
+  test("dynamic network manifest fields do not break verification", async () => {
+    mockSnapshotDependencies({ dynamicDiagnostics: true });
+    const response = await request(app).get("/api/snapshot/verify");
+
+    expect(response.status).toBe(200);
+    expect(response.body.verified).toBe(true);
+    expect(response.body.errors).toEqual([]);
+  });
+
+  test("network manifest hash mismatch is detected if the manifest actually changes", () => {
+    const baseManifest = {
+      success: true,
+      generated_at: "2026-05-25T12:00:00.000Z",
+      project: { name: "Vorliq" },
+      deployment: { commit_hash: "snapshot-test-commit" },
+      diagnostics: { block_height: 42, uptime_seconds: 1000, last_block_hash: "0000hash" },
+    };
+    const changedManifest = {
+      ...baseManifest,
+      generated_at: "2026-05-25T12:10:00.000Z",
+      diagnostics: { ...baseManifest.diagnostics, uptime_seconds: 2000, last_block_hash: "0001realchange" },
+    };
+    const dynamicOnlyManifest = {
+      ...baseManifest,
+      success: true,
+      request_id: "dynamic-request-id",
+      generated_at: "2026-05-25T12:10:00.000Z",
+      diagnostics: { ...baseManifest.diagnostics, uptime_seconds: 2000 },
+    };
+
+    expect(hashNetworkManifest(dynamicOnlyManifest)).toBe(hashNetworkManifest(baseManifest));
+    expect(hashNetworkManifest(changedManifest)).not.toBe(hashNetworkManifest(baseManifest));
+  });
+
   test("snapshot output does not contain forbidden strings, paths, or secrets", async () => {
     const snapshot = await generateSnapshot({ generatedAt: "2026-05-25T12:00:00.000Z" });
     const text = JSON.stringify(snapshot);
 
     expect(hasForbiddenSecretMarker(snapshot)).toBe(false);
-    expect(text).not.toMatch(/should-not-leak|private_key|server_path|\/home\/vorliq|ADMIN_TOKEN|ssh-ed25519/i);
+    expect(text).not.toMatch(/should-not-leak|private_key|server_path|\/home\/vorliq|ADMIN_TOKEN|ssh-ed25519|raw_ip|user_agent|password|Bearer /i);
   });
 
   test("snapshot hashes are deterministic", async () => {
@@ -201,6 +250,6 @@ describe("chain snapshots", () => {
     const verify = await request(app).get("/api/snapshot/verify");
     const combined = JSON.stringify({ latest: latest.body, verify: verify.body });
 
-    expect(combined).not.toMatch(/\/home\/vorliq|private_key|server_path|ADMIN_TOKEN|SERVER_SSH_KEY|ssh-ed25519/i);
+    expect(combined).not.toMatch(/\/home\/vorliq|private_key|server_path|ADMIN_TOKEN|SERVER_SSH_KEY|ssh-ed25519|raw_ip|user_agent|password|Bearer /i);
   });
 });

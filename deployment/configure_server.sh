@@ -76,6 +76,7 @@ Description=Vorliq Public Registry Heartbeat
 After=network-online.target vorliq-blockchain.service vorliq-backend.service
 Wants=network-online.target
 Requires=vorliq-blockchain.service vorliq-backend.service
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -89,12 +90,50 @@ Environment=VORLIQ_NODE_URL=https://node.vorliq.org
 Environment="VORLIQ_NODE_NAME=Vorliq Public Node"
 Environment=VORLIQ_NODE_REGION=London
 Environment="VORLIQ_NODE_COUNTRY=United Kingdom"
+Environment=VORLIQ_HEARTBEAT_INTERVAL_MS=300000
 ExecStart=/usr/bin/node heartbeat.js
 Restart=always
 RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
+SERVICE
+
+cat >/etc/systemd/system/vorliq-heartbeat-once.service <<SERVICE
+[Unit]
+Description=Vorliq Public Registry Heartbeat Once
+After=network-online.target vorliq-blockchain.service vorliq-backend.service
+Wants=network-online.target
+Requires=vorliq-blockchain.service vorliq-backend.service
+
+[Service]
+Type=oneshot
+User=vorliq
+Group=vorliq
+WorkingDirectory=/home/vorliq/app/backend
+Environment=NODE_ENV=production
+Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000
+Environment=FLASK_URL=http://127.0.0.1:5001
+Environment=VORLIQ_NODE_URL=https://node.vorliq.org
+Environment="VORLIQ_NODE_NAME=Vorliq Public Node"
+Environment=VORLIQ_NODE_REGION=London
+Environment="VORLIQ_NODE_COUNTRY=United Kingdom"
+ExecStart=/usr/bin/node heartbeat.js --once
+SERVICE
+
+cat >/etc/systemd/system/vorliq-heartbeat.timer <<SERVICE
+[Unit]
+Description=Run Vorliq public registry heartbeat every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=vorliq-heartbeat-once.service
+
+[Install]
+WantedBy=timers.target
 SERVICE
 
 cat >/etc/systemd/system/vorliq-miner.service <<SERVICE
@@ -122,7 +161,7 @@ WantedBy=multi-user.target
 SERVICE
 
 systemctl daemon-reload
-systemctl enable vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat.service
+systemctl enable vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat.service vorliq-heartbeat.timer
 if [[ "${VORLIQ_PUBLIC_MINER_ENABLED:-false}" == "true" && -n "${VORLIQ_PUBLIC_MINER_ADDRESS:-}" ]]; then
   systemctl enable vorliq-miner.service
 else
@@ -137,6 +176,8 @@ for attempt in 1 2 3 4 5; do
   sleep 3
 done
 systemctl restart vorliq-heartbeat.service
+systemctl start vorliq-heartbeat-once.service || true
+systemctl restart vorliq-heartbeat.timer
 if [[ "${VORLIQ_PUBLIC_MINER_ENABLED:-false}" == "true" && -n "${VORLIQ_PUBLIC_MINER_ADDRESS:-}" ]]; then
   systemctl restart vorliq-miner.service
 fi

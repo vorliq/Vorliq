@@ -4,6 +4,7 @@ const { execFile } = require("child_process");
 const path = require("path");
 const { promisify } = require("util");
 
+const { canonicalStringify, sha256Hex } = require("../canonicalJson");
 const { listActiveIncidents } = require("../incidents");
 const { logError } = require("../logger");
 
@@ -55,6 +56,26 @@ function safeDiagnostics(data) {
     last_block_hash: data?.last_block_hash || null,
     last_block_timestamp: data?.last_block_timestamp || null,
   };
+}
+
+function deterministicNetworkManifestPayload(manifest = {}) {
+  const {
+    generated_at,
+    request_id,
+    success,
+    diagnostics = {},
+    ...rest
+  } = manifest || {};
+  const { uptime_seconds, ...deterministicDiagnostics } = diagnostics || {};
+
+  return {
+    ...rest,
+    diagnostics: deterministicDiagnostics,
+  };
+}
+
+function hashNetworkManifest(manifest = {}) {
+  return sha256Hex(canonicalStringify(deterministicNetworkManifestPayload(manifest)));
 }
 
 async function getCommitHash() {
@@ -176,3 +197,5 @@ router.get("/api/network/manifest", async (req, res) => {
 
 module.exports = router;
 module.exports.buildNetworkManifest = buildNetworkManifest;
+module.exports.deterministicNetworkManifestPayload = deterministicNetworkManifestPayload;
+module.exports.hashNetworkManifest = hashNetworkManifest;

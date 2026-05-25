@@ -58,7 +58,7 @@
       <section>
         <h2>Verify</h2>
         <pre><code>node tools/verify_snapshot.js https://vorliq.org</code></pre>
-        <p>The CLI fetches <code>/api/snapshot/latest</code> and <code>/api/snapshot/verify</code>, confirms both agree on chain height and latest block hash, checks the verification result, scans for forbidden secret markers, and exits non-zero on failure.</p>
+        <p>The CLI fetches <code>/api/snapshot/latest</code> and <code>/api/snapshot/verify</code>, confirms both agree on chain height and latest block hash, checks the verification result, scans for forbidden secret markers, and exits non-zero on failure. Treat live snapshot verification as passing only when <code>/api/snapshot/verify</code> returns <code>verified: true</code>.</p>
       </section>
 
       <section>

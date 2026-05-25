@@ -4,7 +4,7 @@ set -euo pipefail
 ALERT_SCRIPT="${VORLIQ_ALERT_SCRIPT:-/home/vorliq/alert.sh}"
 LOG_FILE="${VORLIQ_MONITOR_LOG:-/var/log/vorliq-monitor.log}"
 HEALTH_URL="${VORLIQ_PUBLIC_HEALTH_URL:-https://vorliq.org/api/health}"
-SERVICES=(vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat.service nginx.service)
+SERVICES=(vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat.service vorliq-heartbeat.timer nginx.service)
 restarted=0
 
 mkdir -p "$(dirname "${LOG_FILE}")"
