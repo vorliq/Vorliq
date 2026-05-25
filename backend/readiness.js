@@ -510,6 +510,10 @@ async function buildReadiness(options = {}) {
 
   const snapshotVerification = snapshotResult.value || {};
   const snapshotSecretScan = (snapshotVerification.checks || []).find((check) => check.id === "secret_scan_passed");
+  const signatureRequired = snapshotVerification.signature_required === true;
+  const signatureEnabled = snapshotVerification.signature_enabled === true;
+  const signatureVerified = snapshotVerification.signature_verified === true;
+  const signatureStatus = snapshotVerification.signature_status || snapshotVerification.snapshot?.signature?.status || "unknown";
   addCheck(checks, {
     id: "snapshot_endpoint_available",
     name: "Snapshot endpoint available",
@@ -549,6 +553,28 @@ async function buildReadiness(options = {}) {
       : "Snapshot payload secret scan did not pass.",
     safe_metadata: {
       secret_scan_passed: snapshotSecretScan?.passed === true,
+    },
+  });
+
+  addCheck(checks, {
+    id: "snapshot_signature_status",
+    name: "Snapshot signature status",
+    category: "Audit",
+    status: signatureRequired && !signatureVerified ? "fail" : signatureEnabled ? signatureVerified ? "pass" : "fail" : "warning",
+    severity: signatureRequired ? "critical" : signatureEnabled ? "high" : "low",
+    message: signatureEnabled
+      ? signatureVerified
+        ? "Snapshot signature verifies against the configured public key."
+        : "Snapshot signature is present but did not verify."
+      : signatureRequired
+        ? "Snapshot signing is required but no valid signature is available."
+        : "Snapshot signing is not configured; deterministic snapshot verification is still available.",
+    safe_metadata: {
+      snapshot_signature_available: signatureEnabled,
+      snapshot_signature_verified: signatureVerified,
+      snapshot_signature_required: signatureRequired,
+      snapshot_signature_status: signatureStatus,
+      public_key_id: snapshotVerification.snapshot?.signature?.public_key_id || null,
     },
   });
 
@@ -704,6 +730,10 @@ async function buildReadiness(options = {}) {
     snapshot_endpoint_available: Boolean(snapshotResult.ok && snapshotVerification.success),
     snapshot_verify_passed: Boolean(snapshotResult.ok && snapshotVerification.verified === true),
     snapshot_secret_scan_passed: Boolean(snapshotResult.ok && snapshotSecretScan?.passed === true),
+    snapshot_signature_available: signatureEnabled,
+    snapshot_signature_verified: signatureVerified,
+    snapshot_signature_required: signatureRequired,
+    snapshot_signature_status: signatureStatus,
     checks,
   };
 

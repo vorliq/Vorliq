@@ -1,4 +1,5 @@
 const assert = require("assert");
+const crypto = require("crypto");
 const VorliqSDK = require("../src");
 
 const validAddress = "3MNQE1X7T4Bz9kLmNpQrStUvWx";
@@ -27,6 +28,8 @@ assert.strictEqual(typeof sdk.getIndexHealth, "function");
 assert.strictEqual(typeof sdk.getMigrationReadiness, "function");
 assert.strictEqual(typeof sdk.getLatestSnapshot, "function");
 assert.strictEqual(typeof sdk.verifySnapshot, "function");
+assert.strictEqual(typeof sdk.getSignedSnapshot, "function");
+assert.strictEqual(typeof sdk.verifySnapshotSignature, "function");
 assert.strictEqual(typeof sdk.setRequestId, "function");
 sdk
   .sendTransaction("SYSTEM", "not-used", "not-used", validAddress, 1)
@@ -81,7 +84,15 @@ global.fetch = async (url, options = {}) => {
         return { success: true, storage_backend: "json", database_enabled: false, migration_supported: "dry_run_only" };
       }
       if (String(url).endsWith("/api/v1/snapshot/latest")) {
-        return { success: true, snapshot: { chain_height: 42, latest_block_hash: "0000snapshot" } };
+        const snapshot = { chain_height: 42, latest_block_hash: "0000snapshot" };
+        snapshot.signature = {
+          enabled: false,
+          algorithm: "Ed25519",
+          snapshot_hash: VorliqSDK.snapshotHash(snapshot),
+          signature: null,
+          status: "unsigned",
+        };
+        return { success: true, snapshot };
       }
       if (String(url).endsWith("/api/v1/snapshot/verify")) {
         return { success: true, verified: true, snapshot: { chain_height: 42, latest_block_hash: "0000snapshot" }, checks: [] };
@@ -113,8 +124,29 @@ global.fetch = async (url, options = {}) => {
   assert.strictEqual(migrationReadiness.database_enabled, false);
   const latestSnapshot = await v1Client.getLatestSnapshot();
   assert.strictEqual(latestSnapshot.snapshot.latest_block_hash, "0000snapshot");
+  const unsignedSnapshot = await v1Client.getSignedSnapshot();
+  assert.strictEqual(unsignedSnapshot.signature_verification.status, "unsigned");
+  assert.strictEqual(unsignedSnapshot.signature_verification.verified, true);
+  assert.strictEqual(v1Client.verifySnapshotSignature(unsignedSnapshot.snapshot, { requireSignature: true }).verified, false);
   const snapshotVerification = await v1Client.verifySnapshot();
   assert.strictEqual(snapshotVerification.verified, true);
+
+  const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
+  const publicPem = publicKey.export({ type: "spki", format: "pem" });
+  const signedSnapshot = { chain_height: 42, latest_block_hash: "0000signed" };
+  const signedHash = VorliqSDK.snapshotHash(signedSnapshot);
+  signedSnapshot.signature = {
+    enabled: true,
+    algorithm: "Ed25519",
+    public_key_id: "ed25519:test",
+    public_key: publicPem,
+    snapshot_hash: signedHash,
+    signature: crypto.sign(null, Buffer.from(signedHash, "utf8"), privateKey).toString("base64"),
+    status: "signed",
+  };
+  const signedVerification = VorliqSDK.verifySnapshotSignature(signedSnapshot);
+  assert.strictEqual(signedVerification.signature_verified, true);
+  assert.strictEqual(signedVerification.verified, true);
   assert.strictEqual(calls[0].url, "https://example.invalid/api/v1/version");
   assert.strictEqual(calls[1].url, "https://example.invalid/api/v1/version/metadata");
   assert.strictEqual(calls[2].url, "https://example.invalid/api/v1/changelog");
@@ -124,13 +156,14 @@ global.fetch = async (url, options = {}) => {
   assert.strictEqual(calls[6].url, "https://example.invalid/api/v1/indexes/health");
   assert.strictEqual(calls[7].url, "https://example.invalid/api/v1/migration/readiness");
   assert.strictEqual(calls[8].url, "https://example.invalid/api/v1/snapshot/latest");
-  assert.strictEqual(calls[9].url, "https://example.invalid/api/v1/snapshot/verify");
+  assert.strictEqual(calls[9].url, "https://example.invalid/api/v1/snapshot/latest");
+  assert.strictEqual(calls[10].url, "https://example.invalid/api/v1/snapshot/verify");
   assert.strictEqual(calls[5].options.headers["X-Request-ID"], "sdk-smoke");
   assert.strictEqual(v1Client.lastRequestId, "sdk-smoke-request");
 
   const legacyClient = new VorliqSDK({ nodeUrl: "https://example.invalid", apiVersion: "legacy" });
   await legacyClient.getChainSummary();
-  assert.strictEqual(calls[10].url, "https://example.invalid/api/chain/summary");
+  assert.strictEqual(calls[11].url, "https://example.invalid/api/chain/summary");
 
   try {
     await v1Client.reportContent({ target_type: "profile", target_id: "x", reason: "other" });

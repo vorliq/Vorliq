@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Signed Snapshots</title>
+    <meta name="description" content="Ed25519 signed public snapshot verification for Vorliq." />
+    <style>
+      body { margin:0; min-width:320px; font-family:Inter,Arial,sans-serif; color:#fff; background:#020817; }
+      a { color:#18d7c9; }
+      .wrap { width:min(980px,calc(100% - 32px)); margin:0 auto; }
+      header, footer { border-color:rgba(24,215,201,.26); background:rgba(8,14,28,.82); }
+      nav { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:16px 0; flex-wrap:wrap; }
+      main { padding:48px 0; }
+      section { border:1px solid rgba(24,215,201,.26); border-radius:16px; background:rgba(255,255,255,.04); padding:22px; margin-bottom:22px; }
+      h1 { font-size:clamp(2.2rem,7vw,4rem); line-height:1; margin:0 0 12px; }
+      h2 { margin-top:0; }
+      p, li { color:#c7d2e4; line-height:1.75; }
+      code, pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+      pre { overflow:auto; border:1px solid rgba(24,215,201,.26); border-radius:12px; padding:16px; background:rgba(0,0,0,.32); }
+      footer { padding:24px 0; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <a href="index.html">Vorliq Docs</a>
+        <a href="snapshot-verification.html">Snapshot Verification</a>
+        <a href="https://vorliq.org/snapshot">Live Snapshot</a>
+      </nav>
+    </header>
+    <main class="wrap">
+      <section>
+        <h1>Signed Snapshots</h1>
+        <p>Signed snapshots add Ed25519 provenance to Vorliq's deterministic public snapshot. The snapshot hash is SHA-256 over canonical JSON with the <code>signature</code> object removed, and the signature signs that hash.</p>
+      </section>
+      <section>
+        <h2>What It Proves</h2>
+        <p>A valid signature proves that the published snapshot payload was produced by whoever controls the configured Vorliq snapshot signing private key. It strengthens operator authenticity on top of deterministic hash checks.</p>
+        <p>It does not prove legal status, financial value, banking safety, investment quality, custody safety, or future network availability. It does not rewrite historical blocks or change block hashes.</p>
+      </section>
+      <section>
+        <h2>Verify</h2>
+        <pre><code>node tools/verify_snapshot.js https://vorliq.org
+node tools/verify_snapshot.js https://vorliq.org --require-signature</code></pre>
+        <p>If signing is disabled, the first command can still pass deterministic checks with an unsigned warning. The second command fails until production signing is configured.</p>
+      </section>
+      <section>
+        <h2>Generate Keys</h2>
+        <pre><code>node tools/generate_snapshot_keypair.js</code></pre>
+        <p>The tool prints a public key, private key, and public key id. Do not commit the private key. Store it only as a production secret. The public key and public key id can be published.</p>
+      </section>
+      <section>
+        <h2>Production Configuration</h2>
+        <pre><code>VORLIQ_SNAPSHOT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."
+VORLIQ_SNAPSHOT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----..."
+# Optional strict mode:
+VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code></pre>
+        <p>Use a secure server environment file or secret manager. Restart the backend after changing keys, then verify <code>/api/snapshot/verify</code>. Never put the private key in frontend code, GitHub Pages, screenshots, logs, or public issue comments.</p>
+      </section>
+      <section>
+        <h2>Key Rotation</h2>
+        <p>Generate a new Ed25519 keypair, publish the new public key and public key id, deploy the new private key as a production secret, restart the backend, and verify that new snapshots report the new key id. Keep historical public keys documented so older signed snapshots can still be checked.</p>
+      </section>
+      <section>
+        <h2>Disabled Signing</h2>
+        <p>Unsigned snapshots report <code>signature.enabled: false</code> and <code>signature.status: unsigned</code>. This is acceptable when signing is not required, but it means users get deterministic integrity checks without production signing-key provenance.</p>
+      </section>
+    </main>
+    <footer><div class="wrap">Signed snapshots are provenance evidence only, not legal, financial, banking, or investment proof.</div></footer>
+  </body>
+</html>

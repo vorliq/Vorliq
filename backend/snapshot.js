@@ -6,6 +6,7 @@ const { buildNetworkManifest, hashNetworkManifest } = require("./routes/manifest
 const { loadStorageHealth } = require("./routes/storage");
 const { listActiveIncidents } = require("./incidents");
 const { logError } = require("./logger");
+const { signingMetadata, snapshotHash, verifySnapshotSignature } = require("./snapshotSigner");
 
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
 const SNAPSHOT_TTL_MS = Number(process.env.SNAPSHOT_TTL_MS || 60000);
@@ -212,7 +213,7 @@ async function generateSnapshot(options = {}) {
   };
   const latestBlockHash = latestHashFromChainSummary(chainSummary) || latestHashFromBlock(latestBlock);
 
-  return sanitizePublicPayload({
+  const snapshot = sanitizePublicPayload({
     success: true,
     snapshot_version: 1,
     generated_at: generatedAt,
@@ -233,6 +234,8 @@ async function generateSnapshot(options = {}) {
     readiness_status: publicStatus(readinessResult.value),
     hashes: buildHashes(payloads),
   });
+  snapshot.signature = signingMetadata(snapshot, { signedAt: generatedAt });
+  return sanitizePublicPayload(snapshot);
 }
 
 async function getLatestSnapshot(options = {}) {
@@ -266,6 +269,11 @@ function verifySnapshotObject(snapshot) {
   add("index_status_available", Boolean(snapshot.index_status?.available), "Index status is available.");
   add("readiness_status_available", Boolean(snapshot.readiness_status?.available), "Readiness status is available.");
   add("secret_scan_passed", !hasForbiddenSecretMarker(snapshot), "No forbidden secret markers appear in the snapshot.");
+  add(
+    "snapshot_hash_matches_payload",
+    Boolean(snapshot.signature?.snapshot_hash) && snapshot.signature.snapshot_hash === snapshotHash(snapshot),
+    "Snapshot hash matches the canonical snapshot payload excluding signature metadata."
+  );
 
   return { checks, warnings, errors };
 }
@@ -287,6 +295,7 @@ async function verifySnapshot(options = {}) {
   const networkManifest = await buildNetworkManifest({ generatedAt });
   const auditHash = sha256Hex(canonicalStringify(sanitizePublicPayload(auditSnapshot.manifest)));
   const networkHash = hashNetworkManifest(sanitizePublicPayload(networkManifest));
+  const signatureVerification = verifySnapshotSignature(snapshot);
 
   const extraChecks = [
     {
@@ -321,9 +330,41 @@ async function verifySnapshot(options = {}) {
     if (!check.passed) verification.errors.push(check.message);
   }
 
+  const signatureChecks = [
+    {
+      id: "snapshot_signature_hash_matches_payload",
+      passed: signatureVerification.hash_matches,
+      message: "Snapshot signature hash matches the canonical snapshot payload.",
+    },
+    {
+      id: "snapshot_signature_verified",
+      passed: signatureVerification.enabled ? signatureVerification.signature_verified === true : !signatureVerification.required,
+      message: signatureVerification.enabled
+        ? "Snapshot signature verifies against the configured Ed25519 public key."
+        : "Snapshot is unsigned and signature verification is not required.",
+    },
+  ];
+
+  for (const check of signatureChecks) {
+    verification.checks.push(check);
+    if (!check.passed) verification.errors.push(check.message);
+  }
+
+  if (!signatureVerification.enabled && !signatureVerification.required) {
+    verification.warnings.push("Snapshot is unsigned; deterministic verification passed but production signing is not configured.");
+  }
+
+  if (signatureVerification.required && !signatureVerification.enabled) {
+    verification.errors.push("Snapshot signature is required but no valid signature is present.");
+  }
+
   return {
     success: true,
     verified: verification.errors.length === 0,
+    signature_verified: signatureVerification.signature_verified,
+    signature_enabled: signatureVerification.enabled,
+    signature_required: signatureVerification.required,
+    signature_status: signatureVerification.status,
     snapshot,
     checks: verification.checks,
     warnings: verification.warnings,

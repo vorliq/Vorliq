@@ -9,6 +9,9 @@ const ORIGINAL_ENV = {
   VORLIQ_BACKUP_DIR: process.env.VORLIQ_BACKUP_DIR,
   INCIDENTS_FILE: process.env.INCIDENTS_FILE,
   ANALYTICS_FILE: process.env.ANALYTICS_FILE,
+  VORLIQ_SNAPSHOT_PRIVATE_KEY: process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY,
+  VORLIQ_SNAPSHOT_PUBLIC_KEY: process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY,
+  VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE: process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE,
 };
 
 process.env.ADMIN_TOKEN = "readiness-admin-token";
@@ -126,6 +129,9 @@ describe("production readiness", () => {
     process.env.VORLIQ_BACKUP_DIR = backupDir;
     process.env.INCIDENTS_FILE = incidentsFile;
     process.env.ANALYTICS_FILE = analyticsFile;
+    delete process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY;
+    delete process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY;
+    delete process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE;
     makeBackup(backupDir);
     fs.mkdirSync(path.dirname(incidentsFile), { recursive: true });
     fs.writeFileSync(incidentsFile, JSON.stringify({ incidents: [] }));
@@ -170,6 +176,18 @@ describe("production readiness", () => {
     expect(response.body.migration_phase).toBe("preparation");
     expect(response.body.rollback_plan_required).toBe(true);
     expect(response.body.migration_tools_available).toBe(true);
+    expect(response.body.snapshot_signature_available).toBe(false);
+    expect(response.body.snapshot_signature_verified).toBe(false);
+    expect(response.body.snapshot_signature_required).toBe(false);
+    expect(response.body.snapshot_signature_status).toBe("unsigned");
+    const signatureCheck = response.body.checks.find((check) => check.id === "snapshot_signature_status");
+    expect(signatureCheck.status).toBe("warning");
+    expect(signatureCheck.safe_metadata).toMatchObject({
+      snapshot_signature_available: false,
+      snapshot_signature_verified: false,
+      snapshot_signature_required: false,
+      snapshot_signature_status: "unsigned",
+    });
     expect(response.body.checks.some((check) => check.id === "index_health_ok")).toBe(true);
     expect(response.body.checks.some((check) => check.id === "migration_readiness_available")).toBe(true);
     expect(response.body.checks.some((check) => check.id === "storage_backend_json")).toBe(true);
@@ -227,6 +245,19 @@ describe("production readiness", () => {
     expect(response.body.success).toBe(true);
     const storageCheck = response.body.checks.find((check) => check.id === "storage_health_ok");
     expect(storageCheck.status).toBe("fail");
+  });
+
+  test("required snapshot signature failure is reported safely", async () => {
+    process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE = "true";
+    const response = await request(app).get("/api/readiness");
+
+    expect(response.status).toBe(200);
+    expect(response.body.snapshot_signature_required).toBe(true);
+    expect(response.body.snapshot_signature_verified).toBe(false);
+    expect(response.body.snapshot_signature_status).toBe("missing_required_signature");
+    const signatureCheck = response.body.checks.find((check) => check.id === "snapshot_signature_status");
+    expect(signatureCheck.status).toBe("fail");
+    expect(JSON.stringify(response.body)).not.toMatch(/BEGIN PRIVATE KEY|VORLIQ_SNAPSHOT_PRIVATE_KEY/i);
   });
 
   test("public node can pass while registry heartbeat is stale", async () => {

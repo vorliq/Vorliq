@@ -117,6 +117,51 @@ function sha256Hex(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
+function snapshotPayload(snapshot = {}) {
+  const { signature, ...payload } = snapshot || {};
+  return payload;
+}
+
+function snapshotHash(snapshot = {}) {
+  return sha256Hex(canonicalStringify(snapshotPayload(snapshot)));
+}
+
+function verifySnapshotSignature(snapshot = {}, options = {}) {
+  const signature = snapshot.signature || {};
+  const enabled = signature.enabled === true || Boolean(signature.signature);
+  const required = options.requireSignature === true;
+  const hash = snapshotHash(snapshot);
+  const hashMatches = signature.snapshot_hash === hash;
+  const publicKey = options.publicKey || signature.public_key;
+  let signatureVerified = false;
+
+  if (enabled && hashMatches && publicKey && signature.signature) {
+    try {
+      signatureVerified = crypto.verify(
+        null,
+        Buffer.from(hash, "utf8"),
+        crypto.createPublicKey(String(publicKey).replace(/\\n/g, "\n")),
+        Buffer.from(String(signature.signature), "base64")
+      );
+    } catch (error) {
+      signatureVerified = false;
+    }
+  }
+
+  return {
+    enabled,
+    required,
+    algorithm: signature.algorithm || "Ed25519",
+    public_key_id: signature.public_key_id || null,
+    snapshot_hash: hash,
+    signed_snapshot_hash: signature.snapshot_hash || null,
+    hash_matches: hashMatches,
+    signature_verified: signatureVerified,
+    status: enabled ? signatureVerified ? "verified" : "invalid" : required ? "missing_required_signature" : "unsigned",
+    verified: enabled ? signatureVerified && hashMatches : !required,
+  };
+}
+
 class VorliqSDK {
   /**
    * Creates a Vorliq SDK client.
@@ -378,6 +423,20 @@ class VorliqSDK {
    */
   async verifySnapshot() {
     return this.request("/api/snapshot/verify");
+  }
+
+  async getSignedSnapshot() {
+    const data = await this.getLatestSnapshot();
+    const snapshot = data.snapshot || data;
+    return {
+      success: true,
+      snapshot,
+      signature_verification: verifySnapshotSignature(snapshot),
+    };
+  }
+
+  verifySnapshotSignature(snapshot, options = {}) {
+    return verifySnapshotSignature(snapshot, options);
   }
 
   /**
@@ -1127,4 +1186,6 @@ module.exports.VorliqSDK = VorliqSDK;
 module.exports.canonicalStringify = canonicalStringify;
 module.exports.createTransactionReview = createTransactionReview;
 module.exports.isReservedAddress = isReservedAddress;
+module.exports.snapshotHash = snapshotHash;
 module.exports.validateAddress = validateAddress;
+module.exports.verifySnapshotSignature = verifySnapshotSignature;

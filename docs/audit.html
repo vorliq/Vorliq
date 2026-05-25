@@ -49,6 +49,7 @@
           <a class="button" href="api.html">API</a>
           <a class="button" href="api-versioning.html">API Versioning</a>
           <a class="button" href="snapshot-verification.html">Snapshot Verification</a>
+          <a class="button" href="signed-snapshots.html">Signed Snapshots</a>
           <a class="button primary" href="https://vorliq.org/audit">Open Audit Page</a>
         </div>
       </nav>
@@ -88,7 +89,7 @@
 
         <article class="card">
           <h2>Snapshot Layer</h2>
-          <p>The public snapshot endpoint hashes the audit manifest together with the current network manifest, chain summary, latest block, transaction totals, treasury, governance, lending, exchange, registry, storage, index, and readiness status. It complements audit exports by giving users one current integrity manifest to compare.</p>
+          <p>The public snapshot endpoint hashes the audit manifest together with the current network manifest, chain summary, latest block, transaction totals, treasury, governance, lending, exchange, registry, storage, index, and readiness status. It also exposes optional Ed25519 signature metadata for the canonical snapshot hash. It complements audit exports by giving users one current integrity manifest to compare.</p>
         </article>
 
         <article class="card">

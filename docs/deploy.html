@@ -126,6 +126,21 @@ Environment=VORLIQ_OPERATOR_WALLET=VLQ_PUBLIC_OPERATOR_ADDRESS</pre>
       </section>
 
       <section>
+        <h2>Signed Public Snapshots</h2>
+        <p>Snapshot signing is optional unless <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code> is set. Generate keys locally, store the private key only as a protected backend secret, and publish only the public key and key id. Do not commit the private key, add it to frontend code, paste it into public logs, or put it in deployment docs.</p>
+        <pre>node tools/generate_snapshot_keypair.js
+
+# Add these securely to the backend service environment:
+VORLIQ_SNAPSHOT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."
+VORLIQ_SNAPSHOT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----..."
+
+sudo systemctl restart vorliq-backend.service
+node tools/verify_snapshot.js https://vorliq.org
+node tools/verify_snapshot.js https://vorliq.org --require-signature</pre>
+        <p>Set <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code> only after the signed snapshot verifies. Rotate keys by publishing the new public key id, updating the backend secrets, restarting the backend, and keeping prior public keys documented for historical verification. Signed snapshots prove snapshot provenance from the configured signing key; they do not prove legal, banking, financial, or investment status.</p>
+      </section>
+
+      <section>
         <h2>Operator Admin Token</h2>
         <p>Production incident and operator dashboard routes are protected by <code>ADMIN_TOKEN</code>. The automated deployment creates a strong random token in <code>/etc/vorliq/backend.env</code> when one is not already present and loads it through the backend systemd service. Do not commit this token, print it in logs, or share it publicly.</p>
         <pre>sudo mkdir -p /etc/vorliq

@@ -26,6 +26,8 @@ router.get("/api/snapshot/verify", async (req, res) => {
     res.status(503).json({
       success: false,
       verified: false,
+      signature_verified: false,
+      signature_enabled: false,
       snapshot: null,
       checks: [],
       warnings: [],

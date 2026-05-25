@@ -45,6 +45,10 @@ function Snapshot() {
   const snapshot = verification?.snapshot || latest;
   const hashes = useMemo(() => Object.entries(snapshot?.hashes || {}), [snapshot]);
   const checks = verification?.checks || [];
+  const signature = snapshot?.signature || {};
+  const signatureEnabled = signature.enabled === true;
+  const signatureVerified = verification?.signature_verified === true;
+  const signatureStatus = verification?.signature_status || signature.status || "unknown";
 
   async function copy(value, label) {
     if (!value) return;
@@ -92,14 +96,46 @@ function Snapshot() {
               <Metric label="Active nodes" value={snapshot.active_node_count} />
               <Metric label="Storage" value={snapshot.storage_status?.overall_status || "unknown"} />
               <Metric label="Readiness" value={snapshot.readiness_status?.overall_status || "unknown"} />
+              <Metric label="Signature" value={signatureStatus} />
+              <Metric label="Signed" value={signatureEnabled ? "Yes" : "No"} />
             </div>
             <div className="info-list">
               <CopyRow label="Latest block hash" value={snapshot.latest_block_hash} copied={copied} onCopy={copy} />
+              <CopyRow label="Snapshot hash" value={signature.snapshot_hash} copied={copied} onCopy={copy} />
               <CopyRow label="Deployment commit" value={snapshot.deployment_commit || "Unavailable"} copied={copied} onCopy={copy} />
               <div>
                 <span>Last generated</span>
                 <strong>{snapshot.generated_at ? new Date(snapshot.generated_at).toLocaleString() : "Unavailable"}</strong>
               </div>
+            </div>
+          </section>
+
+          <section className="card card-pad stats-section">
+            <div className="section-title">
+              <h2>Signature</h2>
+              <span className={`status-badge ${signatureEnabled && signatureVerified ? "pass" : "warning"}`}>
+                {signatureEnabled ? signatureStatus : "unsigned"}
+              </span>
+            </div>
+            <p className="help-text">
+              Signed snapshots help verify that the public snapshot was produced by the Vorliq production signing key. They do not prove legal, financial, banking, or investment status.
+            </p>
+            {!signatureEnabled && (
+              <div className="risk-notice">
+                <strong>Unsigned snapshot</strong>
+                <span>Deterministic verification can still pass, but production snapshot signing is not configured.</span>
+              </div>
+            )}
+            <div className="stats-grid compact-stats">
+              <Metric label="Algorithm" value={signature.algorithm || "Ed25519"} />
+              <Metric label="Public key id" value={signature.public_key_id || "Unavailable"} />
+              <Metric label="Signature verified" value={signatureVerified ? "True" : "False"} />
+              <Metric label="Required" value={verification?.signature_required ? "Yes" : "No"} />
+            </div>
+            <div className="stack">
+              <CopyRow label="Snapshot hash" value={signature.snapshot_hash} copied={copied} onCopy={copy} />
+              {signature.signature && <CopyRow label="Signature" value={signature.signature} copied={copied} onCopy={copy} />}
+              {signature.public_key && <CopyRow label="Public key" value={signature.public_key} copied={copied} onCopy={copy} />}
             </div>
           </section>
 

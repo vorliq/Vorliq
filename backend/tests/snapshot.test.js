@@ -1,4 +1,5 @@
 const request = require("supertest");
+const crypto = require("crypto");
 
 jest.mock("axios");
 const axios = require("axios");
@@ -10,6 +11,17 @@ const { hashNetworkManifest } = require("../routes/manifest");
 jest.setTimeout(15000);
 
 const originalCommit = process.env.VORLIQ_COMMIT;
+const originalPrivateKey = process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY;
+const originalPublicKey = process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY;
+const originalRequireSignature = process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE;
+
+function testKeypair() {
+  const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
+  return {
+    publicKey: publicKey.export({ type: "spki", format: "pem" }),
+    privateKey: privateKey.export({ type: "pkcs8", format: "pem" }),
+  };
+}
 
 function mockSnapshotDependencies(mockOptions = {}) {
   let diagnosticsCalls = 0;
@@ -150,12 +162,21 @@ describe("chain snapshots", () => {
     jest.clearAllMocks();
     clearSnapshotCache();
     process.env.VORLIQ_COMMIT = "snapshot-test-commit";
+    delete process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY;
+    delete process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY;
+    delete process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE;
     mockSnapshotDependencies();
   });
 
   afterAll(() => {
     if (originalCommit === undefined) delete process.env.VORLIQ_COMMIT;
     else process.env.VORLIQ_COMMIT = originalCommit;
+    if (originalPrivateKey === undefined) delete process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY;
+    else process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY = originalPrivateKey;
+    if (originalPublicKey === undefined) delete process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY;
+    else process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY = originalPublicKey;
+    if (originalRequireSignature === undefined) delete process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE;
+    else process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE = originalRequireSignature;
   });
 
   test("snapshot latest returns safe public metadata", async () => {
@@ -171,6 +192,13 @@ describe("chain snapshots", () => {
     expect(response.body.snapshot.treasury_balance).toBe(25);
     expect(response.body.snapshot.active_node_count).toBe(3);
     expect(response.body.snapshot.hashes.chain_summary).toMatch(/^[a-f0-9]{64}$/);
+    expect(response.body.snapshot.signature).toMatchObject({
+      enabled: false,
+      algorithm: "Ed25519",
+      status: "unsigned",
+      signature: null,
+    });
+    expect(response.body.snapshot.signature.snapshot_hash).toMatch(/^[a-f0-9]{64}$/);
   });
 
   test("snapshot verify returns verified true when dependencies are healthy", async () => {
@@ -182,6 +210,39 @@ describe("chain snapshots", () => {
     expect(response.body.checks.some((check) => check.id === "audit_manifest_hash_matches_current" && check.passed)).toBe(true);
     expect(response.body.checks.some((check) => check.id === "network_manifest_hash_matches_current" && check.passed)).toBe(true);
     expect(response.body.errors).toEqual([]);
+    expect(response.body.signature_enabled).toBe(false);
+    expect(response.body.signature_verified).toBe(false);
+    expect(response.body.warnings).toContain("Snapshot is unsigned; deterministic verification passed but production signing is not configured.");
+  });
+
+  test("snapshot verify fails unsigned when signature is required", async () => {
+    process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE = "true";
+
+    const response = await request(app).get("/api/snapshot/verify");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.verified).toBe(false);
+    expect(response.body.signature_enabled).toBe(false);
+    expect(response.body.signature_status).toBe("missing_required_signature");
+    expect(response.body.errors).toContain("Snapshot signature is required but no valid signature is present.");
+  });
+
+  test("snapshot verify passes signed snapshot with test key", async () => {
+    const keys = testKeypair();
+    process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY = keys.privateKey;
+    process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY = keys.publicKey;
+
+    const response = await request(app).get("/api/snapshot/verify");
+
+    expect(response.status).toBe(200);
+    expect(response.body.verified).toBe(true);
+    expect(response.body.signature_enabled).toBe(true);
+    expect(response.body.signature_verified).toBe(true);
+    expect(response.body.signature_status).toBe("verified");
+    expect(response.body.snapshot.signature.signature).toEqual(expect.any(String));
+    expect(response.body.snapshot.signature.public_key).toContain("BEGIN PUBLIC KEY");
+    expect(JSON.stringify(response.body)).not.toContain(keys.privateKey);
   });
 
   test("snapshot latest and verify use the same canonical network manifest hash", async () => {
@@ -234,7 +295,7 @@ describe("chain snapshots", () => {
     const text = JSON.stringify(snapshot);
 
     expect(hasForbiddenSecretMarker(snapshot)).toBe(false);
-    expect(text).not.toMatch(/should-not-leak|private_key|server_path|\/home\/vorliq|ADMIN_TOKEN|ssh-ed25519|raw_ip|user_agent|password|Bearer /i);
+    expect(text).not.toMatch(/should-not-leak|private_key|server_path|\/home\/vorliq|ADMIN_TOKEN|ssh-ed25519|raw_ip|user_agent|password|Bearer |BEGIN PRIVATE KEY/i);
   });
 
   test("snapshot hashes are deterministic", async () => {

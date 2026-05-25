@@ -88,6 +88,20 @@ sudo systemctl restart vorliq-backend.service</code></pre>
       </section>
 
       <section class="glass">
+        <h2>Signed Snapshots</h2>
+        <p>Generate a snapshot signing keypair locally, store the private key only as a production secret, and publish the public key and key id. Do not commit the private key and do not put it in frontend code.</p>
+        <pre><code>node tools/generate_snapshot_keypair.js
+
+# Add these securely to the backend service environment:
+VORLIQ_SNAPSHOT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."
+VORLIQ_SNAPSHOT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----..."
+
+sudo systemctl restart vorliq-backend.service
+node tools/verify_snapshot.js https://vorliq.org</code></pre>
+        <p>Set <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code> only after signing is configured and verified. Rotate keys by publishing the new public key id, updating the private/public key secrets, restarting the backend, and keeping old public keys documented for historical verification.</p>
+      </section>
+
+      <section class="glass">
         <h2>Storage Reliability</h2>
         <p>Vorliq JSON state is protected with atomic writes, backup-before-write <code>.bak</code> files, lightweight write locks, safe JSON loading, and storage health reporting. The public and admin storage endpoints return file names and health metadata only, never raw file contents, full server paths, private keys, wallet passwords, or admin tokens.</p>
         <p>Derived index health is available at <code>/api/indexes/health</code>. Protected operators can call <code>/api/admin/indexes/rebuild</code> to rebuild <code>indexes.json</code> without rewriting <code>chain.json</code> or changing block hashes.</p>

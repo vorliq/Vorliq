@@ -145,6 +145,18 @@ function Readiness() {
                 <span>Snapshot secret scan</span>
                 <strong>{readiness.snapshot_secret_scan_passed ? "Passed" : "Review"}</strong>
               </div>
+              <div className="stat-card">
+                <span>Snapshot signature</span>
+                <strong>{readiness.snapshot_signature_status || "unknown"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Signature verified</span>
+                <strong>{readiness.snapshot_signature_verified ? "Yes" : "No"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Signature required</span>
+                <strong>{readiness.snapshot_signature_required ? "Yes" : "No"}</strong>
+              </div>
             </div>
           </section>
 

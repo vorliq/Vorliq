@@ -158,7 +158,7 @@ async function main() {
 main().catch(console.error);
 ```
 
-Public snapshots gather current public chain state and deterministic hashes into one manifest. Use `getLatestSnapshot()` for the cached snapshot and `verifySnapshot()` when you need the server to regenerate and check the snapshot, audit manifest hash, network manifest hash, status availability, and forbidden secret scan. Snapshots are public integrity aids only; they are not legal, financial, or investment guarantees.
+Public snapshots gather current public chain state and deterministic hashes into one manifest. Use `getLatestSnapshot()` for the cached snapshot and `verifySnapshot()` when you need the server to regenerate and check the snapshot, audit manifest hash, network manifest hash, status availability, signature status, and forbidden secret scan. `getSignedSnapshot()` returns the latest snapshot with local signature verification metadata, and `verifySnapshotSignature(snapshot)` verifies an Ed25519 signature when one is present. Signed snapshots help verify that the public snapshot was produced by the configured Vorliq production signing key; they are public integrity aids only and are not legal, financial, banking, or investment guarantees.
 
 ```js
 const { VorliqSDK } = require("./dist/vorliq-sdk");
@@ -166,11 +166,15 @@ const { VorliqSDK } = require("./dist/vorliq-sdk");
 async function main() {
   const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
   const latest = await vorliq.getLatestSnapshot();
+  const signed = await vorliq.getSignedSnapshot();
   const verification = await vorliq.verifySnapshot();
+  const signature = vorliq.verifySnapshotSignature(latest.snapshot);
 
   console.log("Snapshot height:", latest.snapshot.chain_height);
   console.log("Latest block:", latest.snapshot.latest_block_hash);
   console.log("Snapshot verified:", verification.verified);
+  console.log("Signature status:", signed.signature_verification.status);
+  console.log("Signature verified:", signature.signature_verified);
 }
 
 main().catch(console.error);
