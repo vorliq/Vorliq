@@ -176,7 +176,7 @@ for attempt in 1 2 3 4 5; do
   fi
   sleep 3
 done
-bash -lc 'set -a; . /etc/vorliq/backend.env 2>/dev/null || true; . /etc/vorliq/snapshot-signing.env 2>/dev/null || true; set +a; cd /home/vorliq/app/backend && node archive_snapshot.js && chown -R vorliq:vorliq /home/vorliq/app/backend/data/snapshots' || true
+bash -lc 'set -a; . /etc/vorliq/backend.env 2>/dev/null || true; . /etc/vorliq/snapshot-signing.env 2>/dev/null || true; set +a; VORLIQ_COMMIT="$(git -c safe.directory=/home/vorliq/app -C /home/vorliq/app rev-parse HEAD 2>/dev/null || true)"; export VORLIQ_COMMIT; cd /home/vorliq/app/backend && node archive_snapshot.js && chown -R vorliq:vorliq /home/vorliq/app/backend/data/snapshots' || true
 systemctl restart vorliq-heartbeat.service
 systemctl start vorliq-heartbeat-once.service || true
 systemctl restart vorliq-heartbeat.timer
@@ -217,7 +217,7 @@ printf '*/5 * * * * root /home/vorliq/monitor.sh >/dev/null 2>&1\n' >/etc/cron.d
 chmod 644 /etc/cron.d/vorliq-monitor
 printf '*/15 * * * * root set -a; . /etc/vorliq/backend.env 2>/dev/null || true; set +a; cd /home/vorliq/app/backend && /usr/bin/node maintenance.js >/dev/null 2>&1\n' >/etc/cron.d/vorliq-maintenance
 chmod 644 /etc/cron.d/vorliq-maintenance
-printf 'CRON_TZ=Europe/London\n0 4 * * * root set -a; . /etc/vorliq/backend.env 2>/dev/null || true; . /etc/vorliq/snapshot-signing.env 2>/dev/null || true; set +a; cd /home/vorliq/app/backend && /usr/bin/node archive_snapshot.js >/dev/null 2>&1 && chown -R vorliq:vorliq /home/vorliq/app/backend/data/snapshots\n' >/etc/cron.d/vorliq-snapshot-archive
+printf 'CRON_TZ=Europe/London\n0 4 * * * root set -a; . /etc/vorliq/backend.env 2>/dev/null || true; . /etc/vorliq/snapshot-signing.env 2>/dev/null || true; set +a; VORLIQ_COMMIT="$(git -c safe.directory=/home/vorliq/app -C /home/vorliq/app rev-parse HEAD 2>/dev/null || true)"; export VORLIQ_COMMIT; cd /home/vorliq/app/backend && /usr/bin/node archive_snapshot.js >/dev/null 2>&1 && chown -R vorliq:vorliq /home/vorliq/app/backend/data/snapshots\n' >/etc/cron.d/vorliq-snapshot-archive
 chmod 644 /etc/cron.d/vorliq-snapshot-archive
 
 if [ -f /etc/letsencrypt/live/vorliq.org/fullchain.pem ] && [ -f /etc/letsencrypt/live/vorliq.org/privkey.pem ]; then

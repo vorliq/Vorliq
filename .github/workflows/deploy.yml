@@ -204,7 +204,7 @@ jobs:
             chmod 644 /etc/cron.d/vorliq-backup
             printf '*/5 * * * * root /home/vorliq/monitor.sh >/dev/null 2>&1\n' >/etc/cron.d/vorliq-monitor
             chmod 644 /etc/cron.d/vorliq-monitor
-            printf 'CRON_TZ=Europe/London\n0 4 * * * root set -a; . /etc/vorliq/backend.env 2>/dev/null || true; . /etc/vorliq/snapshot-signing.env 2>/dev/null || true; set +a; cd /home/vorliq/app/backend && /usr/bin/node archive_snapshot.js >/dev/null 2>&1 && chown -R vorliq:vorliq /home/vorliq/app/backend/data/snapshots\n' >/etc/cron.d/vorliq-snapshot-archive
+            printf 'CRON_TZ=Europe/London\n0 4 * * * root set -a; . /etc/vorliq/backend.env 2>/dev/null || true; . /etc/vorliq/snapshot-signing.env 2>/dev/null || true; set +a; VORLIQ_COMMIT="$(git -c safe.directory=/home/vorliq/app -C /home/vorliq/app rev-parse HEAD 2>/dev/null || true)"; export VORLIQ_COMMIT; cd /home/vorliq/app/backend && /usr/bin/node archive_snapshot.js >/dev/null 2>&1 && chown -R vorliq:vorliq /home/vorliq/app/backend/data/snapshots\n' >/etc/cron.d/vorliq-snapshot-archive
             chmod 644 /etc/cron.d/vorliq-snapshot-archive
             /home/vorliq/alert.sh warning "Vorliq deployment alert smoke test" "Deployment verified alert logging on the production server."
             grep -q 'Vorliq deployment alert smoke test' /var/log/vorliq-alerts.log
@@ -305,7 +305,7 @@ jobs:
               echo "Temporary deployment incident is still active after resolve."
               exit 1
             fi
-            bash -lc 'set -a; . /etc/vorliq/backend.env 2>/dev/null || true; . /etc/vorliq/snapshot-signing.env 2>/dev/null || true; set +a; cd /home/vorliq/app/backend && node archive_snapshot.js && chown -R vorliq:vorliq /home/vorliq/app/backend/data/snapshots'
+            bash -lc 'set -a; . /etc/vorliq/backend.env 2>/dev/null || true; . /etc/vorliq/snapshot-signing.env 2>/dev/null || true; set +a; VORLIQ_COMMIT="$(git -c safe.directory=/home/vorliq/app -C /home/vorliq/app rev-parse HEAD 2>/dev/null || true)"; export VORLIQ_COMMIT; cd /home/vorliq/app/backend && node archive_snapshot.js && chown -R vorliq:vorliq /home/vorliq/app/backend/data/snapshots'
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app && node tools/verify_snapshot_archive.js https://vorliq.org --require-signature'
           EOF
 
