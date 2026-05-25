@@ -72,69 +72,69 @@ jobs:
               sed -i '/WorkingDirectory=\/home\/vorliq\/app\/backend/a EnvironmentFile=-/etc/vorliq/backend.env' /etc/systemd/system/vorliq-backend.service
               systemctl daemon-reload
             fi
-            cat >/etc/systemd/system/vorliq-heartbeat.service <<'SERVICE'
-            [Unit]
-            Description=Vorliq Public Registry Heartbeat
-            After=network-online.target vorliq-blockchain.service vorliq-backend.service
-            Wants=network-online.target
-            Requires=vorliq-blockchain.service vorliq-backend.service
-            StartLimitIntervalSec=0
-
-            [Service]
-            Type=simple
-            User=vorliq
-            Group=vorliq
-            WorkingDirectory=/home/vorliq/app/backend
-            Environment=NODE_ENV=production
-            Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000
-            Environment=FLASK_URL=http://127.0.0.1:5001
-            Environment=VORLIQ_NODE_URL=https://node.vorliq.org
-            Environment="VORLIQ_NODE_NAME=Vorliq Public Node"
-            Environment=VORLIQ_NODE_REGION=London
-            Environment="VORLIQ_NODE_COUNTRY=United Kingdom"
-            Environment=VORLIQ_HEARTBEAT_INTERVAL_MS=300000
-            ExecStart=/usr/bin/node heartbeat.js
-            Restart=always
-            RestartSec=5
-
-            [Install]
-            WantedBy=multi-user.target
-            SERVICE
-            cat >/etc/systemd/system/vorliq-heartbeat-once.service <<'SERVICE'
-            [Unit]
-            Description=Vorliq Public Registry Heartbeat Once
-            After=network-online.target vorliq-blockchain.service vorliq-backend.service
-            Wants=network-online.target
-            Requires=vorliq-blockchain.service vorliq-backend.service
-
-            [Service]
-            Type=oneshot
-            User=vorliq
-            Group=vorliq
-            WorkingDirectory=/home/vorliq/app/backend
-            Environment=NODE_ENV=production
-            Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000
-            Environment=FLASK_URL=http://127.0.0.1:5001
-            Environment=VORLIQ_NODE_URL=https://node.vorliq.org
-            Environment="VORLIQ_NODE_NAME=Vorliq Public Node"
-            Environment=VORLIQ_NODE_REGION=London
-            Environment="VORLIQ_NODE_COUNTRY=United Kingdom"
-            ExecStart=/usr/bin/node heartbeat.js --once
-            SERVICE
-            cat >/etc/systemd/system/vorliq-heartbeat.timer <<'SERVICE'
-            [Unit]
-            Description=Run Vorliq public registry heartbeat every five minutes
-
-            [Timer]
-            OnBootSec=2min
-            OnUnitActiveSec=5min
-            AccuracySec=30s
-            Persistent=true
-            Unit=vorliq-heartbeat-once.service
-
-            [Install]
-            WantedBy=timers.target
-            SERVICE
+            printf '%s\n' \
+              '[Unit]' \
+              'Description=Vorliq Public Registry Heartbeat' \
+              'After=network-online.target vorliq-blockchain.service vorliq-backend.service' \
+              'Wants=network-online.target' \
+              'Requires=vorliq-blockchain.service vorliq-backend.service' \
+              'StartLimitIntervalSec=0' \
+              '' \
+              '[Service]' \
+              'Type=simple' \
+              'User=vorliq' \
+              'Group=vorliq' \
+              'WorkingDirectory=/home/vorliq/app/backend' \
+              'Environment=NODE_ENV=production' \
+              'Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000' \
+              'Environment=FLASK_URL=http://127.0.0.1:5001' \
+              'Environment=VORLIQ_NODE_URL=https://node.vorliq.org' \
+              'Environment="VORLIQ_NODE_NAME=Vorliq Public Node"' \
+              'Environment=VORLIQ_NODE_REGION=London' \
+              'Environment="VORLIQ_NODE_COUNTRY=United Kingdom"' \
+              'Environment=VORLIQ_HEARTBEAT_INTERVAL_MS=300000' \
+              'ExecStart=/usr/bin/node heartbeat.js' \
+              'Restart=always' \
+              'RestartSec=5' \
+              '' \
+              '[Install]' \
+              'WantedBy=multi-user.target' \
+              > /etc/systemd/system/vorliq-heartbeat.service
+            printf '%s\n' \
+              '[Unit]' \
+              'Description=Vorliq Public Registry Heartbeat Once' \
+              'After=network-online.target vorliq-blockchain.service vorliq-backend.service' \
+              'Wants=network-online.target' \
+              'Requires=vorliq-blockchain.service vorliq-backend.service' \
+              '' \
+              '[Service]' \
+              'Type=oneshot' \
+              'User=vorliq' \
+              'Group=vorliq' \
+              'WorkingDirectory=/home/vorliq/app/backend' \
+              'Environment=NODE_ENV=production' \
+              'Environment=HEARTBEAT_API_URL=http://127.0.0.1:5000' \
+              'Environment=FLASK_URL=http://127.0.0.1:5001' \
+              'Environment=VORLIQ_NODE_URL=https://node.vorliq.org' \
+              'Environment="VORLIQ_NODE_NAME=Vorliq Public Node"' \
+              'Environment=VORLIQ_NODE_REGION=London' \
+              'Environment="VORLIQ_NODE_COUNTRY=United Kingdom"' \
+              'ExecStart=/usr/bin/node heartbeat.js --once' \
+              > /etc/systemd/system/vorliq-heartbeat-once.service
+            printf '%s\n' \
+              '[Unit]' \
+              'Description=Run Vorliq public registry heartbeat every five minutes' \
+              '' \
+              '[Timer]' \
+              'OnBootSec=2min' \
+              'OnUnitActiveSec=5min' \
+              'AccuracySec=30s' \
+              'Persistent=true' \
+              'Unit=vorliq-heartbeat-once.service' \
+              '' \
+              '[Install]' \
+              'WantedBy=timers.target' \
+              > /etc/systemd/system/vorliq-heartbeat.timer
             systemctl daemon-reload
             if [ ! -f /etc/systemd/system/vorliq-miner.service ]; then
               printf '%s\n' \
