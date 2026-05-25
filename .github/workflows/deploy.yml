@@ -72,6 +72,10 @@ jobs:
               sed -i '/WorkingDirectory=\/home\/vorliq\/app\/backend/a EnvironmentFile=-/etc/vorliq/backend.env' /etc/systemd/system/vorliq-backend.service
               systemctl daemon-reload
             fi
+            if ! grep -q '^EnvironmentFile=-/etc/vorliq/snapshot-signing.env' /etc/systemd/system/vorliq-backend.service && ! grep -q '^EnvironmentFile=/etc/vorliq/snapshot-signing.env' /etc/systemd/system/vorliq-backend.service; then
+              sed -i '/^EnvironmentFile=-\/etc\/vorliq\/backend.env/a EnvironmentFile=-/etc/vorliq/snapshot-signing.env' /etc/systemd/system/vorliq-backend.service
+              systemctl daemon-reload
+            fi
             printf '%s\n' \
               '[Unit]' \
               'Description=Vorliq Public Registry Heartbeat' \

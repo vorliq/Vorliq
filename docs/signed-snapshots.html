@@ -43,7 +43,8 @@
         <h2>Verify</h2>
         <pre><code>node tools/verify_snapshot.js https://vorliq.org
 node tools/verify_snapshot.js https://vorliq.org --require-signature</code></pre>
-        <p>If signing is disabled, the first command can still pass deterministic checks with an unsigned warning. The second command fails until production signing is configured.</p>
+        <p>Vorliq production snapshots are signed. The strict command should pass when the live signature verifies against the published production public key. If signing is disabled during an emergency, the first command can still pass deterministic checks with an unsigned warning, while the strict command fails.</p>
+        <p>The safe public key metadata endpoint is <code>GET /api/snapshot/public-key</code>. It returns only the algorithm, public key id, public key, and signature enabled/required flags.</p>
       </section>
       <section>
         <h2>Generate Keys</h2>
@@ -52,11 +53,11 @@ node tools/verify_snapshot.js https://vorliq.org --require-signature</code></pre
       </section>
       <section>
         <h2>Production Configuration</h2>
-        <pre><code>VORLIQ_SNAPSHOT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."
+        <pre><code># /etc/vorliq/snapshot-signing.env
+VORLIQ_SNAPSHOT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."
 VORLIQ_SNAPSHOT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----..."
-# Optional strict mode:
 VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code></pre>
-        <p>Use a secure server environment file or secret manager. Restart the backend after changing keys, then verify <code>/api/snapshot/verify</code>. Never put the private key in frontend code, GitHub Pages, screenshots, logs, or public issue comments.</p>
+        <p>Use a root-owned server environment file with mode <code>600</code> or an equivalent secret manager. Restart the backend after changing keys, then verify <code>/api/snapshot/verify</code> and <code>node tools/verify_snapshot.js https://vorliq.org --require-signature</code>. Never put the private key in frontend code, GitHub Pages, screenshots, logs, or public issue comments.</p>
       </section>
       <section>
         <h2>Key Rotation</h2>
@@ -64,7 +65,7 @@ VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code></pre>
       </section>
       <section>
         <h2>Disabled Signing</h2>
-        <p>Unsigned snapshots report <code>signature.enabled: false</code> and <code>signature.status: unsigned</code>. This is acceptable when signing is not required, but it means users get deterministic integrity checks without production signing-key provenance.</p>
+        <p>Unsigned snapshots report <code>signature.enabled: false</code> and <code>signature.status: unsigned</code>. In an emergency, operators can set <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=false</code>, restart the backend, and report the reason publicly. That fallback keeps deterministic integrity checks available without production signing-key provenance.</p>
       </section>
     </main>
     <footer><div class="wrap">Signed snapshots are provenance evidence only, not legal, financial, banking, or investment proof.</div></footer>

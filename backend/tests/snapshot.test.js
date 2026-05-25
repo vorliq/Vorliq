@@ -245,6 +245,47 @@ describe("chain snapshots", () => {
     expect(JSON.stringify(response.body)).not.toContain(keys.privateKey);
   });
 
+  test("snapshot public key endpoint returns unsigned safe metadata only", async () => {
+    const response = await request(app).get("/api/snapshot/public-key");
+
+    expect(response.status).toBe(200);
+    expect(Object.keys(response.body).sort()).toEqual([
+      "algorithm",
+      "public_key",
+      "public_key_id",
+      "signature_enabled",
+      "signature_required",
+      "success",
+    ]);
+    expect(response.body).toMatchObject({
+      success: true,
+      algorithm: "Ed25519",
+      public_key_id: null,
+      public_key: null,
+      signature_required: false,
+      signature_enabled: false,
+    });
+  });
+
+  test("snapshot public key endpoint returns public metadata without private key", async () => {
+    const keys = testKeypair();
+    process.env.VORLIQ_SNAPSHOT_PRIVATE_KEY = keys.privateKey;
+    process.env.VORLIQ_SNAPSHOT_PUBLIC_KEY = keys.publicKey;
+    process.env.VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE = "true";
+
+    const response = await request(app).get("/api/snapshot/public-key");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.algorithm).toBe("Ed25519");
+    expect(response.body.public_key_id).toMatch(/^ed25519:[a-f0-9]{16}$/);
+    expect(response.body.public_key).toBe(keys.publicKey);
+    expect(response.body.signature_required).toBe(true);
+    expect(response.body.signature_enabled).toBe(true);
+    expect(JSON.stringify(response.body)).not.toContain(keys.privateKey);
+    expect(JSON.stringify(response.body)).not.toMatch(/VORLIQ_SNAPSHOT_PRIVATE_KEY|BEGIN PRIVATE KEY/);
+  });
+
   test("snapshot latest and verify use the same canonical network manifest hash", async () => {
     mockSnapshotDependencies({ dynamicDiagnostics: true });
     const generatedAt = "2026-05-25T12:00:00.000Z";

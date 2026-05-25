@@ -48,7 +48,7 @@
           <li><code>chain_height</code>, <code>latest_block_hash</code>, <code>chain_valid</code>, confirmed and pending transaction counts.</li>
           <li><code>treasury_balance</code>, <code>active_node_count</code>, <code>active_incident_count</code>, and <code>deployment_commit</code>.</li>
           <li>Public <code>storage_status</code>, <code>index_status</code>, <code>readiness_status</code>, and the <code>hashes</code> map.</li>
-          <li>Optional <code>signature</code> metadata: Ed25519 algorithm, public key id, public key, snapshot hash, signature, signed timestamp, and status.</li>
+          <li><code>signature</code> metadata: Ed25519 algorithm, public key id, public key, snapshot hash, signature, signed timestamp, and status. Production snapshots are signed, and public key metadata is available at <code>/api/snapshot/public-key</code>.</li>
         </ul>
       </section>
 
@@ -62,7 +62,7 @@
         <h2>Verify</h2>
         <pre><code>node tools/verify_snapshot.js https://vorliq.org</code></pre>
         <pre><code>node tools/verify_snapshot.js https://vorliq.org --require-signature</code></pre>
-        <p>The CLI fetches <code>/api/snapshot/latest</code> and <code>/api/snapshot/verify</code>, confirms both agree on chain height and latest block hash, checks the verification result, scans for forbidden secret markers, verifies an Ed25519 signature when present, and exits non-zero on failure. Treat live snapshot verification as passing only when <code>/api/snapshot/verify</code> returns <code>verified: true</code>. Use <code>--require-signature</code> when an unsigned snapshot should fail locally.</p>
+        <p>The CLI fetches <code>/api/snapshot/latest</code> and <code>/api/snapshot/verify</code>, confirms both agree on chain height and latest block hash, checks the verification result, scans for forbidden secret markers, verifies the Ed25519 signature, and exits non-zero on failure. Treat live snapshot verification as passing only when <code>/api/snapshot/verify</code> returns <code>verified: true</code> and <code>signature_verified: true</code>. Production uses required signatures; <code>--require-signature</code> should pass live.</p>
       </section>
 
       <section>

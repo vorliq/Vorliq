@@ -55,6 +55,11 @@ if ! grep -q '^EnvironmentFile=-/etc/vorliq/backend.env' /etc/systemd/system/vor
   systemctl daemon-reload
 fi
 
+if ! grep -q '^EnvironmentFile=-/etc/vorliq/snapshot-signing.env' /etc/systemd/system/vorliq-backend.service && ! grep -q '^EnvironmentFile=/etc/vorliq/snapshot-signing.env' /etc/systemd/system/vorliq-backend.service; then
+  sed -i '/^EnvironmentFile=-\/etc\/vorliq\/backend.env/a EnvironmentFile=-/etc/vorliq/snapshot-signing.env' /etc/systemd/system/vorliq-backend.service
+  systemctl daemon-reload
+fi
+
 cat >/etc/systemd/system/vorliq-heartbeat.service <<'SERVICE'
 [Unit]
 Description=Vorliq Public Registry Heartbeat

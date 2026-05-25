@@ -127,17 +127,19 @@ Environment=VORLIQ_OPERATOR_WALLET=VLQ_PUBLIC_OPERATOR_ADDRESS</pre>
 
       <section>
         <h2>Signed Public Snapshots</h2>
-        <p>Snapshot signing is optional unless <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code> is set. Generate keys locally, store the private key only as a protected backend secret, and publish only the public key and key id. Do not commit the private key, add it to frontend code, paste it into public logs, or put it in deployment docs.</p>
+        <p>Vorliq production snapshots are signed, and required signatures should remain enabled after live verification. Generate keys locally or on the server, store the private key only as a protected backend secret, and publish only the public key and key id. Do not commit the private key, add it to frontend code, paste it into public logs, or put it in deployment docs.</p>
         <pre>node tools/generate_snapshot_keypair.js
 
-# Add these securely to the backend service environment:
+# Add these securely to /etc/vorliq/snapshot-signing.env:
 VORLIQ_SNAPSHOT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."
 VORLIQ_SNAPSHOT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----..."
+VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true
 
 sudo systemctl restart vorliq-backend.service
 node tools/verify_snapshot.js https://vorliq.org
-node tools/verify_snapshot.js https://vorliq.org --require-signature</pre>
-        <p>Set <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code> only after the signed snapshot verifies. Rotate keys by publishing the new public key id, updating the backend secrets, restarting the backend, and keeping prior public keys documented for historical verification. Signed snapshots prove snapshot provenance from the configured signing key; they do not prove legal, banking, financial, or investment status.</p>
+node tools/verify_snapshot.js https://vorliq.org --require-signature
+curl https://vorliq.org/api/snapshot/public-key</pre>
+        <p>The file should be owned by root with mode <code>600</code>, and the backend service should load it with <code>EnvironmentFile=/etc/vorliq/snapshot-signing.env</code> or optional <code>EnvironmentFile=-/etc/vorliq/snapshot-signing.env</code> on new installs. Set <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code> only after the signed snapshot verifies. In an emergency, set it to <code>false</code>, restart, and report the reason. Rotate keys by publishing the new public key id, updating the backend secrets, restarting the backend, and keeping prior public keys documented for historical verification. Signed snapshots prove snapshot provenance from the configured signing key; they do not prove legal, banking, financial, or investment status.</p>
       </section>
 
       <section>

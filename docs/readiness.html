@@ -63,7 +63,7 @@
       <section>
         <h2>Snapshot Readiness</h2>
         <p>Readiness includes <code>snapshot_endpoint_available</code>, <code>snapshot_verify_passed</code>, <code>snapshot_secret_scan_passed</code>, <code>snapshot_signature_available</code>, <code>snapshot_signature_verified</code>, <code>snapshot_signature_required</code>, and <code>snapshot_signature_status</code>. These confirm that the public snapshot endpoint responds, regenerated hashes and public status checks are coherent, forbidden secret markers are absent, and signature configuration is visible without exposing private keys.</p>
-        <p>If signing is not configured and signatures are not required, readiness may still pass with a low-severity unsigned note. If <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code>, missing or invalid signatures fail readiness.</p>
+        <p>Production signed snapshots are required after live signature verification. If <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code>, missing or invalid signatures fail readiness. If signing is temporarily disabled and signatures are not required, readiness may still pass with a low-severity unsigned note until operators restore signing.</p>
       </section>
 
       <section>

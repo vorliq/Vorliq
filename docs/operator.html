@@ -89,16 +89,18 @@ sudo systemctl restart vorliq-backend.service</code></pre>
 
       <section class="glass">
         <h2>Signed Snapshots</h2>
-        <p>Generate a snapshot signing keypair locally, store the private key only as a production secret, and publish the public key and key id. Do not commit the private key and do not put it in frontend code.</p>
+        <p>Production snapshots are signed with an Ed25519 key stored outside the repository. Generate a snapshot signing keypair locally or on the server, store the private key only as a production secret, and publish the public key and key id. Do not commit the private key and do not put it in frontend code.</p>
         <pre><code>node tools/generate_snapshot_keypair.js
 
-# Add these securely to the backend service environment:
+# Add these securely to /etc/vorliq/snapshot-signing.env:
 VORLIQ_SNAPSHOT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."
 VORLIQ_SNAPSHOT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----..."
+VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true
 
 sudo systemctl restart vorliq-backend.service
-node tools/verify_snapshot.js https://vorliq.org</code></pre>
-        <p>Set <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code> only after signing is configured and verified. Rotate keys by publishing the new public key id, updating the private/public key secrets, restarting the backend, and keeping old public keys documented for historical verification.</p>
+node tools/verify_snapshot.js https://vorliq.org --require-signature
+curl https://vorliq.org/api/snapshot/public-key</code></pre>
+        <p>The environment file should be owned by root with mode <code>600</code>, and the backend service should load it with <code>EnvironmentFile=/etc/vorliq/snapshot-signing.env</code> or optional <code>EnvironmentFile=-/etc/vorliq/snapshot-signing.env</code> on new installs. Rotate keys by publishing the new public key id, updating the private/public key secrets, restarting the backend, and keeping old public keys documented for historical verification. In an emergency, set <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=false</code>, restart, and report the reason.</p>
       </section>
 
       <section class="glass">

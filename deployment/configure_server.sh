@@ -59,6 +59,7 @@ User=vorliq
 Group=vorliq
 WorkingDirectory=/home/vorliq/app/backend
 EnvironmentFile=-/etc/vorliq/backend.env
+EnvironmentFile=-/etc/vorliq/snapshot-signing.env
 Environment=NODE_ENV=production
 Environment=PORT=5000
 Environment=FLASK_URL=http://127.0.0.1:5001
