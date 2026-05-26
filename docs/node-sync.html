@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Node Sync</title>
+    <meta name="description" content="How Vorliq compares public nodes with the trusted signed public chain and handles fork awareness." />
+    <style>
+      :root { --bg:#020817; --panel:rgba(8,14,28,.56); --green:#86e33b; --cyan:#18d7c9; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.25); --warn:#ffd166; --danger:#ff6574; }
+      * { box-sizing:border-box; }
+      body { margin:0; min-width:320px; font-family:Inter,Arial,sans-serif; color:var(--text); background:linear-gradient(180deg,#020817,#07182d 56%,#020817); }
+      a { color:var(--cyan); font-weight:800; }
+      .wrap { width:min(1020px,calc(100% - 32px)); margin:0 auto; }
+      header, footer { border-color:var(--border); border-style:solid; border-width:0 0 1px; background:#071427; }
+      footer { border-width:1px 0 0; color:var(--muted); padding:24px 0; }
+      nav { display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:18px 0; }
+      .links { display:flex; gap:12px; flex-wrap:wrap; }
+      main { padding:44px 0 64px; display:grid; gap:18px; }
+      section { border:1px solid var(--border); border-radius:14px; background:var(--panel); padding:22px; display:grid; gap:14px; }
+      .hero { border:0; background:transparent; padding:0 0 12px; }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+      .eyebrow { color:var(--green); font-size:.8rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+      h1,h2,h3,p { margin:0; }
+      h1 { font-size:clamp(2.25rem,7vw,4.2rem); line-height:1; }
+      h2 { font-size:clamp(1.45rem,4vw,2.05rem); }
+      p, li { color:var(--muted); line-height:1.75; }
+      code, pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+      code { color:#e7f7ff; overflow-wrap:anywhere; }
+      pre { margin:0; overflow:auto; white-space:pre-wrap; border:1px solid var(--border); border-radius:10px; padding:14px; background:#020817; color:#e7f7ff; }
+      .warning { border-color:rgba(255,209,102,.48); }
+      .danger { border-color:rgba(255,101,116,.5); }
+      @media (max-width:760px) { .grid { grid-template-columns:1fr; } main { padding-top:32px; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <strong>Vorliq</strong>
+        <div class="links">
+          <a href="index.html">Docs Home</a>
+          <a href="nodes.html">Nodes</a>
+          <a href="run-your-own-node.html">Run a Node</a>
+          <a href="bootstrap-chain.html">Chain Bootstrap</a>
+          <a href="https://vorliq.org/nodes/compare">Live Node Sync</a>
+        </div>
+      </nav>
+    </header>
+    <main class="wrap">
+      <section class="hero">
+        <span class="eyebrow">Node Sync</span>
+        <h1>Compare public nodes without blindly trusting them</h1>
+        <p>Vorliq node sync compares registry heartbeat data with the trusted public chain height, latest hash, signed snapshot hash, and signature verification status. It helps operators spot lag, stale heartbeats, unreachable diagnostics, and possible forks.</p>
+      </section>
+
+      <section class="grid">
+        <article>
+          <h2>Synced</h2>
+          <p><code>synced</code> means the node is active, reports a valid chain, has the same height as the trusted public chain, and reports the same latest block hash.</p>
+        </article>
+        <article>
+          <h2>Behind</h2>
+          <p><code>behind</code> means the node reports a valid chain but its height is lower than the trusted public chain. Operators should check heartbeat, update code, and wait for safe sync.</p>
+        </article>
+        <article>
+          <h2>Ahead</h2>
+          <p><code>ahead</code> means the node reports a higher height than the trusted public chain. Vorliq does not automatically trust ahead nodes. A higher height can be a real new block, a local fork, a reporting bug, or unverified state until signed snapshot and audit paths agree.</p>
+        </article>
+        <article>
+          <h2>Forked</h2>
+          <p><code>forked</code> means a node is active or recently seen but its latest hash does not match the trusted chain at the comparable position. Do not sync from a forked node without recovery checks.</p>
+        </article>
+        <article>
+          <h2>Stale</h2>
+          <p><code>stale</code> means the last heartbeat is outside the active window. Restart heartbeat and confirm the public URL can reach HTTPS endpoints.</p>
+        </article>
+        <article>
+          <h2>Unreachable or Unknown</h2>
+          <p><code>unreachable</code> means diagnostics could not be checked. <code>unknown</code> means the heartbeat is missing enough safe height, hash, or validity data to compare confidently.</p>
+        </article>
+      </section>
+
+      <section class="warning">
+        <h2>Why signed snapshots and audit exports matter</h2>
+        <p>Heartbeat data is a signal from a registered node. The trusted public chain is backed by signed snapshots and audit exports so operators can verify height, latest hash, chain export hash, and public metadata without exposing secrets. Ahead nodes should be treated as warnings until that verification path agrees.</p>
+      </section>
+
+      <section>
+        <h2>Fix a stale node</h2>
+        <pre><code>sudo systemctl restart vorliq-heartbeat.service
+curl -I https://node.example.org/api/health
+node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
+        <p>Also check DNS, HTTPS certificates, backend service state, and the configured public node URL.</p>
+      </section>
+
+      <section class="danger">
+        <h2>Recover a forked node safely</h2>
+        <p>Do not manually edit <code>chain.json</code>, rewrite historical blocks, or change block hashes. First run verified bootstrap in dry-run mode. Only write chain data on a new node or after a deliberate backup and a clean verification report.</p>
+        <pre><code>python3.12 tools/bootstrap_chain_from_public_node.py --trusted-node https://vorliq.org --data-dir ./blockchain/data
+node tools/bootstrap_verify_node.js https://vorliq.org
+node tools/node_doctor.js --base-url http://127.0.0.1:5000 --trusted-node https://vorliq.org</code></pre>
+      </section>
+
+      <section>
+        <h2>Public endpoints</h2>
+        <p>Use <code>GET https://vorliq.org/api/nodes/compare</code> for public-safe comparison JSON. Operators with the admin token can use <code>GET /api/admin/nodes/compare</code> for safe extra diagnostics. Neither endpoint returns private keys, admin tokens, raw logs, server paths, raw IPs, or raw user agents.</p>
+      </section>
+    </main>
+    <footer><div class="wrap">Node sync is an operational trust signal, not a legal, banking, investment, or financial guarantee.</div></footer>
+  </body>
+</html>

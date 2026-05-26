@@ -592,6 +592,15 @@ class VorliqSDK {
   }
 
   /**
+   * Compares registered nodes with the trusted public chain snapshot.
+   *
+   * @returns {Promise<object>} Node sync comparison response with synced, behind, ahead, forked, stale, unreachable, and unknown statuses.
+   */
+  async compareNodes() {
+    return this.request("/api/nodes/compare");
+  }
+
+  /**
    * Gets active public nodes seen in the recent active window.
    *
    * @returns {Promise<object>} Active node list response.

@@ -47,6 +47,7 @@ async function getDiagnostics({ diagnosticsUrl = `${flaskUrl}/diagnostics` } = {
     const response = await axios.get(diagnosticsUrl, { timeout: 8000 });
     return {
       chain_height: response.data.block_height,
+      latest_block_hash: response.data.last_block_hash,
       last_block_hash: response.data.last_block_hash,
       chain_valid: Boolean(response.data.chain_valid),
       response_time_ms: Date.now() - started,
@@ -57,6 +58,19 @@ async function getDiagnostics({ diagnosticsUrl = `${flaskUrl}/diagnostics` } = {
       chain_valid: false,
       response_time_ms: null,
     };
+  }
+}
+
+async function getSnapshotDiagnostics({ snapshotVerifyUrl = `${apiUrl}/api/snapshot/verify` } = {}) {
+  try {
+    const response = await axios.get(snapshotVerifyUrl, { timeout: 8000 });
+    return {
+      snapshot_hash: response.data.snapshot?.signature?.snapshot_hash || null,
+      snapshot_signature_verified: response.data.signature_verified === true,
+    };
+  } catch (error) {
+    console.log(`Snapshot check skipped before heartbeat: ${safeError(error)}`);
+    return {};
   }
 }
 
@@ -78,10 +92,14 @@ async function postHeartbeat(payload, { registryApiUrl = apiUrl } = {}) {
 async function sendHeartbeat(options = {}) {
   const registryApiUrl = options.registryApiUrl || apiUrl;
   try {
-    const diagnostics = await getDiagnostics(options);
+    const [diagnostics, snapshotDiagnostics] = await Promise.all([
+      getDiagnostics(options),
+      getSnapshotDiagnostics(options),
+    ]);
     const payload = {
       ...basePayload(),
       ...diagnostics,
+      ...snapshotDiagnostics,
     };
     let response;
     try {
@@ -128,6 +146,7 @@ if (require.main === module) {
 module.exports = {
   basePayload,
   getDiagnostics,
+  getSnapshotDiagnostics,
   registerLocalNode,
   sendHeartbeat,
   startHeartbeatLoop,

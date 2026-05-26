@@ -39,6 +39,7 @@
           <a href="index.html">Docs Home</a>
           <a href="run-your-own-node.html">Run Your Own Node</a>
           <a href="bootstrap-verification.html">Bootstrap Verification</a>
+          <a href="node-sync.html">Node Sync</a>
           <a href="recovery.html">Recovery</a>
         </div>
       </nav>
@@ -80,6 +81,10 @@
       <section>
         <h2>Recover if bootstrap fails</h2>
         <p>If dry-run fails, write nothing and inspect the exact failed check. Verify the trusted node with <code>node tools/bootstrap_verify_node.js https://vorliq.org</code>, check <a href="recovery.html">Recovery</a>, and try again only after the signed snapshot, audit manifest, and chain export agree.</p>
+      </section>
+      <section class="warning">
+        <h2>Fork awareness</h2>
+        <p>If <a href="node-sync.html">Node Sync</a> marks a node as <code>forked</code>, do not manually edit <code>chain.json</code> and do not rewrite blocks. Run bootstrap in dry-run mode first, compare signed snapshot and audit export hashes, then decide whether the node should be rebuilt from verified public data. If a node appears <code>ahead</code>, treat that as a warning until signed snapshot and audit paths verify the newer state.</p>
       </section>
       <section>
         <h2>Verify after bootstrap</h2>

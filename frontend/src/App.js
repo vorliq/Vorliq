@@ -21,6 +21,7 @@ import Network from "./pages/Network";
 import Lending from "./pages/Lending";
 import Stats from "./pages/Stats";
 import Registry from "./pages/Registry";
+import NodeSync from "./pages/NodeSync";
 import Login from "./pages/Login";
 import Account from "./pages/Account";
 import Profile from "./pages/Profile";
@@ -73,6 +74,7 @@ const moreLinks = [
   { to: "/price", label: "Price" },
   { to: "/leaderboard", label: "Leaderboard" },
   { to: "/registry", label: "Registry" },
+  { to: "/nodes/compare", label: "Node Sync" },
   { to: "/blockchain", label: "Blockchain" },
   { to: "/network", label: "Network" },
   { to: "/stats", label: "Stats" },
@@ -118,6 +120,7 @@ const mobileNavSections = [
       { to: "/blockchain", label: "Blockchain" },
       { to: "/network", label: "Network" },
       { to: "/registry", label: "Registry" },
+      { to: "/nodes/compare", label: "Node Sync" },
       { to: "/stats", label: "Stats" },
       { to: "/leaderboard", label: "Leaderboard" },
       { to: "/health", label: "Health" },
@@ -510,6 +513,7 @@ function AppShell() {
           <Route path="/achievements" element={<Achievements />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/registry" element={<Registry />} />
+          <Route path="/nodes/compare" element={<NodeSync />} />
           <Route path="/health" element={<Health />} />
           <Route path="/growth" element={<Growth />} />
           <Route path="/roadmap" element={<Roadmap />} />

@@ -19,6 +19,7 @@ function Footer() {
         { label: "Roadmap", href: "/roadmap", internal: true },
         { label: "Releases", href: "/releases", internal: true },
         { label: "Readiness", href: "/readiness", internal: true },
+        { label: "Node Sync", href: "/nodes/compare", internal: true },
         { label: "Snapshot Verification", href: "/snapshot", internal: true },
         { label: "Snapshot Archive", href: "/snapshot-archive", internal: true },
         { label: "Bootstrap Node", href: "/bootstrap", internal: true },

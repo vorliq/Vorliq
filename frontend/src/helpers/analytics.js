@@ -20,6 +20,7 @@ const SAFE_EVENT_TYPES = new Set([
   "chat_page_opened",
   "profile_page_opened",
   "registry_page_opened",
+  "node_sync_page_opened",
   "docs_link_clicked",
   "error_boundary_seen",
 ]);
@@ -124,6 +125,7 @@ export function featureEventForRoute(pathname) {
     "/chat": "chat_page_opened",
     "/profile": "profile_page_opened",
     "/registry": "registry_page_opened",
+    "/nodes/compare": "node_sync_page_opened",
   };
   return exact[pathname || "/"] || null;
 }

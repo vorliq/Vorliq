@@ -31,6 +31,7 @@ function Health() {
   const [migrationReadiness, setMigrationReadiness] = useState(null);
   const [activeIncidents, setActiveIncidents] = useState([]);
   const [weeklyReport, setWeeklyReport] = useState(null);
+  const [nodeComparison, setNodeComparison] = useState(null);
   const [registryNodes, setRegistryNodes] = useState([]);
   const [registrySummary, setRegistrySummary] = useState(null);
   const [networkHealth, setNetworkHealth] = useState([]);
@@ -62,6 +63,7 @@ function Health() {
         const migrationRequest = api.get("/migration/readiness");
         const incidentsRequest = api.get("/incidents/active");
         const weeklyReportRequest = api.get("/reports/weekly");
+        const nodeComparisonRequest = api.get("/nodes/compare").catch(() => ({ data: null }));
         const miningRequest = api.get("/mining/status");
         const [
           diagnosticsResponse,
@@ -79,6 +81,7 @@ function Health() {
           migrationResponse,
           incidentsResponse,
           weeklyReportResponse,
+          nodeComparisonResponse,
           miningResponse,
         ] = await Promise.all([
           diagnosticsRequest,
@@ -96,6 +99,7 @@ function Health() {
           migrationRequest,
           incidentsRequest,
           weeklyReportRequest,
+          nodeComparisonRequest,
           miningRequest,
         ]);
         const diagnosticsResponseTime = Math.round(performance.now() - diagnosticsStart);
@@ -135,6 +139,7 @@ function Health() {
           setMigrationReadiness(migrationResponse.data);
           setActiveIncidents(incidentsResponse.data.incidents || []);
           setWeeklyReport(weeklyReportResponse.data);
+          setNodeComparison(nodeComparisonResponse.data);
           setRegistryNodes(nodes);
           setRegistrySummary(registrySummaryResponse.data.summary || null);
           setNetworkHealth(nodeChecks);
@@ -430,6 +435,39 @@ function Health() {
           </div>
         ) : (
           <div className="empty-state">Registry summary is unavailable right now.</div>
+        )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <div className="section-title">
+          <h2>Node Sync</h2>
+          <a className="button secondary small-button" href="/nodes/compare">
+            Open Node Sync
+          </a>
+        </div>
+        {loading ? (
+          <Spinner label="Loading node sync..." />
+        ) : nodeComparison?.success ? (
+          <div className="stats-grid compact-stats">
+            <div className="stat-card">
+              <span>Trusted height</span>
+              <strong>{nodeComparison.trusted_chain_height ?? "unknown"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Active nodes</span>
+              <strong>{nodeComparison.active_node_count ?? 0}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Forked</span>
+              <strong>{nodeComparison.summary?.forked_count ?? 0}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Ahead</span>
+              <strong>{nodeComparison.summary?.ahead_count ?? 0}</strong>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">Node sync comparison is unavailable right now.</div>
         )}
       </section>
 

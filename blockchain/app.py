@@ -1529,16 +1529,27 @@ def registry_heartbeat():
         chain_valid = data.get("chain_valid") if data.get("chain_valid") is not None else data.get("chainValid")
         if isinstance(chain_valid, str):
             chain_valid = chain_valid.lower() in {"true", "1", "yes", "valid"}
+        snapshot_signature_verified = (
+            data.get("snapshot_signature_verified")
+            if data.get("snapshot_signature_verified") is not None
+            else data.get("snapshotSignatureVerified")
+        )
+        if isinstance(snapshot_signature_verified, str):
+            snapshot_signature_verified = snapshot_signature_verified.lower() in {"true", "1", "yes", "verified"}
         registry_node = node_registry.heartbeat(
             node_url=node_url,
             public_chain_height=node.blockchain.get_block_height(),
             display_name=data.get("display_name") or data.get("displayName"),
             chain_height=chain_height,
-            last_block_hash=data.get("last_block_hash") or data.get("lastBlockHash"),
+            last_block_hash=data.get("latest_block_hash") or data.get("latestBlockHash") or data.get("last_block_hash") or data.get("lastBlockHash"),
             chain_valid=chain_valid if isinstance(chain_valid, bool) else None,
             software_version=data.get("software_version") or data.get("softwareVersion"),
             operator_wallet_address=data.get("operator_wallet_address") or data.get("operatorWalletAddress"),
             response_time_ms=data.get("response_time_ms") or data.get("responseTimeMs"),
+            snapshot_hash=data.get("snapshot_hash") or data.get("snapshotHash"),
+            snapshot_signature_verified=snapshot_signature_verified
+            if isinstance(snapshot_signature_verified, bool)
+            else None,
             region=data.get("region"),
             country=data.get("country"),
         )

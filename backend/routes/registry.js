@@ -1,9 +1,17 @@
 const express = require("express");
 const axios = require("axios");
+const adminAuth = require("../middleware/adminAuth");
+const { verifySnapshot } = require("../snapshot");
+const {
+  compareNodeToTrustedState,
+  hasForbiddenPublicMarker,
+  summarizeNetworkSync,
+} = require("../nodeCompare");
 const { handleRouteError } = require("./routeError");
 
 const router = express.Router();
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
+const DEFAULT_TRUSTED_NODE_URL = "https://vorliq.org";
 
 const SYNC_STATUSES = new Set(["synced", "behind", "invalid", "unknown"]);
 const ACTIVITY_STATUSES = new Set(["active", "inactive"]);
@@ -36,9 +44,11 @@ function heartbeatPayload(body = {}) {
   return {
     ...nodePayload(body),
     chain_height: body.chain_height ?? body.chainHeight,
-    last_block_hash: cleanText(body.last_block_hash || body.lastBlockHash, 160),
+    last_block_hash: cleanText(body.latest_block_hash || body.latestBlockHash || body.last_block_hash || body.lastBlockHash, 160),
     chain_valid: body.chain_valid ?? body.chainValid,
     response_time_ms: body.response_time_ms ?? body.responseTimeMs,
+    snapshot_hash: cleanText(body.snapshot_hash || body.snapshotHash, 160),
+    snapshot_signature_verified: body.snapshot_signature_verified ?? body.snapshotSignatureVerified,
   };
 }
 
@@ -68,6 +78,63 @@ function listParams(query = {}) {
 
 function sendValidationError(res, error) {
   return res.status(error.statusCode || 400).json({ success: false, message: error.message });
+}
+
+function trustedNodeUrl() {
+  return String(process.env.VORLIQ_PUBLIC_NODE_URL || DEFAULT_TRUSTED_NODE_URL).replace(/\/+$/, "");
+}
+
+function failIfUnsafe(payload) {
+  if (hasForbiddenPublicMarker(payload)) {
+    const error = new Error("Node comparison response contains forbidden public markers.");
+    error.statusCode = 500;
+    throw error;
+  }
+}
+
+async function buildNodeComparison({ admin = false } = {}) {
+  const checkedAt = new Date().toISOString();
+  const [snapshotResult, registryResult] = await Promise.all([
+    verifySnapshot({ generatedAt: checkedAt, includeReadinessStatus: false }),
+    axios.get(`${flaskUrl}/registry/all`),
+  ]);
+  const snapshot = snapshotResult.snapshot || {};
+  const trustedState = {
+    trusted_node_url: trustedNodeUrl(),
+    trusted_chain_height: Number.isFinite(Number(snapshot.chain_height)) ? Number(snapshot.chain_height) : null,
+    trusted_latest_hash: snapshot.latest_block_hash || null,
+    trusted_snapshot_hash: snapshot.signature?.snapshot_hash || null,
+    trusted_signature_verified: snapshotResult.signature_verified === true,
+    active_window_seconds: 30 * 60,
+    now_seconds: Math.floor(new Date(checkedAt).getTime() / 1000),
+  };
+  const nodes = (registryResult.data?.nodes || []).map((node) => compareNodeToTrustedState(node, trustedState));
+  const summary = summarizeNetworkSync(nodes);
+  const payload = {
+    success: true,
+    checked_at: checkedAt,
+    trusted_node_url: trustedState.trusted_node_url,
+    trusted_chain_height: trustedState.trusted_chain_height,
+    trusted_latest_hash: trustedState.trusted_latest_hash,
+    trusted_snapshot_hash: trustedState.trusted_snapshot_hash,
+    trusted_signature_verified: trustedState.trusted_signature_verified,
+    active_node_count: summary.active_node_count,
+    summary,
+    nodes,
+  };
+
+  if (admin) {
+    payload.diagnostics = {
+      registry_node_count: nodes.length,
+      snapshot_verified: snapshotResult.verified === true,
+      snapshot_signature_status: snapshotResult.signature_status || "unknown",
+      snapshot_signature_required: snapshotResult.signature_required === true,
+      comparison_source: "registry heartbeat plus trusted signed public snapshot",
+    };
+  }
+
+  failIfUnsafe(payload);
+  return payload;
 }
 
 router.post("/api/registry/register", async (req, res) => {
@@ -129,4 +196,27 @@ router.get("/api/registry/summary", async (req, res) => {
   }
 });
 
+router.get("/api/nodes/compare", async (req, res) => {
+  try {
+    return res.json(await buildNodeComparison());
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ success: false, message: "Node comparison is currently unavailable." });
+    }
+    return handleRouteError(res, error, "GET /api/nodes/compare", "Node comparison is currently unavailable.");
+  }
+});
+
+router.get("/api/admin/nodes/compare", adminAuth, async (req, res) => {
+  try {
+    return res.json(await buildNodeComparison({ admin: true }));
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ success: false, message: "Admin node comparison is currently unavailable." });
+    }
+    return handleRouteError(res, error, "GET /api/admin/nodes/compare", "Admin node comparison is currently unavailable.");
+  }
+});
+
 module.exports = router;
+module.exports.buildNodeComparison = buildNodeComparison;

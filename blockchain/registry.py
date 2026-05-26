@@ -64,6 +64,8 @@ class NodeRegistry:
         software_version: str | None = None,
         operator_wallet_address: str | None = None,
         response_time_ms: int | None = None,
+        snapshot_hash: str | None = None,
+        snapshot_signature_verified: bool | None = None,
         region: str | None = None,
         country: str | None = None,
     ) -> dict[str, Any]:
@@ -87,6 +89,10 @@ class NodeRegistry:
         node["last_chain_height"] = self._optional_int(chain_height)
         node["last_block_hash"] = self._optional_text(last_block_hash, "last_block_hash", 160)
         node["last_diagnostics_status"] = "valid" if chain_valid is True else "invalid" if chain_valid is False else "unknown"
+        if snapshot_hash is not None:
+            node["snapshot_hash"] = self._optional_text(snapshot_hash, "snapshot_hash", 160)
+        if snapshot_signature_verified is not None:
+            node["snapshot_signature_verified"] = bool(snapshot_signature_verified)
         node["sync_status"] = self._sync_status(node["last_chain_height"], bool(chain_valid), public_chain_height)
 
         history_status = "online"
@@ -237,6 +243,8 @@ class NodeRegistry:
         normalized["last_heartbeat_at"] = float(normalized.get("last_heartbeat_at") or 0)
         normalized["last_chain_height"] = self._optional_int(normalized.get("last_chain_height"))
         normalized["last_block_hash"] = self._optional_text(normalized.get("last_block_hash"), "last_block_hash", 160)
+        normalized["snapshot_hash"] = self._optional_text(normalized.get("snapshot_hash"), "snapshot_hash", 160)
+        normalized["snapshot_signature_verified"] = bool(normalized.get("snapshot_signature_verified", False))
         normalized["last_diagnostics_status"] = self._optional_text(
             normalized.get("last_diagnostics_status") or "unknown",
             "last_diagnostics_status",
@@ -271,6 +279,8 @@ class NodeRegistry:
             "last_heartbeat_at": normalized["last_heartbeat_at"],
             "last_chain_height": normalized["last_chain_height"],
             "last_block_hash": normalized["last_block_hash"],
+            "snapshot_hash": normalized["snapshot_hash"],
+            "snapshot_signature_verified": normalized["snapshot_signature_verified"],
             "last_diagnostics_status": normalized["last_diagnostics_status"],
             "uptime_score": normalized["uptime_score"],
             "reliability_score": normalized["reliability_score"],

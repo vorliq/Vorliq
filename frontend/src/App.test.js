@@ -31,6 +31,7 @@ import BlockDetail from "./pages/BlockDetail";
 import Blockchain from "./pages/Blockchain";
 import Registry from "./pages/Registry";
 import Health from "./pages/Health";
+import NodeSync from "./pages/NodeSync";
 import Readiness from "./pages/Readiness";
 import MigrationReadiness from "./pages/MigrationReadiness";
 import Footer from "./components/Footer";
@@ -746,6 +747,53 @@ function defaultApiGet(path) {
           highest_chain_height: 12,
           latest_block_hash: "0000nodehash",
         },
+      },
+    });
+  }
+
+  if (path === "/nodes/compare") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        checked_at: "2026-05-26T12:00:00.000Z",
+        trusted_node_url: "https://vorliq.org",
+        trusted_chain_height: 12,
+        trusted_latest_hash: "0000nodehash",
+        trusted_snapshot_hash: "snapshot-hash",
+        trusted_signature_verified: true,
+        active_node_count: 1,
+        summary: {
+          total_node_count: 1,
+          active_node_count: 1,
+          synced_count: 1,
+          behind_count: 0,
+          ahead_count: 0,
+          forked_count: 0,
+          stale_count: 0,
+          unreachable_count: 0,
+          unknown_count: 0,
+          overall_status: "synced",
+        },
+        nodes: [
+          {
+            node_url: "https://node.example.org",
+            display_name: "Example Node",
+            region: "Europe",
+            country: "United Kingdom",
+            last_seen: Math.floor(Date.now() / 1000),
+            active: true,
+            chain_height: 12,
+            latest_block_hash: "0000nodehash",
+            chain_valid: true,
+            response_time_ms: 42,
+            sync_status: "synced",
+            sync_label: "Synced",
+            sync_message: "Node matches the trusted public chain.",
+            height_difference: 0,
+            same_latest_hash: true,
+            risk_level: "low",
+          },
+        ],
       },
     });
   }
@@ -1962,10 +2010,22 @@ test("Registry node details search renders health history", async () => {
   expect(screen.getByText(/node heartbeat is valid/i)).toBeInTheDocument();
 });
 
+test("Node sync page renders comparison filters and trusted chain", async () => {
+  renderWithProviders(<NodeSync />, "/nodes/compare");
+
+  expect(await screen.findByRole("heading", { name: /^node sync$/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /network sync overview/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /trusted public chain/i })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: /forked/i })).toBeInTheDocument();
+  expect(await screen.findByText(/example node/i)).toBeInTheDocument();
+  expect(screen.getByText(/operator fix commands/i)).toBeInTheDocument();
+});
+
 test("Health page renders registry summary section", async () => {
   renderWithProviders(<Health />, "/health");
 
   expect(await screen.findByRole("heading", { name: /network registry health/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /^node sync$/i })).toBeInTheDocument();
   expect(await screen.findByText(/average reliability/i)).toBeInTheDocument();
   expect(await screen.findByText(/98%/i)).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: /mining operations/i })).toBeInTheDocument();

@@ -23,6 +23,7 @@ const EVENT_TYPES = new Set([
   "chat_page_opened",
   "profile_page_opened",
   "registry_page_opened",
+  "node_sync_page_opened",
   "docs_link_clicked",
   "error_boundary_seen",
 ]);

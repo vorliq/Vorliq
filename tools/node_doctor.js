@@ -91,6 +91,16 @@ function createReporter() {
   };
 }
 
+function operatorFixes() {
+  return [
+    "restart heartbeat",
+    "run verified bootstrap dry-run",
+    "check DNS and HTTPS",
+    "run update_server.sh",
+    "run node doctor locally",
+  ].join("; ");
+}
+
 async function checkEndpoint(reporter, statusName, baseUrl, pathname, evaluator, fix) {
   try {
     const data = await fetchJson(baseUrl, pathname);
@@ -123,6 +133,49 @@ async function checkRegistryNode(reporter, trustedNode, publicUrl) {
   } catch (error) {
     reporter.add("WARN", "registry node detail", error.message, "Check VORLIQ_NODE_URL and run sudo systemctl start vorliq-heartbeat-once.service");
   }
+}
+
+async function checkNodeComparison(reporter, trustedNode) {
+  const comparison = await checkEndpoint(reporter, "node sync comparison", trustedNode, "/api/nodes/compare", (data) => {
+    if (data.success !== true) {
+      return { status: "FAIL", explanation: "Node comparison did not return success=true." };
+    }
+    const summary = data.summary || {};
+    if (Number(data.active_node_count || summary.active_node_count || 0) === 0) {
+      return { status: "WARN", explanation: "No active public nodes are visible in the trusted registry.", fix: operatorFixes() };
+    }
+    if (Number(summary.forked_count || 0) > 0) {
+      return { status: "FAIL", explanation: `${summary.forked_count} node(s) appear forked from the trusted public chain.`, fix: operatorFixes() };
+    }
+    if (Number(summary.behind_count || 0) > 0 || Number(summary.ahead_count || 0) > 0 || Number(summary.stale_count || 0) > 0) {
+      return { status: "WARN", explanation: "Node comparison has sync warnings.", fix: operatorFixes() };
+    }
+    return { status: "PASS", explanation: `${data.active_node_count} active node(s) compared with the trusted public chain.` };
+  }, operatorFixes());
+
+  if (!comparison) return null;
+
+  const trustedSignatureVerified = comparison.trusted_signature_verified === true;
+  const nodes = Array.isArray(comparison.nodes) ? comparison.nodes : [];
+  for (const node of nodes) {
+    const label = node.display_name || node.node_url || "Unknown node";
+    const height = node.chain_height ?? "unknown";
+    const diff = node.height_difference === null || node.height_difference === undefined ? "unknown" : node.height_difference;
+    console.log(`NODE ${node.sync_status || "unknown"} ${label} height=${height} diff=${diff} risk=${node.risk_level || "unknown"} url=${node.node_url || "unknown"}`);
+
+    if (node.active && node.sync_status === "forked") {
+      reporter.add("FAIL", `node fork ${label}`, node.sync_message || "Active node appears forked from the trusted chain.", operatorFixes());
+    } else if (node.active && node.sync_status === "behind") {
+      reporter.add("WARN", `node behind ${label}`, node.sync_message || "Active node is behind the trusted node.", operatorFixes());
+    } else if (node.active && node.sync_status === "ahead") {
+      const signatureMessage = trustedSignatureVerified
+        ? "Ahead node still needs signed snapshot and audit export verification before trust."
+        : "Trusted signed snapshot verification is not confirmed, so the ahead node is not verified by a signed snapshot or audit path.";
+      reporter.add("WARN", `node ahead ${label}`, `${node.sync_message || "Active node is ahead of the trusted node."} ${signatureMessage}`, operatorFixes());
+    }
+  }
+
+  return comparison;
 }
 
 function commandExists(command) {
@@ -264,6 +317,8 @@ async function main() {
     const summary = data.summary || {};
     return { status: "PASS", explanation: `${summary.active_node_count ?? 0} active nodes, ${summary.synced_node_count ?? 0} synced nodes in trusted registry.` };
   }, "Check trusted node registry availability.");
+
+  await checkNodeComparison(reporter, trustedNode);
 
   await checkRegistryNode(reporter, trustedNode, args.publicUrl);
 

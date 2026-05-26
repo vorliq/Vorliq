@@ -75,6 +75,24 @@
           </div>
         </div>
         <section>
+          <h2>Node Sync Comparison</h2>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method GET">GET</span>
+              <code class="path">/api/nodes/compare</code>
+              <a class="try" href="https://vorliq.org/api/nodes/compare">Try it</a>
+            </div>
+            <p>Returns public-safe node comparison metadata: trusted public chain height, trusted latest hash, trusted signed snapshot hash, signature verification status, active node count, summary counts, and node rows with <code>synced</code>, <code>behind</code>, <code>ahead</code>, <code>forked</code>, <code>stale</code>, <code>unreachable</code>, or <code>unknown</code>. Ahead nodes are not automatically trusted; signed snapshots and audit exports are the verification path.</p>
+          </div>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method GET">GET</span>
+              <code class="path">/api/admin/nodes/compare</code>
+            </div>
+            <p>Protected admin route requiring <code>ADMIN_TOKEN</code>. It returns the same public-safe comparison plus safe diagnostic metadata and never returns private keys, admin tokens, raw logs, server paths, raw IPs, or raw user agents.</p>
+          </div>
+        </section>
+        <section>
           <h2>Bootstrap Package</h2>
           <div class="endpoint">
             <div class="endpoint-head">

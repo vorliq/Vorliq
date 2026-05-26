@@ -40,6 +40,7 @@
           <a href="index.html">Docs Home</a>
           <a href="bootstrap-verification.html">Bootstrap Verification</a>
           <a href="bootstrap-chain.html">Chain Bootstrap</a>
+          <a href="node-sync.html">Node Sync</a>
           <a href="nodes.html">Nodes</a>
         </div>
       </nav>
@@ -93,6 +94,7 @@ sudo bash install_verified_node.sh</code></pre>
         <p>Run the doctor after install or after updates. It is read-only and prints PASS, WARN, or FAIL with suggested commands when possible.</p>
         <pre><code>cd /home/vorliq/app
 node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
+        <p>Open <a href="https://vorliq.org/nodes/compare">Node Sync</a> to compare your node with the trusted public chain. <code>behind</code> means your node is lower, <code>ahead</code> is not automatically trusted, <code>forked</code> requires recovery checks, <code>stale</code> usually needs heartbeat or DNS repair, and <code>unreachable</code> means diagnostics could not be checked.</p>
       </section>
 
       <section class="grid">

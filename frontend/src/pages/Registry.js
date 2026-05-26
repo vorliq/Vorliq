@@ -243,6 +243,9 @@ function Registry() {
         <div className="section-title">
           <h2>Run Your Own Node</h2>
           <div className="button-row">
+            <a className="button secondary small-button" href="/nodes/compare">
+              Node Sync
+            </a>
             <a className="button secondary small-button" href="/docs/run-your-own-node.html">
               Node Guide
             </a>

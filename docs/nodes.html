@@ -46,6 +46,7 @@
             <a class="button" href="api.html">API</a>
             <a class="button" href="run-your-own-node.html">Run a Node</a>
             <a class="button" href="bootstrap-chain.html">Bootstrap Chain</a>
+            <a class="button" href="node-sync.html">Node Sync</a>
             <a class="button" href="deploy.html">Deploy</a>
             <a class="button primary" href="https://vorliq.org/registry">Open Registry</a>
           </div>
@@ -74,14 +75,14 @@
         </article>
         <article class="card stack">
           <h2>Sync states</h2>
-          <p><code>synced</code> means the node is valid and within one block of the public node height. <code>behind</code> means it is valid but lagging. <code>invalid</code> means the node reported an invalid chain. <code>unknown</code> means no recent complete heartbeat is available.</p>
+          <p><code>synced</code> means the node is active, valid, at the same trusted height, and has the same latest hash. <code>behind</code> means it is valid but lower. <code>ahead</code> means higher but not automatically trusted. <code>forked</code> means a comparable hash mismatch. <code>stale</code> means the heartbeat is outside the active window. <code>unreachable</code> means diagnostics could not be checked. <code>unknown</code> means safe comparison data is missing.</p>
         </article>
       </section>
 
       <section class="card stack" style="margin-top:16px">
         <h2>Register and connect</h2>
         <p>Use the <a href="run-your-own-node.html">Run Your Own Node</a> guide to verify the trusted public node first, install the app, configure node identity, register with heartbeat metadata, run a dry-run <a href="bootstrap-chain.html">verified chain bootstrap</a>, and run the doctor. Use the Registry page to inspect public nodes with a safe HTTP or HTTPS URL, display name, region, country, and optional operator wallet. Use the Network page to add active registry nodes to your peer list.</p>
-        <p>More independent nodes improve availability and make it easier for the community to compare chain height, block hash, and live sync status.</p>
+        <p>More independent nodes improve availability and make it easier for the community to compare chain height, block hash, and live sync status. Use <a href="node-sync.html">Node Sync</a> or <a href="https://vorliq.org/nodes/compare">the live comparison page</a> to see fork awareness. Do not manually edit <code>chain.json</code>; recover forked nodes with dry-run bootstrap first.</p>
       </section>
     </main>
     <footer><div class="wrap">2026 Vorliq. Public node signals are operational metadata only.</div></footer>

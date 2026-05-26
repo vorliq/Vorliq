@@ -42,8 +42,13 @@
           <li>Migration readiness metadata, expected JSON backend status, storage adapter interface availability, PostgreSQL shadow rehearsal availability, and confirmation that no PostgreSQL adapter is active in production.</li>
           <li>Audit manifest availability and server-side hash-shape verification.</li>
           <li>Snapshot endpoint availability, regenerated snapshot verification, snapshot secret-scan status, signed snapshot status, and signed snapshot archive status.</li>
-          <li>Network manifest source metadata, registry active node count, public node activity, chain validity, mining status, treasury, faucet, and analytics availability.</li>
+          <li>Network manifest source metadata, registry active node count, node sync comparison, public node activity, chain validity, mining status, treasury, faucet, and analytics availability.</li>
         </ul>
+      </section>
+
+      <section>
+        <h2>Node Sync Signals</h2>
+        <p>Node sync comparison is available at <code>/api/nodes/compare</code> and the live <a href="https://vorliq.org/nodes/compare">Node Sync</a> page. <code>synced</code> means active, valid, same trusted height, and same latest hash. <code>behind</code> means valid but lower. <code>ahead</code> is a warning because a higher height is not automatically trusted until signed snapshots and audit exports verify the newer state. <code>forked</code> means a comparable latest hash mismatch. <code>stale</code>, <code>unreachable</code>, and <code>unknown</code> mean the operator should repair heartbeat, DNS/HTTPS, diagnostics, or missing data.</p>
       </section>
 
       <section>
