@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Verified Chain Bootstrap</title>
+    <meta name="description" content="Dry-run-first verified chain bootstrap for new Vorliq community nodes." />
+    <style>
+      :root { --bg:#020817; --panel:rgba(8,14,28,.56); --green:#86e33b; --cyan:#18d7c9; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.25); --warn:#ffd166; }
+      * { box-sizing:border-box; }
+      body { margin:0; min-width:320px; font-family:Inter,Arial,sans-serif; background:linear-gradient(180deg,#020817,#07182d 56%,#020817); color:var(--text); }
+      a { color:var(--cyan); font-weight:800; }
+      .wrap { width:min(1020px,calc(100% - 32px)); margin:0 auto; }
+      header, footer { border-color:var(--border); border-style:solid; border-width:0 0 1px; background:#071427; }
+      footer { border-width:1px 0 0; color:var(--muted); padding:24px 0; }
+      nav { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:18px 0; }
+      .links { display:flex; gap:12px; flex-wrap:wrap; }
+      main { padding:44px 0 64px; display:grid; gap:18px; }
+      section { border:1px solid var(--border); border-radius:14px; background:var(--panel); padding:22px; display:grid; gap:14px; }
+      .hero { background:transparent; border:0; padding:0 0 12px; }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+      .eyebrow { color:var(--green); font-size:.8rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+      h1,h2,p { margin:0; }
+      h1 { font-size:clamp(2.25rem,7vw,4.2rem); line-height:1; }
+      h2 { font-size:clamp(1.45rem,4vw,2.05rem); }
+      p, li { color:var(--muted); line-height:1.75; }
+      code, pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+      code { color:#e7f7ff; overflow-wrap:anywhere; }
+      pre { margin:0; overflow:auto; white-space:pre-wrap; border:1px solid var(--border); border-radius:10px; padding:14px; background:#020817; color:#e7f7ff; }
+      .warning { border-color:rgba(255,209,102,.48); }
+      @media (max-width:760px) { .grid { grid-template-columns:1fr; } main { padding-top:32px; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <strong>Vorliq</strong>
+        <div class="links">
+          <a href="index.html">Docs Home</a>
+          <a href="run-your-own-node.html">Run Your Own Node</a>
+          <a href="bootstrap-verification.html">Bootstrap Verification</a>
+          <a href="recovery.html">Recovery</a>
+        </div>
+      </nav>
+    </header>
+    <main class="wrap">
+      <section class="hero">
+        <span class="eyebrow">Verified Chain Bootstrap</span>
+        <h1>Bootstrap a new node without blindly trusting raw chain data</h1>
+        <p>Vorliq chain bootstrap is a dry-run-first process for new community nodes. It verifies signed snapshots, audit export hashes, chain hashes, previous-hash links, block hashes, and transaction ordering before it can write local <code>chain.json</code>.</p>
+      </section>
+      <section class="grid">
+        <article>
+          <h2>Dry-run first</h2>
+          <p>Dry-run mode is the default and writes nothing. It downloads public metadata from the trusted node, checks signatures and hashes, validates every block link, scans for forbidden secret markers, and prints a report.</p>
+          <pre><code>python3.12 tools/bootstrap_chain_from_public_node.py --trusted-node https://vorliq.org --data-dir ./blockchain/data</code></pre>
+        </article>
+        <article>
+          <h2>Write only by choice</h2>
+          <p>Write mode is only for a new node or a node whose data has already been backed up. The tool refuses to overwrite a non-empty <code>chain.json</code> unless <code>--force</code> is used manually.</p>
+          <pre><code>python3.12 tools/bootstrap_chain_from_public_node.py --trusted-node https://vorliq.org --data-dir ./blockchain/data --write</code></pre>
+        </article>
+      </section>
+      <section>
+        <h2>What gets verified</h2>
+        <ul>
+          <li><code>/api/bootstrap/package</code> exposes safe metadata and URLs, not the full chain body.</li>
+          <li><code>/api/snapshot/latest</code> and <code>/api/snapshot/verify</code> prove the public snapshot hash and Ed25519 signature status.</li>
+          <li><code>/api/audit/manifest</code> lists audit export hashes, including the chain export hash.</li>
+          <li>The chain export hash must match the manifest and bootstrap package.</li>
+          <li>Every block hash is recalculated and every <code>previous_hash</code> link is checked from genesis to the latest block.</li>
+          <li>The latest block hash must match the signed snapshot metadata and bootstrap package.</li>
+          <li>The downloaded public data is scanned for private keys, admin tokens, SSH keys, server paths, raw IP markers, raw user-agent markers, and bearer tokens.</li>
+        </ul>
+      </section>
+      <section class="warning">
+        <h2>Back up before overwrite</h2>
+        <p>Do not use <code>--force</code> unless you intentionally want to replace existing local chain data and have a tested backup. Forced write mode creates a timestamped backup beside the data directory first, then writes <code>chain.json</code> atomically and records safe public bootstrap metadata in <code>bootstrap.json</code>.</p>
+      </section>
+      <section>
+        <h2>Recover if bootstrap fails</h2>
+        <p>If dry-run fails, write nothing and inspect the exact failed check. Verify the trusted node with <code>node tools/bootstrap_verify_node.js https://vorliq.org</code>, check <a href="recovery.html">Recovery</a>, and try again only after the signed snapshot, audit manifest, and chain export agree.</p>
+      </section>
+      <section>
+        <h2>Verify after bootstrap</h2>
+        <pre><code>node tools/node_doctor.js --base-url http://127.0.0.1:5000 --trusted-node https://vorliq.org</code></pre>
+        <p>Node Doctor compares local height and latest hash with the trusted public node, checks snapshot verification, bootstrap status, audit availability, indexes, storage, registry metadata, readiness, and Linux services when available.</p>
+      </section>
+      <section class="warning">
+        <h2>What bootstrap does not prove</h2>
+        <p>Verified bootstrap is a technical integrity check for public chain data. It does not create legal, financial, banking, custody, investment, exchange, lending, profit, or future availability guarantees.</p>
+      </section>
+    </main>
+    <footer><div class="wrap">Dry-run first. Write only with intent and a backup.</div></footer>
+  </body>
+</html>

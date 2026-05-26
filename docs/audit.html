@@ -101,6 +101,7 @@
         <article class="card full">
           <h2>Historical Blocks</h2>
           <p>Audit exports do not rewrite historical blocks or change block hashes. Older blocks are exported as public chain data exactly for consistency checks. If legacy serialization prevents full hash reproduction in a future version, verification still checks block links, stored hashes, chain validity flags, and latest hash consistency.</p>
+          <p>The verified chain bootstrap tool uses the audit manifest and chain export hash to avoid blindly importing raw chain data. See <a href="bootstrap-chain.html">Verified Chain Bootstrap</a> for the dry-run and write-mode workflow.</p>
         </article>
 
         <article class="card full">

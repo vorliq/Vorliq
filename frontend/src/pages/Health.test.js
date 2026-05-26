@@ -28,6 +28,14 @@ beforeEach(() => {
         checks: [{ id: "secret_scan_passed", passed: true }],
         warnings: [],
       },
+      "/bootstrap/status": {
+        success: true,
+        chain_valid: true,
+        bootstrap_package_available: true,
+        snapshot_verify_available: true,
+        audit_export_available: true,
+        last_bootstrap_marker: { has_run: false },
+      },
       "/migration/readiness": { success: true, migration_supported: "dry_run_only", future_database_target: "postgresql", storage_backend: "json", database_enabled: false, postgres_active: false, postgres_schema_present: true, migration_phase: "preparation", chain_source_of_truth: "json", indexes_derived: true, rollback_plan_required: true },
       "/incidents/active": { success: true, incidents: [] },
       "/reports/weekly": { success: true, stats: { active_users: 1, transactions: 2 }, generated_at: "2026-05-25T12:00:00.000Z" },
@@ -43,7 +51,9 @@ test("Health shows snapshot summary", async () => {
   expect(await screen.findByRole("heading", { name: /node doctor/i })).toBeInTheDocument();
   expect(screen.getByText(/node tools\/node_doctor\.js/i)).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: /snapshot verification/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /bootstrap status/i })).toBeInTheDocument();
   expect(await screen.findByText(/0000latest/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/available/i).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/snapshot archive/i).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/valid/i).length).toBeGreaterThan(0);
   expect(screen.getByRole("link", { name: /open snapshot verification/i })).toHaveAttribute("href", "/snapshot");

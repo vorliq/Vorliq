@@ -169,6 +169,14 @@ function Readiness() {
                 <span>Archive signature</span>
                 <strong>{readiness.snapshot_archive_signature_valid ? "Valid" : "Review"}</strong>
               </div>
+              <div className="stat-card">
+                <span>Bootstrap package</span>
+                <strong>{readiness.bootstrap_package_available ? "Available" : "Review"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Bootstrap signature</span>
+                <strong>{readiness.bootstrap_package_snapshot_signature_verified ? "Verified" : "Review"}</strong>
+              </div>
             </div>
           </section>
 

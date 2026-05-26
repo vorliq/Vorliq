@@ -39,6 +39,7 @@
         <div class="links">
           <a href="index.html">Docs Home</a>
           <a href="bootstrap-verification.html">Bootstrap Verification</a>
+          <a href="bootstrap-chain.html">Chain Bootstrap</a>
           <a href="nodes.html">Nodes</a>
         </div>
       </nav>
@@ -78,6 +79,13 @@
         <pre><code>curl -fsSL https://raw.githubusercontent.com/vorliq/Vorliq/main/deployment/install_verified_node.sh -o install_verified_node.sh
 sudo bash install_verified_node.sh</code></pre>
         <p>The installer verifies first, installs Node.js 20, Python 3.12, nginx, Certbot, Git, app dependencies, systemd services, nginx routing, and then runs a one-shot heartbeat registration.</p>
+      </section>
+
+      <section>
+        <h2>Verified Chain Bootstrap</h2>
+        <p>After the trusted public node verifies, the installer asks whether to run a dry-run chain bootstrap. Dry-run is the default and writes nothing. It checks the signed snapshot, audit manifest, chain export hash, block hashes, previous-hash links, latest hash, transaction ordering, and public-data secret scan.</p>
+        <pre><code>python3.12 tools/bootstrap_chain_from_public_node.py --trusted-node https://vorliq.org --data-dir /home/vorliq/app/blockchain/data</code></pre>
+        <p>Write mode is off by default. Use it only for a new node or after a deliberate backup. See the <a href="bootstrap-chain.html">Verified Chain Bootstrap</a> guide before using force mode manually.</p>
       </section>
 
       <section>

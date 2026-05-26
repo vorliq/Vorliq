@@ -657,6 +657,32 @@ async function buildReadiness(options = {}) {
     },
   });
 
+  const bootstrapChainExport = (auditManifest.exports || []).find((item) => item.name === "chain") || {};
+  const bootstrapPackage = {
+    success: Boolean(auditResult.ok && snapshotResult.ok && snapshotVerification.success),
+    chain_height: numberOrNull(snapshotVerification.snapshot?.chain_height ?? auditManifest.chain_height),
+    latest_block_hash: snapshotVerification.snapshot?.latest_block_hash || auditManifest.latest_block_hash || null,
+    snapshot_signature_verified: signatureVerified,
+    audit_chain_hash: bootstrapChainExport.sha256 || null,
+  };
+  addCheck(checks, {
+    id: "bootstrap_package_available",
+    name: "Bootstrap package available",
+    category: "Bootstrap",
+    status: bootstrapPackage.success === true ? "pass" : "warning",
+    severity: "medium",
+    message:
+      bootstrapPackage.success === true
+        ? "Verified chain bootstrap metadata is available."
+        : "Verified chain bootstrap metadata is unavailable.",
+    safe_metadata: {
+      chain_height: numberOrNull(bootstrapPackage.chain_height),
+      latest_block_hash: bootstrapPackage.latest_block_hash || null,
+      snapshot_signature_verified: bootstrapPackage.snapshot_signature_verified === true,
+      audit_chain_hash_available: Boolean(bootstrapPackage.audit_chain_hash),
+    },
+  });
+
   const registrySummary = registryResult.value?.summary || {};
   const activeNodeCount = numberOrNull(registrySummary.active_node_count);
   const syncedNodeCount = numberOrNull(registrySummary.synced_node_count);
@@ -816,6 +842,10 @@ async function buildReadiness(options = {}) {
     snapshot_archive_available: archiveExists,
     snapshot_archive_latest_verified: archiveVerified,
     snapshot_archive_signature_valid: archiveSignatureValid,
+    bootstrap_package_available: Boolean(bootstrapPackage.success === true),
+    bootstrap_package_snapshot_signature_verified: bootstrapPackage.snapshot_signature_verified === true,
+    bootstrap_package_chain_height: numberOrNull(bootstrapPackage.chain_height),
+    bootstrap_package_latest_block_hash: bootstrapPackage.latest_block_hash || null,
     checks,
   };
 

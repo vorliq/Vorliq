@@ -27,6 +27,7 @@ function Health() {
   const [storageHealth, setStorageHealth] = useState(null);
   const [indexHealth, setIndexHealth] = useState(null);
   const [snapshotVerification, setSnapshotVerification] = useState(null);
+  const [bootstrapStatus, setBootstrapStatus] = useState(null);
   const [migrationReadiness, setMigrationReadiness] = useState(null);
   const [activeIncidents, setActiveIncidents] = useState([]);
   const [weeklyReport, setWeeklyReport] = useState(null);
@@ -57,6 +58,7 @@ function Health() {
         const storageRequest = api.get("/storage/health");
         const indexRequest = api.get("/indexes/health");
         const snapshotRequest = api.get("/snapshot/verify").catch(() => ({ data: null }));
+        const bootstrapRequest = api.get("/bootstrap/status").catch(() => ({ data: null }));
         const migrationRequest = api.get("/migration/readiness");
         const incidentsRequest = api.get("/incidents/active");
         const weeklyReportRequest = api.get("/reports/weekly");
@@ -73,6 +75,7 @@ function Health() {
           storageResponse,
           indexResponse,
           snapshotResponse,
+          bootstrapResponse,
           migrationResponse,
           incidentsResponse,
           weeklyReportResponse,
@@ -89,6 +92,7 @@ function Health() {
           storageRequest,
           indexRequest,
           snapshotRequest,
+          bootstrapRequest,
           migrationRequest,
           incidentsRequest,
           weeklyReportRequest,
@@ -127,6 +131,7 @@ function Health() {
           setStorageHealth(storageResponse.data);
           setIndexHealth(indexResponse.data);
           setSnapshotVerification(snapshotResponse.data);
+          setBootstrapStatus(bootstrapResponse.data);
           setMigrationReadiness(migrationResponse.data);
           setActiveIncidents(incidentsResponse.data.incidents || []);
           setWeeklyReport(weeklyReportResponse.data);
@@ -205,6 +210,39 @@ function Health() {
         <p className="help-text">
           Run <code>node tools/node_doctor.js --base-url http://127.0.0.1:5000 --trusted-node https://vorliq.org</code> after install or update.
         </p>
+      </section>
+
+      <section className="card card-pad health-section">
+        <div className="section-title">
+          <h2>Bootstrap Status</h2>
+          <span className={`status-badge ${bootstrapStatus?.chain_valid ? "pass" : "warning"}`}>
+            {bootstrapStatus?.success ? "available" : "unknown"}
+          </span>
+        </div>
+        {loading ? (
+          <Spinner label="Loading bootstrap status..." />
+        ) : bootstrapStatus?.success ? (
+          <div className="stats-grid compact-stats">
+            <div className="stat-card">
+              <span>Package</span>
+              <strong>{bootstrapStatus.bootstrap_package_available ? "Available" : "Review"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Snapshot verify</span>
+              <strong>{bootstrapStatus.snapshot_verify_available ? "Available" : "Review"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Audit export</span>
+              <strong>{bootstrapStatus.audit_export_available ? "Available" : "Review"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Bootstrap marker</span>
+              <strong>{bootstrapStatus.last_bootstrap_marker?.has_run ? "Recorded" : "Not recorded"}</strong>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">Bootstrap status is unavailable right now.</div>
+        )}
       </section>
 
       <section className="card card-pad health-section">
@@ -301,6 +339,10 @@ function Health() {
             <div className="stat-card">
               <span>Archive signature</span>
               <strong>{readiness?.snapshot_archive_signature_valid ? "Valid" : "Review"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Bootstrap package</span>
+              <strong>{readiness?.bootstrap_package_available ? "Available" : "Review"}</strong>
             </div>
           </div>
         ) : (

@@ -165,6 +165,9 @@ function Network() {
           <a className="button secondary small-button" href="/readiness">
             Readiness Page
           </a>
+          <a className="button secondary small-button" href="/bootstrap">
+            Bootstrap Node
+          </a>
         </div>
       </section>
 

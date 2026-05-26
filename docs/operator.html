@@ -37,6 +37,7 @@
       <nav class="wrap">
         <a class="brand" href="index.html">Vorliq</a>
         <a class="button" href="https://vorliq.org/admin">Operator Login</a>
+        <a class="button" href="bootstrap-chain.html">Chain Bootstrap</a>
       </nav>
     </header>
     <main class="wrap">
@@ -84,7 +85,7 @@ sudo systemctl restart vorliq-backend.service</code></pre>
         <h2>Post-Deploy Checks</h2>
         <p>After deployment, verify the public app, <code>/api/health</code>, <code>/api/deployment</code>, <code>/api/version/metadata</code>, <code>/api/system/self-check</code>, <code>/api/storage/health</code>, <code>/api/migration/readiness</code>, <code>/api/readiness</code>, the registry summary, and the status page. CI also runs read-only Playwright browser tests against production so route loading, mobile navigation, layout overflow, safe API responses, and non-destructive user journeys are checked before the deploy workflow runs. The deploy workflow then runs the public readiness CLI; a fail result blocks the workflow.</p>
         <p>Operators with the admin token can review <code>/api/admin/readiness</code> or the Admin Readiness tab for deeper safe metadata. Do not paste admin tokens into public reports, screenshots, or issue comments.</p>
-        <p>Use the <a href="run-your-own-node.html">Run Your Own Node</a> guide for verified community onboarding, and use the <a href="upgrades.html">Upgrade Guide</a> before updating self-hosted nodes.</p>
+        <p>Use the <a href="run-your-own-node.html">Run Your Own Node</a> guide for verified community onboarding, use <a href="bootstrap-chain.html">Verified Chain Bootstrap</a> for dry-run-first public chain import, and use the <a href="upgrades.html">Upgrade Guide</a> before updating self-hosted nodes.</p>
       </section>
 
       <section class="glass">

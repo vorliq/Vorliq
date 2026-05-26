@@ -21,6 +21,7 @@ function Footer() {
         { label: "Readiness", href: "/readiness", internal: true },
         { label: "Snapshot Verification", href: "/snapshot", internal: true },
         { label: "Snapshot Archive", href: "/snapshot-archive", internal: true },
+        { label: "Bootstrap Node", href: "/bootstrap", internal: true },
         { label: "Storage Roadmap", href: "/migration-readiness", internal: true },
         { label: "Profiles", href: "/profile", internal: true },
       ],

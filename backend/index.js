@@ -33,6 +33,7 @@ const systemRoutes = require("./routes/system");
 const analyticsRoutes = require("./routes/analytics");
 const storageRoutes = require("./routes/storage");
 const auditRoutes = require("./routes/audit");
+const bootstrapRoutes = require("./routes/bootstrap");
 const migrationRoutes = require("./routes/migration");
 const adminAuth = require("./middleware/adminAuth");
 const { sendError } = require("./utils/apiResponse");
@@ -258,6 +259,7 @@ app.use(readinessRoutes);
 app.use(systemRoutes);
 app.use(storageRoutes);
 app.use(auditRoutes);
+app.use(bootstrapRoutes);
 app.use(migrationRoutes);
 app.use(adminRoutes);
 

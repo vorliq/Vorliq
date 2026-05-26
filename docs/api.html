@@ -71,8 +71,28 @@
             <a href="operator.html">Operator Dashboard Guide</a>
             <a href="audit.html">Audit Export Guide</a>
             <a href="snapshot-verification.html">Snapshot Verification</a>
+            <a href="bootstrap-chain.html">Chain Bootstrap</a>
           </div>
         </div>
+        <section>
+          <h2>Bootstrap Package</h2>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method GET">GET</span>
+              <code class="path">/api/bootstrap/package</code>
+              <a class="try" href="https://vorliq.org/api/bootstrap/package">Try it</a>
+            </div>
+            <p>Returns safe read-only metadata for verified chain bootstrap: package version, source node, deployment commit, signed snapshot status, chain height, latest block hash, audit manifest hash, audit chain hash, and URLs for snapshot verification, audit manifest, and chain export. It does not return the full chain body or any secrets.</p>
+          </div>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method GET">GET</span>
+              <code class="path">/api/bootstrap/status</code>
+              <a class="try" href="https://vorliq.org/api/bootstrap/status">Try it</a>
+            </div>
+            <p>Returns safe local bootstrap metadata: chain height, latest hash, chain validity, availability of snapshot verification, audit export and bootstrap package, storage backend, index status, recommended trusted node, and a safe bootstrap marker if one exists.</p>
+          </div>
+        </section>
         <section>
           <h2>Snapshot Verification</h2>
           <div class="endpoint">

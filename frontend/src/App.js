@@ -44,6 +44,7 @@ import Readiness from "./pages/Readiness";
 import MigrationReadiness from "./pages/MigrationReadiness";
 import Snapshot from "./pages/Snapshot";
 import SnapshotArchive from "./pages/SnapshotArchive";
+import Bootstrap from "./pages/Bootstrap";
 import Admin from "./pages/Admin";
 import Notifications from "./pages/Notifications";
 import TransactionDetail from "./pages/TransactionDetail";
@@ -83,6 +84,7 @@ const moreLinks = [
   { to: "/migration-readiness", label: "Migration Readiness" },
   { to: "/snapshot", label: "Snapshot" },
   { to: "/snapshot-archive", label: "Snapshot Archive" },
+  { to: "/bootstrap", label: "Bootstrap" },
   { to: "/transparency", label: "Transparency" },
   { to: "/whitepaper", label: "Whitepaper" },
 ];
@@ -125,6 +127,7 @@ const mobileNavSections = [
       { to: "/migration-readiness", label: "Migration Readiness" },
       { to: "/snapshot", label: "Snapshot" },
       { to: "/snapshot-archive", label: "Snapshot Archive" },
+      { to: "/bootstrap", label: "Bootstrap" },
     ],
   },
   {
@@ -515,6 +518,7 @@ function AppShell() {
           <Route path="/migration-readiness" element={<MigrationReadiness />} />
           <Route path="/snapshot" element={<Snapshot />} />
           <Route path="/snapshot-archive" element={<SnapshotArchive />} />
+          <Route path="/bootstrap" element={<Bootstrap />} />
           <Route path="/audit" element={<Audit />} />
           <Route path="/transparency" element={<Transparency />} />
           <Route path="/login" element={<Login />} />

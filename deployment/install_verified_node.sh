@@ -163,6 +163,35 @@ install_app() {
   chmod 750 "${APP_DIR}/blockchain/data" "${APP_DIR}/backend/data" /home/vorliq/backups
 }
 
+run_verified_chain_bootstrap_prompt() {
+  local trusted_node_url="$1"
+  local app_dir_arg trusted_arg data_dir_arg
+  printf -v app_dir_arg '%q' "${APP_DIR}"
+  printf -v trusted_arg '%q' "${trusted_node_url}"
+  printf -v data_dir_arg '%q' "${APP_DIR}/blockchain/data"
+  echo
+  echo "Verified chain bootstrap can check the signed public snapshot, audit manifest, chain export hash, and block links before this node starts."
+  read -r -p "Run a dry-run chain bootstrap now? [Y/n]: " dry_run_answer
+  if [[ ! "${dry_run_answer}" =~ ^[Nn]$ ]]; then
+    sudo -u "${APP_USER}" -H bash -c "cd ${app_dir_arg} && python3.12 tools/bootstrap_chain_from_public_node.py --trusted-node ${trusted_arg} --data-dir ${data_dir_arg}"
+  else
+    echo "Skipped dry-run bootstrap. You can run it later from ${APP_DIR}."
+  fi
+
+  echo
+  echo "Write mode replaces local chain data only when chain.json is empty or missing."
+  echo "Use it for a new node. If chain.json already exists, this installer will not force overwrite it."
+  read -r -p "Write the verified public chain to this new node now? [y/N]: " write_answer
+  if [[ "${write_answer}" =~ ^[Yy]$ ]]; then
+    if [[ -s "${APP_DIR}/blockchain/data/chain.json" ]]; then
+      echo "Existing chain.json found. The installer will not force overwrite chain data."
+      echo "Read the recovery docs and run tools/bootstrap_chain_from_public_node.py --write --force manually only if you understand the risk and have a backup."
+    else
+      sudo -u "${APP_USER}" -H bash -c "cd ${app_dir_arg} && python3.12 tools/bootstrap_chain_from_public_node.py --trusted-node ${trusted_arg} --data-dir ${data_dir_arg} --write"
+    fi
+  fi
+}
+
 configure_env() {
   local trusted_node_url="$1"
   local public_node_url="$2"
@@ -441,6 +470,7 @@ main() {
   install_dependencies
   ensure_user_and_repo
   install_app
+  run_verified_chain_bootstrap_prompt "${trusted_node_url}"
   configure_env "${trusted_node_url}" "${public_node_url}" "${display_name}" "${region}" "${country}" "${operator_wallet}"
   write_services
 

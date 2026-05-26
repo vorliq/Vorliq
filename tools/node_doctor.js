@@ -39,7 +39,7 @@ async function getFetch() {
   return imported.default;
 }
 
-async function fetchJson(baseUrl, pathname, { timeout = 12000, query } = {}) {
+async function fetchJson(baseUrl, pathname, { timeout = 30000, query } = {}) {
   const fetchImpl = await getFetch();
   const url = new URL(pathname, `${baseUrl}/`);
   if (query) {
@@ -62,6 +62,18 @@ async function fetchJson(baseUrl, pathname, { timeout = 12000, query } = {}) {
 
 function statusRank(status) {
   return { PASS: 0, WARN: 1, FAIL: 2 }[status] ?? 2;
+}
+
+function chainHeight(data) {
+  const summary = data?.summary || data || {};
+  const value = summary.block_height ?? summary.chain_height ?? summary.height;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function latestHash(data) {
+  const summary = data?.summary || data || {};
+  return summary.last_block_hash || summary.latest_block_hash || summary.hash || null;
 }
 
 function createReporter() {
@@ -163,7 +175,7 @@ async function main() {
     explanation: data.success === true ? "Backend API is reachable." : "Backend API did not return success=true.",
   }), "sudo systemctl restart vorliq-backend.service");
 
-  await checkEndpoint(reporter, "chain summary", baseUrl, "/api/chain/summary", (data) => {
+  const localChainSummary = await checkEndpoint(reporter, "chain summary", baseUrl, "/api/chain/summary", (data) => {
     const summary = data.summary || data;
     if (summary.chain_valid === false || data.is_valid === false) {
       return { status: "FAIL", explanation: "Chain summary reports an invalid chain." };
@@ -186,6 +198,28 @@ async function main() {
     return { status: "FAIL", explanation: "Trusted node snapshot verification failed." };
   }, `node tools/bootstrap_verify_node.js ${trustedNode}`);
 
+  const trustedBootstrapPackage = await checkEndpoint(reporter, "bootstrap package", trustedNode, "/api/bootstrap/package", (data) => {
+    if (data.success === true && data.snapshot_signature_verified === true && data.audit_chain_hash && data.chain_export_url) {
+      return { status: "PASS", explanation: `Bootstrap package is available at height ${data.chain_height ?? "unknown"}.` };
+    }
+    if (data.success === true) {
+      return { status: "WARN", explanation: "Bootstrap package is available but signature or audit chain metadata is incomplete." };
+    }
+    return { status: "FAIL", explanation: "Bootstrap package did not return success=true." };
+  }, `node tools/bootstrap_verify_node.js ${trustedNode}`);
+
+  if (trustedBootstrapPackage?.chain_export_url) {
+    await checkEndpoint(reporter, "audit chain export", trustedNode, trustedBootstrapPackage.chain_export_url, (data) => {
+      const blocks = Array.isArray(data.blocks) ? data.blocks.length : 0;
+      if (data.success === true && blocks > 0) {
+        return { status: "PASS", explanation: `Audit chain export is available with ${blocks} blocks.` };
+      }
+      return { status: "WARN", explanation: "Audit chain export is reachable but did not include blocks." };
+    }, "Open /api/audit/manifest and verify the chain export entry.");
+  } else {
+    reporter.add("WARN", "audit chain export", "Skipped because the bootstrap package did not include a chain export URL.", "Check /api/bootstrap/package.");
+  }
+
   await checkEndpoint(reporter, "local snapshot verification", baseUrl, "/api/snapshot/verify", (data) => {
     if (data.verified === true && data.signature_verified === true) {
       return { status: "PASS", explanation: "Local snapshot is signed and verified." };
@@ -195,6 +229,36 @@ async function main() {
     }
     return { status: "WARN", explanation: "Local snapshot verification is unavailable or incomplete." };
   }, "Check local backend and snapshot configuration.");
+
+  const localBootstrapStatus = await checkEndpoint(reporter, "local bootstrap status", baseUrl, "/api/bootstrap/status", (data) => {
+    if (data.success === true && data.bootstrap_package_available === true) {
+      const marker = data.last_bootstrap_marker?.has_run ? "recorded" : "not recorded";
+      return { status: "PASS", explanation: `Bootstrap status is available; marker ${marker}.` };
+    }
+    if (data.success === true) {
+      return { status: "WARN", explanation: "Bootstrap status is available but package availability is not confirmed." };
+    }
+    return { status: "WARN", explanation: "Bootstrap status did not return success=true." };
+  }, "Restart backend after deploying bootstrap routes.");
+
+  if (trustedBootstrapPackage && localChainSummary) {
+    const localHeight = chainHeight(localChainSummary);
+    const trustedHeight = Number(trustedBootstrapPackage.chain_height);
+    const localLatestHash = latestHash(localChainSummary);
+    const trustedLatestHash = trustedBootstrapPackage.latest_block_hash || null;
+    if (Number.isFinite(trustedHeight) && localHeight !== null) {
+      if (localHeight < trustedHeight) {
+        reporter.add("WARN", "chain height comparison", `Local node is behind trusted node (${localHeight} < ${trustedHeight}).`, "Wait for sync or run a verified dry-run bootstrap.");
+      } else {
+        reporter.add("PASS", "chain height comparison", `Local height ${localHeight} is not behind trusted height ${trustedHeight}.`);
+      }
+      if (localHeight <= trustedHeight && localLatestHash && trustedLatestHash && localLatestHash !== trustedLatestHash) {
+        reporter.add("WARN", "latest hash comparison", "Local latest hash differs from the trusted node at the same or lower height.", "Verify chain state before syncing or writing bootstrap data.");
+      } else if (localLatestHash && trustedLatestHash) {
+        reporter.add("PASS", "latest hash comparison", "Latest hash comparison did not find a mismatch at the same or lower height.");
+      }
+    }
+  }
 
   await checkEndpoint(reporter, "registry summary", trustedNode, "/api/registry/summary", (data) => {
     const summary = data.summary || {};

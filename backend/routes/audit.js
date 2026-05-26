@@ -19,6 +19,7 @@ const FORBIDDEN_KEY_FRAGMENTS = ["private_key", "password", "admin_token", "serv
 const FORBIDDEN_VALUE_PATTERNS = [/BEGIN PRIVATE KEY/gi, /PRIVATE KEY/gi, /ADMIN_TOKEN/gi, /\/home\/vorliq/gi, /ssh-/gi];
 
 let cachedSnapshot = null;
+const cachedSnapshotsByTimestamp = new Map();
 
 function sortRecords(records, keys) {
   if (!Array.isArray(records)) return [];
@@ -168,21 +169,40 @@ async function buildAuditSnapshot(exportTimestamp = new Date().toISOString()) {
 }
 
 async function getAuditSnapshot(exportTimestamp = null) {
+  const now = Date.now();
+  for (const [timestamp, snapshot] of cachedSnapshotsByTimestamp.entries()) {
+    if (now - snapshot.createdAt >= SNAPSHOT_TTL_MS) {
+      cachedSnapshotsByTimestamp.delete(timestamp);
+    }
+  }
+
+  if (exportTimestamp) {
+    const timestampedSnapshot = cachedSnapshotsByTimestamp.get(exportTimestamp);
+    if (timestampedSnapshot && now - timestampedSnapshot.createdAt < SNAPSHOT_TTL_MS) {
+      return timestampedSnapshot;
+    }
+    const snapshot = await buildAuditSnapshot(exportTimestamp);
+    cachedSnapshotsByTimestamp.set(snapshot.manifest.export_timestamp, snapshot);
+    cachedSnapshot = snapshot;
+    return snapshot;
+  }
+
   const cachedTimestamp = cachedSnapshot?.manifest?.export_timestamp;
   if (
     cachedSnapshot &&
-    (!exportTimestamp || cachedTimestamp === exportTimestamp) &&
     Date.now() - cachedSnapshot.createdAt < SNAPSHOT_TTL_MS
   ) {
     return cachedSnapshot;
   }
-  cachedSnapshot = await buildAuditSnapshot(exportTimestamp || undefined);
+  cachedSnapshot = await buildAuditSnapshot();
+  cachedSnapshotsByTimestamp.set(cachedSnapshot.manifest.export_timestamp, cachedSnapshot);
   return cachedSnapshot;
 }
 
 router.get("/api/audit/manifest", async (req, res) => {
   try {
-    const snapshot = await getAuditSnapshot();
+    const requestedTimestamp = typeof req.query.export_timestamp === "string" ? req.query.export_timestamp : null;
+    const snapshot = await getAuditSnapshot(requestedTimestamp);
     res.json(snapshot.manifest);
   } catch (error) {
     logError(`GET /api/audit/manifest failed: ${error.message}`);
@@ -207,5 +227,6 @@ module.exports = router;
 module.exports.AUDIT_EXPORTS = AUDIT_EXPORTS;
 module.exports.buildAuditSnapshot = buildAuditSnapshot;
 module.exports.canonicalStringify = canonicalStringify;
+module.exports.getAuditSnapshot = getAuditSnapshot;
 module.exports.sha256Hex = sha256Hex;
 module.exports.sanitizePublicPayload = sanitizePublicPayload;

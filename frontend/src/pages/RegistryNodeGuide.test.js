@@ -37,6 +37,7 @@ test("Registry page shows Run Your Own Node section", async () => {
 
   expect(await screen.findByRole("heading", { name: /run your own node/i })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /node guide/i })).toHaveAttribute("href", "/docs/run-your-own-node.html");
+  expect(screen.getByRole("link", { name: /bootstrap node/i })).toHaveAttribute("href", "/bootstrap");
   expect(screen.getByText(/verify first/i)).toBeInTheDocument();
   expect(screen.getAllByText(/install/i).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/register/i).length).toBeGreaterThan(0);

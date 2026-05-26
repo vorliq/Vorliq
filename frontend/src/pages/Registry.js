@@ -242,9 +242,14 @@ function Registry() {
       <section className="card card-pad registry-section stack">
         <div className="section-title">
           <h2>Run Your Own Node</h2>
-          <a className="button secondary small-button" href="/docs/run-your-own-node.html">
-            Node Guide
-          </a>
+          <div className="button-row">
+            <a className="button secondary small-button" href="/docs/run-your-own-node.html">
+              Node Guide
+            </a>
+            <a className="button secondary small-button" href="/bootstrap">
+              Bootstrap Node
+            </a>
+          </div>
         </div>
         <div className="stats-grid compact-stats">
           <div className="stat-card">

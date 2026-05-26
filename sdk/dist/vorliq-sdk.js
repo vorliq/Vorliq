@@ -515,6 +515,15 @@ class VorliqSDK {
   }
 
   /**
+   * Gets the verified chain bootstrap package without downloading the full chain.
+   *
+   * @returns {Promise<object>} Safe bootstrap metadata with signed snapshot status and audit export URLs.
+   */
+  async getBootstrapPackage() {
+    return this.request("/api/bootstrap/package");
+  }
+
+  /**
    * Gets the latest cached public chain integrity snapshot.
    *
    * @returns {Promise<object>} Snapshot response with public chain, status, and hash metadata.
