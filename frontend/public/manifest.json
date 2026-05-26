@@ -8,14 +8,14 @@
       "type": "image/x-icon"
     },
     {
-      "src": "logo.png",
-      "type": "image/png",
-      "sizes": "1254x1254",
+      "src": "logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "128x128",
       "purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#0f0f1a",
-  "background_color": "#0f0f1a"
+  "theme_color": "#020817",
+  "background_color": "#020817"
 }
