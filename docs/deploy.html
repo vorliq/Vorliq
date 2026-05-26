@@ -35,11 +35,10 @@
 
       <section>
         <h2>Quick Setup</h2>
-        <p>The fastest way to deploy a Vorliq public node is to run the automated setup scripts on a fresh Ubuntu 22.04 server. The first command downloads and runs the installer. The second command runs the server configuration script from the cloned Vorliq repository.</p>
-        <pre>curl -fsSL https://raw.githubusercontent.com/vorliq/Vorliq/main/deployment/setup_server.sh -o setup_server.sh
-sudo bash setup_server.sh</pre>
-        <pre>sudo bash /home/vorliq/app/deployment/configure_server.sh</pre>
-        <p>After the scripts finish, the React web app is served through nginx, the backend API runs through systemd, the blockchain API listens on port 5001, and the node is ready to register with the Vorliq community.</p>
+        <p>Community operators should start with the verified installer in the <a href="run-your-own-node.html">Run Your Own Node</a> guide. It verifies the trusted public node before installing, preserves existing data, avoids creating snapshot signing keys, and does not create an admin token unless the operator explicitly asks.</p>
+        <pre>curl -fsSL https://raw.githubusercontent.com/vorliq/Vorliq/main/deployment/install_verified_node.sh -o install_verified_node.sh
+sudo bash install_verified_node.sh</pre>
+        <p>The older setup and configure scripts remain useful for production-maintainer deployments, but they are not the recommended first path for non-expert community operators.</p>
       </section>
 
       <section>

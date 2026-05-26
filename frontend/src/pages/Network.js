@@ -149,6 +149,27 @@ function Network() {
 
       <section className="card card-pad peer-section">
         <div className="section-title">
+          <h2>Node Operator Tools</h2>
+          <span className="eyebrow">Verified onboarding</span>
+        </div>
+        <div className="button-row">
+          <a className="button secondary small-button" href="/docs/run-your-own-node.html">
+            Node Guide
+          </a>
+          <a className="button secondary small-button" href="/docs/bootstrap-verification.html">
+            Bootstrap Verification
+          </a>
+          <a className="button secondary small-button" href="https://status.vorliq.org">
+            Status Page
+          </a>
+          <a className="button secondary small-button" href="/readiness">
+            Readiness Page
+          </a>
+        </div>
+      </section>
+
+      <section className="card card-pad peer-section">
+        <div className="section-title">
           <h2>Known Peers</h2>
           <span className="eyebrow">Auto refreshes every 10 seconds</span>
         </div>
@@ -203,7 +224,7 @@ function Network() {
                 </span>
               </span>
               <span className="meta-label">
-                Height {node.last_chain_height ?? "unknown"} · Reliability {node.reliability_score ?? 0}%
+                Height {node.last_chain_height ?? "unknown"} - Reliability {node.reliability_score ?? 0}%
               </span>
               <button
                 className="button secondary small-button"

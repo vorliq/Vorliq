@@ -40,6 +40,8 @@ beforeEach(() => {
 test("Health shows snapshot summary", async () => {
   render(<Health />);
 
+  expect(await screen.findByRole("heading", { name: /node doctor/i })).toBeInTheDocument();
+  expect(screen.getByText(/node tools\/node_doctor\.js/i)).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: /snapshot verification/i })).toBeInTheDocument();
   expect(await screen.findByText(/0000latest/i)).toBeInTheDocument();
   expect(screen.getAllByText(/snapshot archive/i).length).toBeGreaterThan(0);

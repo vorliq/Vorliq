@@ -84,7 +84,7 @@ sudo systemctl restart vorliq-backend.service</code></pre>
         <h2>Post-Deploy Checks</h2>
         <p>After deployment, verify the public app, <code>/api/health</code>, <code>/api/deployment</code>, <code>/api/version/metadata</code>, <code>/api/system/self-check</code>, <code>/api/storage/health</code>, <code>/api/migration/readiness</code>, <code>/api/readiness</code>, the registry summary, and the status page. CI also runs read-only Playwright browser tests against production so route loading, mobile navigation, layout overflow, safe API responses, and non-destructive user journeys are checked before the deploy workflow runs. The deploy workflow then runs the public readiness CLI; a fail result blocks the workflow.</p>
         <p>Operators with the admin token can review <code>/api/admin/readiness</code> or the Admin Readiness tab for deeper safe metadata. Do not paste admin tokens into public reports, screenshots, or issue comments.</p>
-        <p>Use the <a href="upgrades.html">Upgrade Guide</a> before updating self-hosted nodes.</p>
+        <p>Use the <a href="run-your-own-node.html">Run Your Own Node</a> guide for verified community onboarding, and use the <a href="upgrades.html">Upgrade Guide</a> before updating self-hosted nodes.</p>
       </section>
 
       <section class="glass">
@@ -126,6 +126,12 @@ Environment=PUBLIC_MINER_API_URL=http://127.0.0.1:5000
 sudo systemctl daemon-reload
 sudo systemctl enable --now vorliq-miner.service</code></pre>
         <p>To disable it, run <code>sudo systemctl disable --now vorliq-miner.service</code>. Never add private keys, admin tokens, SSH keys, or wallet passwords to the miner service.</p>
+      </section>
+
+      <section class="glass">
+        <h2>Community Node Doctor</h2>
+        <p>Community operators can run the read-only doctor after install or update. It checks local health, chain summary, diagnostics, storage, indexes, readiness, trusted snapshot verification, registry metadata, and local systemd services when available.</p>
+        <pre><code>node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
       </section>
     </main>
     <footer><div class="wrap">2026 Vorliq. Keep operator credentials private.</div></footer>

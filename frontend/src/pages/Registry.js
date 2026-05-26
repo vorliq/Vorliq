@@ -239,6 +239,37 @@ function Registry() {
         </section>
       )}
 
+      <section className="card card-pad registry-section stack">
+        <div className="section-title">
+          <h2>Run Your Own Node</h2>
+          <a className="button secondary small-button" href="/docs/run-your-own-node.html">
+            Node Guide
+          </a>
+        </div>
+        <div className="stats-grid compact-stats">
+          <div className="stat-card">
+            <span>Verify first</span>
+            <strong>Bootstrap</strong>
+          </div>
+          <div className="stat-card">
+            <span>Install</span>
+            <strong>Ubuntu</strong>
+          </div>
+          <div className="stat-card">
+            <span>Register</span>
+            <strong>Heartbeat</strong>
+          </div>
+          <div className="stat-card">
+            <span>Check health</span>
+            <strong>Doctor</strong>
+          </div>
+          <div className="stat-card">
+            <span>Backups</span>
+            <strong>Keep</strong>
+          </div>
+        </div>
+      </section>
+
       <div className="tabs" role="tablist" aria-label="Registry sections">
         {tabs.map((tab) => (
           <button

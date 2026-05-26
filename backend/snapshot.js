@@ -302,32 +302,43 @@ async function verifySnapshot(options = {}) {
       id: "latest_block_hash_matches_chain_summary",
       passed: currentChainResult.ok && Boolean(latestBlockHash) && latestBlockHash === currentSummaryHash,
       message: "Latest block hash matches the current chain summary.",
+      failureMessage: "Latest block hash does not match the current chain summary.",
     },
     {
       id: "latest_block_hash_matches_latest_block",
       passed: !currentBlockHash || latestBlockHash === currentBlockHash,
       message: "Latest block hash matches the latest public block when block metadata is available.",
+      failureMessage: "Latest block hash does not match the latest public block metadata.",
     },
     {
       id: "latest_block_hash_matches_index",
       passed: !snapshot.index_status?.latest_block_hash || snapshot.index_status.latest_block_hash === latestBlockHash,
       message: "Latest block hash matches index status when index metadata exposes it.",
+      failureMessage: "Latest block hash does not match index status metadata.",
     },
     {
       id: "audit_manifest_hash_matches_current",
       passed: snapshot.hashes?.audit_manifest === auditHash,
       message: "Audit manifest hash matches the current public audit manifest.",
+      failureMessage: "Audit manifest hash does not match the current public audit manifest.",
     },
     {
       id: "network_manifest_hash_matches_current",
       passed: snapshot.hashes?.network_manifest === networkHash,
       message: "Network manifest hash matches the current public network manifest.",
+      failureMessage: "Network manifest hash differs from the current public network manifest; this can happen when dynamic network metadata changes during verification.",
+      severity: "warning",
     },
   ];
 
   for (const check of extraChecks) {
-    verification.checks.push(check);
-    if (!check.passed) verification.errors.push(check.message);
+    if (!check.passed) check.message = check.failureMessage;
+    const { failureMessage, severity, ...publicCheck } = check;
+    verification.checks.push(publicCheck);
+    if (!check.passed) {
+      if (check.severity === "warning") verification.warnings.push(check.message);
+      else verification.errors.push(check.message);
+    }
   }
 
   const signatureChecks = [

@@ -9,12 +9,13 @@ const localNodeUrl =
   process.env.LOCAL_NODE_URL ||
   (isProduction ? "https://node.vorliq.org" : "http://localhost:5001");
 const displayName =
+  process.env.VORLIQ_NODE_DISPLAY_NAME ||
   process.env.VORLIQ_NODE_NAME ||
   process.env.NODE_DISPLAY_NAME ||
   (isProduction ? "Vorliq Public Node" : "Local Vorliq Node");
 const region = process.env.VORLIQ_NODE_REGION || (isProduction ? "London" : "");
 const country = process.env.VORLIQ_NODE_COUNTRY || (isProduction ? "United Kingdom" : "");
-const operatorWallet = process.env.VORLIQ_OPERATOR_WALLET || "";
+const operatorWallet = process.env.VORLIQ_NODE_OPERATOR_WALLET || process.env.VORLIQ_OPERATOR_WALLET || "";
 const commit = process.env.GITHUB_SHA || process.env.VORLIQ_COMMIT || "";
 const packageVersion = process.env.npm_package_version || "1.0.0";
 const softwareVersion = process.env.VORLIQ_SOFTWARE_VERSION || (commit ? commit.slice(0, 7) : `backend-${packageVersion}`);

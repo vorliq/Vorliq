@@ -15,10 +15,12 @@ beforeEach(() => {
   delete process.env.FLASK_URL;
   delete process.env.VORLIQ_NODE_URL;
   delete process.env.LOCAL_NODE_URL;
+  delete process.env.VORLIQ_NODE_DISPLAY_NAME;
   delete process.env.VORLIQ_NODE_NAME;
   delete process.env.NODE_DISPLAY_NAME;
   delete process.env.VORLIQ_NODE_REGION;
   delete process.env.VORLIQ_NODE_COUNTRY;
+  delete process.env.VORLIQ_NODE_OPERATOR_WALLET;
   delete process.env.VORLIQ_OPERATOR_WALLET;
   delete process.env.ADMIN_TOKEN;
   delete process.env.GITHUB_SHA;
@@ -115,5 +117,24 @@ describe("production heartbeat", () => {
     axios.post.mockRejectedValue({ response: { status: 500, data: { message: "registry unavailable" } } });
 
     await expect(heartbeat.sendHeartbeat()).resolves.toBeNull();
+  });
+
+  test("accepts community installer node identity environment names", () => {
+    const { heartbeat } = loadHeartbeat({
+      NODE_ENV: "production",
+      VORLIQ_NODE_URL: "https://community.example.org",
+      VORLIQ_NODE_DISPLAY_NAME: "Community Example",
+      VORLIQ_NODE_REGION: "Europe",
+      VORLIQ_NODE_COUNTRY: "Portugal",
+      VORLIQ_NODE_OPERATOR_WALLET: "VLQ_OPERATOR",
+    });
+
+    expect(heartbeat.basePayload()).toMatchObject({
+      node_url: "https://community.example.org",
+      display_name: "Community Example",
+      region: "Europe",
+      country: "Portugal",
+      operator_wallet_address: "VLQ_OPERATOR",
+    });
   });
 });

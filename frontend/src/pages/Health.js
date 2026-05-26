@@ -198,6 +198,16 @@ function Health() {
       <ErrorMessage message={errorMessage} />
 
       <section className="card card-pad health-section">
+        <div className="section-title">
+          <h2>Node Doctor</h2>
+          <span className="eyebrow">Read-only CLI</span>
+        </div>
+        <p className="help-text">
+          Run <code>node tools/node_doctor.js --base-url http://127.0.0.1:5000 --trusted-node https://vorliq.org</code> after install or update.
+        </p>
+      </section>
+
+      <section className="card card-pad health-section">
         <h2>Local Node Diagnostics</h2>
         {loading ? (
           <Spinner label="Loading node diagnostics..." />
