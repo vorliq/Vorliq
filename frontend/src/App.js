@@ -52,28 +52,27 @@ import BlockDetail from "./pages/BlockDetail";
 import Footer from "./components/Footer";
 import IncidentBanner from "./components/IncidentBanner";
 import api from "./helpers/api";
-import logo from "./assets/vorliq-mark.svg";
+import logo from "./assets/logo.png";
 
 const primaryLinks = [
   { to: "/", label: "Dashboard", end: true },
-  { to: "/lending", label: "Lending" },
-  { to: "/exchange", label: "Exchange" },
-  { to: "/governance", label: "Governance" },
-  { to: "/registry", label: "Registry" },
-  { to: "/admin", label: "Admin" },
-];
-
-const moreLinks = [
   { to: "/wallet", label: "Wallet" },
   { to: "/send", label: "Send" },
   { to: "/mine", label: "Mine" },
   { to: "/forum", label: "Forum" },
+];
+
+const moreLinks = [
   { to: "/chat", label: "Chat" },
   { to: "/profile", label: "Profiles" },
+  { to: "/lending", label: "Lending" },
+  { to: "/exchange", label: "Exchange" },
+  { to: "/governance", label: "Governance" },
   { to: "/treasury", label: "Treasury" },
   { to: "/faucet", label: "Faucet" },
   { to: "/price", label: "Price" },
   { to: "/leaderboard", label: "Leaderboard" },
+  { to: "/registry", label: "Registry" },
   { to: "/blockchain", label: "Blockchain" },
   { to: "/network", label: "Network" },
   { to: "/stats", label: "Stats" },
@@ -95,11 +94,6 @@ const mobileNavSections = [
     title: "Core",
     links: [
       { to: "/", label: "Dashboard", end: true },
-      { to: "/lending", label: "Lending" },
-      { to: "/exchange", label: "Exchange" },
-      { to: "/governance", label: "Governance" },
-      { to: "/registry", label: "Registry" },
-      { to: "/admin", label: "Admin" },
       { to: "/wallet", label: "Wallet" },
       { to: "/send", label: "Send" },
       { to: "/mine", label: "Mine" },
@@ -276,140 +270,118 @@ function AppShell() {
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
-      <nav className="app-sidebar navbar" aria-label="Primary navigation">
-        <NavLink className="sidebar-brand" to="/">
-          <img className="brand-logo" src={logo} alt="Vorliq logo" />
-          <span>
-            <strong>Vorliq</strong>
-            <small>Self-contained blockchain</small>
-          </span>
-        </NavLink>
+      <nav className="navbar">
+        <div className="navbar-inner">
+          <NavLink className="brand" to="/">
+            <img className="brand-logo" src={logo} alt="Vorliq logo" />
+            <span
+              className={`connection-dot ${backendOnline ? "online" : "offline"}`}
+              title={backendOnline ? "all systems running" : "backend offline"}
+              aria-label={backendOnline ? "all systems running" : "backend offline"}
+            />
+            <span>Vorliq</span>
+          </NavLink>
 
-        <div className="sidebar-links" id="primary-navigation">
-          {primaryLinks.map((link) => (
-            <NavLink className="nav-link" to={link.to} end={link.end} key={link.to}>
-              <NavIcon label={link.label} />
-              <span>{link.label}</span>
-            </NavLink>
-          ))}
-          <div className="more-menu" ref={moreMenuRef}>
-            <button
-              className={`nav-link more-trigger ${moreOpen ? "active" : ""}`}
-              type="button"
-              aria-haspopup="menu"
-              aria-expanded={moreOpen}
-              aria-controls="more-navigation"
-              onClick={() => setMoreOpen((open) => !open)}
-            >
-              <NavIcon label="More" />
-              <span>More</span>
-              <span aria-hidden="true">+</span>
-            </button>
-            <div
-              className={`more-dropdown ${moreOpen ? "open" : ""}`}
-              id="more-navigation"
-              role="menu"
-              aria-label="More navigation"
-            >
-              {moreLinks.map((link) => (
-                <NavLink
-                  className="more-link"
-                  to={link.to}
-                  role="menuitem"
-                  key={link.to}
-                  onClick={() => setMoreOpen(false)}
-                >
+          <button
+            className={`hamburger ${mobileNavOpen ? "is-open" : ""}`}
+            type="button"
+            ref={hamburgerRef}
+            aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={mobileNavOpen}
+            aria-controls="mobile-navigation"
+            onClick={() => setMobileNavOpen((open) => !open)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+
+          <div className="desktop-navigation" id="primary-navigation">
+            <div className="primary-links" aria-label="Primary navigation">
+              {primaryLinks.map((link) => (
+                <NavLink className="nav-link" to={link.to} end={link.end} key={link.to}>
                   {link.label}
                 </NavLink>
               ))}
+              <div className="more-menu" ref={moreMenuRef}>
+                <button
+                  className={`nav-link more-trigger ${moreOpen ? "active" : ""}`}
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={moreOpen}
+                  aria-controls="more-navigation"
+                  onClick={() => setMoreOpen((open) => !open)}
+                >
+                  More
+                  <span aria-hidden="true">+</span>
+                </button>
+                <div
+                  className={`more-dropdown ${moreOpen ? "open" : ""}`}
+                  id="more-navigation"
+                  role="menu"
+                  aria-label="More navigation"
+                >
+                  {moreLinks.map((link) => (
+                    <NavLink
+                      className="more-link"
+                      to={link.to}
+                      role="menuitem"
+                      key={link.to}
+                      onClick={() => setMoreOpen(false)}
+                    >
+                      {link.label}
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="nav-tools">
+              <button
+                className="icon-button"
+                type="button"
+                onClick={toggleTheme}
+                aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+                aria-pressed={theme === "light"}
+                title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              >
+                {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+              </button>
+              <button
+                className="icon-button notification-bell"
+                type="button"
+                onClick={() => {
+                  setNotificationsOpen(false);
+                  navigate("/notifications");
+                }}
+                aria-label="Open notifications page"
+                title="Notifications"
+              >
+                <BellIcon />
+                {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+              </button>
+            </div>
+
+            <div className="auth-actions">
+              {isLoggedIn ? (
+                <>
+                  <NavLink className="wallet-chip" to="/account">
+                    {wallet.address.slice(0, 12)}
+                  </NavLink>
+                  <button className="button secondary nav-button" type="button" onClick={logout}>
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <NavLink className="button nav-button" to="/login">
+                  Login
+                </NavLink>
+              )}
             </div>
           </div>
-        </div>
 
-        <section className="sidebar-network-card" aria-label="Vorliq network status">
-          <span className={`connection-dot ${backendOnline ? "online" : "offline"}`} />
-          <div>
-            <strong>Vorliq Network</strong>
-            <span>{backendOnline ? "Healthy" : "Checking"}</span>
-          </div>
-        </section>
-
-        <div className="sidebar-safety-card">
-          <ShieldIcon />
-          <div>
-            <strong>Self-custody blockchain</strong>
-            <span>No external chain dependency. Back up keys before transacting.</span>
-          </div>
-        </div>
-
-        <div className="sidebar-tools">
-          <div className="nav-tools">
-            <button
-              className="icon-button"
-              type="button"
-              onClick={toggleTheme}
-              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-              aria-pressed={theme === "light"}
-              title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-            >
-              {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-            </button>
-            <button
-              className="icon-button notification-bell"
-              type="button"
-              onClick={() => {
-                setNotificationsOpen(false);
-                navigate("/notifications");
-              }}
-              aria-label="Open notifications page"
-              title="Notifications"
-            >
-              <BellIcon />
-              {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
-            </button>
-          </div>
-
-          <div className="auth-actions">
-            {isLoggedIn ? (
-              <>
-                <NavLink className="wallet-chip" to="/account">
-                  {wallet.address.slice(0, 12)}
-                </NavLink>
-                <button className="button secondary nav-button" type="button" onClick={logout}>
-                  Logout
-                </button>
-              </>
-            ) : (
-              <NavLink className="button nav-button" to="/login">
-                Login
-              </NavLink>
-            )}
-          </div>
         </div>
       </nav>
-
-      <header className="mobile-topbar">
-        <NavLink className="sidebar-brand" to="/">
-          <img className="brand-logo" src={logo} alt="Vorliq logo" />
-          <span>
-            <strong>Vorliq</strong>
-            <small>Self-contained blockchain</small>
-          </span>
-        </NavLink>
-        <button
-          className={`hamburger ${mobileNavOpen ? "is-open" : ""}`}
-          type="button"
-          ref={hamburgerRef}
-          aria-label={mobileNavOpen ? "Close navigation menu" : "Open navigation menu"}
-          aria-expanded={mobileNavOpen}
-          aria-controls="mobile-navigation"
-          onClick={() => setMobileNavOpen((open) => !open)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
-      </header>
 
       <div
         className={`mobile-drawer-backdrop ${mobileNavOpen ? "nav-open" : ""}`}
@@ -515,26 +487,6 @@ function AppShell() {
       <AnalyticsRouteTracker />
 
       <main id="main-content" tabIndex="-1">
-        <div className="app-command-bar" aria-label="Vorliq application status">
-          <div>
-            <span className="command-kicker">Vorliq workspace</span>
-            <strong>Own-chain VLQ ledger, wallets, mining, and community finance tools.</strong>
-          </div>
-          <div className="command-actions">
-            <span className={`command-status ${backendOnline ? "online" : "offline"}`}>
-              {backendOnline ? "Backend online" : "Backend checking"}
-            </span>
-            {isLoggedIn ? (
-              <NavLink className="button secondary command-button" to="/account">
-                Account
-              </NavLink>
-            ) : (
-              <NavLink className="button command-button" to="/login">
-                Login
-              </NavLink>
-            )}
-          </div>
-        </div>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/wallet" element={<Wallet />} />
@@ -601,83 +553,6 @@ function AppShell() {
 }
 
 export { mobileNavSections as navSections, moreLinks, primaryLinks };
-
-function NavIcon({ label }) {
-  const normalized = label.toLowerCase();
-  if (normalized.includes("dashboard")) {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 11.5 12 5l8 6.5" />
-        <path d="M6.5 10.5V19h11v-8.5" />
-        <path d="M10 19v-5h4v5" />
-      </svg>
-    );
-  }
-  if (normalized.includes("lending")) {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 17c3-3 5-3 8 0s5 3 8 0" />
-        <path d="M7 8h10" />
-        <path d="M8 12h8" />
-        <path d="M12 4v12" />
-      </svg>
-    );
-  }
-  if (normalized.includes("exchange")) {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M7 7h12l-3-3" />
-        <path d="M17 17H5l3 3" />
-        <path d="M19 7l-3 3" />
-        <path d="M5 17l3-3" />
-      </svg>
-    );
-  }
-  if (normalized.includes("governance")) {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M5 20h14" />
-        <path d="M7 10h10" />
-        <path d="M8 10v10" />
-        <path d="M16 10v10" />
-        <path d="M12 4 5 10h14L12 4Z" />
-      </svg>
-    );
-  }
-  if (normalized.includes("registry")) {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M6 7h12v10H6z" />
-        <path d="M9 7V4h6v3" />
-        <path d="M9 12h6" />
-        <path d="M9 15h4" />
-      </svg>
-    );
-  }
-  if (normalized.includes("admin")) {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 3 5 6v5c0 4.5 2.8 8 7 10 4.2-2 7-5.5 7-10V6l-7-3Z" />
-        <path d="M9.5 12.5 11 14l3.5-4" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M5 12h14" />
-      <path d="M12 5v14" />
-    </svg>
-  );
-}
-
-function ShieldIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 3 5 6v5c0 4.5 2.8 8 7 10 4.2-2 7-5.5 7-10V6l-7-3Z" />
-      <path d="M9.5 12.5 11 14l3.5-4" />
-    </svg>
-  );
-}
 
 function SunIcon() {
   return (
