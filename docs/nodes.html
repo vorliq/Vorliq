@@ -47,6 +47,7 @@
             <a class="button" href="run-your-own-node.html">Run a Node</a>
             <a class="button" href="bootstrap-chain.html">Bootstrap Chain</a>
             <a class="button" href="node-sync.html">Node Sync</a>
+            <a class="button" href="node-lifecycle.html">Node Lifecycle</a>
             <a class="button" href="deploy.html">Deploy</a>
             <a class="button primary" href="https://vorliq.org/registry">Open Registry</a>
           </div>
@@ -70,6 +71,10 @@
           <p>Operators can register a public node URL with display metadata. Heartbeats update chain height, last block hash, software version, sync status, and recent health history.</p>
         </article>
         <article class="card stack">
+          <h2>Lifecycle and archival</h2>
+          <p>Registry lifecycle states are <code>active</code>, <code>stale</code>, <code>inactive</code>, <code>archived</code>, and <code>retired</code>. Archived and retired nodes are hidden from default live views but preserved in history. Old localhost or test nodes may appear as stale or inactive until a protected admin archives them. Do not manually edit <code>registry.json</code>.</p>
+        </article>
+        <article class="card stack">
           <h2>Trust signals</h2>
           <p>Reliability is the percentage of recent checks that were online and synced. Uptime is the percentage of recent checks that were online. These are operational signals, not identity verification.</p>
         </article>
@@ -81,7 +86,7 @@
 
       <section class="card stack" style="margin-top:16px">
         <h2>Register and connect</h2>
-        <p>Use the <a href="run-your-own-node.html">Run Your Own Node</a> guide to verify the trusted public node first, install the app, configure node identity, register with heartbeat metadata, run a dry-run <a href="bootstrap-chain.html">verified chain bootstrap</a>, and run the doctor. Use the Registry page to inspect public nodes with a safe HTTP or HTTPS URL, display name, region, country, and optional operator wallet. Use the Network page to add active registry nodes to your peer list.</p>
+        <p>Use the <a href="run-your-own-node.html">Run Your Own Node</a> guide to verify the trusted public node first, install the app, configure node identity, register with heartbeat metadata, run a dry-run <a href="bootstrap-chain.html">verified chain bootstrap</a>, and run the doctor. Use the Registry page to inspect public nodes with a safe HTTP or HTTPS URL, display name, region, country, and optional operator wallet. Use the Network page to add active registry nodes to your peer list. See <a href="node-lifecycle.html">Node Lifecycle</a> before archiving, restoring, or retiring nodes.</p>
         <p>More independent nodes improve availability and make it easier for the community to compare chain height, block hash, and live sync status. Use <a href="node-sync.html">Node Sync</a> or <a href="https://vorliq.org/nodes/compare">the live comparison page</a> to see fork awareness. Do not manually edit <code>chain.json</code>; recover forked nodes with dry-run bootstrap first.</p>
       </section>
     </main>

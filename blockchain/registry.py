@@ -10,10 +10,14 @@ from logger import vorliq_logger
 
 class NodeRegistry:
     active_window_seconds = 30 * 60
+    stale_window_seconds = 7 * 24 * 60 * 60
     history_limit = 100
+    lifecycle_history_limit = 100
     display_name_limit = 64
     description_limit = 300
     location_limit = 80
+    lifecycle_statuses = {"active", "stale", "inactive", "archived", "retired"}
+    explicit_lifecycle_statuses = {"archived", "retired"}
 
     def __init__(self) -> None:
         self.registered_nodes: dict[str, dict[str, Any]] = {}
@@ -119,7 +123,7 @@ class NodeRegistry:
         return [
             self._public_node(node, profile_lookup)
             for node in self._sorted_nodes()
-            if self._is_active(node, cutoff)
+            if self._is_active(node, cutoff) and self.classify_node_lifecycle(node)["lifecycle_status"] == "active"
         ]
 
     def get_all_nodes(
@@ -127,12 +131,20 @@ class NodeRegistry:
         status: str | None = None,
         country: str | None = None,
         sync_status: str | None = None,
+        lifecycle_status: str | None = None,
+        include_archived: bool = False,
         profile_lookup: Callable[[str], dict[str, Any] | None] | None = None,
     ) -> list[dict[str, Any]]:
         cutoff = time.time() - self.active_window_seconds
+        lifecycle_filter = self._normalize_lifecycle_status(lifecycle_status) if lifecycle_status else ""
         nodes = []
         for node in self._sorted_nodes():
             public = self._public_node(node, profile_lookup)
+            node_lifecycle = str(public.get("lifecycle_status") or "inactive")
+            if not include_archived and not lifecycle_filter and node_lifecycle in {"archived", "retired"}:
+                continue
+            if lifecycle_filter and node_lifecycle != lifecycle_filter:
+                continue
             if status:
                 normalized_status = status.lower()
                 if normalized_status == "active" and not self._is_active(node, cutoff):
@@ -157,6 +169,18 @@ class NodeRegistry:
             return None
         return self._public_node(self._normalize_node(node, normalized_url), profile_lookup)
 
+    def get_lifecycle_nodes(
+        self,
+        lifecycle_status: str | None = None,
+        include_archived: bool = False,
+        profile_lookup: Callable[[str], dict[str, Any] | None] | None = None,
+    ) -> list[dict[str, Any]]:
+        return self.get_all_nodes(
+            lifecycle_status=lifecycle_status,
+            include_archived=include_archived or bool(lifecycle_status),
+            profile_lookup=profile_lookup,
+        )
+
     def get_summary(self, public_chain_height: int = 0) -> dict[str, Any]:
         cutoff = time.time() - self.active_window_seconds
         active = 0
@@ -169,7 +193,8 @@ class NodeRegistry:
         reliability_scores: list[int] = []
 
         for node in self._sorted_nodes():
-            if self._is_active(node, cutoff):
+            lifecycle = self.classify_node_lifecycle(node)
+            if lifecycle["lifecycle_status"] == "active":
                 active += 1
             sync_status = self._current_sync_status(node, public_chain_height)
             if sync_status == "synced":
@@ -197,7 +222,147 @@ class NodeRegistry:
             "average_reliability_score": average_reliability,
             "highest_chain_height": highest_height,
             "latest_block_hash": latest_hash,
+            **self.summarize_node_lifecycle(),
         }
+
+    def summarize_node_lifecycle(self) -> dict[str, int]:
+        summary = {
+            "active_count": 0,
+            "stale_count": 0,
+            "inactive_count": 0,
+            "archived_count": 0,
+            "retired_count": 0,
+            "visible_public_count": 0,
+            "total_count": len(self.registered_nodes),
+        }
+        for node in self._sorted_nodes():
+            lifecycle_status = self.classify_node_lifecycle(node)["lifecycle_status"]
+            key = f"{lifecycle_status}_count"
+            if key in summary:
+                summary[key] += 1
+            if lifecycle_status not in {"archived", "retired"}:
+                summary["visible_public_count"] += 1
+        return summary
+
+    def archive_node(
+        self,
+        node_url: str,
+        reason: str,
+        changed_by: str = "admin",
+        trusted_public_node_url: str = "https://node.vorliq.org",
+        force: bool = False,
+    ) -> dict[str, Any]:
+        normalized_url = self._normalize_node_url(node_url)
+        trusted_url = self._normalize_node_url(trusted_public_node_url)
+        if normalized_url == trusted_url and not force:
+            raise ValueError("Trusted public node cannot be archived without force=true.")
+        return self._set_lifecycle_status(normalized_url, "archived", reason, changed_by)
+
+    def restore_node(self, node_url: str, reason: str, changed_by: str = "admin") -> dict[str, Any]:
+        normalized_url = self._normalize_node_url(node_url)
+        node = self._require_registry_node(normalized_url)
+        current = self.classify_node_lifecycle(node)
+        restored = self._classify_time_based_lifecycle(node)
+        updated = self.apply_node_lifecycle(
+            node,
+            {
+                "lifecycle_status": restored,
+                "reason": reason,
+                "changed_by": changed_by,
+                "from_status": current["lifecycle_status"],
+            },
+        )
+        updated["lifecycle_status"] = ""
+        updated["archived_at"] = ""
+        updated["archived_by"] = ""
+        updated["retired_at"] = ""
+        updated["retired_by"] = ""
+        self.registered_nodes[normalized_url] = self._normalize_node(updated, normalized_url)
+        return self.get_node(normalized_url) or self._public_node(updated)
+
+    def retire_node(self, node_url: str, reason: str, changed_by: str = "admin") -> dict[str, Any]:
+        normalized_url = self._normalize_node_url(node_url)
+        return self._set_lifecycle_status(normalized_url, "retired", reason, changed_by)
+
+    def _set_lifecycle_status(self, normalized_url: str, status: str, reason: str, changed_by: str) -> dict[str, Any]:
+        node = self._require_registry_node(normalized_url)
+        updated = self.apply_node_lifecycle(
+            node,
+            {
+                "lifecycle_status": status,
+                "reason": reason,
+                "changed_by": changed_by,
+            },
+        )
+        self.registered_nodes[normalized_url] = self._normalize_node(updated, normalized_url)
+        return self.get_node(normalized_url) or self._public_node(updated)
+
+    def _require_registry_node(self, normalized_url: str) -> dict[str, Any]:
+        node = self.registered_nodes.get(normalized_url)
+        if not node:
+            raise ValueError("Node not found")
+        return self._normalize_node(node, normalized_url)
+
+    def classify_node_lifecycle(
+        self,
+        node: dict[str, Any],
+        now: float | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        now = float(now if now is not None else time.time())
+        options = options or {}
+        normalized_status = self._normalize_lifecycle_status(node.get("lifecycle_status"))
+        base = {
+            "lifecycle_reason": self._optional_text(node.get("lifecycle_reason"), "lifecycle_reason", 300),
+            "archived_at": self._optional_text(node.get("archived_at"), "archived_at", 80),
+            "archived_by": self._optional_text(node.get("archived_by"), "archived_by", 80),
+            "retired_at": self._optional_text(node.get("retired_at"), "retired_at", 80),
+            "retired_by": self._optional_text(node.get("retired_by"), "retired_by", 80),
+            "last_lifecycle_change": self._optional_text(node.get("last_lifecycle_change"), "last_lifecycle_change", 80),
+            "lifecycle_history": [
+                self._normalize_lifecycle_history_entry(entry)
+                for entry in (node.get("lifecycle_history") if isinstance(node.get("lifecycle_history"), list) else [])
+            ][-self.lifecycle_history_limit :],
+        }
+        if normalized_status in self.explicit_lifecycle_statuses:
+            return {"lifecycle_status": normalized_status, **base}
+        return {"lifecycle_status": self._classify_time_based_lifecycle(node, now, options), **base}
+
+    def apply_node_lifecycle(self, node: dict[str, Any], lifecycle_update: dict[str, Any]) -> dict[str, Any]:
+        status = self._normalize_lifecycle_status(lifecycle_update.get("lifecycle_status"))
+        if not status:
+            raise ValueError("lifecycle_status is required")
+        now_iso = self._optional_text(lifecycle_update.get("timestamp") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "timestamp", 80)
+        reason = self._optional_text(lifecycle_update.get("reason") or lifecycle_update.get("lifecycle_reason"), "lifecycle_reason", 300)
+        changed_by = self._optional_text(lifecycle_update.get("changed_by") or "admin", "changed_by", 80) or "admin"
+        previous_status = self._normalize_lifecycle_status(lifecycle_update.get("from_status")) or self.classify_node_lifecycle(node)["lifecycle_status"]
+        updated = dict(node)
+        history = [
+            self._normalize_lifecycle_history_entry(entry)
+            for entry in (updated.get("lifecycle_history") if isinstance(updated.get("lifecycle_history"), list) else [])
+        ]
+        history.append(
+            self._normalize_lifecycle_history_entry(
+                {
+                    "timestamp": now_iso,
+                    "from_status": previous_status,
+                    "to_status": status,
+                    "reason": reason,
+                    "changed_by": changed_by,
+                }
+            )
+        )
+        updated["lifecycle_status"] = status if status in self.explicit_lifecycle_statuses else ""
+        updated["lifecycle_reason"] = reason
+        updated["last_lifecycle_change"] = now_iso
+        updated["lifecycle_history"] = history[-self.lifecycle_history_limit :]
+        if status == "archived":
+            updated["archived_at"] = now_iso
+            updated["archived_by"] = changed_by
+        if status == "retired":
+            updated["retired_at"] = now_iso
+            updated["retired_by"] = changed_by
+        return updated
 
     def mark_offline(self, node_url: str, message: str = "Node health check failed") -> dict[str, Any] | None:
         normalized_url = self._normalize_node_url(node_url)
@@ -255,6 +420,22 @@ class NodeRegistry:
         normalized["sync_status"] = self._optional_text(normalized.get("sync_status") or "unknown", "sync_status", 32)
         normalized["is_public"] = bool(normalized.get("is_public", True))
         normalized["is_verified_operator"] = bool(normalized.get("is_verified_operator", False))
+        normalized["lifecycle_status"] = (
+            self._normalize_lifecycle_status(normalized.get("lifecycle_status"))
+            if self._normalize_lifecycle_status(normalized.get("lifecycle_status")) in self.explicit_lifecycle_statuses
+            else ""
+        )
+        normalized["lifecycle_reason"] = self._optional_text(normalized.get("lifecycle_reason"), "lifecycle_reason", 300)
+        normalized["archived_at"] = self._optional_text(normalized.get("archived_at"), "archived_at", 80)
+        normalized["archived_by"] = self._optional_text(normalized.get("archived_by"), "archived_by", 80)
+        normalized["retired_at"] = self._optional_text(normalized.get("retired_at"), "retired_at", 80)
+        normalized["retired_by"] = self._optional_text(normalized.get("retired_by"), "retired_by", 80)
+        normalized["last_lifecycle_change"] = self._optional_text(normalized.get("last_lifecycle_change"), "last_lifecycle_change", 80)
+        lifecycle_history = normalized.get("lifecycle_history") if isinstance(normalized.get("lifecycle_history"), list) else []
+        normalized["lifecycle_history"] = [
+            self._normalize_lifecycle_history_entry(entry)
+            for entry in lifecycle_history
+        ][-self.lifecycle_history_limit :]
         history = normalized.get("status_history") if isinstance(normalized.get("status_history"), list) else []
         normalized["status_history"] = [self._normalize_history_entry(entry) for entry in history][-self.history_limit :]
         return normalized
@@ -265,6 +446,7 @@ class NodeRegistry:
         profile_lookup: Callable[[str], dict[str, Any] | None] | None = None,
     ) -> dict[str, Any]:
         normalized = self._normalize_node(node, str(node.get("node_url")))
+        lifecycle = self.classify_node_lifecycle(normalized)
         public = {
             "node_url": normalized["node_url"],
             "display_name": normalized["display_name"],
@@ -287,7 +469,15 @@ class NodeRegistry:
             "sync_status": normalized["sync_status"],
             "is_public": normalized["is_public"],
             "is_verified_operator": normalized["is_verified_operator"],
-            "active": self._is_active(normalized),
+            "active": lifecycle["lifecycle_status"] == "active",
+            "lifecycle_status": lifecycle["lifecycle_status"],
+            "lifecycle_reason": lifecycle["lifecycle_reason"],
+            "archived_at": lifecycle["archived_at"],
+            "archived_by": lifecycle["archived_by"],
+            "retired_at": lifecycle["retired_at"],
+            "retired_by": lifecycle["retired_by"],
+            "last_lifecycle_change": lifecycle["last_lifecycle_change"],
+            "lifecycle_history": lifecycle["lifecycle_history"],
             "status_history": normalized["status_history"],
         }
         wallet = normalized.get("operator_wallet_address")
@@ -331,6 +521,17 @@ class NodeRegistry:
             "message": self._optional_text(entry.get("message"), "message", 160),
         }
 
+    def _normalize_lifecycle_history_entry(self, entry: Any) -> dict[str, Any]:
+        if not isinstance(entry, dict):
+            entry = {}
+        return {
+            "timestamp": self._optional_text(entry.get("timestamp") or entry.get("changed_at"), "timestamp", 80),
+            "from_status": self._normalize_lifecycle_status(entry.get("from_status") or entry.get("fromStatus")),
+            "to_status": self._normalize_lifecycle_status(entry.get("to_status") or entry.get("toStatus") or entry.get("lifecycle_status")) or "inactive",
+            "reason": self._optional_text(entry.get("reason") or entry.get("lifecycle_reason"), "reason", 300),
+            "changed_by": self._optional_text(entry.get("changed_by") or entry.get("changedBy") or "system", "changed_by", 80) or "system",
+        }
+
     def _recalculate_scores(self, node: dict[str, Any]) -> None:
         history = node.get("status_history") if isinstance(node.get("status_history"), list) else []
         if not history:
@@ -353,6 +554,32 @@ class NodeRegistry:
     def _is_active(self, node: dict[str, Any], cutoff: float | None = None) -> bool:
         cutoff = cutoff if cutoff is not None else time.time() - self.active_window_seconds
         return float(node.get("last_seen") or 0) >= cutoff
+
+    def _classify_time_based_lifecycle(
+        self,
+        node: dict[str, Any],
+        now: float | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> str:
+        now = float(now if now is not None else time.time())
+        options = options or {}
+        active_window = float(options.get("active_window_seconds") or self.active_window_seconds)
+        stale_window = float(options.get("stale_window_seconds") or self.stale_window_seconds)
+        try:
+            last_seen = float(node.get("last_seen") or 0)
+        except (TypeError, ValueError):
+            last_seen = 0
+        if last_seen >= now - active_window:
+            return "active"
+        if last_seen >= now - stale_window:
+            return "stale"
+        return "inactive"
+
+    def _normalize_lifecycle_status(self, value: Any) -> str:
+        if value is None:
+            return ""
+        normalized = str(value).replace("\x00", "").strip().lower()
+        return normalized if normalized in self.lifecycle_statuses else ""
 
     def _history_message(self, sync_status: str) -> str:
         return {

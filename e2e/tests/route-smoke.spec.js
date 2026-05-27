@@ -23,6 +23,7 @@ const routes = [
   ["/profile", /Profile/i],
   ["/leaderboard", /Leaderboard|Top Reputation/i],
   ["/registry", /Registry/i],
+  ["/nodes/compare", /Node Sync/i],
   ["/network", /Network/i],
   ["/stats", /Stats|Statistics/i],
   ["/health", /Health/i],

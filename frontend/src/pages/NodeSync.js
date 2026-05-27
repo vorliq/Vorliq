@@ -252,6 +252,7 @@ function NodeSync() {
                       <th>URL</th>
                       <th>Region</th>
                       <th>Active</th>
+                      <th>Lifecycle</th>
                       <th>Height</th>
                       <th>Diff</th>
                       <th>Latest hash</th>
@@ -268,6 +269,11 @@ function NodeSync() {
                         <td className="hash-text">{node.node_url}</td>
                         <td>{[node.region, node.country].filter(Boolean).join(", ") || "unknown"}</td>
                         <td>{node.active ? "active" : "inactive"}</td>
+                        <td>
+                          <span className={`status-badge ${badgeClass(node.lifecycle_status === "active" ? "synced" : "warning")}`}>
+                            {node.lifecycle_status || (node.active ? "active" : "inactive")}
+                          </span>
+                        </td>
                         <td>{displayValue(node.chain_height)}</td>
                         <td>{displayValue(node.height_difference)}</td>
                         <td className="hash-text">{shortHash(node.latest_block_hash)}</td>

@@ -1,5 +1,6 @@
 const ACTIVE_WINDOW_SECONDS = 30 * 60;
 const RECENT_WINDOW_SECONDS = 6 * 60 * 60;
+const { classifyNodeLifecycle } = require("./nodeLifecycle");
 
 const FORBIDDEN_PUBLIC_PATTERNS = [
   /PRIVATE KEY/i,
@@ -61,6 +62,7 @@ function latestHistoryValue(node = {}, key) {
 }
 
 function normalizedNode(node = {}) {
+  const lifecycle = classifyNodeLifecycle(node);
   return {
     node_url: textOrEmpty(node.node_url || node.nodeUrl, 240),
     display_name: textOrEmpty(node.display_name || node.displayName || "Vorliq Node", 64),
@@ -81,6 +83,8 @@ function normalizedNode(node = {}) {
     snapshot_hash: textOrEmpty(node.snapshot_hash || node.snapshotHash, 160),
     snapshot_signature_verified: boolOrNull(node.snapshot_signature_verified ?? node.snapshotSignatureVerified),
     status_history: Array.isArray(node.status_history) ? node.status_history : [],
+    lifecycle_status: lifecycle.lifecycle_status,
+    lifecycle_reason: lifecycle.lifecycle_reason,
   };
 }
 
@@ -205,6 +209,8 @@ function compareNodeToTrustedState(nodeInput, trustedState = {}) {
     latest_block_hash: node.latest_block_hash,
     chain_valid: node.chain_valid === true,
     response_time_ms: node.response_time_ms,
+    lifecycle_status: node.lifecycle_status,
+    lifecycle_reason: node.lifecycle_reason,
     ...details,
     same_latest_hash: Boolean(node.latest_block_hash && trustedHash && node.latest_block_hash === trustedHash),
   };
@@ -219,6 +225,10 @@ function summarizeNetworkSync(nodes = []) {
     ahead_count: 0,
     forked_count: 0,
     stale_count: 0,
+    inactive_count: 0,
+    archived_count: 0,
+    retired_count: 0,
+    visible_public_count: nodes.filter((node) => !["archived", "retired"].includes(node.lifecycle_status)).length,
     unreachable_count: 0,
     unknown_count: 0,
     warning_count: 0,
@@ -229,6 +239,8 @@ function summarizeNetworkSync(nodes = []) {
   for (const node of nodes) {
     const key = `${node.sync_status || "unknown"}_count`;
     if (Object.prototype.hasOwnProperty.call(summary, key)) summary[key] += 1;
+    const lifecycleKey = `${node.lifecycle_status || "inactive"}_count`;
+    if (["inactive_count", "archived_count", "retired_count"].includes(lifecycleKey)) summary[lifecycleKey] += 1;
     if (node.risk_level === "warning") summary.warning_count += 1;
     if (node.risk_level === "high") summary.high_risk_count += 1;
   }

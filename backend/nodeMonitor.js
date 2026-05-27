@@ -164,14 +164,19 @@ function buildNetworkMonitor(comparison = {}, options = {}) {
     }
 
     if (node.sync_status === "stale" && !isTrusted) {
+      const lifecycleStatus = node.lifecycle_status || "stale";
       alerts.push(
         alert(
           "warning",
-          "stale_node",
-          "Registered node heartbeat is stale",
-          "A non-critical registered node has not sent a heartbeat inside the active window.",
+          lifecycleStatus === "inactive" ? "inactive_node" : "stale_node",
+          lifecycleStatus === "inactive" ? "Registered node is inactive" : "Registered node heartbeat is stale",
+          lifecycleStatus === "inactive"
+            ? "A non-critical registered node has been stale beyond the lifecycle inactive threshold."
+            : "A non-critical registered node has not sent a heartbeat inside the active window.",
           node,
-          "Restart heartbeat, check DNS and HTTPS, then run node doctor locally."
+          lifecycleStatus === "inactive"
+            ? "Admin archive old test node if it is no longer participating, or restart heartbeat, check DNS and HTTPS, then run update_server.sh."
+            : "Restart heartbeat, check DNS and HTTPS, then run node doctor locally."
         )
       );
     }
@@ -245,6 +250,9 @@ function buildNetworkMonitor(comparison = {}, options = {}) {
     ahead_count: numberValue(summary.ahead_count),
     forked_count: numberValue(summary.forked_count),
     stale_count: numberValue(summary.stale_count),
+    inactive_count: numberValue(summary.inactive_count),
+    archived_count: numberValue(summary.archived_count),
+    retired_count: numberValue(summary.retired_count),
     unreachable_count: numberValue(summary.unreachable_count),
     warning_count: warningCount,
     critical_count: criticalCount,

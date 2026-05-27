@@ -25,11 +25,39 @@ beforeEach(() => {
     if (path === "/registry/all") {
       return Promise.resolve({ data: { success: true, nodes: [] } });
     }
+    if (path === "/registry/lifecycle") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          summary: { active_count: 1, stale_count: 1, inactive_count: 0, archived_count: 1, retired_count: 0 },
+          nodes: [
+            { node_url: "https://active.example.org", display_name: "Active Example", lifecycle_status: "active", sync_status: "synced", reliability_score: 98, uptime_score: 98, last_seen: Date.now() / 1000 },
+            { node_url: "https://archived.example.org", display_name: "Archived Example", lifecycle_status: "archived", sync_status: "unknown", reliability_score: 0, uptime_score: 0, last_seen: 1 },
+          ],
+        },
+      });
+    }
     if (path === "/registry/summary") {
       return Promise.resolve({ data: { success: true, summary: { active_node_count: 0, synced_node_count: 0, highest_chain_height: 0, average_reliability_score: 0 } } });
     }
     return Promise.resolve({ data: { success: true } });
   });
+});
+
+test("Registry lifecycle filters and badges render", async () => {
+  render(<Registry />);
+
+  await screen.findByRole("heading", { name: /run your own node/i });
+  expect(screen.getByRole("button", { name: /all nodes/i })).toBeInTheDocument();
+
+  screen.getByRole("button", { name: /all nodes/i }).click();
+
+  expect(await screen.findByLabelText(/lifecycle/i)).toBeInTheDocument();
+  expect(screen.getByRole("option", { name: /all visible/i })).toBeInTheDocument();
+  expect(screen.getByRole("option", { name: /archived/i })).toBeInTheDocument();
+  expect(await screen.findByText(/archived and retired nodes are preserved/i)).toBeInTheDocument();
+  expect(await screen.findByText(/active example/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/active/i).length).toBeGreaterThan(0);
 });
 
 test("Registry page shows Run Your Own Node section", async () => {

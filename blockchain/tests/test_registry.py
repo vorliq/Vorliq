@@ -110,3 +110,58 @@ def test_status_history_is_capped():
     node = registry.get_node("https://node.example.org")
 
     assert len(node["status_history"]) == 100
+
+
+def test_lifecycle_compatibility_defaults_and_counts():
+    registry = NodeRegistry()
+    active = registry.register_node("https://active.example.org", "Active Node")
+    stale = registry.register_node("https://stale.example.org", "Stale Node")
+    inactive = registry.register_node("https://inactive.example.org", "Inactive Node")
+
+    registry.registered_nodes[stale["node_url"]]["last_seen"] = time.time() - registry.active_window_seconds - 10
+    registry.registered_nodes[inactive["node_url"]]["last_seen"] = time.time() - registry.stale_window_seconds - 10
+
+    assert registry.get_node(active["node_url"])["lifecycle_status"] == "active"
+    assert registry.get_node(stale["node_url"])["lifecycle_status"] == "stale"
+    assert registry.get_node(inactive["node_url"])["lifecycle_status"] == "inactive"
+
+    summary = registry.summarize_node_lifecycle()
+    assert summary["active_count"] == 1
+    assert summary["stale_count"] == 1
+    assert summary["inactive_count"] == 1
+    assert summary["visible_public_count"] == 3
+
+
+def test_archive_restore_retire_lifecycle_persistence():
+    registry = NodeRegistry()
+    node = registry.register_node("https://old.example.org", "Old Test Node")
+
+    archived = registry.archive_node(node["node_url"], "old test node", changed_by="admin")
+    assert archived["lifecycle_status"] == "archived"
+    assert archived["lifecycle_history"][-1]["to_status"] == "archived"
+    assert registry.get_all_nodes() == []
+    assert registry.get_all_nodes(lifecycle_status="archived")[0]["node_url"] == node["node_url"]
+
+    restored = registry.restore_node(node["node_url"], "operator restarted", changed_by="admin")
+    assert restored["lifecycle_status"] == "active"
+    assert restored["archived_at"] == ""
+
+    retired = registry.retire_node(node["node_url"], "operator retired node", changed_by="admin")
+    assert retired["lifecycle_status"] == "retired"
+    assert retired["lifecycle_history"][-1]["to_status"] == "retired"
+
+
+def test_trusted_public_node_archive_requires_force():
+    registry = NodeRegistry()
+    node = registry.register_node("https://node.vorliq.org", "Trusted Public Node")
+
+    with pytest.raises(ValueError):
+        registry.archive_node(node["node_url"], "do not archive casually", trusted_public_node_url="https://node.vorliq.org")
+
+    archived = registry.archive_node(
+        node["node_url"],
+        "forced by protected admin",
+        trusted_public_node_url="https://node.vorliq.org",
+        force=True,
+    )
+    assert archived["lifecycle_status"] == "archived"

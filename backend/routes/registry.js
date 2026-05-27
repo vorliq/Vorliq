@@ -16,6 +16,7 @@ const DEFAULT_TRUSTED_NODE_URL = "https://vorliq.org";
 
 const SYNC_STATUSES = new Set(["synced", "behind", "invalid", "unknown"]);
 const ACTIVITY_STATUSES = new Set(["active", "inactive"]);
+const LIFECYCLE_STATUSES = new Set(["active", "stale", "inactive", "archived", "retired"]);
 
 function cleanText(value, maxLength = 300) {
   if (value === undefined || value === null) return "";
@@ -74,6 +75,18 @@ function listParams(query = {}) {
     params.sync_status = syncStatus;
   }
   if (query.country) params.country = cleanText(query.country, 80);
+  if (query.lifecycle_status || query.lifecycleStatus) {
+    const lifecycleStatus = String(query.lifecycle_status || query.lifecycleStatus).toLowerCase();
+    if (!LIFECYCLE_STATUSES.has(lifecycleStatus)) {
+      const error = new Error("lifecycle_status must be active, stale, inactive, archived, or retired.");
+      error.statusCode = 400;
+      throw error;
+    }
+    params.lifecycle_status = lifecycleStatus;
+  }
+  if (["true", "1", "yes"].includes(String(query.include_archived || query.includeArchived || "").toLowerCase())) {
+    params.include_archived = "true";
+  }
   return params;
 }
 
@@ -87,6 +100,18 @@ function trustedNodeUrl() {
 
 function trustedPublicNodeUrl() {
   return String(process.env.VORLIQ_NODE_URL || "https://node.vorliq.org").replace(/\/+$/, "");
+}
+
+function normalizeUrl(value) {
+  try {
+    const parsed = new URL(String(value || "").trim().replace(/\/+$/, ""));
+    if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password || !parsed.hostname) {
+      return "";
+    }
+    return `${parsed.protocol}//${parsed.host}`.toLowerCase();
+  } catch {
+    return "";
+  }
 }
 
 function failIfUnsafe(payload) {
@@ -229,6 +254,54 @@ router.get("/api/registry/summary", async (req, res) => {
     return handleRouteError(res, error, "GET /api/registry/summary", "Unable to load registry summary.");
   }
 });
+
+router.get("/api/registry/lifecycle", async (req, res) => {
+  try {
+    const response = await axios.get(`${flaskUrl}/registry/lifecycle`, { params: listParams(req.query) });
+    failIfUnsafe(response.data);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    if (error.statusCode) return sendValidationError(res, error);
+    return handleRouteError(res, error, "GET /api/registry/lifecycle", "Unable to load registry lifecycle.");
+  }
+});
+
+function lifecyclePayload(body = {}) {
+  const nodeUrl = body.node_url || body.nodeUrl;
+  const normalizedNodeUrl = normalizeUrl(nodeUrl);
+  if (!normalizedNodeUrl) {
+    const error = new Error("node_url must be a valid http or https URL without credentials.");
+    error.statusCode = 400;
+    throw error;
+  }
+  return {
+    node_url: normalizedNodeUrl,
+    reason: cleanText(body.reason || "Registry lifecycle updated by administrator.", 300),
+    force: body.force === true || ["true", "1", "yes"].includes(String(body.force || "").toLowerCase()),
+  };
+}
+
+async function postLifecycleAction(action, req, res) {
+  try {
+    const payload = lifecyclePayload(req.body || {});
+    if (action === "archive" && normalizeUrl(payload.node_url) === normalizeUrl(trustedPublicNodeUrl()) && !payload.force) {
+      return res.status(400).json({
+        success: false,
+        message: "Trusted public node cannot be archived without force=true.",
+      });
+    }
+    const response = await axios.post(`${flaskUrl}/registry/admin/${action}`, payload);
+    failIfUnsafe(response.data);
+    return res.status(response.status).json(response.data);
+  } catch (error) {
+    if (error.statusCode) return sendValidationError(res, error);
+    return handleRouteError(res, error, `POST /api/admin/registry/${action}`, `Unable to ${action} registry node.`);
+  }
+}
+
+router.post("/api/admin/registry/archive", adminAuth, async (req, res) => postLifecycleAction("archive", req, res));
+router.post("/api/admin/registry/restore", adminAuth, async (req, res) => postLifecycleAction("restore", req, res));
+router.post("/api/admin/registry/retire", adminAuth, async (req, res) => postLifecycleAction("retire", req, res));
 
 router.get("/api/nodes/compare", async (req, res) => {
   try {

@@ -71,6 +71,7 @@ sudo systemctl restart vorliq-backend.service</code></pre>
           <li>Use Overview to verify deployment, block height, chain validity, pending transactions, incidents, backups, and service state.</li>
           <li>Use Readiness to review the combined production gate, score, failing checks, warning checks, latest backup age, storage counts, incident counts, registry counts, deployment commit, and safe service names.</li>
           <li>Use Network Monitor to review <code>ok</code>, <code>warning</code>, or <code>critical</code> node monitor status, fork/stale/ahead alerts, and safe operator actions.</li>
+          <li>Use Registry Lifecycle to archive old test nodes, restore nodes that return, or retire nodes without deleting registry history.</li>
           <li>Use Storage to review JSON validity, backup availability, warning counts, and corruption signals without exposing server paths or secrets.</li>
           <li>Use Indexes to review derived read-index status, chain match, build time, and to trigger a safe rebuild from <code>chain.json</code> when needed.</li>
           <li>Use Migration to confirm production is still on JSON storage, the active adapter is JSON, PostgreSQL adapter writes are blocked, and dry-run plus shadow rehearsal migration preparation is available.</li>
@@ -135,6 +136,7 @@ sudo systemctl enable --now vorliq-miner.service</code></pre>
       <section class="glass">
         <h2>Community Node Doctor</h2>
         <p>Community operators can run the read-only doctor after install or update. It checks local health, chain summary, diagnostics, storage, indexes, readiness, trusted snapshot verification, node sync comparison, node monitor alerts, registry metadata, and local systemd services when available. <code>ahead</code> is not automatically trusted; use signed snapshot and audit export checks. Recover forked nodes with dry-run bootstrap first and do not manually edit <code>chain.json</code>.</p>
+        <p>Do not manually edit <code>registry.json</code>. To remove old stale/test nodes from default live views, use Registry Lifecycle or <code>POST /api/admin/registry/archive</code> with a clear reason. Restore returns the node to heartbeat-based classification. Retire marks intentional departure. The trusted public node should not be archived casually and requires an explicit force flag.</p>
         <pre><code>node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
       </section>
     </main>

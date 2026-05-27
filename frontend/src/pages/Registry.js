@@ -27,7 +27,8 @@ function statusLabel(status) {
 
 function statusClass(status) {
   if (status === "synced") return "confirmed";
-  if (status === "behind" || status === "unknown") return "pending";
+  if (["behind", "unknown", "stale", "inactive"].includes(status)) return "pending";
+  if (["archived", "retired"].includes(status)) return "unknown";
   return status || "unknown";
 }
 
@@ -41,6 +42,9 @@ function NodeCard({ node, onAdd, onInspect }) {
         </div>
         <span className={`status-badge ${statusClass(node.sync_status)}`}>
           {statusLabel(node.sync_status)}
+        </span>
+        <span className={`status-badge ${statusClass(node.lifecycle_status)}`}>
+          {statusLabel(node.lifecycle_status || (node.active ? "active" : "inactive"))}
         </span>
       </div>
 
@@ -100,7 +104,7 @@ function Registry() {
   const [summary, setSummary] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [detailUrl, setDetailUrl] = useState("");
-  const [filters, setFilters] = useState({ status: "", country: "", sync_status: "" });
+  const [filters, setFilters] = useState({ lifecycle_status: "", country: "", sync_status: "" });
   const [form, setForm] = useState({
     node_url: "",
     display_name: "Vorliq Community Node",
@@ -118,7 +122,7 @@ function Registry() {
     try {
       const [activeResponse, allResponse, summaryResponse] = await Promise.all([
         api.get("/registry/nodes"),
-        api.get("/registry/all"),
+        api.get("/registry/lifecycle", { params: { include_archived: true } }),
         api.get("/registry/summary"),
       ]);
       setNodes(activeResponse.data.nodes || []);
@@ -198,8 +202,9 @@ function Registry() {
 
   const filteredNodes = useMemo(() => {
     return allNodes.filter((node) => {
-      if (filters.status === "active" && !node.active) return false;
-      if (filters.status === "inactive" && node.active) return false;
+      const lifecycle = node.lifecycle_status || (node.active ? "active" : "inactive");
+      if (!filters.lifecycle_status && ["archived", "retired"].includes(lifecycle)) return false;
+      if (filters.lifecycle_status && lifecycle !== filters.lifecycle_status) return false;
       if (filters.sync_status && node.sync_status !== filters.sync_status) return false;
       if (filters.country && String(node.country || "").toLowerCase() !== filters.country.toLowerCase()) return false;
       return true;
@@ -310,21 +315,27 @@ function Registry() {
       {activeTab === "All Nodes" && (
         <section className="registry-section stack">
           <div className="section-title">
-            <h2>All Nodes</h2>
-            <span className="eyebrow">{filteredNodes.length} shown</span>
-          </div>
+          <h2>All Nodes</h2>
+          <span className="eyebrow">{filteredNodes.length} shown</span>
+        </div>
+          <p className="help-text">
+            Archived and retired nodes are preserved for transparency but hidden from default live network views.
+          </p>
           <div className="grid three-column">
             <div className="field">
-              <label htmlFor="node-activity-filter">Status</label>
+              <label htmlFor="node-lifecycle-filter">Lifecycle</label>
               <select
-                id="node-activity-filter"
+                id="node-lifecycle-filter"
                 className="input"
-                value={filters.status}
-                onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
+                value={filters.lifecycle_status}
+                onChange={(event) => setFilters((current) => ({ ...current, lifecycle_status: event.target.value }))}
               >
-                <option value="">All</option>
+                <option value="">All visible</option>
                 <option value="active">Active</option>
+                <option value="stale">Stale</option>
                 <option value="inactive">Inactive</option>
+                <option value="archived">Archived</option>
+                <option value="retired">Retired</option>
               </select>
             </div>
             <div className="field">

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Node Lifecycle</title>
+    <meta name="description" content="Vorliq node registry lifecycle statuses, archival, restoration, and retirement." />
+    <style>
+      :root { --bg:#020817; --card:rgba(8,14,28,.42); --accent:#18d7c9; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.24); --green:#86e33b; --blue:#1479ff; }
+      * { box-sizing:border-box; }
+      body { margin:0; min-width:320px; font-family:Inter,Arial,sans-serif; background:linear-gradient(180deg,#020817,#07182d 58%,#020817); color:var(--text); }
+      a { color:inherit; }
+      .wrap { width:min(1040px,calc(100% - 32px)); margin:0 auto; }
+      header, footer { border-color:var(--border); border-style:solid; border-width:0 0 1px; padding:22px 0; }
+      footer { border-width:1px 0 0; color:var(--muted); }
+      nav { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+      .brand, .button { font-weight:900; text-decoration:none; }
+      .button { border:1px solid var(--border); border-radius:999px; padding:10px 14px; color:var(--muted); display:inline-flex; }
+      main { padding:48px 0; }
+      .hero, .stack { display:grid; gap:14px; }
+      h1 { font-size:clamp(2.2rem,6vw,4rem); margin:0; line-height:1; }
+      h2 { margin:0; font-size:clamp(1.4rem,4vw,2rem); }
+      p, li { color:var(--muted); line-height:1.7; }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin:24px 0; }
+      .card { border:1px solid var(--border); border-radius:14px; background:var(--card); padding:20px; }
+      code { color:var(--accent); overflow-wrap:anywhere; }
+      @media (max-width:760px) { .grid { grid-template-columns:1fr; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <nav>
+          <a class="brand" href="index.html">Vorliq</a>
+          <a class="button" href="nodes.html">Nodes</a>
+          <a class="button" href="node-sync.html">Node Sync</a>
+          <a class="button" href="operator.html">Operator Guide</a>
+          <a class="button" href="api.html">API</a>
+        </nav>
+      </div>
+    </header>
+    <main class="wrap">
+      <section class="hero">
+        <h1>Node lifecycle and archival</h1>
+        <p>Vorliq keeps registry history transparent while making the live network easier to understand. Old stale or test nodes can be archived or retired, but registry records are preserved and must not be silently deleted.</p>
+      </section>
+
+      <section class="grid">
+        <article class="card stack"><h2>active</h2><p>The node sent a heartbeat inside the active window, currently 30 minutes.</p></article>
+        <article class="card stack"><h2>stale</h2><p>The node is outside the active window but was seen within the recent lifecycle window, currently 7 days.</p></article>
+        <article class="card stack"><h2>inactive</h2><p>The node has been stale longer than the lifecycle window. It may be an old test node, a stopped node, or a real node whose heartbeat needs repair.</p></article>
+        <article class="card stack"><h2>archived</h2><p>An admin intentionally hid the node from default live network views. The record remains available in lifecycle and audit/history views.</p></article>
+        <article class="card stack"><h2>retired</h2><p>An operator or admin marked the node as no longer participating. The record remains preserved for transparency.</p></article>
+      </section>
+
+      <section class="card stack">
+        <h2>Why old test nodes may appear</h2>
+        <p>Registry data is append-and-update operational history. If an early localhost or test node registered and then stopped sending heartbeats, it remains visible as stale or inactive until an admin archives or retires it. This is intentional: old records are not deleted just to make the network look cleaner.</p>
+      </section>
+
+      <section class="card stack">
+        <h2>Safe admin actions</h2>
+        <p>Use the protected operator dashboard or protected API routes. Archive old test nodes that should no longer appear in default live network views. Restore a node when it returns and should go back to heartbeat-based classification. Retire a node when the operator intentionally ends participation.</p>
+        <p>Do not manually edit <code>registry.json</code>. Do not delete records. Do not rewrite historical blocks, alter block hashes, disable snapshot signing, or weaken signed snapshot verification.</p>
+      </section>
+
+      <section class="card stack">
+        <h2>Trusted public node caution</h2>
+        <p>The trusted public node, normally <code>https://node.vorliq.org</code>, should not be archived casually. It is a critical operational signal for public sync checks. Protected admin archive requires an explicit force flag for that node.</p>
+      </section>
+
+      <section class="card stack">
+        <h2>API</h2>
+        <p>Read lifecycle state with <code>GET /api/registry/lifecycle</code> and summary counts with <code>GET /api/registry/summary</code>. Protected actions are <code>POST /api/admin/registry/archive</code>, <code>POST /api/admin/registry/restore</code>, and <code>POST /api/admin/registry/retire</code>. Each action takes <code>node_url</code> and <code>reason</code>, requires <code>ADMIN_TOKEN</code>, and never deletes registry history.</p>
+      </section>
+    </main>
+    <footer><div class="wrap">Vorliq node lifecycle is transparency-first operational metadata.</div></footer>
+  </body>
+</html>

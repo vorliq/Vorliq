@@ -70,6 +70,7 @@
       <section>
         <h2>Why stale old nodes are warnings only</h2>
         <p>A stale community node can be an old local install, a stopped laptop, or a node that no longer sends heartbeat. Vorliq does not delete stale registry history and does not open a public incident for one harmless stale record by default. Operators still see the warning and suggested fixes.</p>
+        <p>Long-inactive non-critical nodes are archival candidates, not automatic deletions. Maintenance suggests archival by default and only auto-archives when <code>VORLIQ_AUTO_ARCHIVE_INACTIVE_NODES=true</code>. Auto-archive skips the trusted public node and requires the node to be inactive longer than 30 days.</p>
       </section>
 
       <section class="danger">
@@ -109,7 +110,7 @@ python3.12 tools/bootstrap_chain_from_public_node.py --trusted-node https://vorl
 
       <section>
         <h2>Endpoints</h2>
-        <p><code>GET /api/nodes/monitor</code> returns public-safe monitor JSON. <code>GET /api/admin/nodes/monitor</code> requires the admin token and adds safe diagnostic context. Neither endpoint returns private keys, admin tokens, raw logs, server paths, raw IPs, raw user agents, or environment dumps.</p>
+        <p><code>GET /api/nodes/monitor</code> returns public-safe monitor JSON. <code>GET /api/admin/nodes/monitor</code> requires the admin token and adds safe diagnostic context. Use <a href="node-lifecycle.html">Node Lifecycle</a> for archive, restore, and retire behavior. Neither endpoint returns private keys, admin tokens, raw logs, server paths, raw IPs, raw user agents, or environment dumps.</p>
       </section>
     </main>
     <footer><div class="wrap">Node monitoring is an operational signal, not a legal, banking, investment, or financial guarantee.</div></footer>

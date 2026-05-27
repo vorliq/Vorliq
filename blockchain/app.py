@@ -352,6 +352,11 @@ def _require_public_url(value: object, field_name: str) -> str:
     return url.rstrip("/")
 
 
+def _require_registry_url(value: object, field_name: str) -> str:
+    url = _require_text(value, field_name, 240)
+    return node_registry._normalize_node_url(url)
+
+
 def _origin_is_allowed(origin: str) -> bool:
     if origin in ALLOWED_ORIGINS:
         return True
@@ -918,7 +923,7 @@ def get_audit_registry():
         {
             **_audit_base("registry"),
             "summary": node_registry.get_summary(node.blockchain.get_block_height()),
-            "nodes": node_registry.get_all_nodes(profile_lookup=_registry_profile_lookup),
+            "nodes": node_registry.get_all_nodes(include_archived=True, profile_lookup=_registry_profile_lookup),
         }
     )
 
@@ -1485,6 +1490,8 @@ def get_registry_all_nodes():
     status = request.args.get("status")
     country = request.args.get("country")
     sync_status = request.args.get("sync_status") or request.args.get("syncStatus")
+    lifecycle_status = request.args.get("lifecycle_status") or request.args.get("lifecycleStatus")
+    include_archived = str(request.args.get("include_archived") or request.args.get("includeArchived") or "").lower() in {"true", "1", "yes"}
     return jsonify(
         {
             "success": True,
@@ -1492,6 +1499,8 @@ def get_registry_all_nodes():
                 status=status,
                 country=country,
                 sync_status=sync_status,
+                lifecycle_status=lifecycle_status,
+                include_archived=include_archived,
                 profile_lookup=_registry_profile_lookup,
             ),
         }
@@ -1518,6 +1527,75 @@ def get_registry_summary():
             "summary": node_registry.get_summary(node.blockchain.get_block_height()),
         }
     )
+
+
+@app.get("/registry/lifecycle")
+def get_registry_lifecycle():
+    lifecycle_status = request.args.get("lifecycle_status") or request.args.get("lifecycleStatus")
+    include_archived = str(request.args.get("include_archived") or request.args.get("includeArchived") or "").lower() in {"true", "1", "yes"}
+    nodes = node_registry.get_lifecycle_nodes(
+        lifecycle_status=lifecycle_status,
+        include_archived=include_archived,
+        profile_lookup=_registry_profile_lookup,
+    )
+    return jsonify(
+        {
+            "success": True,
+            "summary": node_registry.summarize_node_lifecycle(),
+            "nodes": nodes,
+            "note": "Archived and retired nodes are preserved in registry history but hidden from default live network views.",
+        }
+    )
+
+
+@app.post("/registry/admin/archive")
+def admin_archive_registry_node():
+    try:
+        data = _json_body()
+        archived_node = node_registry.archive_node(
+            node_url=_require_registry_url(data.get("node_url") or data.get("nodeUrl"), "node URL"),
+            reason=data.get("reason") or "Archived by administrator.",
+            changed_by="admin",
+            trusted_public_node_url=os.environ.get("VORLIQ_NODE_URL", "https://node.vorliq.org"),
+            force=bool(data.get("force", False)),
+        )
+        storage.save_registry(node_registry)
+        return jsonify({"success": True, "node": archived_node})
+    except Exception as exc:
+        vorliq_logger.error("Registry archive endpoint failed: %s", exc)
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.post("/registry/admin/restore")
+def admin_restore_registry_node():
+    try:
+        data = _json_body()
+        restored_node = node_registry.restore_node(
+            node_url=_require_registry_url(data.get("node_url") or data.get("nodeUrl"), "node URL"),
+            reason=data.get("reason") or "Restored by administrator.",
+            changed_by="admin",
+        )
+        storage.save_registry(node_registry)
+        return jsonify({"success": True, "node": restored_node})
+    except Exception as exc:
+        vorliq_logger.error("Registry restore endpoint failed: %s", exc)
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.post("/registry/admin/retire")
+def admin_retire_registry_node():
+    try:
+        data = _json_body()
+        retired_node = node_registry.retire_node(
+            node_url=_require_registry_url(data.get("node_url") or data.get("nodeUrl"), "node URL"),
+            reason=data.get("reason") or "Retired by administrator.",
+            changed_by="admin",
+        )
+        storage.save_registry(node_registry)
+        return jsonify({"success": True, "node": retired_node})
+    except Exception as exc:
+        vorliq_logger.error("Registry retire endpoint failed: %s", exc)
+        return jsonify({"success": False, "message": str(exc)}), 400
 
 
 @app.post("/registry/heartbeat")

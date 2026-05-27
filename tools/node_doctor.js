@@ -93,11 +93,22 @@ function createReporter() {
 
 function operatorFixes() {
   return [
+    "admin archive old test node",
     "restart heartbeat",
     "run verified bootstrap dry-run",
     "check DNS and HTTPS",
     "run update_server.sh",
     "run node doctor locally",
+  ].join("; ");
+}
+
+function lifecycleFixes() {
+  return [
+    "admin archive old test node",
+    "restart heartbeat for a real node",
+    "run verified bootstrap dry-run if node forked",
+    "check DNS/HTTPS",
+    "run update_server.sh",
   ].join("; ");
 }
 
@@ -172,10 +183,47 @@ async function checkNodeComparison(reporter, trustedNode) {
         ? "Ahead node still needs signed snapshot and audit export verification before trust."
         : "Trusted signed snapshot verification is not confirmed, so the ahead node is not verified by a signed snapshot or audit path.";
       reporter.add("WARN", `node ahead ${label}`, `${node.sync_message || "Active node is ahead of the trusted node."} ${signatureMessage}`, operatorFixes());
+    } else if (!node.active && ["stale", "inactive"].includes(node.lifecycle_status || node.sync_status)) {
+      reporter.add("WARN", `node lifecycle ${label}`, `${label} is ${node.lifecycle_status || "stale"} in the public registry.`, lifecycleFixes());
     }
   }
 
   return comparison;
+}
+
+async function checkRegistryLifecycle(reporter, trustedNode) {
+  const lifecycle = await checkEndpoint(reporter, "registry lifecycle", trustedNode, "/api/registry/lifecycle", (data) => {
+    if (data.success !== true) {
+      return { status: "FAIL", explanation: "Registry lifecycle did not return success=true.", fix: lifecycleFixes() };
+    }
+    const summary = data.summary || {};
+    const stale = Number(summary.stale_count || 0);
+    const inactive = Number(summary.inactive_count || 0);
+    const archived = Number(summary.archived_count || 0);
+    const retired = Number(summary.retired_count || 0);
+    if (stale > 0 || inactive > 0) {
+      return {
+        status: "WARN",
+        explanation: `Lifecycle counts active=${summary.active_count || 0} stale=${stale} inactive=${inactive} archived=${archived} retired=${retired}.`,
+        fix: lifecycleFixes(),
+      };
+    }
+    return {
+      status: "PASS",
+      explanation: `Lifecycle counts active=${summary.active_count || 0} stale=0 inactive=0 archived=${archived} retired=${retired}.`,
+    };
+  }, lifecycleFixes());
+
+  if (!lifecycle) return null;
+  const summary = lifecycle.summary || {};
+  console.log(`LIFECYCLE active=${summary.active_count ?? 0} stale=${summary.stale_count ?? 0} inactive=${summary.inactive_count ?? 0} archived=${summary.archived_count ?? 0} retired=${summary.retired_count ?? 0}`);
+  for (const node of lifecycle.nodes || []) {
+    if (["archived", "retired"].includes(node.lifecycle_status)) continue;
+    if (["stale", "inactive"].includes(node.lifecycle_status)) {
+      console.log(`LIFECYCLE_WARN ${node.lifecycle_status} ${node.display_name || node.node_url || "Unknown node"} action=${lifecycleFixes()}`);
+    }
+  }
+  return lifecycle;
 }
 
 async function checkNodeMonitor(reporter, trustedNode) {
@@ -351,8 +399,10 @@ async function main() {
 
   await checkEndpoint(reporter, "registry summary", trustedNode, "/api/registry/summary", (data) => {
     const summary = data.summary || {};
-    return { status: "PASS", explanation: `${summary.active_node_count ?? 0} active nodes, ${summary.synced_node_count ?? 0} synced nodes in trusted registry.` };
+    return { status: "PASS", explanation: `${summary.active_node_count ?? 0} active nodes, ${summary.synced_node_count ?? 0} synced nodes in trusted registry. Lifecycle active=${summary.active_count ?? 0} stale=${summary.stale_count ?? 0} inactive=${summary.inactive_count ?? 0}.` };
   }, "Check trusted node registry availability.");
+
+  await checkRegistryLifecycle(reporter, trustedNode);
 
   await checkNodeComparison(reporter, trustedNode);
 

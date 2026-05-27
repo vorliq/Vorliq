@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../helpers/api";
 
 const ADMIN_TOKEN_KEY = "vorliq_admin_token";
-const tabs = ["Overview", "Readiness", "Network Monitor", "Analytics", "Storage", "Indexes", "Migration", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
+const tabs = ["Overview", "Readiness", "Network Monitor", "Registry Lifecycle", "Analytics", "Storage", "Indexes", "Migration", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
 
 function authHeader(token) {
   return { Authorization: `Bearer ${token}` };
@@ -16,6 +16,7 @@ function Admin() {
   const [overview, setOverview] = useState(null);
   const [readiness, setReadiness] = useState(null);
   const [nodeMonitor, setNodeMonitor] = useState(null);
+  const [registryLifecycle, setRegistryLifecycle] = useState(null);
   const [security, setSecurity] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [storage, setStorage] = useState(null);
@@ -35,6 +36,10 @@ function Admin() {
     message: "",
     severity: "minor",
     affected_services: "",
+  });
+  const [lifecycleForm, setLifecycleForm] = useState({
+    node_url: "",
+    reason: "",
   });
 
   const headers = useMemo(() => (adminToken ? authHeader(adminToken) : null), [adminToken]);
@@ -59,6 +64,11 @@ function Admin() {
     const response = await api.get("/admin/nodes/monitor", { headers });
     setNodeMonitor(response.data);
   }, [headers]);
+
+  const loadRegistryLifecycle = useCallback(async () => {
+    const response = await api.get("/registry/lifecycle", { params: { include_archived: true } });
+    setRegistryLifecycle(response.data);
+  }, []);
 
   const loadAnalytics = useCallback(async () => {
     const response = await api.get("/admin/analytics", { headers });
@@ -115,6 +125,7 @@ function Admin() {
       if (tab === "Overview") await loadOverview();
       if (tab === "Readiness") await loadReadiness();
       if (tab === "Network Monitor") await loadNodeMonitor();
+      if (tab === "Registry Lifecycle") await loadRegistryLifecycle();
       if (tab === "Analytics") await loadAnalytics();
       if (tab === "Storage") await loadStorage();
       if (tab === "Indexes") await loadIndexes();
@@ -128,7 +139,7 @@ function Admin() {
     } catch (requestError) {
       setError(requestError.response?.status === 401 ? "Unauthorized" : "Unable to load admin data.");
     }
-  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadMigration, loadNodeMonitor, loadOverview, loadReadiness, loadReports, loadSecurity, loadStorage]);
+  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadMigration, loadNodeMonitor, loadOverview, loadReadiness, loadRegistryLifecycle, loadReports, loadSecurity, loadStorage]);
 
   useEffect(() => {
     if (adminToken) {
@@ -158,6 +169,7 @@ function Admin() {
     setOverview(null);
     setReadiness(null);
     setNodeMonitor(null);
+    setRegistryLifecycle(null);
     setSecurity(null);
     setAnalytics(null);
     setStorage(null);
@@ -199,6 +211,24 @@ function Admin() {
       await loadIndexes();
     } catch (requestError) {
       setStatus(requestError.response?.data?.message || "Index rebuild failed.");
+    }
+  }
+
+  async function submitLifecycleAction(action) {
+    setStatus(`${action} registry node...`);
+    try {
+      const response = await api.post(
+        `/admin/registry/${action}`,
+        {
+          node_url: lifecycleForm.node_url,
+          reason: lifecycleForm.reason || `${action} requested from operator dashboard.`,
+        },
+        { headers }
+      );
+      setStatus(response.data.success ? `Registry node ${action} completed.` : `Registry node ${action} did not complete.`);
+      await loadRegistryLifecycle();
+    } catch (requestError) {
+      setStatus(requestError.response?.data?.message || `Unable to ${action} registry node.`);
     }
   }
 
@@ -322,6 +352,15 @@ function Admin() {
       {activeTab === "Overview" && <OverviewTab overview={overview} />}
       {activeTab === "Readiness" && <ReadinessTab readiness={readiness} onLoad={loadReadiness} />}
       {activeTab === "Network Monitor" && <NetworkMonitorTab monitor={nodeMonitor} onLoad={loadNodeMonitor} />}
+      {activeTab === "Registry Lifecycle" && (
+        <RegistryLifecycleTab
+          lifecycle={registryLifecycle}
+          form={lifecycleForm}
+          setForm={setLifecycleForm}
+          onLoad={loadRegistryLifecycle}
+          onAction={submitLifecycleAction}
+        />
+      )}
       {activeTab === "Analytics" && <AnalyticsTab analytics={analytics} onLoad={loadAnalytics} />}
       {activeTab === "Storage" && <StorageTab storage={storage} onLoad={loadStorage} />}
       {activeTab === "Indexes" && <IndexesTab indexes={indexes} onLoad={loadIndexes} onRebuild={rebuildIndexes} />}
@@ -675,6 +714,70 @@ function NetworkMonitorTab({ monitor, onLoad }) {
           </div>
         ))}
         {!(monitor.alerts || []).length && <div className="empty-state">No network monitor alerts.</div>}
+      </div>
+    </section>
+  );
+}
+
+function RegistryLifecycleTab({ lifecycle, form, setForm, onLoad, onAction }) {
+  useEffect(() => { if (!lifecycle) onLoad().catch(() => {}); }, [lifecycle, onLoad]);
+  const summary = lifecycle?.summary || {};
+
+  return (
+    <section className="glass-section card-pad">
+      <p className="risk-box">
+        Registry lifecycle actions do not delete registry history. Archive hides old nodes from default live views; restore returns a node to heartbeat-based classification; retire marks intentional departure.
+      </p>
+      <div className="admin-card-grid">
+        {[
+          ["Active", summary.active_count ?? 0],
+          ["Stale", summary.stale_count ?? 0],
+          ["Inactive", summary.inactive_count ?? 0],
+          ["Archived", summary.archived_count ?? 0],
+          ["Retired", summary.retired_count ?? 0],
+          ["Visible public", summary.visible_public_count ?? 0],
+        ].map(([label, value]) => (
+          <div className="stat-card" key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+
+      <form className="admin-form-grid" onSubmit={(event) => event.preventDefault()}>
+        <input
+          placeholder="Node URL"
+          type="url"
+          value={form.node_url}
+          onChange={(event) => setForm({ ...form, node_url: event.target.value })}
+          required
+        />
+        <input
+          placeholder="Reason"
+          value={form.reason}
+          onChange={(event) => setForm({ ...form, reason: event.target.value })}
+        />
+        <button className="button brand-button" type="button" onClick={() => onAction("archive")}>Archive</button>
+        <button className="button secondary brand-button-secondary" type="button" onClick={() => onAction("restore")}>Restore</button>
+        <button className="button secondary brand-button-secondary" type="button" onClick={() => onAction("retire")}>Retire</button>
+      </form>
+
+      <h2>Lifecycle Records</h2>
+      <div className="table-wrap">
+        <table className="stats-table">
+          <thead><tr><th>Node</th><th>URL</th><th>Lifecycle</th><th>Last seen</th><th>Reason</th></tr></thead>
+          <tbody>
+            {(lifecycle?.nodes || []).map((node) => (
+              <tr key={node.node_url}>
+                <td>{node.display_name || "Vorliq Node"}</td>
+                <td className="hash-text">{node.node_url}</td>
+                <td>{node.lifecycle_status || "unknown"}</td>
+                <td>{node.last_seen || "unknown"}</td>
+                <td>{node.lifecycle_reason || ""}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
   );

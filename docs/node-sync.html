@@ -104,6 +104,7 @@ node tools/node_doctor.js --base-url http://127.0.0.1:5000 --trusted-node https:
       <section>
         <h2>Network monitor</h2>
         <p>The <a href="node-monitoring.html">network monitor</a> turns sync comparison into <code>ok</code>, <code>warning</code>, or <code>critical</code> status. Stale old community nodes are warning-only by default, while active forks and trusted public node failures are critical.</p>
+        <p>Registry lifecycle metadata separates live network visibility from historical transparency. <code>active</code>, <code>stale</code>, and <code>inactive</code> nodes remain visible in lifecycle-aware views. <code>archived</code> and <code>retired</code> records are preserved for history but hidden from default live network views. Learn the safe flow in <a href="node-lifecycle.html">Node Lifecycle</a>.</p>
       </section>
 
       <section>

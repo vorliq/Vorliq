@@ -16,6 +16,7 @@ const endpoints = [
   "/api/mining/status",
   "/api/treasury/summary",
   "/api/registry/summary",
+  "/api/registry/lifecycle",
   "/api/faucet/summary",
   "/api/network/manifest",
   "/api/snapshot/latest",
@@ -72,6 +73,16 @@ test.describe("read-only API smoke tests", () => {
 
   test("admin migration readiness stays protected without a token", async ({ request }) => {
     const response = await request.get("/api/admin/migration/readiness");
+    expect(response.status()).toBe(401);
+    const json = await response.json();
+    expect(json.success).toBe(false);
+    safeApiJson(json);
+  });
+
+  test("admin registry archive stays protected without a token", async ({ request }) => {
+    const response = await request.post("/api/admin/registry/archive", {
+      data: { node_url: "https://old.example.org", reason: "protection smoke" },
+    });
     expect(response.status()).toBe(401);
     const json = await response.json();
     expect(json.success).toBe(false);

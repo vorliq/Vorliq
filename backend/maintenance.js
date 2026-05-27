@@ -20,6 +20,9 @@ const alertScript = process.env.VORLIQ_ALERT_SCRIPT || "/home/vorliq/alert.sh";
 const nodeMonitorStateFile = process.env.NODE_MONITOR_STATE_FILE || path.join(__dirname, "data", "node-monitor-state.json");
 const alertSuppressionSeconds = Number(process.env.NODE_MONITOR_ALERT_SUPPRESSION_SECONDS || 1800);
 const warningThreshold = Number(process.env.NODE_MONITOR_WARNING_THRESHOLD || 3);
+const autoArchiveInactiveNodes = String(process.env.VORLIQ_AUTO_ARCHIVE_INACTIVE_NODES || "").toLowerCase() === "true";
+const inactiveArchiveSeconds = Number(process.env.VORLIQ_INACTIVE_ARCHIVE_SECONDS || 30 * 24 * 60 * 60);
+const trustedPublicNodeUrl = String(process.env.VORLIQ_NODE_URL || "https://node.vorliq.org").replace(/\/+$/, "");
 
 function sanitize(value) {
   return String(value || "")
@@ -28,6 +31,10 @@ function sanitize(value) {
     .replace(/(password|token|private[_-]?key|secret)=?[^\s]*/gi, "$1=[redacted]")
     .replace(/\/home\/vorliq\/[^\s'"]*/g, "[server-path]")
     .slice(0, 500);
+}
+
+function normalizeUrl(value) {
+  return String(value || "").trim().replace(/\/+$/, "").toLowerCase();
 }
 
 function writeLog(level, message, metadata = {}) {
@@ -218,8 +225,46 @@ async function checkNodeMonitor() {
   }
 
   await reconcileNetworkIncidents(alerts);
+  await checkRegistryLifecycleSuggestions();
   writeNodeMonitorState(state);
   return monitor;
+}
+
+async function checkRegistryLifecycleSuggestions() {
+  try {
+    const lifecycle = await get("/api/registry/lifecycle?include_archived=true");
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const nodes = Array.isArray(lifecycle.nodes) ? lifecycle.nodes : [];
+    for (const node of nodes) {
+      const lastSeen = Number(node.last_seen || 0);
+      const inactiveLongEnough =
+        node.lifecycle_status === "inactive" &&
+        Number.isFinite(lastSeen) &&
+        nowSeconds - lastSeen >= inactiveArchiveSeconds;
+      const trusted = normalizeUrl(node.node_url) === normalizeUrl(trustedPublicNodeUrl);
+      if (!inactiveLongEnough || trusted || ["archived", "retired"].includes(node.lifecycle_status)) continue;
+
+      if (!autoArchiveInactiveNodes) {
+        writeLog("warning", "registry lifecycle archival suggested", {
+          node_url: node.node_url || "",
+          lifecycle_status: node.lifecycle_status,
+          recommendation: "Archive old test node through protected admin flow, or restart heartbeat if this is a real node.",
+        });
+        continue;
+      }
+
+      const result = await postAdminJson("/api/admin/registry/archive", {
+        node_url: node.node_url,
+        reason: "Auto-archived after more than 30 days inactive by maintenance lifecycle policy.",
+      });
+      writeLog(result.skipped ? "warning" : "info", "registry lifecycle auto-archive checked", {
+        node_url: node.node_url || "",
+        skipped: Boolean(result.skipped),
+      });
+    }
+  } catch (error) {
+    writeLog("warning", "registry lifecycle suggestions unavailable", { error: sanitize(error.message) });
+  }
 }
 
 async function run() {

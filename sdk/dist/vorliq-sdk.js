@@ -90,6 +90,8 @@ function registryQuery(params = {}) {
   if (params.status) query.set("status", String(params.status));
   if (params.country) query.set("country", String(params.country));
   if (params.sync_status || params.syncStatus) query.set("sync_status", String(params.sync_status || params.syncStatus));
+  if (params.lifecycle_status || params.lifecycleStatus) query.set("lifecycle_status", String(params.lifecycle_status || params.lifecycleStatus));
+  if (params.include_archived || params.includeArchived) query.set("include_archived", "true");
   const value = query.toString();
   return value ? `?${value}` : "";
 }
@@ -589,6 +591,16 @@ class VorliqSDK {
   async getRegistrySummary() {
     const data = await this.request("/api/registry/summary");
     return data.summary || data;
+  }
+
+  /**
+   * Gets registry lifecycle counts and safe public node lifecycle metadata.
+   *
+   * @param {object} [options] Optional lifecycle_status and include_archived filters.
+   * @returns {Promise<object>} Registry lifecycle response with summary and nodes.
+   */
+  async getRegistryLifecycle(options = {}) {
+    return this.request(`/api/registry/lifecycle${registryQuery(options)}`);
   }
 
   /**
