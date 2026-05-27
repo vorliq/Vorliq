@@ -601,6 +601,15 @@ class VorliqSDK {
   }
 
   /**
+   * Gets the public node network monitor summary and safe operator alerts.
+   *
+   * @returns {Promise<object>} Node monitor response with ok, warning, or critical status.
+   */
+  async getNodeMonitor() {
+    return this.request("/api/nodes/monitor");
+  }
+
+  /**
    * Gets active public nodes seen in the recent active window.
    *
    * @returns {Promise<object>} Active node list response.

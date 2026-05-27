@@ -24,6 +24,7 @@ assert.strictEqual(typeof sdk.getVersionMetadata, "function");
 assert.strictEqual(typeof sdk.getChangelog, "function");
 assert.strictEqual(typeof sdk.getRoadmap, "function");
 assert.strictEqual(typeof sdk.getReadiness, "function");
+assert.strictEqual(typeof sdk.getNodeMonitor, "function");
 assert.strictEqual(typeof sdk.getIndexHealth, "function");
 assert.strictEqual(typeof sdk.getMigrationReadiness, "function");
 assert.strictEqual(typeof sdk.getLatestSnapshot, "function");
@@ -137,6 +138,16 @@ global.fetch = async (url, options = {}) => {
           nodes: [{ node_url: "https://node.vorliq.org", sync_status: "synced", risk_level: "low" }],
         };
       }
+      if (String(url).endsWith("/api/v1/nodes/monitor")) {
+        return {
+          success: true,
+          overall_status: "warning",
+          trusted_public_node_status: "synced",
+          warning_count: 1,
+          critical_count: 0,
+          alerts: [{ severity: "warning", code: "stale_node", public_safe: true }],
+        };
+      }
       if (String(url).endsWith("/api/v1/indexes/health")) {
         return { success: true, status: "ok", rebuild_needed: false };
       }
@@ -198,6 +209,8 @@ global.fetch = async (url, options = {}) => {
   assert.strictEqual(readiness.overall_status, "pass");
   const nodeComparison = await v1Client.compareNodes();
   assert.strictEqual(nodeComparison.nodes[0].sync_status, "synced");
+  const nodeMonitor = await v1Client.getNodeMonitor();
+  assert.strictEqual(nodeMonitor.overall_status, "warning");
   const summary = await v1Client.getChainSummary();
   assert.strictEqual(summary.height, 1);
   const indexHealth = await v1Client.getIndexHealth();
@@ -245,13 +258,14 @@ global.fetch = async (url, options = {}) => {
   assert.strictEqual(calls[3].url, "https://example.invalid/api/v1/roadmap");
   assert.strictEqual(calls[4].url, "https://example.invalid/api/v1/readiness");
   assert.strictEqual(calls[5].url, "https://example.invalid/api/v1/nodes/compare");
-  assert.strictEqual(calls[6].url, "https://example.invalid/api/v1/chain/summary");
-  assert.strictEqual(calls[7].url, "https://example.invalid/api/v1/indexes/health");
-  assert.strictEqual(calls[8].url, "https://example.invalid/api/v1/migration/readiness");
-  assert.strictEqual(calls[9].url, "https://example.invalid/api/v1/snapshot/latest");
+  assert.strictEqual(calls[6].url, "https://example.invalid/api/v1/nodes/monitor");
+  assert.strictEqual(calls[7].url, "https://example.invalid/api/v1/chain/summary");
+  assert.strictEqual(calls[8].url, "https://example.invalid/api/v1/indexes/health");
+  assert.strictEqual(calls[9].url, "https://example.invalid/api/v1/migration/readiness");
   assert.strictEqual(calls[10].url, "https://example.invalid/api/v1/snapshot/latest");
-  assert.strictEqual(calls[11].url, "https://example.invalid/api/v1/snapshot/verify");
-  assert.strictEqual(calls[6].options.headers["X-Request-ID"], "sdk-smoke");
+  assert.strictEqual(calls[11].url, "https://example.invalid/api/v1/snapshot/latest");
+  assert.strictEqual(calls[12].url, "https://example.invalid/api/v1/snapshot/verify");
+  assert.strictEqual(calls[7].options.headers["X-Request-ID"], "sdk-smoke");
   assert.strictEqual(v1Client.lastRequestId, "sdk-smoke-request");
 
   const legacyClient = new VorliqSDK({ nodeUrl: "https://example.invalid", apiVersion: "legacy" });

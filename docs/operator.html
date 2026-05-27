@@ -39,6 +39,7 @@
         <a class="button" href="https://vorliq.org/admin">Operator Login</a>
         <a class="button" href="bootstrap-chain.html">Chain Bootstrap</a>
         <a class="button" href="node-sync.html">Node Sync</a>
+        <a class="button" href="node-monitoring.html">Node Monitoring</a>
       </nav>
     </header>
     <main class="wrap">
@@ -69,6 +70,7 @@ sudo systemctl restart vorliq-backend.service</code></pre>
         <ul>
           <li>Use Overview to verify deployment, block height, chain validity, pending transactions, incidents, backups, and service state.</li>
           <li>Use Readiness to review the combined production gate, score, failing checks, warning checks, latest backup age, storage counts, incident counts, registry counts, deployment commit, and safe service names.</li>
+          <li>Use Network Monitor to review <code>ok</code>, <code>warning</code>, or <code>critical</code> node monitor status, fork/stale/ahead alerts, and safe operator actions.</li>
           <li>Use Storage to review JSON validity, backup availability, warning counts, and corruption signals without exposing server paths or secrets.</li>
           <li>Use Indexes to review derived read-index status, chain match, build time, and to trigger a safe rebuild from <code>chain.json</code> when needed.</li>
           <li>Use Migration to confirm production is still on JSON storage, the active adapter is JSON, PostgreSQL adapter writes are blocked, and dry-run plus shadow rehearsal migration preparation is available.</li>
@@ -84,8 +86,8 @@ sudo systemctl restart vorliq-backend.service</code></pre>
 
       <section class="glass">
         <h2>Post-Deploy Checks</h2>
-        <p>After deployment, verify the public app, <code>/api/health</code>, <code>/api/deployment</code>, <code>/api/version/metadata</code>, <code>/api/system/self-check</code>, <code>/api/storage/health</code>, <code>/api/migration/readiness</code>, <code>/api/readiness</code>, <code>/api/nodes/compare</code>, the registry summary, and the status page. CI also runs read-only Playwright browser tests against production so route loading, mobile navigation, layout overflow, safe API responses, and non-destructive user journeys are checked before the deploy workflow runs. The deploy workflow then runs the public readiness CLI; a fail result blocks the workflow.</p>
-        <p>Operators with the admin token can review <code>/api/admin/readiness</code> or <code>/api/admin/nodes/compare</code> for deeper safe metadata. Do not paste admin tokens into public reports, screenshots, or issue comments.</p>
+        <p>After deployment, verify the public app, <code>/api/health</code>, <code>/api/deployment</code>, <code>/api/version/metadata</code>, <code>/api/system/self-check</code>, <code>/api/storage/health</code>, <code>/api/migration/readiness</code>, <code>/api/readiness</code>, <code>/api/nodes/compare</code>, <code>/api/nodes/monitor</code>, the registry summary, and the status page. CI also runs read-only Playwright browser tests against production so route loading, mobile navigation, layout overflow, safe API responses, and non-destructive user journeys are checked before the deploy workflow runs. The deploy workflow then runs the public readiness CLI; a fail result blocks the workflow.</p>
+        <p>Operators with the admin token can review <code>/api/admin/readiness</code>, <code>/api/admin/nodes/compare</code>, or <code>/api/admin/nodes/monitor</code> for deeper safe metadata. Do not paste admin tokens into public reports, screenshots, or issue comments.</p>
         <p>Use the <a href="run-your-own-node.html">Run Your Own Node</a> guide for verified community onboarding, use <a href="bootstrap-chain.html">Verified Chain Bootstrap</a> for dry-run-first public chain import, and use the <a href="upgrades.html">Upgrade Guide</a> before updating self-hosted nodes.</p>
       </section>
 
@@ -132,7 +134,7 @@ sudo systemctl enable --now vorliq-miner.service</code></pre>
 
       <section class="glass">
         <h2>Community Node Doctor</h2>
-        <p>Community operators can run the read-only doctor after install or update. It checks local health, chain summary, diagnostics, storage, indexes, readiness, trusted snapshot verification, node sync comparison, registry metadata, and local systemd services when available. <code>ahead</code> is not automatically trusted; use signed snapshot and audit export checks. Recover forked nodes with dry-run bootstrap first and do not manually edit <code>chain.json</code>.</p>
+        <p>Community operators can run the read-only doctor after install or update. It checks local health, chain summary, diagnostics, storage, indexes, readiness, trusted snapshot verification, node sync comparison, node monitor alerts, registry metadata, and local systemd services when available. <code>ahead</code> is not automatically trusted; use signed snapshot and audit export checks. Recover forked nodes with dry-run bootstrap first and do not manually edit <code>chain.json</code>.</p>
         <pre><code>node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
       </section>
     </main>

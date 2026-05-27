@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../helpers/api";
 
 const ADMIN_TOKEN_KEY = "vorliq_admin_token";
-const tabs = ["Overview", "Readiness", "Analytics", "Storage", "Indexes", "Migration", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
+const tabs = ["Overview", "Readiness", "Network Monitor", "Analytics", "Storage", "Indexes", "Migration", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
 
 function authHeader(token) {
   return { Authorization: `Bearer ${token}` };
@@ -15,6 +15,7 @@ function Admin() {
   const [activeTab, setActiveTab] = useState("Overview");
   const [overview, setOverview] = useState(null);
   const [readiness, setReadiness] = useState(null);
+  const [nodeMonitor, setNodeMonitor] = useState(null);
   const [security, setSecurity] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [storage, setStorage] = useState(null);
@@ -52,6 +53,11 @@ function Admin() {
   const loadReadiness = useCallback(async () => {
     const response = await api.get("/admin/readiness", { headers });
     setReadiness(response.data);
+  }, [headers]);
+
+  const loadNodeMonitor = useCallback(async () => {
+    const response = await api.get("/admin/nodes/monitor", { headers });
+    setNodeMonitor(response.data);
   }, [headers]);
 
   const loadAnalytics = useCallback(async () => {
@@ -108,6 +114,7 @@ function Admin() {
     try {
       if (tab === "Overview") await loadOverview();
       if (tab === "Readiness") await loadReadiness();
+      if (tab === "Network Monitor") await loadNodeMonitor();
       if (tab === "Analytics") await loadAnalytics();
       if (tab === "Storage") await loadStorage();
       if (tab === "Indexes") await loadIndexes();
@@ -121,7 +128,7 @@ function Admin() {
     } catch (requestError) {
       setError(requestError.response?.status === 401 ? "Unauthorized" : "Unable to load admin data.");
     }
-  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadMigration, loadOverview, loadReadiness, loadReports, loadSecurity, loadStorage]);
+  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadMigration, loadNodeMonitor, loadOverview, loadReadiness, loadReports, loadSecurity, loadStorage]);
 
   useEffect(() => {
     if (adminToken) {
@@ -150,6 +157,7 @@ function Admin() {
     setAdminToken("");
     setOverview(null);
     setReadiness(null);
+    setNodeMonitor(null);
     setSecurity(null);
     setAnalytics(null);
     setStorage(null);
@@ -313,6 +321,7 @@ function Admin() {
 
       {activeTab === "Overview" && <OverviewTab overview={overview} />}
       {activeTab === "Readiness" && <ReadinessTab readiness={readiness} onLoad={loadReadiness} />}
+      {activeTab === "Network Monitor" && <NetworkMonitorTab monitor={nodeMonitor} onLoad={loadNodeMonitor} />}
       {activeTab === "Analytics" && <AnalyticsTab analytics={analytics} onLoad={loadAnalytics} />}
       {activeTab === "Storage" && <StorageTab storage={storage} onLoad={loadStorage} />}
       {activeTab === "Indexes" && <IndexesTab indexes={indexes} onLoad={loadIndexes} onRebuild={rebuildIndexes} />}
@@ -623,6 +632,49 @@ function ReadinessTab({ readiness, onLoad }) {
         <div className="admin-row"><strong>Registry active nodes</strong><span>{metadata.registry?.active_node_count ?? "Unavailable"}</span></div>
         <div className="admin-row"><strong>Deployment commit</strong><span>{metadata.deployment?.commit?.slice(0, 12) || "Unavailable"}</span></div>
         <div className="admin-row"><strong>Services</strong><span>{(metadata.services || []).join(", ")}</span></div>
+      </div>
+    </section>
+  );
+}
+
+function NetworkMonitorTab({ monitor, onLoad }) {
+  useEffect(() => { if (!monitor) onLoad().catch(() => {}); }, [monitor, onLoad]);
+  if (!monitor) return <div className="empty-state">Loading network monitor...</div>;
+
+  return (
+    <section className="glass-section card-pad">
+      <p className="risk-box">
+        Network monitor alerts are safe operational signals. Ahead nodes are not automatically trusted, and stale community nodes do not create public incidents by default.
+      </p>
+      <div className="admin-card-grid">
+        {[
+          ["Overall status", monitor.overall_status || "unknown"],
+          ["Trusted public node", monitor.trusted_public_node_status || "unknown"],
+          ["Active nodes", monitor.active_node_count ?? 0],
+          ["Synced", monitor.synced_count ?? 0],
+          ["Behind", monitor.behind_count ?? 0],
+          ["Ahead", monitor.ahead_count ?? 0],
+          ["Forked", monitor.forked_count ?? 0],
+          ["Stale", monitor.stale_count ?? 0],
+          ["Unreachable", monitor.unreachable_count ?? 0],
+          ["Warnings", monitor.warning_count ?? 0],
+          ["Critical", monitor.critical_count ?? 0],
+        ].map(([label, value]) => (
+          <div className="stat-card" key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+      <h2>Alerts</h2>
+      <div className="admin-list">
+        {(monitor.alerts || []).map((item) => (
+          <div className="admin-row" key={`${item.code}-${item.node_url || "network"}`}>
+            <strong>{item.title}</strong>
+            <span>{item.severity} - {item.operator_action}</span>
+          </div>
+        ))}
+        {!(monitor.alerts || []).length && <div className="empty-state">No network monitor alerts.</div>}
       </div>
     </section>
   );

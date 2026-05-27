@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vorliq Node Monitoring</title>
+    <meta name="description" content="How Vorliq monitors node sync, alerts operators, and opens public incidents for critical network-integrity issues." />
+    <style>
+      :root { --bg:#020817; --panel:rgba(8,14,28,.56); --green:#86e33b; --cyan:#18d7c9; --text:#fff; --muted:#c7d2e4; --border:rgba(24,215,201,.25); --warn:#ffd166; --danger:#ff6574; }
+      * { box-sizing:border-box; }
+      body { margin:0; min-width:320px; font-family:Inter,Arial,sans-serif; color:var(--text); background:linear-gradient(180deg,#020817,#07182d 56%,#020817); }
+      a { color:var(--cyan); font-weight:800; }
+      .wrap { width:min(1020px,calc(100% - 32px)); margin:0 auto; }
+      header, footer { border-color:var(--border); border-style:solid; border-width:0 0 1px; background:#071427; }
+      footer { border-width:1px 0 0; color:var(--muted); padding:24px 0; }
+      nav { display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:18px 0; }
+      .links { display:flex; gap:12px; flex-wrap:wrap; }
+      main { padding:44px 0 64px; display:grid; gap:18px; }
+      section { border:1px solid var(--border); border-radius:14px; background:var(--panel); padding:22px; display:grid; gap:14px; }
+      .hero { border:0; background:transparent; padding:0 0 12px; }
+      .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+      .eyebrow { color:var(--green); font-size:.8rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+      h1,h2,h3,p { margin:0; }
+      h1 { font-size:clamp(2.25rem,7vw,4.2rem); line-height:1; }
+      h2 { font-size:clamp(1.45rem,4vw,2.05rem); }
+      p, li { color:var(--muted); line-height:1.75; }
+      code, pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+      code { color:#e7f7ff; overflow-wrap:anywhere; }
+      pre { margin:0; overflow:auto; white-space:pre-wrap; border:1px solid var(--border); border-radius:10px; padding:14px; background:#020817; color:#e7f7ff; }
+      .warning { border-color:rgba(255,209,102,.48); }
+      .danger { border-color:rgba(255,101,116,.5); }
+      @media (max-width:760px) { .grid { grid-template-columns:1fr; } main { padding-top:32px; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav class="wrap">
+        <strong>Vorliq</strong>
+        <div class="links">
+          <a href="index.html">Docs Home</a>
+          <a href="node-sync.html">Node Sync</a>
+          <a href="operator.html">Operator Guide</a>
+          <a href="incidents.html">Incidents</a>
+          <a href="https://vorliq.org/nodes/compare">Live Node Sync</a>
+        </div>
+      </nav>
+    </header>
+    <main class="wrap">
+      <section class="hero">
+        <span class="eyebrow">Network Monitoring</span>
+        <h1>Monitor forks, stale nodes, and operator actions</h1>
+        <p>Vorliq node monitoring reads the public node comparison layer, classifies network state, alerts operators, and opens public incidents only for critical network-integrity issues.</p>
+      </section>
+
+      <section class="grid">
+        <article>
+          <h2>ok</h2>
+          <p><code>ok</code> means the trusted public node is synced, no active fork is visible, and no trusted public node is unreachable.</p>
+        </article>
+        <article class="warning">
+          <h2>warning</h2>
+          <p><code>warning</code> covers stale old community nodes, behind nodes, ahead nodes, unreachable non-critical nodes, and missing snapshot metadata from non-critical nodes.</p>
+        </article>
+        <article class="danger">
+          <h2>critical</h2>
+          <p><code>critical</code> covers trusted public node forked or unreachable, any active forked node, trusted snapshot signature failure, or inability to determine trusted chain state.</p>
+        </article>
+      </section>
+
+      <section>
+        <h2>Why stale old nodes are warnings only</h2>
+        <p>A stale community node can be an old local install, a stopped laptop, or a node that no longer sends heartbeat. Vorliq does not delete stale registry history and does not open a public incident for one harmless stale record by default. Operators still see the warning and suggested fixes.</p>
+      </section>
+
+      <section class="danger">
+        <h2>Why active forks are critical</h2>
+        <p>An active forked node is currently online and reporting a latest hash that does not match the trusted public chain at the comparable position. That can confuse operators and users, so it is treated as network-integrity critical. Do not sync from it until signed snapshots and audit exports agree.</p>
+      </section>
+
+      <section class="warning">
+        <h2>Ahead nodes are not automatically trusted</h2>
+        <p>Ahead means a node reports a higher height than the trusted public chain. It might be ahead legitimately, but it might also be forked, misconfigured, or unverified. Vorliq treats it as a warning until signed snapshots and audit exports verify the state.</p>
+      </section>
+
+      <section>
+        <h2>Operator alerts and duplicate suppression</h2>
+        <p>The scheduled maintenance runner calls <code>http://127.0.0.1:5000/api/nodes/monitor</code>. It logs sanitized warnings, calls the configured <code>alert.sh</code> path for repeated warnings or critical alerts, and suppresses duplicates by alert code and node URL. The state file stores only alert code, node URL, first seen, last seen, count, last alerted time, and status.</p>
+      </section>
+
+      <section>
+        <h2>Public incident rules</h2>
+        <p>Public incidents are created or updated only for critical network-integrity issues: active fork, trusted public node unreachable, trusted public node forked, trusted snapshot signature failure, or trusted state unavailable. Stale community nodes remain operator warnings by default. Incidents are resolved when the same critical condition clears.</p>
+      </section>
+
+      <section>
+        <h2>Fix stale heartbeat</h2>
+        <pre><code>sudo systemctl restart vorliq-heartbeat.service
+curl -I https://node.example.org/api/health
+node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
+      </section>
+
+      <section>
+        <h2>Investigate a fork warning</h2>
+        <pre><code>node tools/node_doctor.js --base-url http://127.0.0.1:5000 --trusted-node https://vorliq.org
+node tools/bootstrap_verify_node.js https://vorliq.org
+python3.12 tools/bootstrap_chain_from_public_node.py --trusted-node https://vorliq.org --data-dir ./blockchain/data</code></pre>
+        <p>Do not manually edit <code>chain.json</code>, rewrite historical blocks, or change block hashes. Use verified dry-run bootstrap first, then recover deliberately from backup if needed.</p>
+      </section>
+
+      <section>
+        <h2>Endpoints</h2>
+        <p><code>GET /api/nodes/monitor</code> returns public-safe monitor JSON. <code>GET /api/admin/nodes/monitor</code> requires the admin token and adds safe diagnostic context. Neither endpoint returns private keys, admin tokens, raw logs, server paths, raw IPs, raw user agents, or environment dumps.</p>
+      </section>
+    </main>
+    <footer><div class="wrap">Node monitoring is an operational signal, not a legal, banking, investment, or financial guarantee.</div></footer>
+  </body>
+</html>

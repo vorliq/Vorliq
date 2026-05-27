@@ -91,6 +91,21 @@
             </div>
             <p>Protected admin route requiring <code>ADMIN_TOKEN</code>. It returns the same public-safe comparison plus safe diagnostic metadata and never returns private keys, admin tokens, raw logs, server paths, raw IPs, or raw user agents.</p>
           </div>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method GET">GET</span>
+              <code class="path">/api/nodes/monitor</code>
+              <a class="try" href="https://vorliq.org/api/nodes/monitor">Try it</a>
+            </div>
+            <p>Returns public-safe network monitor status: <code>ok</code>, <code>warning</code>, or <code>critical</code>, trusted public node status, sync counts, alert counts, recommended actions, and safe alert rows. Stale old community nodes are warning-only by default; active forks are critical.</p>
+          </div>
+          <div class="endpoint">
+            <div class="endpoint-head">
+              <span class="method GET">GET</span>
+              <code class="path">/api/admin/nodes/monitor</code>
+            </div>
+            <p>Protected admin route requiring <code>ADMIN_TOKEN</code>. It returns the same public-safe monitor summary plus safe diagnostic context. It never returns private keys, admin tokens, raw logs, server paths, raw IPs, raw user agents, or environment values.</p>
+          </div>
         </section>
         <section>
           <h2>Bootstrap Package</h2>

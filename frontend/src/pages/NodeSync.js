@@ -26,8 +26,8 @@ const statusMeanings = [
 ];
 
 function badgeClass(status) {
-  if (status === "synced" || status === "low") return "pass";
-  if (status === "forked" || status === "high") return "fail";
+  if (status === "synced" || status === "low" || status === "ok") return "pass";
+  if (status === "forked" || status === "high" || status === "critical") return "fail";
   return "warning";
 }
 
@@ -56,6 +56,7 @@ function displayValue(value) {
 
 function NodeSync() {
   const [comparison, setComparison] = useState(null);
+  const [monitor, setMonitor] = useState(null);
   const [readiness, setReadiness] = useState(null);
   const [activeFilter, setActiveFilter] = useState("");
   const [loading, setLoading] = useState(true);
@@ -68,12 +69,14 @@ function NodeSync() {
       setLoading(true);
       setErrorMessage("");
       try {
-        const [compareResponse, readinessResponse] = await Promise.all([
+        const [compareResponse, monitorResponse, readinessResponse] = await Promise.all([
           api.get("/nodes/compare"),
+          api.get("/nodes/monitor").catch(() => ({ data: null })),
           api.get("/readiness").catch(() => ({ data: null })),
         ]);
         if (mounted) {
           setComparison(compareResponse.data);
+          setMonitor(monitorResponse.data);
           setReadiness(readinessResponse.data);
         }
       } catch (error) {
@@ -147,6 +150,51 @@ function NodeSync() {
                 <strong>{readiness?.overall_status || "unknown"}</strong>
               </div>
             </div>
+          </section>
+
+          <section className="card card-pad health-section">
+            <div className="section-title">
+              <h2>Network Monitor</h2>
+              <span className={`status-badge ${badgeClass(monitor?.overall_status)}`}>
+                {monitor?.overall_status || "unknown"}
+              </span>
+            </div>
+            {monitor?.success ? (
+              <>
+                <div className="stats-grid compact-stats">
+                  <div className="stat-card">
+                    <span>Trusted public node</span>
+                    <strong>{monitor.trusted_public_node_status || "unknown"}</strong>
+                  </div>
+                  <div className="stat-card">
+                    <span>Warnings</span>
+                    <strong>{monitor.warning_count ?? 0}</strong>
+                  </div>
+                  <div className="stat-card">
+                    <span>Critical</span>
+                    <strong>{monitor.critical_count ?? 0}</strong>
+                  </div>
+                  <div className="stat-card">
+                    <span>Unreachable</span>
+                    <strong>{monitor.unreachable_count ?? 0}</strong>
+                  </div>
+                </div>
+                {(monitor.alerts || []).length > 0 && (
+                  <div className="release-list">
+                    {monitor.alerts.map((item) => (
+                      <article className="release-item" key={`${item.code}-${item.node_url || "network"}`}>
+                        <span className={`status-badge ${badgeClass(item.severity)}`}>{item.severity}</span>
+                        <h3>{item.title}</h3>
+                        <p>{item.message}</p>
+                        <span className="help-text">{item.operator_action}</span>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="empty-state">Network monitor is unavailable right now.</div>
+            )}
           </section>
 
           <section className="card card-pad health-section">

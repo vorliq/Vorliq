@@ -178,6 +178,42 @@ async function checkNodeComparison(reporter, trustedNode) {
   return comparison;
 }
 
+async function checkNodeMonitor(reporter, trustedNode) {
+  const monitor = await checkEndpoint(reporter, "node network monitor", trustedNode, "/api/nodes/monitor", (data) => {
+    if (data.success !== true) {
+      return { status: "FAIL", explanation: "Node monitor did not return success=true.", fix: operatorFixes() };
+    }
+    if (data.overall_status === "critical") {
+      return {
+        status: "FAIL",
+        explanation: `Node monitor is critical with ${data.critical_count || 0} critical alert(s).`,
+        fix: operatorFixes(),
+      };
+    }
+    if (data.overall_status === "warning") {
+      return {
+        status: "WARN",
+        explanation: `Node monitor has ${data.warning_count || 0} warning alert(s).`,
+        fix: operatorFixes(),
+      };
+    }
+    if (data.overall_status === "ok") {
+      return { status: "PASS", explanation: "Node monitor reports ok." };
+    }
+    return { status: "FAIL", explanation: `Node monitor status is ${data.overall_status || "unknown"}.`, fix: operatorFixes() };
+  }, operatorFixes());
+
+  if (!monitor) return null;
+
+  console.log(`MONITOR status=${monitor.overall_status || "unknown"} warnings=${monitor.warning_count ?? 0} critical=${monitor.critical_count ?? 0}`);
+  for (const item of monitor.alerts || []) {
+    console.log(
+      `ALERT ${item.severity || "warning"} ${item.code || "unknown"} node=${item.node_url || "network"} action=${item.operator_action || "review"}`
+    );
+  }
+  return monitor;
+}
+
 function commandExists(command) {
   return new Promise((resolve) => {
     execFile("sh", ["-lc", `command -v ${command}`], (error) => resolve(!error));
@@ -319,6 +355,8 @@ async function main() {
   }, "Check trusted node registry availability.");
 
   await checkNodeComparison(reporter, trustedNode);
+
+  await checkNodeMonitor(reporter, trustedNode);
 
   await checkRegistryNode(reporter, trustedNode, args.publicUrl);
 

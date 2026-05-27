@@ -67,6 +67,7 @@
         <h2>How Incidents Work</h2>
         <p>Public incident records are stored by the backend and shown on the status page and inside the Vorliq web app. Users can read incidents without signing in, while incident creation and updates are protected by an operator-only admin token.</p>
         <p>Active incidents are any incidents whose status is not <code>resolved</code>. The public status page shows active incidents and marks the network as a service disruption when any active major or critical incident exists.</p>
+        <p>The node monitor can create or update incidents only for critical network-integrity issues: active fork, trusted public node unreachable, trusted public node forked, trusted snapshot signature verification failure, or trusted state unavailable. A single stale old community node is warning-only by default and should not create a public incident.</p>
       </section>
 
       <section>
@@ -86,6 +87,11 @@
       <section class="warning">
         <h2>Operator Token</h2>
         <p>Incident write routes require <code>ADMIN_TOKEN</code> on the production backend. The token must be generated on the server, stored outside the repository, and never committed, printed in logs, or shared publicly.</p>
+      </section>
+
+      <section>
+        <h2>Automated node monitor incidents</h2>
+        <p>The scheduled maintenance runner calls <code>/api/nodes/monitor</code>, logs sanitized warnings, suppresses duplicate operator alerts by alert code and node URL, and resolves matching network-integrity incidents after the critical condition clears. The suppression state stores only safe alert code, node URL, first seen, last seen, count, last alerted time, and status.</p>
       </section>
 
       <section>

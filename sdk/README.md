@@ -202,7 +202,7 @@ main().catch(console.error);
 
 ## Node Registry and Sync Comparison
 
-The public node registry lets applications show active nodes, sync status, reliability, uptime, and safe operator metadata. `compareNodes()` compares registered nodes with the trusted public chain snapshot and reports `synced`, `behind`, `ahead`, `forked`, `stale`, `unreachable`, or `unknown`. Ahead nodes are not automatically trusted; signed snapshots and audit exports are the verification path. Registry trust signals are operational signals only; a verified operator flag is not identity verification.
+The public node registry lets applications show active nodes, sync status, reliability, uptime, and safe operator metadata. `compareNodes()` compares registered nodes with the trusted public chain snapshot and reports `synced`, `behind`, `ahead`, `forked`, `stale`, `unreachable`, or `unknown`. `getNodeMonitor()` returns the public network monitor status (`ok`, `warning`, or `critical`) with safe operator actions. Ahead nodes are not automatically trusted; signed snapshots and audit exports are the verification path. Registry trust signals are operational signals only; a verified operator flag is not identity verification.
 
 ```js
 const { VorliqSDK } = require("./dist/vorliq-sdk");
@@ -211,10 +211,12 @@ async function main() {
   const vorliq = new VorliqSDK({ nodeUrl: "https://vorliq.org" });
   const summary = await vorliq.getRegistrySummary();
   const comparison = await vorliq.compareNodes();
+  const monitor = await vorliq.getNodeMonitor();
   const active = await vorliq.getActiveNodes();
   const allSynced = await vorliq.getAllNodes({ sync_status: "synced" });
 
   console.log("Active nodes:", summary.active_node_count);
+  console.log("Monitor status:", monitor.overall_status);
   console.log("Forked nodes:", comparison.summary.forked_count);
   console.log("Known synced nodes:", allSynced.nodes.length);
 

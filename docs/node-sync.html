@@ -41,6 +41,7 @@
           <a href="nodes.html">Nodes</a>
           <a href="run-your-own-node.html">Run a Node</a>
           <a href="bootstrap-chain.html">Chain Bootstrap</a>
+          <a href="node-monitoring.html">Node Monitoring</a>
           <a href="https://vorliq.org/nodes/compare">Live Node Sync</a>
         </div>
       </nav>
@@ -101,8 +102,13 @@ node tools/node_doctor.js --base-url http://127.0.0.1:5000 --trusted-node https:
       </section>
 
       <section>
+        <h2>Network monitor</h2>
+        <p>The <a href="node-monitoring.html">network monitor</a> turns sync comparison into <code>ok</code>, <code>warning</code>, or <code>critical</code> status. Stale old community nodes are warning-only by default, while active forks and trusted public node failures are critical.</p>
+      </section>
+
+      <section>
         <h2>Public endpoints</h2>
-        <p>Use <code>GET https://vorliq.org/api/nodes/compare</code> for public-safe comparison JSON. Operators with the admin token can use <code>GET /api/admin/nodes/compare</code> for safe extra diagnostics. Neither endpoint returns private keys, admin tokens, raw logs, server paths, raw IPs, or raw user agents.</p>
+        <p>Use <code>GET https://vorliq.org/api/nodes/compare</code> for public-safe comparison JSON and <code>GET https://vorliq.org/api/nodes/monitor</code> for monitor status and safe operator actions. Operators with the admin token can use <code>GET /api/admin/nodes/compare</code> and <code>GET /api/admin/nodes/monitor</code> for safe extra diagnostics. These endpoints do not return private keys, admin tokens, raw logs, server paths, raw IPs, or raw user agents.</p>
       </section>
     </main>
     <footer><div class="wrap">Node sync is an operational trust signal, not a legal, banking, investment, or financial guarantee.</div></footer>

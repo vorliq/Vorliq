@@ -798,6 +798,39 @@ function defaultApiGet(path) {
     });
   }
 
+  if (path === "/nodes/monitor") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        overall_status: "warning",
+        checked_at: "2026-05-26T12:00:00.000Z",
+        trusted_node_url: "https://vorliq.org",
+        trusted_public_node_status: "synced",
+        active_node_count: 1,
+        synced_count: 1,
+        behind_count: 0,
+        ahead_count: 0,
+        forked_count: 0,
+        stale_count: 1,
+        unreachable_count: 0,
+        warning_count: 1,
+        critical_count: 0,
+        recommended_actions: ["Restart heartbeat and run node doctor locally."],
+        alerts: [
+          {
+            severity: "warning",
+            code: "stale_node",
+            title: "Registered node heartbeat is stale",
+            message: "A non-critical registered node has not sent a heartbeat inside the active window.",
+            node_url: "https://old-node.example.org",
+            operator_action: "Restart heartbeat and run node doctor locally.",
+            public_safe: true,
+          },
+        ],
+      },
+    });
+  }
+
   if (path === "/registry/node") {
     return Promise.resolve({
       data: {
@@ -958,6 +991,9 @@ function defaultApiGet(path) {
         migration_phase: "preparation",
         rollback_plan_required: true,
         migration_tools_available: true,
+        node_monitor_status: "warning",
+        node_monitor_warning_count: 1,
+        node_monitor_critical_count: 0,
         checks: [
           {
             id: "index_health_ok",
@@ -2015,9 +2051,11 @@ test("Node sync page renders comparison filters and trusted chain", async () => 
 
   expect(await screen.findByRole("heading", { name: /^node sync$/i })).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: /network sync overview/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /network monitor/i })).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: /trusted public chain/i })).toBeInTheDocument();
   expect(await screen.findByRole("button", { name: /forked/i })).toBeInTheDocument();
   expect(await screen.findByText(/example node/i)).toBeInTheDocument();
+  expect(await screen.findByText(/registered node heartbeat is stale/i)).toBeInTheDocument();
   expect(screen.getByText(/operator fix commands/i)).toBeInTheDocument();
 });
 
@@ -2026,6 +2064,7 @@ test("Health page renders registry summary section", async () => {
 
   expect(await screen.findByRole("heading", { name: /network registry health/i })).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: /^node sync$/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /network monitor/i })).toBeInTheDocument();
   expect(await screen.findByText(/average reliability/i)).toBeInTheDocument();
   expect(await screen.findByText(/98%/i)).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: /mining operations/i })).toBeInTheDocument();
@@ -2242,6 +2281,7 @@ test("Readiness page includes index checks", async () => {
   expect(await screen.findByText(/index rebuild needed/i)).toBeInTheDocument();
   expect(await screen.findByText(/index health is ok/i)).toBeInTheDocument();
   expect(await screen.findByText(/migration readiness metadata is available/i)).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /network monitor/i })).toBeInTheDocument();
   expect(await screen.findByText(/preparation-only postgresql schema files are present/i)).toBeInTheDocument();
   expect(await screen.findByText(/postgresql is not active in production/i)).toBeInTheDocument();
 });

@@ -22,6 +22,7 @@ function groupByCategory(checks = []) {
 
 function Readiness() {
   const [readiness, setReadiness] = useState(null);
+  const [nodeMonitor, setNodeMonitor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -32,8 +33,14 @@ function Readiness() {
       setLoading(true);
       setErrorMessage("");
       try {
-        const response = await api.get("/readiness");
-        if (mounted) setReadiness(response.data);
+        const [response, monitorResponse] = await Promise.all([
+          api.get("/readiness"),
+          api.get("/nodes/monitor").catch(() => ({ data: null })),
+        ]);
+        if (mounted) {
+          setReadiness(response.data);
+          setNodeMonitor(monitorResponse.data);
+        }
       } catch (error) {
         if (mounted) setErrorMessage(apiErrorMessage(error, "Production readiness is unavailable."));
       } finally {
@@ -176,6 +183,33 @@ function Readiness() {
               <div className="stat-card">
                 <span>Bootstrap signature</span>
                 <strong>{readiness.bootstrap_package_snapshot_signature_verified ? "Verified" : "Review"}</strong>
+              </div>
+            </div>
+          </section>
+
+          <section className="card card-pad">
+            <div className="section-title">
+              <h2>Network Monitor</h2>
+              <span className={`status-badge ${nodeMonitor?.overall_status === "ok" ? "pass" : nodeMonitor?.overall_status === "critical" ? "fail" : "warning"}`}>
+                {nodeMonitor?.overall_status || readiness.node_monitor_status || "unknown"}
+              </span>
+            </div>
+            <div className="stats-grid compact-stats">
+              <div className="stat-card">
+                <span>Trusted node</span>
+                <strong>{nodeMonitor?.trusted_public_node_status || "unknown"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Warnings</span>
+                <strong>{nodeMonitor?.warning_count ?? readiness.node_monitor_warning_count ?? 0}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Critical</span>
+                <strong>{nodeMonitor?.critical_count ?? readiness.node_monitor_critical_count ?? 0}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Active nodes</span>
+                <strong>{nodeMonitor?.active_node_count ?? "unknown"}</strong>
               </div>
             </div>
           </section>

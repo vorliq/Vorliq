@@ -529,6 +529,34 @@ async function buildReadiness(options = {}) {
     },
   });
 
+  const registrySummary = registryResult.value?.summary || {};
+  const monitorActiveNodeCount = numberOrNull(registrySummary.active_node_count);
+  const monitorSyncedNodeCount = numberOrNull(registrySummary.synced_node_count);
+  const nodeMonitor = {
+    overall_status: registryResult.ok && (monitorActiveNodeCount || 0) > 0 && (monitorSyncedNodeCount === null || monitorSyncedNodeCount > 0)
+      ? "ok"
+      : "warning",
+    warning_count: registryResult.ok && (monitorActiveNodeCount || 0) > 0 ? 0 : 1,
+    critical_count: 0,
+    active_node_count: monitorActiveNodeCount,
+    trusted_public_node_status: monitorSyncedNodeCount && monitorSyncedNodeCount > 0 ? "synced" : "unknown",
+  };
+  addCheck(checks, {
+    id: "node_monitor_status",
+    name: "Node monitor status",
+    category: "Network",
+    status: nodeMonitor.overall_status === "ok" ? "pass" : "warning",
+    severity: nodeMonitor.overall_status === "critical" ? "critical" : "medium",
+    message: `Node monitor status is ${nodeMonitor.overall_status || "unknown"}.`,
+    safe_metadata: {
+      overall_status: nodeMonitor.overall_status || "unknown",
+      warning_count: numberOrNull(nodeMonitor.warning_count),
+      critical_count: numberOrNull(nodeMonitor.critical_count),
+      active_node_count: numberOrNull(nodeMonitor.active_node_count),
+      trusted_public_node_status: nodeMonitor.trusted_public_node_status || "unknown",
+    },
+  });
+
   const snapshotVerification = snapshotResult.value || {};
   const snapshotSecretScan = (snapshotVerification.checks || []).find((check) => check.id === "secret_scan_passed");
   const signatureRequired = snapshotVerification.signature_required === true;
@@ -683,7 +711,6 @@ async function buildReadiness(options = {}) {
     },
   });
 
-  const registrySummary = registryResult.value?.summary || {};
   const activeNodeCount = numberOrNull(registrySummary.active_node_count);
   const syncedNodeCount = numberOrNull(registrySummary.synced_node_count);
   const diagnosticsNodeActive = diagnosticsResult.ok
@@ -846,6 +873,9 @@ async function buildReadiness(options = {}) {
     bootstrap_package_snapshot_signature_verified: bootstrapPackage.snapshot_signature_verified === true,
     bootstrap_package_chain_height: numberOrNull(bootstrapPackage.chain_height),
     bootstrap_package_latest_block_hash: bootstrapPackage.latest_block_hash || null,
+    node_monitor_status: nodeMonitor.overall_status || "unknown",
+    node_monitor_warning_count: numberOrNull(nodeMonitor.warning_count),
+    node_monitor_critical_count: numberOrNull(nodeMonitor.critical_count),
     checks,
   };
 
@@ -902,6 +932,12 @@ async function buildReadiness(options = {}) {
         active_node_count: activeNodeCount,
         inactive_node_count: Math.max(0, (numberOrNull(registrySummary.total_registered_node_count) || 0) - (activeNodeCount || 0)),
         synced_node_count: syncedNodeCount,
+      },
+      node_monitor: {
+        overall_status: nodeMonitor.overall_status || "unknown",
+        warning_count: numberOrNull(nodeMonitor.warning_count),
+        critical_count: numberOrNull(nodeMonitor.critical_count),
+        trusted_public_node_status: nodeMonitor.trusted_public_node_status || "unknown",
       },
       deployment: {
         commit: commitResult.value || null,

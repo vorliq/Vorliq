@@ -7,6 +7,7 @@ const {
   hasForbiddenPublicMarker,
   summarizeNetworkSync,
 } = require("../nodeCompare");
+const { buildNetworkMonitor } = require("../nodeMonitor");
 const { handleRouteError } = require("./routeError");
 
 const router = express.Router();
@@ -84,6 +85,10 @@ function trustedNodeUrl() {
   return String(process.env.VORLIQ_PUBLIC_NODE_URL || DEFAULT_TRUSTED_NODE_URL).replace(/\/+$/, "");
 }
 
+function trustedPublicNodeUrl() {
+  return String(process.env.VORLIQ_NODE_URL || "https://node.vorliq.org").replace(/\/+$/, "");
+}
+
 function failIfUnsafe(payload) {
   if (hasForbiddenPublicMarker(payload)) {
     const error = new Error("Node comparison response contains forbidden public markers.");
@@ -92,7 +97,7 @@ function failIfUnsafe(payload) {
   }
 }
 
-async function buildNodeComparison({ admin = false } = {}) {
+async function buildNodeComparison({ admin = false, includeInternalMetadata = false } = {}) {
   const checkedAt = new Date().toISOString();
   const [snapshotResult, registryResult] = await Promise.all([
     verifySnapshot({ generatedAt: checkedAt, includeReadinessStatus: false }),
@@ -108,7 +113,15 @@ async function buildNodeComparison({ admin = false } = {}) {
     active_window_seconds: 30 * 60,
     now_seconds: Math.floor(new Date(checkedAt).getTime() / 1000),
   };
-  const nodes = (registryResult.data?.nodes || []).map((node) => compareNodeToTrustedState(node, trustedState));
+  const nodes = (registryResult.data?.nodes || []).map((node) => {
+    const comparison = compareNodeToTrustedState(node, trustedState);
+    if (!includeInternalMetadata) return comparison;
+    return {
+      ...comparison,
+      snapshot_hash: cleanText(node.snapshot_hash || node.snapshotHash, 160),
+      snapshot_signature_verified: node.snapshot_signature_verified ?? node.snapshotSignatureVerified ?? null,
+    };
+  });
   const summary = summarizeNetworkSync(nodes);
   const payload = {
     success: true,
@@ -135,6 +148,27 @@ async function buildNodeComparison({ admin = false } = {}) {
 
   failIfUnsafe(payload);
   return payload;
+}
+
+async function buildNodeMonitor({ admin = false } = {}) {
+  const comparison = await buildNodeComparison({ admin: false, includeInternalMetadata: true });
+  const monitor = buildNetworkMonitor(comparison, {
+    checkedAt: comparison.checked_at,
+    trustedPublicNodeUrl: trustedPublicNodeUrl(),
+  });
+
+  if (admin) {
+    monitor.diagnostics = {
+      comparison_checked_at: comparison.checked_at,
+      comparison_node_count: Array.isArray(comparison.nodes) ? comparison.nodes.length : 0,
+      trusted_signature_verified: comparison.trusted_signature_verified === true,
+      trusted_public_node_url_configured: Boolean(trustedPublicNodeUrl()),
+      incident_trigger_policy: "critical network integrity alerts only",
+    };
+  }
+
+  failIfUnsafe(monitor);
+  return monitor;
 }
 
 router.post("/api/registry/register", async (req, res) => {
@@ -218,5 +252,28 @@ router.get("/api/admin/nodes/compare", adminAuth, async (req, res) => {
   }
 });
 
+router.get("/api/nodes/monitor", async (req, res) => {
+  try {
+    return res.json(await buildNodeMonitor());
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ success: false, message: "Node monitor is currently unavailable." });
+    }
+    return handleRouteError(res, error, "GET /api/nodes/monitor", "Node monitor is currently unavailable.");
+  }
+});
+
+router.get("/api/admin/nodes/monitor", adminAuth, async (req, res) => {
+  try {
+    return res.json(await buildNodeMonitor({ admin: true }));
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ success: false, message: "Admin node monitor is currently unavailable." });
+    }
+    return handleRouteError(res, error, "GET /api/admin/nodes/monitor", "Admin node monitor is currently unavailable.");
+  }
+});
+
 module.exports = router;
 module.exports.buildNodeComparison = buildNodeComparison;
+module.exports.buildNodeMonitor = buildNodeMonitor;

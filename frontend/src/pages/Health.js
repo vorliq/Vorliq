@@ -32,6 +32,7 @@ function Health() {
   const [activeIncidents, setActiveIncidents] = useState([]);
   const [weeklyReport, setWeeklyReport] = useState(null);
   const [nodeComparison, setNodeComparison] = useState(null);
+  const [nodeMonitor, setNodeMonitor] = useState(null);
   const [registryNodes, setRegistryNodes] = useState([]);
   const [registrySummary, setRegistrySummary] = useState(null);
   const [networkHealth, setNetworkHealth] = useState([]);
@@ -64,6 +65,7 @@ function Health() {
         const incidentsRequest = api.get("/incidents/active");
         const weeklyReportRequest = api.get("/reports/weekly");
         const nodeComparisonRequest = api.get("/nodes/compare").catch(() => ({ data: null }));
+        const nodeMonitorRequest = api.get("/nodes/monitor").catch(() => ({ data: null }));
         const miningRequest = api.get("/mining/status");
         const [
           diagnosticsResponse,
@@ -82,6 +84,7 @@ function Health() {
           incidentsResponse,
           weeklyReportResponse,
           nodeComparisonResponse,
+          nodeMonitorResponse,
           miningResponse,
         ] = await Promise.all([
           diagnosticsRequest,
@@ -100,6 +103,7 @@ function Health() {
           incidentsRequest,
           weeklyReportRequest,
           nodeComparisonRequest,
+          nodeMonitorRequest,
           miningRequest,
         ]);
         const diagnosticsResponseTime = Math.round(performance.now() - diagnosticsStart);
@@ -140,6 +144,7 @@ function Health() {
           setActiveIncidents(incidentsResponse.data.incidents || []);
           setWeeklyReport(weeklyReportResponse.data);
           setNodeComparison(nodeComparisonResponse.data);
+          setNodeMonitor(nodeMonitorResponse.data);
           setRegistryNodes(nodes);
           setRegistrySummary(registrySummaryResponse.data.summary || null);
           setNetworkHealth(nodeChecks);
@@ -468,6 +473,39 @@ function Health() {
           </div>
         ) : (
           <div className="empty-state">Node sync comparison is unavailable right now.</div>
+        )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <div className="section-title">
+          <h2>Network Monitor</h2>
+          <span className={`status-badge ${nodeMonitor?.overall_status === "ok" ? "pass" : nodeMonitor?.overall_status === "critical" ? "fail" : "warning"}`}>
+            {nodeMonitor?.overall_status || "unknown"}
+          </span>
+        </div>
+        {loading ? (
+          <Spinner label="Loading network monitor..." />
+        ) : nodeMonitor?.success ? (
+          <div className="stats-grid compact-stats">
+            <div className="stat-card">
+              <span>Trusted node</span>
+              <strong>{nodeMonitor.trusted_public_node_status || "unknown"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Warnings</span>
+              <strong>{nodeMonitor.warning_count ?? 0}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Critical</span>
+              <strong>{nodeMonitor.critical_count ?? 0}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Actions</span>
+              <strong>{(nodeMonitor.recommended_actions || []).length}</strong>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">Network monitor is unavailable right now.</div>
         )}
       </section>
 
