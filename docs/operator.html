@@ -135,8 +135,9 @@ sudo systemctl enable --now vorliq-miner.service</code></pre>
 
       <section class="glass">
         <h2>Community Node Doctor</h2>
-        <p>Community operators can run the read-only doctor after install or update. It checks local health, chain summary, diagnostics, storage, indexes, readiness, trusted snapshot verification, node sync comparison, node monitor alerts, registry metadata, and local systemd services when available. <code>ahead</code> is not automatically trusted; use signed snapshot and audit export checks. Recover forked nodes with dry-run bootstrap first and do not manually edit <code>chain.json</code>.</p>
+        <p>Community operators can run the read-only doctor after install or update. It checks local health, chain summary, diagnostics, storage, indexes, readiness, trusted snapshot verification, node sync comparison, node monitor alerts, peer propagation status, registry metadata, and local systemd services when available. <code>ahead</code> is not automatically trusted; use signed snapshot and audit export checks. Recover forked nodes with dry-run bootstrap first and do not manually edit <code>chain.json</code>.</p>
         <p>Do not manually edit <code>registry.json</code>. To remove old stale/test nodes from default live views, use Registry Lifecycle or <code>POST /api/admin/registry/archive</code> with a clear reason. Restore returns the node to heartbeat-based classification. Retire marks intentional departure. The trusted public node should not be archived casually and requires an explicit force flag.</p>
+        <p>Peer propagation status is available at <code>/api/peers/propagation/status</code> and the live <a href="https://vorliq.org/peers/propagation">Peer Propagation</a> page. Broadcast may remain disabled by default; receive validation can still quarantine unsafe blocks and reject invalid transactions.</p>
         <pre><code>node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
       </section>
     </main>

@@ -24,6 +24,7 @@ const routes = [
   ["/leaderboard", /Leaderboard|Top Reputation/i],
   ["/registry", /Registry/i],
   ["/nodes/compare", /Node Sync/i],
+  ["/peers/propagation", /Peer Propagation/i],
   ["/network", /Network/i],
   ["/stats", /Stats|Statistics/i],
   ["/health", /Health/i],

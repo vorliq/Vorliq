@@ -47,6 +47,7 @@
             <a class="button" href="run-your-own-node.html">Run a Node</a>
             <a class="button" href="bootstrap-chain.html">Bootstrap Chain</a>
             <a class="button" href="node-sync.html">Node Sync</a>
+            <a class="button" href="peer-propagation.html">Peer Propagation</a>
             <a class="button" href="node-lifecycle.html">Node Lifecycle</a>
             <a class="button" href="deploy.html">Deploy</a>
             <a class="button primary" href="https://vorliq.org/registry">Open Registry</a>
@@ -81,6 +82,10 @@
         <article class="card stack">
           <h2>Sync states</h2>
           <p><code>synced</code> means the node is active, valid, at the same trusted height, and has the same latest hash. <code>behind</code> means it is valid but lower. <code>ahead</code> means higher but not automatically trusted. <code>forked</code> means a comparable hash mismatch. <code>stale</code> means the heartbeat is outside the active window. <code>unreachable</code> means diagnostics could not be checked. <code>unknown</code> means safe comparison data is missing.</p>
+        </article>
+        <article class="card stack">
+          <h2>Peer propagation</h2>
+          <p>Active synced HTTPS registry nodes may relay signed pending transactions and newly mined direct-next blocks when broadcast is enabled. Receiving nodes still validate every payload and quarantine non-next blocks instead of replacing the local chain. See <a href="peer-propagation.html">Peer Propagation</a>.</p>
         </article>
       </section>
 

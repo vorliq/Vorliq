@@ -40,6 +40,7 @@
           <a href="run-your-own-node.html">Run Your Own Node</a>
           <a href="bootstrap-verification.html">Bootstrap Verification</a>
           <a href="node-sync.html">Node Sync</a>
+          <a href="peer-propagation.html">Peer Propagation</a>
           <a href="recovery.html">Recovery</a>
         </div>
       </nav>
@@ -85,6 +86,7 @@
       <section class="warning">
         <h2>Fork awareness</h2>
         <p>If <a href="node-sync.html">Node Sync</a> marks a node as <code>forked</code>, do not manually edit <code>chain.json</code> and do not rewrite blocks. Run bootstrap in dry-run mode first, compare signed snapshot and audit export hashes, then decide whether the node should be rebuilt from verified public data. If a node appears <code>ahead</code>, treat that as a warning until signed snapshot and audit paths verify the newer state.</p>
+        <p><a href="peer-propagation.html">Peer propagation</a> is live relay for pending transactions and direct-next blocks. It is not a bootstrap path and does not automatically replace local chain data from peers.</p>
       </section>
       <section>
         <h2>Verify after bootstrap</h2>

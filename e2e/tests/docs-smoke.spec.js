@@ -8,3 +8,11 @@ test("node lifecycle docs page loads", async ({ page }) => {
   await expectNoCrashText(page);
   await expectNoHorizontalOverflow(page);
 });
+
+test("peer propagation docs page loads", async ({ page }) => {
+  await safeGoto(page, "/docs/peer-propagation.html");
+  await expect(page.locator("body")).toContainText(/Peer propagation/i);
+  await expect(page.locator("body")).toContainText(/Do not manually edit chain\.json/i);
+  await expectNoCrashText(page);
+  await expectNoHorizontalOverflow(page);
+});

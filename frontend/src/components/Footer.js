@@ -20,6 +20,7 @@ function Footer() {
         { label: "Releases", href: "/releases", internal: true },
         { label: "Readiness", href: "/readiness", internal: true },
         { label: "Node Sync", href: "/nodes/compare", internal: true },
+        { label: "Peer Propagation", href: "/peers/propagation", internal: true },
         { label: "Snapshot Verification", href: "/snapshot", internal: true },
         { label: "Snapshot Archive", href: "/snapshot-archive", internal: true },
         { label: "Bootstrap Node", href: "/bootstrap", internal: true },

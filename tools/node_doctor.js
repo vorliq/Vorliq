@@ -262,6 +262,53 @@ async function checkNodeMonitor(reporter, trustedNode) {
   return monitor;
 }
 
+async function checkPeerPropagation(reporter, baseUrl) {
+  const status = await checkEndpoint(reporter, "peer propagation", baseUrl, "/api/peers/propagation/status", (data) => {
+    if (data.success !== true) {
+      return { status: "FAIL", explanation: "Peer propagation status did not return success=true." };
+    }
+    if (data.receive_enabled !== true) {
+      return {
+        status: "WARN",
+        explanation: "Peer receiving is disabled, so this node will not accept validated peer transactions or blocks.",
+        fix: "Set VORLIQ_PEER_RECEIVE_ENABLED=true after confirming validation routes are deployed.",
+      };
+    }
+    if (data.broadcast_enabled === true && Number(data.eligible_broadcast_peer_count || 0) === 0) {
+      return {
+        status: "WARN",
+        explanation: "Peer broadcast is enabled but no eligible synced HTTPS peers are available.",
+        fix: "Register a synced public HTTPS peer or disable broadcast until peers are available.",
+      };
+    }
+    return {
+      status: "PASS",
+      explanation: `Receive=${data.receive_enabled ? "enabled" : "disabled"} broadcast=${data.broadcast_enabled ? "enabled" : "disabled"} eligible=${data.eligible_broadcast_peer_count ?? 0}.`,
+    };
+  }, "Check /api/peers/propagation/status.");
+
+  if (!status) return null;
+
+  console.log(
+    `PROPAGATION broadcast=${status.broadcast_enabled ? "enabled" : "disabled"} receive=${status.receive_enabled ? "enabled" : "disabled"} active=${status.active_peer_count ?? 0} eligible=${status.eligible_broadcast_peer_count ?? 0} accepted_tx=${status.accepted_transactions ?? 0} accepted_blocks=${status.accepted_blocks ?? 0} rejected=${status.rejected ?? 0} quarantined=${status.quarantined ?? 0} failed=${status.failed ?? 0}`
+  );
+
+  if (Number(status.rejected || 0) >= 10) {
+    reporter.add("WARN", "peer rejected payloads", `${status.rejected} rejected peer payloads are in the retained event log.`, "Review /api/peers/propagation/events?status=rejected.");
+  }
+  if (Number(status.quarantined || 0) > 0) {
+    reporter.add("WARN", "peer quarantined blocks", `${status.quarantined} quarantined peer block(s) are recorded.`, "Review /api/peers/propagation/events?status=quarantined before taking any sync action.");
+  }
+  if (Number(status.failed || 0) >= 3) {
+    reporter.add("WARN", "peer broadcast failures", `${status.failed} peer propagation failure(s) are recorded.`, "Check peer URLs, HTTPS, and VORLIQ_PEER_BROADCAST_TIMEOUT_MS.");
+  }
+  if (status.broadcast_enabled !== true) {
+    reporter.add("PASS", "peer broadcast default", "Peer broadcast is disabled; this is an acceptable safe default.");
+  }
+
+  return status;
+}
+
 function commandExists(command) {
   return new Promise((resolve) => {
     execFile("sh", ["-lc", `command -v ${command}`], (error) => resolve(!error));
@@ -407,6 +454,8 @@ async function main() {
   await checkNodeComparison(reporter, trustedNode);
 
   await checkNodeMonitor(reporter, trustedNode);
+
+  await checkPeerPropagation(reporter, baseUrl);
 
   await checkRegistryNode(reporter, trustedNode, args.publicUrl);
 

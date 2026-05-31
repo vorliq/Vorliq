@@ -111,6 +111,11 @@ node tools/node_doctor.js --base-url http://127.0.0.1:5000 --trusted-node https:
         <h2>Public endpoints</h2>
         <p>Use <code>GET https://vorliq.org/api/nodes/compare</code> for public-safe comparison JSON and <code>GET https://vorliq.org/api/nodes/monitor</code> for monitor status and safe operator actions. Operators with the admin token can use <code>GET /api/admin/nodes/compare</code> and <code>GET /api/admin/nodes/monitor</code> for safe extra diagnostics. These endpoints do not return private keys, admin tokens, raw logs, server paths, raw IPs, or raw user agents.</p>
       </section>
+
+      <section>
+        <h2>Peer propagation is separate</h2>
+        <p><a href="peer-propagation.html">Peer propagation</a> can relay valid signed transactions and direct-next blocks, but it does not automatically trust ahead nodes, replace chains, or rewrite history. Non-next peer blocks are quarantined for operator review.</p>
+      </section>
     </main>
     <footer><div class="wrap">Node sync is an operational trust signal, not a legal, banking, investment, or financial guarantee.</div></footer>
   </body>

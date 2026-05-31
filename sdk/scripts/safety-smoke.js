@@ -25,6 +25,8 @@ assert.strictEqual(typeof sdk.getChangelog, "function");
 assert.strictEqual(typeof sdk.getRoadmap, "function");
 assert.strictEqual(typeof sdk.getReadiness, "function");
 assert.strictEqual(typeof sdk.getNodeMonitor, "function");
+assert.strictEqual(typeof sdk.getPeerPropagationStatus, "function");
+assert.strictEqual(typeof sdk.getPeerPropagationEvents, "function");
 assert.strictEqual(typeof sdk.getRegistryLifecycle, "function");
 assert.strictEqual(typeof sdk.getIndexHealth, "function");
 assert.strictEqual(typeof sdk.getMigrationReadiness, "function");
@@ -149,6 +151,25 @@ global.fetch = async (url, options = {}) => {
           alerts: [{ severity: "warning", code: "stale_node", public_safe: true }],
         };
       }
+      if (String(url).endsWith("/api/v1/peers/propagation/status")) {
+        return {
+          success: true,
+          broadcast_enabled: false,
+          receive_enabled: true,
+          active_peer_count: 1,
+          eligible_broadcast_peer_count: 0,
+          quarantined: 0,
+        };
+      }
+      if (String(url).includes("/api/v1/peers/propagation/events")) {
+        return {
+          success: true,
+          events: [{ event_id: "event-1", type: "transaction", status: "accepted" }],
+          total: 1,
+          limit: 10,
+          offset: 0,
+        };
+      }
       if (String(url).endsWith("/api/v1/registry/lifecycle")) {
         return {
           success: true,
@@ -219,6 +240,10 @@ global.fetch = async (url, options = {}) => {
   assert.strictEqual(nodeComparison.nodes[0].sync_status, "synced");
   const nodeMonitor = await v1Client.getNodeMonitor();
   assert.strictEqual(nodeMonitor.overall_status, "warning");
+  const propagationStatus = await v1Client.getPeerPropagationStatus();
+  assert.strictEqual(propagationStatus.receive_enabled, true);
+  const propagationEvents = await v1Client.getPeerPropagationEvents({ limit: 10, status: "accepted" });
+  assert.strictEqual(propagationEvents.events[0].status, "accepted");
   const registryLifecycle = await v1Client.getRegistryLifecycle();
   assert.strictEqual(registryLifecycle.summary.active_count, 1);
   const summary = await v1Client.getChainSummary();
@@ -269,14 +294,16 @@ global.fetch = async (url, options = {}) => {
   assert.strictEqual(calls[4].url, "https://example.invalid/api/v1/readiness");
   assert.strictEqual(calls[5].url, "https://example.invalid/api/v1/nodes/compare");
   assert.strictEqual(calls[6].url, "https://example.invalid/api/v1/nodes/monitor");
-  assert.strictEqual(calls[7].url, "https://example.invalid/api/v1/registry/lifecycle");
-  assert.strictEqual(calls[8].url, "https://example.invalid/api/v1/chain/summary");
-  assert.strictEqual(calls[9].url, "https://example.invalid/api/v1/indexes/health");
-  assert.strictEqual(calls[10].url, "https://example.invalid/api/v1/migration/readiness");
-  assert.strictEqual(calls[11].url, "https://example.invalid/api/v1/snapshot/latest");
-  assert.strictEqual(calls[12].url, "https://example.invalid/api/v1/snapshot/latest");
-  assert.strictEqual(calls[13].url, "https://example.invalid/api/v1/snapshot/verify");
-  assert.strictEqual(calls[8].options.headers["X-Request-ID"], "sdk-smoke");
+  assert.strictEqual(calls[7].url, "https://example.invalid/api/v1/peers/propagation/status");
+  assert.strictEqual(calls[8].url, "https://example.invalid/api/v1/peers/propagation/events?limit=10&status=accepted");
+  assert.strictEqual(calls[9].url, "https://example.invalid/api/v1/registry/lifecycle");
+  assert.strictEqual(calls[10].url, "https://example.invalid/api/v1/chain/summary");
+  assert.strictEqual(calls[11].url, "https://example.invalid/api/v1/indexes/health");
+  assert.strictEqual(calls[12].url, "https://example.invalid/api/v1/migration/readiness");
+  assert.strictEqual(calls[13].url, "https://example.invalid/api/v1/snapshot/latest");
+  assert.strictEqual(calls[14].url, "https://example.invalid/api/v1/snapshot/latest");
+  assert.strictEqual(calls[15].url, "https://example.invalid/api/v1/snapshot/verify");
+  assert.strictEqual(calls[10].options.headers["X-Request-ID"], "sdk-smoke");
   assert.strictEqual(v1Client.lastRequestId, "sdk-smoke-request");
 
   const legacyClient = new VorliqSDK({ nodeUrl: "https://example.invalid", apiVersion: "legacy" });

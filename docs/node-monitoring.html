@@ -112,6 +112,11 @@ python3.12 tools/bootstrap_chain_from_public_node.py --trusted-node https://vorl
         <h2>Endpoints</h2>
         <p><code>GET /api/nodes/monitor</code> returns public-safe monitor JSON. <code>GET /api/admin/nodes/monitor</code> requires the admin token and adds safe diagnostic context. Use <a href="node-lifecycle.html">Node Lifecycle</a> for archive, restore, and retire behavior. Neither endpoint returns private keys, admin tokens, raw logs, server paths, raw IPs, raw user agents, or environment dumps.</p>
       </section>
+
+      <section>
+        <h2>Propagation warnings</h2>
+        <p><code>GET /api/peers/propagation/status</code> reports receive state, broadcast state, rejected payloads, quarantined blocks, and failures. Quarantined peer blocks are operator evidence only; they are not applied to the chain and do not replace signed snapshot or bootstrap verification.</p>
+      </section>
     </main>
     <footer><div class="wrap">Node monitoring is an operational signal, not a legal, banking, investment, or financial guarantee.</div></footer>
   </body>

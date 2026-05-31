@@ -168,6 +168,9 @@ function Network() {
           <a className="button secondary small-button" href="/nodes/compare">
             Node Sync
           </a>
+          <a className="button secondary small-button" href="/peers/propagation">
+            Peer Propagation
+          </a>
           <a className="button secondary small-button" href="/bootstrap">
             Bootstrap Node
           </a>

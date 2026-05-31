@@ -37,5 +37,6 @@ test("Network page shows Node Operator Tools", async () => {
   expect(screen.getByRole("link", { name: /bootstrap verification/i })).toHaveAttribute("href", "/docs/bootstrap-verification.html");
   expect(screen.getByRole("link", { name: /status page/i })).toHaveAttribute("href", "https://status.vorliq.org");
   expect(screen.getByRole("link", { name: /readiness page/i })).toHaveAttribute("href", "/readiness");
+  expect(screen.getByRole("link", { name: /peer propagation/i })).toHaveAttribute("href", "/peers/propagation");
   expect(screen.getByRole("link", { name: /bootstrap node/i })).toHaveAttribute("href", "/bootstrap");
 });

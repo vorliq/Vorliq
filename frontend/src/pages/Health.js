@@ -33,6 +33,7 @@ function Health() {
   const [weeklyReport, setWeeklyReport] = useState(null);
   const [nodeComparison, setNodeComparison] = useState(null);
   const [nodeMonitor, setNodeMonitor] = useState(null);
+  const [peerPropagation, setPeerPropagation] = useState(null);
   const [registryNodes, setRegistryNodes] = useState([]);
   const [registrySummary, setRegistrySummary] = useState(null);
   const [networkHealth, setNetworkHealth] = useState([]);
@@ -66,6 +67,7 @@ function Health() {
         const weeklyReportRequest = api.get("/reports/weekly");
         const nodeComparisonRequest = api.get("/nodes/compare").catch(() => ({ data: null }));
         const nodeMonitorRequest = api.get("/nodes/monitor").catch(() => ({ data: null }));
+        const peerPropagationRequest = api.get("/peers/propagation/status").catch(() => ({ data: null }));
         const miningRequest = api.get("/mining/status");
         const [
           diagnosticsResponse,
@@ -85,6 +87,7 @@ function Health() {
           weeklyReportResponse,
           nodeComparisonResponse,
           nodeMonitorResponse,
+          peerPropagationResponse,
           miningResponse,
         ] = await Promise.all([
           diagnosticsRequest,
@@ -104,6 +107,7 @@ function Health() {
           weeklyReportRequest,
           nodeComparisonRequest,
           nodeMonitorRequest,
+          peerPropagationRequest,
           miningRequest,
         ]);
         const diagnosticsResponseTime = Math.round(performance.now() - diagnosticsStart);
@@ -145,6 +149,7 @@ function Health() {
           setWeeklyReport(weeklyReportResponse.data);
           setNodeComparison(nodeComparisonResponse.data);
           setNodeMonitor(nodeMonitorResponse.data);
+          setPeerPropagation(peerPropagationResponse.data);
           setRegistryNodes(nodes);
           setRegistrySummary(registrySummaryResponse.data.summary || null);
           setNetworkHealth(nodeChecks);
@@ -506,6 +511,39 @@ function Health() {
           </div>
         ) : (
           <div className="empty-state">Network monitor is unavailable right now.</div>
+        )}
+      </section>
+
+      <section className="card card-pad health-section">
+        <div className="section-title">
+          <h2>Peer Propagation</h2>
+          <a className="button secondary small-button" href="/peers/propagation">
+            Open Propagation
+          </a>
+        </div>
+        {loading ? (
+          <Spinner label="Loading peer propagation..." />
+        ) : peerPropagation?.success ? (
+          <div className="stats-grid compact-stats">
+            <div className="stat-card">
+              <span>Broadcast</span>
+              <strong>{peerPropagation.broadcast_enabled ? "Enabled" : "Disabled"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Receive</span>
+              <strong>{peerPropagation.receive_enabled ? "Enabled" : "Disabled"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Eligible peers</span>
+              <strong>{peerPropagation.eligible_broadcast_peer_count ?? 0}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Quarantined</span>
+              <strong>{peerPropagation.quarantined ?? 0}</strong>
+            </div>
+          </div>
+        ) : (
+          <div className="empty-state">Peer propagation status is unavailable right now.</div>
         )}
       </section>
 

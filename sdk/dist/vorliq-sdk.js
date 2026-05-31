@@ -96,6 +96,16 @@ function registryQuery(params = {}) {
   return value ? `?${value}` : "";
 }
 
+function peerPropagationEventsQuery(params = {}) {
+  const query = new URLSearchParams();
+  if (params.limit !== undefined) query.set("limit", String(params.limit));
+  if (params.offset !== undefined) query.set("offset", String(params.offset));
+  if (params.status) query.set("status", String(params.status));
+  if (params.type) query.set("type", String(params.type));
+  const value = query.toString();
+  return value ? `?${value}` : "";
+}
+
 function canonicalize(value) {
   if (Array.isArray(value)) {
     return value.map(canonicalize);
@@ -619,6 +629,25 @@ class VorliqSDK {
    */
   async getNodeMonitor() {
     return this.request("/api/nodes/monitor");
+  }
+
+  /**
+   * Gets safe peer propagation status for transaction and block relay.
+   *
+   * @returns {Promise<object>} Propagation controls, eligible peer counts, and recent event totals.
+   */
+  async getPeerPropagationStatus() {
+    return this.request("/api/peers/propagation/status");
+  }
+
+  /**
+   * Gets paginated safe peer propagation events.
+   *
+   * @param {object} [options] Optional limit, offset, status, and type filters.
+   * @returns {Promise<object>} Propagation event page without raw payloads or secrets.
+   */
+  async getPeerPropagationEvents(options = {}) {
+    return this.request(`/api/peers/propagation/events${peerPropagationEventsQuery(options)}`);
   }
 
   /**

@@ -17,6 +17,7 @@ from lending import LendingPool
 from logger import vorliq_logger
 from network import Network
 from node import Node
+from peer_propagation import PeerEventLog, PeerPropagation
 from price import PriceDiscovery
 from profiles import Profiles
 from registry import NodeRegistry
@@ -26,7 +27,7 @@ from storage_adapters.factory import (
     storage_adapter_runtime_metadata,
     validate_storage_backend_config,
 )
-from transaction import SYSTEM_ADDRESSES, TREASURY_ADDRESS, Transaction
+from transaction import SYSTEM_ADDRESS, SYSTEM_ADDRESSES, TREASURY_ADDRESS, Transaction
 from treasury import Treasury
 from wallet import Wallet, address_from_public_key_pem, is_reserved_address, validate_address, verify_digest_signature
 
@@ -69,6 +70,8 @@ except StorageAdapterConfigurationError as exc:
     raise
 STORAGE_ADAPTER_METADATA = storage_adapter_runtime_metadata()
 storage = Storage(os.environ.get("VORLIQ_DATA_DIR"))
+peer_events = PeerEventLog(storage.data_dir / "peer_events.json")
+peer_propagation = PeerPropagation(peer_events)
 node = Node()
 saved_blockchain = storage.load_chain()
 if saved_blockchain:
@@ -207,6 +210,11 @@ def _transaction_pagination(default_limit: int = 25) -> tuple[int, int]:
     return min(limit, 100), offset
 
 
+def _peer_event_pagination(default_limit: int = 25) -> tuple[int, int]:
+    limit, offset = _pagination(default_limit)
+    return min(limit, 100), offset
+
+
 def _page(items: list, limit: int, offset: int) -> tuple[list, int, bool]:
     total = len(items)
     page_items = items[offset : offset + limit]
@@ -308,6 +316,47 @@ def _sync_faucet(save: bool = True) -> bool:
 
 
 _sync_faucet(save=True)
+
+
+def _ensure_peer_reward_pending(mined_block: Block) -> None:
+    miner_address = getattr(mined_block, "miner_address", None)
+    if not miner_address:
+        return
+    mining_reward = node.blockchain.get_current_mining_reward()
+    if mining_reward <= 0:
+        return
+    rewards = [
+        Transaction(
+            sender_address=SYSTEM_ADDRESS,
+            receiver_address=miner_address,
+            amount=round(mining_reward * (1 - node.blockchain.TREASURY_PERCENTAGE), 8),
+        ),
+        Transaction(
+            sender_address=SYSTEM_ADDRESS,
+            receiver_address=node.blockchain.TREASURY_ADDRESS,
+            amount=round(mining_reward * node.blockchain.TREASURY_PERCENTAGE, 8),
+        ),
+    ]
+    existing = {node.blockchain._transaction_identity(transaction) for transaction in node.blockchain.pending_transactions}
+    for reward in rewards:
+        if node.blockchain._transaction_identity(reward) not in existing:
+            node.blockchain.pending_transactions.append(reward)
+
+
+def _persist_after_peer_block(mined_block: Block) -> None:
+    node.blockchain.prune_pending_transactions(drop_system_rewards=False)
+    _ensure_peer_reward_pending(mined_block)
+    _sync_lending_pool(save=False)
+    _sync_exchange(save=False)
+    _sync_treasury(save=False)
+    _sync_faucet(save=False)
+    storage.save_chain(node.blockchain)
+    storage.save_pending(node.blockchain.pending_transactions)
+    _rebuild_indexes(save=True)
+    storage.save_lending_pool(lending_pool)
+    storage.save_exchange(exchange)
+    storage.save_treasury(treasury)
+    storage.save_faucet(faucet)
 
 
 def _load_or_rebuild_indexes() -> None:
@@ -583,8 +632,12 @@ def create_transaction():
         storage.save_pending(node.blockchain.pending_transactions)
         _rebuild_indexes(save=True)
         storage.save_achievements(achievements)
-        if not data.get("_broadcasted"):
-            network.broadcast_transaction({**transaction.to_dict(), "_broadcasted": True})
+        peer_propagation.broadcast_transaction(
+            transaction,
+            node_registry,
+            local_node_url=LOCAL_NODE_URL,
+            is_local_development=IS_LOCAL_DEVELOPMENT,
+        )
         return jsonify(
             {
                 "success": True,
@@ -619,7 +672,12 @@ def mine_block():
         achievements.check_and_award(miner_address, "first_mine", node.blockchain)
         achievements.check_and_award(miner_address, "ten_blocks", node.blockchain)
         storage.save_achievements(achievements)
-        network.broadcast_block(raw_block)
+        peer_propagation.broadcast_block(
+            raw_block,
+            node_registry,
+            local_node_url=LOCAL_NODE_URL,
+            is_local_development=IS_LOCAL_DEVELOPMENT,
+        )
         return jsonify({"success": True, "block": block}), 201
     except MiningCooldownError as exc:
         vorliq_logger.warning("Mine endpoint rejected request during cooldown: %s", exc)
@@ -1359,6 +1417,226 @@ def announce_peer():
     except Exception as exc:
         vorliq_logger.error("Peer announce endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
+
+
+def _peer_source_url(data: dict) -> str:
+    value = data.get("source_node_url") or data.get("sourceNodeUrl") or data.get("peer_url") or data.get("peerUrl")
+    if not value:
+        return ""
+    try:
+        return node_registry._normalize_node_url(str(value))
+    except Exception:
+        return ""
+
+
+@app.post("/peer/transaction")
+def receive_peer_transaction():
+    data = {}
+    peer_url = ""
+    tx_id = ""
+    try:
+        data = _json_body()
+        peer_url = _peer_source_url(data)
+        transaction, result, status_code = peer_propagation.validate_peer_transaction(data, node.blockchain)
+        if transaction is not None:
+            tx_id = transaction.tx_id
+        if result.get("success") and not result.get("duplicate") and transaction is not None:
+            node.submit_transaction(transaction)
+            storage.save_pending(node.blockchain.pending_transactions)
+            _rebuild_indexes(save=True)
+            peer_events.append(
+                {
+                    "direction": "inbound",
+                    "type": "transaction",
+                    "peer_url": peer_url,
+                    "status": "accepted",
+                    "reason": "valid_transaction",
+                    "tx_id": transaction.tx_id,
+                    "safe_message": "Peer transaction passed signature, address, duplicate, and spend validation.",
+                }
+            )
+        elif result.get("duplicate"):
+            peer_events.append(
+                {
+                    "direction": "inbound",
+                    "type": "transaction",
+                    "peer_url": peer_url,
+                    "status": "duplicate",
+                    "reason": "duplicate_transaction",
+                    "tx_id": tx_id or result.get("tx_id"),
+                    "safe_message": "Peer transaction was already known locally.",
+                }
+            )
+        else:
+            peer_events.append(
+                {
+                    "direction": "inbound",
+                    "type": "transaction",
+                    "peer_url": peer_url,
+                    "status": "rejected",
+                    "reason": result.get("reason"),
+                    "tx_id": tx_id,
+                    "safe_message": result.get("message") or "Peer transaction was rejected.",
+                }
+            )
+        return jsonify(result), status_code
+    except Exception as exc:
+        peer_events.append(
+            {
+                "direction": "inbound",
+                "type": "transaction",
+                "peer_url": peer_url,
+                "status": "rejected",
+                "reason": "invalid_payload",
+                "tx_id": tx_id,
+                "safe_message": str(exc),
+            }
+        )
+        vorliq_logger.warning("Peer transaction endpoint rejected payload: %s", exc)
+        return jsonify({"success": False, "message": "Peer transaction was rejected.", "reason": "invalid_payload"}), 400
+
+
+@app.post("/peer/block")
+def receive_peer_block():
+    data = {}
+    peer_url = ""
+    try:
+        data = _json_body()
+        peer_url = _peer_source_url(data)
+        block, result, status_code = peer_propagation.classify_peer_block(data, node.blockchain)
+        block_index = getattr(block, "index", None)
+        block_hash = getattr(block, "hash", "")
+        if result.get("success") and result.get("duplicate"):
+            peer_events.append(
+                {
+                    "direction": "inbound",
+                    "type": "block",
+                    "peer_url": peer_url,
+                    "status": "duplicate",
+                    "reason": result.get("reason") or "duplicate_block",
+                    "block_index": block_index,
+                    "block_hash": block_hash,
+                    "safe_message": "Peer block was already the local latest block.",
+                }
+            )
+            return jsonify(result), status_code
+        if result.get("success") and block is not None:
+            if not node.blockchain.add_block(block):
+                result = {"success": False, "message": "Peer block failed the local add_block validation path.", "reason": "add_block_rejected"}
+                peer_events.append(
+                    {
+                        "direction": "inbound",
+                        "type": "block",
+                        "peer_url": peer_url,
+                        "status": "rejected",
+                        "reason": "add_block_rejected",
+                        "block_index": block_index,
+                        "block_hash": block_hash,
+                        "safe_message": result["message"],
+                    }
+                )
+                return jsonify(result), 409
+            _persist_after_peer_block(block)
+            peer_events.append(
+                {
+                    "direction": "inbound",
+                    "type": "block",
+                    "peer_url": peer_url,
+                    "status": "accepted",
+                    "reason": "direct_next_block",
+                    "block_index": block_index,
+                    "block_hash": block_hash,
+                    "safe_message": "Peer block extended the local latest block and passed local validation.",
+                }
+            )
+            return jsonify({**result, "block_index": block_index, "block_hash": block_hash}), status_code
+        if result.get("quarantined"):
+            peer_events.append(
+                {
+                    "direction": "inbound",
+                    "type": "block",
+                    "peer_url": peer_url,
+                    "status": "quarantined",
+                    "reason": result.get("reason"),
+                    "block_index": block_index,
+                    "block_hash": block_hash,
+                    "safe_message": result.get("message") or "Peer block was quarantined.",
+                }
+            )
+            return jsonify({**result, "block_index": block_index, "block_hash": block_hash}), status_code
+        peer_events.append(
+            {
+                "direction": "inbound",
+                "type": "block",
+                "peer_url": peer_url,
+                "status": "rejected",
+                "reason": result.get("reason"),
+                "block_index": block_index,
+                "block_hash": block_hash,
+                "safe_message": result.get("message") or "Peer block was rejected.",
+            }
+        )
+        return jsonify(result), status_code
+    except Exception as exc:
+        peer_events.append(
+            {
+                "direction": "inbound",
+                "type": "block",
+                "peer_url": peer_url,
+                "status": "rejected",
+                "reason": "invalid_payload",
+                "safe_message": str(exc),
+            }
+        )
+        vorliq_logger.warning("Peer block endpoint rejected payload: %s", exc)
+        return jsonify({"success": False, "message": "Peer block was rejected.", "reason": "invalid_payload"}), 400
+
+
+@app.get("/peers/propagation/status")
+def peer_propagation_status():
+    return jsonify(
+        peer_propagation.propagation_status(
+            node_registry,
+            local_node_url=LOCAL_NODE_URL,
+            is_local_development=IS_LOCAL_DEVELOPMENT,
+        )
+    )
+
+
+@app.get("/peers/propagation/events")
+def peer_propagation_events():
+    try:
+        limit, offset = _peer_event_pagination()
+        status = str(request.args.get("status") or "").lower()
+        event_type = str(request.args.get("type") or "").lower()
+        if status and status not in {"accepted", "duplicate", "rejected", "quarantined", "failed"}:
+            raise ValueError("status filter is not valid")
+        if event_type and event_type not in {"transaction", "block"}:
+            raise ValueError("type filter is not valid")
+        return jsonify({"success": True, **peer_events.query(limit=limit, offset=offset, status=status, event_type=event_type)})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/admin/peers/propagation")
+def admin_peer_propagation_status():
+    status = peer_propagation.propagation_status(
+        node_registry,
+        local_node_url=LOCAL_NODE_URL,
+        is_local_development=IS_LOCAL_DEVELOPMENT,
+    )
+    return jsonify(
+        {
+            **status,
+            "diagnostics": {
+                "retention_limit": peer_events.retention_limit,
+                "event_log_configured": True,
+                "broadcast_timeout_ms": int(peer_propagation.timeout_seconds * 1000),
+                "broadcast_max_peers": peer_propagation.max_peers,
+                "note": "Peer payloads are validated before local mutation; non-next blocks are quarantined.",
+            },
+        }
+    )
 
 
 @app.post("/receive_block")

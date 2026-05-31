@@ -111,6 +111,15 @@ function NodeSync() {
 
       <ErrorMessage message={errorMessage} />
 
+      <section className="card card-pad peer-section">
+        <div className="section-title">
+          <h2>Propagation</h2>
+          <a className="button secondary small-button" href="/peers/propagation">
+            Peer Propagation
+          </a>
+        </div>
+      </section>
+
       {loading ? (
         <section className="card card-pad">
           <Spinner label="Loading node sync comparison..." />
