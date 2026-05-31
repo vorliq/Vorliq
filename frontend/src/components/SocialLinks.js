@@ -1,7 +1,6 @@
 const socialLinks = [
   { label: "Discord", href: "https://discord.gg/qpX5sHD4pC", icon: DiscordIcon, brand: "discord" },
   { label: "Telegram", href: "https://t.me/Vorliq", icon: TelegramIcon, brand: "telegram" },
-  { label: "Reddit", href: "https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS", icon: RedditIcon, brand: "reddit" },
   { label: "GitHub", href: "https://github.com/vorliq/Vorliq", icon: GitHubIcon, brand: "github" },
   { label: "X", href: "https://x.com/vorliq", icon: XIcon, brand: "x" },
 ];
@@ -47,20 +46,6 @@ function TelegramIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M21 4 3 11.2l6.9 2.2L17 8.2l-5.4 6.6.2 5.2 3.1-3.4 3.9 2.9L21 4Z" />
-    </svg>
-  );
-}
-
-function RedditIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M8.4 14.6c1.9 1.2 5.3 1.2 7.2 0" />
-      <path d="M9.2 12.2h.01" />
-      <path d="M14.8 12.2h.01" />
-      <path d="M12 7.8c4.1 0 7.4 2.2 7.4 4.9s-3.3 4.9-7.4 4.9-7.4-2.2-7.4-4.9S7.9 7.8 12 7.8Z" />
-      <path d="M16.4 8.5 17.5 5l3 .7" />
-      <path d="M4.7 11.1a1.9 1.9 0 1 1 1.5-3.4" />
-      <path d="M19.3 11.1a1.9 1.9 0 1 0-1.5-3.4" />
     </svg>
   );
 }

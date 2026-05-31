@@ -3129,11 +3129,6 @@ a:focus-visible {
   --brand-link-glow: rgba(34, 158, 217, 0.26);
 }
 
-.social-brand-link.reddit {
-  --brand-link-color: #ff4500;
-  --brand-link-glow: rgba(255, 69, 0, 0.24);
-}
-
 .social-brand-link.github {
   --brand-link-color: #f5f7fb;
   --brand-link-glow: rgba(245, 247, 251, 0.18);

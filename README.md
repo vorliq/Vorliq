@@ -109,8 +109,6 @@ Discord: https://discord.gg/qpX5sHD4pC
 
 Telegram: https://t.me/Vorliq
 
-Reddit: https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS
-
 GitHub: https://github.com/vorliq/Vorliq
 
 X: https://x.com/vorliq

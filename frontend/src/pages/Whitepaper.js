@@ -2,7 +2,6 @@ function Whitepaper() {
   const communityLinks = [
     { label: "Discord", href: "https://discord.gg/qpX5sHD4pC" },
     { label: "Telegram", href: "https://t.me/Vorliq" },
-    { label: "Reddit", href: "https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS" },
     { label: "GitHub", href: "https://github.com/vorliq/Vorliq" },
     { label: "X", href: "https://x.com/vorliq" },
   ];

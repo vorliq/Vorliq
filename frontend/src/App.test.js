@@ -1217,10 +1217,9 @@ test("Dashboard shows branded official social icon links", async () => {
   expect(await screen.findByRole("heading", { name: /join the conversation/i })).toBeInTheDocument();
   const socialLinks = container.querySelector(".dashboard-social-links");
 
-  expect(socialLinks.querySelectorAll(".social-brand-link")).toHaveLength(5);
+  expect(socialLinks.querySelectorAll(".social-brand-link")).toHaveLength(4);
   expect(socialLinks.querySelector(".discord")).toHaveAttribute("href", "https://discord.gg/qpX5sHD4pC");
   expect(socialLinks.querySelector(".telegram")).toHaveAttribute("href", "https://t.me/Vorliq");
-  expect(socialLinks.querySelector(".reddit")).toHaveAttribute("href", "https://www.reddit.com/u/Vorliq/s/PbPMGkrGVS");
   expect(socialLinks.querySelector(".github")).toHaveAttribute("href", "https://github.com/vorliq/Vorliq");
   expect(socialLinks.querySelector(".x")).toHaveAttribute("href", "https://x.com/vorliq");
 });
