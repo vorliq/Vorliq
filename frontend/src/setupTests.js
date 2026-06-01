@@ -34,8 +34,24 @@ class ResizeObserverMock {
   disconnect() {}
 }
 
+class IntersectionObserverMock {
+  constructor(callback) {
+    this.callback = callback;
+  }
+  observe(element) {
+    this.callback?.([{ isIntersecting: true, target: element }]);
+  }
+  unobserve() {}
+  disconnect() {}
+}
+
 if (!window.ResizeObserver) {
   window.ResizeObserver = ResizeObserverMock;
+}
+
+if (!window.IntersectionObserver) {
+  window.IntersectionObserver = IntersectionObserverMock;
+  global.IntersectionObserver = IntersectionObserverMock;
 }
 
 if (!window.matchMedia) {

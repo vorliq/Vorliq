@@ -4,8 +4,7 @@ const ThemeContext = createContext(null);
 const STORAGE_KEY = "vorliq_theme";
 
 function getInitialTheme() {
-  const savedTheme = window.localStorage.getItem(STORAGE_KEY);
-  const theme = savedTheme === "light" ? "light" : "dark";
+  const theme = "dark";
   document.documentElement.setAttribute("data-theme", theme);
   return theme;
 }
@@ -19,7 +18,7 @@ export function ThemeProvider({ children }) {
   }, [theme]);
 
   function toggleTheme() {
-    setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"));
+    setTheme("dark");
   }
 
   const value = useMemo(

@@ -1,5 +1,9 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root,
 html[data-theme="dark"],
 html[data-theme="light"] {
@@ -3367,4 +3371,32 @@ html[data-theme="light"] .community-links-card.glass-section {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.05);
+}
+
+html,
+html[data-theme="dark"],
+html[data-theme="light"] {
+  --bg: #0A0E1A;
+  --bg-deep: #0A0E1A;
+  --bg-soft: #111827;
+  --surface-glass: rgba(17, 24, 39, 0.72);
+  --surface-glass-strong: rgba(17, 24, 39, 0.9);
+  --surface-glass-solid: rgba(10, 14, 26, 0.96);
+  --text: #FFFFFF;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0AEC0;
+  --text-muted: #A0AEC0;
+  --border: #1E2D40;
+  --border-strong: rgba(0, 198, 167, 0.52);
+  --accent-cyan: #00C6A7;
+  --accent-green: #00C6A7;
+  --accent-blue: #F5A623;
+  --primary: #00C6A7;
+  --warning: #F5A623;
+  --focus-ring: rgba(0, 198, 167, 0.24);
+  color-scheme: dark;
+}
+
+body {
+  background: #0A0E1A;
 }
