@@ -94,8 +94,8 @@ function Readiness() {
                   {readiness.checked_at ? new Date(readiness.checked_at).toLocaleString() : "unknown time"}.
                 </p>
                 <p className="help-text">
-                  This is a technical readiness signal only. It is not a guarantee of legal status,
-                  investment value, banking safety, or future financial outcomes.
+                  This is a technical readiness signal only. It is not proof of legal status,
+                  financial value, operating safety, or future outcomes.
                 </p>
               </div>
             </div>

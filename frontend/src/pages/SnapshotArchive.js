@@ -73,7 +73,7 @@ function SnapshotArchive() {
       <section className="risk-notice">
         <strong>Verification aid only</strong>
         <span>
-          Archived snapshots help public verification and recovery checks. They are not legal, financial, banking, or investment proof.
+          Archived snapshots help public verification and recovery checks. They are not legal or financial proof.
         </span>
       </section>
 

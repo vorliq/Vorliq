@@ -173,7 +173,9 @@ function defaultApiGet(path) {
   }
 
   if (path === "/leaderboard") {
-    return Promise.resolve({ data: { success: true, holders: [], miners: [], lenders: [] } });
+    return Promise.resolve({
+      data: { success: true, holders: [{ address: "VLQ_A", value: 10 }], miners: [], lenders: [], totals: { holders: 1 } },
+    });
   }
 
   if (path === "/lending/summary") {
@@ -1119,7 +1121,7 @@ test("App renders without crashing inside its providers", async () => {
   ).toBeInTheDocument();
   expect(screen.getByRole("navigation")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /^create your account$/i })).toHaveAttribute("href", "/register");
-  expect(screen.getByText(/Vorliq is a savings and lending platform built for real communities/i)).toBeInTheDocument();
+  expect(screen.getByText(/Vorliq is a community savings and lending platform built on its own lightweight blockchain/i)).toBeInTheDocument();
 });
 
 test("Production shell is dark only and no longer exposes the old theme toggle", async () => {
@@ -1168,11 +1170,12 @@ test("Homepage has responsible product wording and no external wallet integratio
 
   await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
 
-  expect(screen.getByText(/Vorliq is a savings and lending platform built for real communities/i)).toBeInTheDocument();
-  expect(screen.getByText(/No Ethereum\. No Solana\. Just Vorliq\./i)).toBeInTheDocument();
+  expect(screen.getByText(/Vorliq is a community savings and lending platform built on its own lightweight blockchain/i)).toBeInTheDocument();
+  expect(screen.getByText(/Native VLQ\. Built for Vorliq\./i)).toBeInTheDocument();
   expect(screen.queryByText(/MetaMask/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/WalletConnect/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/wallet-connect|connect wallet/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Ethereum|Bitcoin|Solana/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/regulated bank/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/investment product/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/custody provider/i)).not.toBeInTheDocument();
@@ -1282,8 +1285,8 @@ test("Features route states responsible limits without wallet-connect integratio
       name: /savings, lending, and shared records for real communities/i,
     })
   ).toBeInTheDocument();
-  expect(screen.getByText(/Vorliq does not describe itself as a regulated bank, investment product, legal lender, custody provider, or guaranteed return product/i)).toBeInTheDocument();
-  expect(screen.getByText(/No external wallet connection systems\./i)).toBeInTheDocument();
+  expect(screen.getByText(/Vorliq describes itself as experimental community software, not as regulated financial services or a promise of value/i)).toBeInTheDocument();
+  expect(screen.getByText(/Native Vorliq wallet flow\./i)).toBeInTheDocument();
   expect(screen.getByText(/No third party blockchain dependency\./i)).toBeInTheDocument();
   expect(screen.queryByText(/MetaMask|WalletConnect|wallet-connect|connect wallet/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/Ethereum|Bitcoin|Solana/i)).not.toBeInTheDocument();
@@ -2003,7 +2006,7 @@ test("Blockchain explorer loads pending transactions and links to tx details", a
 
 test("Blockchain page renders a loading state before public chain data resolves", () => {
   api.get.mockImplementation((path) => {
-    if (["/chain/summary", "/chain/blocks", "/transactions", "/transactions/pending", "/health"].includes(path)) {
+    if (["/chain/summary", "/chain/blocks", "/transactions", "/transactions/pending", "/health", "/leaderboard"].includes(path)) {
       return new Promise(() => {});
     }
     return defaultApiGet(path);
@@ -2017,7 +2020,7 @@ test("Blockchain page renders a loading state before public chain data resolves"
 
 test("Blockchain page handles unavailable public chain endpoints safely", async () => {
   api.get.mockImplementation((path) => {
-    if (["/chain/summary", "/chain/blocks", "/transactions", "/transactions/pending", "/health"].includes(path)) {
+    if (["/chain/summary", "/chain/blocks", "/transactions", "/transactions/pending", "/health", "/leaderboard"].includes(path)) {
       return Promise.reject(new Error("public endpoint unavailable"));
     }
     return defaultApiGet(path);
@@ -2026,7 +2029,7 @@ test("Blockchain page handles unavailable public chain endpoints safely", async 
   renderWithProviders(<Blockchain />, "/blockchain");
 
   expect(await screen.findByRole("heading", { level: 1, name: /vorliq blockchain/i })).toBeInTheDocument();
-  expect(await screen.findByText(/No public total-wallet endpoint is available/i)).toBeInTheDocument();
+  expect(await screen.findByText(/Public holder count comes from the leaderboard endpoint/i)).toBeInTheDocument();
   expect(screen.getAllByText(/^Unavailable$/i).length).toBeGreaterThanOrEqual(3);
   expect(screen.getByText(/No blocks are available from the public API right now/i)).toBeInTheDocument();
   expect(screen.getByText(/No pending transactions are waiting right now/i)).toBeInTheDocument();
@@ -2137,7 +2140,7 @@ test("Transparency page renders experimental and self custody notices from the m
   renderWithProviders(<Transparency />, "/transparency");
 
   expect(await screen.findByRole("heading", { name: /experimental software/i })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: /self custody/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /user-controlled keys/i })).toBeInTheDocument();
   expect(screen.getByText(/lost keys cannot be recovered by vorliq/i)).toBeInTheDocument();
   expect(await screen.findByText(/abc123/i)).toBeInTheDocument();
   expect(api.get).toHaveBeenCalledWith("/network/manifest", { timeout: 8000 });

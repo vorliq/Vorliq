@@ -24,8 +24,8 @@ function Whitepaper() {
             Vorliq is a self contained community blockchain platform where ordinary people can
             test saving-style coordination, sending, and lending-style requests with VLQ without depending on any external cryptocurrency network.
             The platform is built around the idea that a community should be able to keep its
-            own ledger, operate its own coin, and use that shared record without relying on
-            Ethereum, Bitcoin, Solana, or any other outside chain.
+            own ledger, operate its own coin, and use that shared record through Vorliq's
+            native chain.
           </p>
           <p>
             Most crypto projects are inaccessible to everyday communities because they often
@@ -41,15 +41,15 @@ function Whitepaper() {
           <p>
             VLQ is the native coin of the Vorliq network. It is the unit of value used for
             transactions, mining rewards, balances, and community voting activity.
-            Vorliq uses a maximum supply of 21 million VLQ, mirroring the scarcity model made
-            familiar by Bitcoin while keeping the network independent and community focused.
+            Vorliq uses a maximum supply of 21 million VLQ while keeping the network
+            independent and community focused.
           </p>
           <p>
             The initial mining reward is 50 VLQ per block, and this reward halves every 210000
             blocks. No VLQ can be created outside of mining rewards and the genesis allocation,
             which means supply growth is transparent and controlled by the rules of the chain
             rather than by a central operator. VLQ has no guaranteed market value and should
-            not be treated as an investment promise.
+            not be treated as a promise of financial return.
           </p>
         </section>
 
@@ -62,10 +62,10 @@ function Whitepaper() {
             remaining lightweight enough for the application to demonstrate the full process.
           </p>
           <p>
-            Transactions are signed with SECP256K1 elliptic curve cryptography, the same curve
-            used by Bitcoin. Every block contains a list of signed transactions and links to
-            the previous block by hash. Each node validates the full chain by checking block
-            hashes, previous hash links, proof of work, and transaction signatures.
+            Transactions are signed with SECP256K1 elliptic curve cryptography. Every block
+            contains a list of signed transactions and links to the previous block by hash.
+            Each node validates the full chain by checking block hashes, previous hash links,
+            proof of work, and transaction signatures.
           </p>
         </section>
 
@@ -79,7 +79,7 @@ function Whitepaper() {
           </p>
           <p>
             This approach is intended to make rules visible and decisions accountable. It does
-            not guarantee adoption, returns, repayment, or economic value.
+            not promise adoption, repayment, economic value, or financial return.
           </p>
         </section>
 
@@ -110,9 +110,9 @@ function Whitepaper() {
         <section>
           <h2>Responsible Use</h2>
           <p>
-            Vorliq is not a licensed bank, broker, exchange, lender, investment adviser,
-            custodian, or financial institution. Users are responsible for their own keys,
-            actions, local laws, counterparties, and risk decisions.
+            Vorliq is experimental community software, not regulated financial advice or a
+            provider of financial services. Users are responsible for their own keys, actions,
+            local laws, counterparties, and risk decisions.
           </p>
         </section>
 

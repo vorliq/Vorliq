@@ -152,7 +152,11 @@ function Blockchain() {
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5" aria-label="Chain summary">
-              <ExplorerStat label="Total wallets" value="Unavailable" note="No public total-wallet endpoint is available." />
+              <ExplorerStat
+                label="Wallet holders"
+                value={snapshot?.unavailable.holders ? "Unavailable" : snapshot?.holderTotal ?? "Unavailable"}
+                note="Public holder count comes from the leaderboard endpoint."
+              />
               <ExplorerStat label="Total blocks" value={summary.total_blocks ?? "Unavailable"} />
               <ExplorerStat label="Total transactions" value={summary.total_transactions ?? "Unavailable"} />
               <ExplorerStat

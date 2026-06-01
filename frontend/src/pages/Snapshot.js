@@ -78,7 +78,7 @@ function Snapshot() {
           <section className="risk-notice">
             <strong>Integrity aid only</strong>
             <span>
-              This snapshot is a public integrity aid. It helps users compare hashes and exported public state. It is not a legal, financial, or investment guarantee.
+              This snapshot is a public integrity aid. It helps users compare hashes and exported public state. It is not legal or financial proof.
             </span>
           </section>
 
@@ -121,7 +121,7 @@ function Snapshot() {
               </span>
             </div>
             <p className="help-text">
-              Signed snapshots help verify that the public snapshot was produced by the Vorliq production signing key. They do not prove legal, financial, banking, or investment status.
+              Signed snapshots help verify that the public snapshot was produced by the Vorliq production signing key. They do not prove legal status, financial status, or future value.
             </p>
             {!signatureEnabled && (
               <div className="risk-notice">

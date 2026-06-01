@@ -10,12 +10,13 @@ function isUnavailable(result) {
 }
 
 export async function loadPublicChainSnapshot() {
-  const [summaryResult, blocksResult, confirmedResult, pendingResult, healthResult] = await Promise.allSettled([
+  const [summaryResult, blocksResult, confirmedResult, pendingResult, healthResult, leaderboardResult] = await Promise.allSettled([
     api.get("/chain/summary"),
     api.get("/chain/blocks", { params: { limit: 6, offset: 0 } }),
     api.get("/transactions", { params: { status: "confirmed", limit: 8, offset: 0 } }),
     api.get("/transactions/pending", { params: { limit: 8, offset: 0 } }),
     api.get("/health", { timeout: 5000 }),
+    api.get("/leaderboard", { params: { limit: 1, offset: 0 } }),
   ]);
 
   const summaryData = settledValue(summaryResult, {});
@@ -23,6 +24,8 @@ export async function loadPublicChainSnapshot() {
   const confirmedData = settledValue(confirmedResult, {});
   const pendingData = settledValue(pendingResult, {});
   const healthData = settledValue(healthResult, {});
+  const leaderboardData = settledValue(leaderboardResult, {});
+  const holderTotal = leaderboardData?.totals?.holders ?? leaderboardData?.holders_total ?? leaderboardData?.holders?.length;
 
   return {
     summary: summaryData.summary || null,
@@ -32,13 +35,14 @@ export async function loadPublicChainSnapshot() {
     pendingTransactions: pendingData.transactions || [],
     pendingTotal: pendingData.total,
     health: healthData,
+    holderTotal,
     unavailable: {
       summary: isUnavailable(summaryResult),
       blocks: isUnavailable(blocksResult),
       confirmedTransactions: isUnavailable(confirmedResult),
       pendingTransactions: isUnavailable(pendingResult),
       health: isUnavailable(healthResult),
-      totalWallets: true,
+      holders: isUnavailable(leaderboardResult) || holderTotal == null,
     },
   };
 }

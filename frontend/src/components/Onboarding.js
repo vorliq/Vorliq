@@ -7,7 +7,7 @@ const steps = [
   {
     title: "Welcome to Vorliq",
     body:
-      "Vorliq is experimental community blockchain software running on its own lightweight chain. The coin inside the network is called VLQ, and the system runs independently without depending on Ethereum, Bitcoin, or any outside cryptocurrency network.",
+      "Vorliq is experimental community blockchain software running on its own lightweight chain. The coin inside the network is called VLQ, and the system is built around Vorliq's native ledger.",
   },
   {
     title: "Create Your Wallet",

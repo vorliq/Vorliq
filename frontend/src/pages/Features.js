@@ -8,7 +8,7 @@ const pillars = [
     title: "Savings",
     icon: HandCoins,
     body:
-      "Communities can pool VLQ and keep a transparent record of movement. Vorliq does not promise returns or present savings as a regulated deposit product.",
+      "Communities can pool VLQ and keep a transparent record of movement. Vorliq does not promise financial returns or present savings as deposits.",
   },
   {
     title: "Lending",
@@ -20,13 +20,13 @@ const pillars = [
     title: "Blockchain",
     icon: Blocks,
     body:
-      "VLQ runs on Vorliq's own lightweight blockchain. There is no outside wallet connection, gas fee, or outside validator dependency.",
+      "VLQ runs on Vorliq's own lightweight blockchain. Wallets, transactions, and validation stay within the Vorliq network.",
   },
   {
     title: "Community",
     icon: Users,
     body:
-      "Vorliq is designed for neighbourhoods, families, cooperatives, and local groups that want shared financial coordination without a corporate owner.",
+      "Vorliq is designed for neighbourhoods, families, cooperatives, and local groups that want shared coordination without a corporate owner.",
   },
   {
     title: "Governance",
@@ -76,14 +76,14 @@ function Features() {
         <Reveal>
           <h2 className="text-[clamp(2rem,5vw,3.4rem)] font-black leading-tight text-white">What Vorliq is not</h2>
           <p className="mt-4 text-lg leading-8 text-vorliq-muted">
-            Responsible wording matters. Vorliq does not describe itself as a regulated bank, investment product, legal lender, custody provider, or guaranteed return product.
+            Responsible wording matters. Vorliq describes itself as experimental community software, not as regulated financial services or a promise of value.
           </p>
         </Reveal>
         <Card className="grid gap-4 p-6">
           {[
-            "No external wallet connection systems.",
+            "Native Vorliq wallet flow.",
             "No third party blockchain dependency.",
-            "No guaranteed return claims.",
+            "No promise of financial returns.",
             "No request for users to paste private keys into public forms.",
           ].map((item) => (
             <div className="flex items-start gap-3 rounded-lg border border-vorliq-border bg-[#0A0E1A]/72 p-4" key={item}>

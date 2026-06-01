@@ -141,7 +141,7 @@ function Bootstrap() {
             <h2>Write Mode Warning</h2>
             <p className="help-text">
               Do not overwrite an existing chain unless you intentionally created a backup and understand that local node data will be replaced.
-              Bootstrap verification is a technical integrity check; it is not a legal, financial, banking, or investment guarantee.
+              Bootstrap verification is a technical integrity check; it is not legal or financial proof.
             </p>
             <div className="button-row">
               <a className="button secondary small-button" href="/docs/bootstrap-chain.html">

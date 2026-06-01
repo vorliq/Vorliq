@@ -64,7 +64,7 @@ function Register() {
             A Vorliq account starts with an encrypted browser wallet for VLQ. The app creates the wallet through the existing public API and stores the encrypted backup locally in this browser.
           </p>
           <div className="mt-8 grid gap-4">
-            <SafetyItem title="No external wallets" body="Vorliq does not use external wallet connection systems, gas fees, or third party chains." />
+            <SafetyItem title="Native Vorliq wallets" body="Vorliq creates encrypted local wallets for its own lightweight chain, with no gas fee step or third party chain dependency." />
             <SafetyItem title="No private key paste box" body="This page never asks you to paste a private key, seed phrase, admin token, or password from another service." />
           </div>
         </div>
@@ -78,12 +78,12 @@ function Register() {
               </span>
               <div>
                 <h2 className="text-2xl font-black text-white">Create wallet</h2>
-                <p className="text-sm font-semibold text-vorliq-muted">Encrypted local storage, self-custody keys.</p>
+                <p className="text-sm font-semibold text-vorliq-muted">Encrypted local storage, user-controlled keys.</p>
               </div>
             </div>
 
             <div className="rounded-lg border border-vorliq-gold/40 bg-vorliq-gold/10 p-4">
-              <strong className="text-white">Private keys are self-custody</strong>
+              <strong className="text-white">Private keys stay with you</strong>
               <p className="mt-2 text-sm leading-6 text-vorliq-muted">
                 Vorliq cannot recover your password or private key. Keep your encrypted backup and password somewhere safe.
               </p>

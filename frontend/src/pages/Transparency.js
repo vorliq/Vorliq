@@ -76,7 +76,7 @@ function Transparency() {
         <h1>Transparency</h1>
         <p className="subtitle">
           Vorliq is public blockchain software. This page explains what is live, what is still
-          experimental, how self custody works, and where anyone can verify the network.
+          experimental, how user-controlled keys work, and where anyone can verify the network.
         </p>
       </section>
 
@@ -87,13 +87,13 @@ function Transparency() {
           <h2>Experimental Software</h2>
           <p>
             Vorliq is live and usable, but it is still early software. VLQ is not listed on
-            exchanges, has no guaranteed market value, and should not be treated as a guaranteed
-            investment. The network is young and users should test carefully.
+            exchanges, has no guaranteed market value, and should not be treated as a promise
+            of financial return. The network is young and users should test carefully.
           </p>
         </article>
 
         <article className="card card-pad transparency-notice custody">
-          <h2>Self Custody</h2>
+          <h2>User-Controlled Keys</h2>
           <p>
             Vorliq does not store private keys or wallet passwords on the server. Lost keys cannot
             be recovered by Vorliq. Keep encrypted backups and never share a private key with
@@ -114,9 +114,9 @@ function Transparency() {
       <section className="card card-pad health-section">
         <h2>Risk and Limitations</h2>
         <p>
-          Vorliq is not a licensed bank, broker, exchange, lender, investment adviser, or
-          financial institution. The public node at vorliq.org is a convenience gateway for
-          visitors, not a guarantee that the network is fully decentralized. Decentralization
+          Vorliq is experimental community software, not regulated financial advice or a
+          provider of financial services. The public node at vorliq.org is a convenience gateway
+          for visitors, not a guarantee that the network is fully decentralized. Decentralization
           improves only as more independent operators run nodes, keep their own backups, and
           verify the chain for themselves.
         </p>

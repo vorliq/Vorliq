@@ -64,7 +64,7 @@ const features = [
     icon: Vote,
   },
   {
-    title: "No Ethereum. No Solana. Just Vorliq.",
+    title: "Native VLQ. Built for Vorliq.",
     copy:
       "VLQ runs on Vorliq's own lightweight blockchain. Wallets, blocks, and transactions are internal to this platform, with no external validators or gas fees.",
     cta: "Explore the Chain",
@@ -130,7 +130,7 @@ function Hero() {
             Your Community's Platform. Your Rules.
           </h1>
           <p className="max-w-2xl text-lg leading-8 text-vorliq-muted md:text-xl">
-            Vorliq is a savings and lending platform built for real communities, powered by the VLQ blockchain and owned by no corporation.
+            Vorliq is a community savings and lending platform built on its own lightweight blockchain.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
             <ButtonLink to="/register">Create Your Account</ButtonLink>
@@ -141,7 +141,7 @@ function Hero() {
               See How It Works
             </a>
           </div>
-          <p className="text-sm font-bold text-vorliq-muted">Built by the community · VLQ powered · No third party chains</p>
+          <p className="text-sm font-bold text-vorliq-muted">Community-run software - VLQ powered - No third party chains</p>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -156,11 +156,48 @@ function Hero() {
 }
 
 function DashboardMockup() {
-  const rows = [
-    { label: "Community deposit", value: "+42 VLQ", tone: "text-vorliq-accent" },
-    { label: "Loan vote opened", value: "12 members", tone: "text-vorliq-gold" },
-    { label: "Block accepted", value: "#218", tone: "text-white" },
-  ];
+  const [snapshot, setSnapshot] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    loadPublicChainSnapshot()
+      .then((data) => {
+        if (mounted) setSnapshot(data);
+      })
+      .catch(() => {
+        if (mounted) setSnapshot(null);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const summary = snapshot?.summary || {};
+  const recentTransactions = [...(snapshot?.pendingTransactions || []), ...(snapshot?.confirmedTransactions || [])].slice(0, 3);
+  const latestBlock = snapshot?.blocks?.[0];
+  const rows = recentTransactions.length
+    ? recentTransactions.map((tx) => ({
+        label: tx.status === "pending" ? "Pending transaction" : "Confirmed transaction",
+        value: formatVlq(tx.amount),
+        tone: tx.status === "pending" ? "text-vorliq-gold" : "text-vorliq-accent",
+      }))
+    : [
+        {
+          label: "Latest accepted block",
+          value: latestBlock?.index != null ? `#${latestBlock.index}` : summary.block_height != null ? `#${summary.block_height}` : "Loading",
+          tone: "text-white",
+        },
+        {
+          label: "Public transactions",
+          value: summary.total_transactions ?? "Loading",
+          tone: "text-vorliq-accent",
+        },
+        {
+          label: "Chain status",
+          value: snapshot ? (summary.chain_valid ? "Valid" : "Review") : "Loading",
+          tone: summary.chain_valid ? "text-vorliq-accent" : "text-vorliq-gold",
+        },
+      ];
 
   return (
     <Card className="relative overflow-hidden p-5">
@@ -175,12 +212,14 @@ function DashboardMockup() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-lg border border-vorliq-border bg-[#0A0E1A]/70 p-4">
-            <span className="text-xs font-black uppercase tracking-[0.12em] text-vorliq-muted">Wallet balance</span>
-            <strong className="mt-3 block font-mono text-3xl text-white">1,248.50 VLQ</strong>
+            <span className="text-xs font-black uppercase tracking-[0.12em] text-vorliq-muted">Total VLQ issued</span>
+            <strong className="mt-3 block font-mono text-3xl text-white">{formatVlq(summary.total_issued)}</strong>
           </div>
           <div className="rounded-lg border border-vorliq-border bg-[#0A0E1A]/70 p-4">
-            <span className="text-xs font-black uppercase tracking-[0.12em] text-vorliq-muted">Community pool</span>
-            <strong className="mt-3 block font-mono text-3xl text-vorliq-accent">8,410 VLQ</strong>
+            <span className="text-xs font-black uppercase tracking-[0.12em] text-vorliq-muted">Wallet holders</span>
+            <strong className="mt-3 block font-mono text-3xl text-vorliq-accent">
+              {snapshot?.unavailable.holders ? "Unavailable" : snapshot?.holderTotal ?? "Loading"}
+            </strong>
           </div>
         </div>
         <div className="rounded-lg border border-vorliq-border bg-[#0A0E1A]/70 p-4">
@@ -198,7 +237,7 @@ function DashboardMockup() {
           </div>
         </div>
         <div className="grid grid-cols-3 gap-3 text-center">
-          {["Valid chain", "No gas fees", "Internal VLQ"].map((item) => (
+            {["Valid chain", "No gas fees", "Internal VLQ"].map((item) => (
             <div className="rounded-md border border-vorliq-border bg-white/[0.035] px-2 py-3 text-xs font-black text-vorliq-muted" key={item}>
               {item}
             </div>
@@ -346,7 +385,11 @@ function LiveSnapshot() {
 
   const summary = snapshot?.summary || {};
   const statCards = [
-    { label: "Total wallets", value: "Unavailable", note: "No public total-wallet endpoint is available." },
+    {
+      label: "Wallet holders",
+      value: snapshot?.unavailable.holders ? "Unavailable" : snapshot?.holderTotal ?? "Unavailable",
+      note: "Public holder count comes from the leaderboard endpoint.",
+    },
     { label: "Total blocks", value: snapshot?.unavailable.summary ? "Unavailable" : summary.total_blocks ?? "Unavailable" },
     { label: "Total transactions", value: snapshot?.unavailable.summary ? "Unavailable" : summary.total_transactions ?? "Unavailable" },
     {
@@ -363,7 +406,7 @@ function LiveSnapshot() {
       <Reveal className="mb-8 grid gap-4">
         <h2 className="text-[clamp(2rem,5vw,3.7rem)] font-black leading-tight text-white">Live VLQ and Chain Snapshot</h2>
         <p className="max-w-3xl text-lg leading-8 text-vorliq-muted">
-          This panel uses the existing public backend API. When a value is not exposed by the API, it stays unavailable instead of being estimated.
+          This panel uses existing public backend APIs. When a value is not exposed by an API, it stays unavailable instead of being estimated.
         </p>
       </Reveal>
       <Card className="overflow-hidden">
