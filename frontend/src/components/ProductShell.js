@@ -153,50 +153,49 @@ export function ProductNav() {
         </button>
       </nav>
 
-      <div
-        className={`fixed inset-0 z-[1001] bg-black/50 backdrop-blur-sm transition md:hidden ${
-          open ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-        aria-hidden="true"
-        onClick={() => setOpen(false)}
-      />
-      <aside
-        ref={menuRef}
-        id="mobile-product-navigation"
-        className={`fixed bottom-0 right-0 top-0 z-[1002] w-[min(90vw,390px)] border-l border-vorliq-border bg-[#0A0E1A] p-5 shadow-panel transition-transform duration-300 md:hidden ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-        role={open ? "dialog" : undefined}
-        aria-modal={open ? "true" : undefined}
-        aria-label={open ? "Navigation menu" : undefined}
-        aria-hidden={!open}
-      >
-        <div className="mb-7 flex items-center justify-between">
-          <BrandLockup />
-          <button
-            ref={closeButtonRef}
-            className="grid h-10 w-10 place-items-center rounded-full border border-vorliq-border text-white"
-            type="button"
-            aria-label="Close navigation menu"
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-[1001] bg-black/50 backdrop-blur-sm transition md:hidden"
+            aria-hidden="true"
             onClick={() => setOpen(false)}
+          />
+          <aside
+            ref={menuRef}
+            id="mobile-product-navigation"
+            className="fixed bottom-0 right-0 top-0 z-[1002] w-[min(90vw,390px)] border-l border-vorliq-border bg-[#0A0E1A] p-5 shadow-panel transition-transform duration-300 md:hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
           >
-            <X size={20} aria-hidden="true" />
-          </button>
-        </div>
-        <div className="grid gap-2">
-          {navLinks.map((link) => (
-            <NavItem key={link.label} link={link} mobile />
-          ))}
-        </div>
-        <div className="mt-8 grid gap-3">
-          <Link className="rounded-full border border-vorliq-border px-5 py-3 text-center font-extrabold text-white" to="/login">
-            Sign In
-          </Link>
-          <Link className="rounded-full bg-vorliq-accent px-5 py-3 text-center font-black text-[#06101c] shadow-glow" to="/register">
-            Create Account
-          </Link>
-        </div>
-      </aside>
+            <div className="mb-7 flex items-center justify-between">
+              <BrandLockup />
+              <button
+                ref={closeButtonRef}
+                className="grid h-10 w-10 place-items-center rounded-full border border-vorliq-border text-white"
+                type="button"
+                aria-label="Close navigation menu"
+                onClick={() => setOpen(false)}
+              >
+                <X size={20} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="grid gap-2">
+              {navLinks.map((link) => (
+                <NavItem key={link.label} link={link} mobile />
+              ))}
+            </div>
+            <div className="mt-8 grid gap-3">
+              <Link className="rounded-full border border-vorliq-border px-5 py-3 text-center font-extrabold text-white" to="/login">
+                Sign In
+              </Link>
+              <Link className="rounded-full bg-vorliq-accent px-5 py-3 text-center font-black text-[#06101c] shadow-glow" to="/register">
+                Create Account
+              </Link>
+            </div>
+          </aside>
+        </>
+      )}
     </header>
   );
 }
