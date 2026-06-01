@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Vorliq | Community Blockchain and VLQ Coin</title>
-    <meta name="description" content="Vorliq is experimental open-source community blockchain software with the VLQ coin." />
+    <meta name="description" content="Vorliq is a community savings bank built on its own blockchain with the VLQ coin." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
@@ -65,6 +65,7 @@
       @media (max-width:900px) { nav, .footer-inner { align-items:flex-start; flex-direction:column; display:flex; } .top-links, .socials { justify-content:flex-start; } .feature-grid, .coin-grid, .link-grid { grid-template-columns:1fr; } .hero { min-height:auto; } }
       @media (max-width:560px) { .wrap { width:min(100% - 22px,1120px); } .actions .button, .top-links a, .newsletter-form button, .socials a { width:100%; } .newsletter { padding:20px 16px; } }
     </style>
+    <link rel="stylesheet" href="style.css" data-docs-rebuilt-style />
   </head>
   <body>
     <header>
@@ -113,7 +114,7 @@
           <img class="logo" src="logo.png" alt="Vorliq logo" />
           <div class="eyebrow">Version 1.0 is live</div>
           <h1>Vorliq</h1>
-          <p class="subtitle">Your Community Your Coin. Vorliq is experimental open-source community blockchain software powered by its own lightweight chain and the native VLQ coin.</p>
+          <p class="subtitle">Your community, your coin. Vorliq is a community savings bank built on its own blockchain with the native VLQ coin.</p>
           <div class="actions">
             <a class="button primary" href="https://vorliq.org">Open App</a>
             <a class="button primary" href="https://github.com/vorliq/Vorliq">Download Vorliq</a>
@@ -133,12 +134,12 @@
         <div class="wrap">
           <div class="section-head">
             <span class="eyebrow">Complete Platform</span>
-            <h2>Open tools for an experimental community chain</h2>
+            <h2>Open tools for a community savings bank chain</h2>
           </div>
           <div class="feature-grid">
-            <article class="glass card"><h3>Own Blockchain</h3><p>Vorliq runs on its own proof of work blockchain with signed transactions, mined blocks, persistent storage, and automatic validation. It does not depend on any external cryptocurrency network.</p></article>
-            <article class="glass card"><h3>Community Lending</h3><p>Members can request VLQ support and the community can approve or reject requests with balance-weighted voting. This is experimental software, not a licensed lending service.</p></article>
-            <article class="glass card"><h3>Decentralized Exchange</h3><p>Community members can post buy and sell offers for VLQ with flexible real-world pricing. This is an experimental offer board, not a licensed exchange.</p></article>
+            <article class="glass card"><h3>Own Blockchain</h3><p>Vorliq runs on its own proof of work blockchain with signed transactions, mined blocks, persistent storage, and automatic validation.</p></article>
+            <article class="glass card"><h3>Community Lending</h3><p>Members can request VLQ support and the community can approve or reject requests with balance-weighted voting. Vorliq records the community decision transparently without presenting itself as a licensed lending service.</p></article>
+            <article class="glass card"><h3>Decentralized Exchange</h3><p>Community members can post buy and sell offers for VLQ with flexible real-world pricing. Vorliq records offers and trade states without presenting itself as a licensed exchange.</p></article>
             <article class="glass card"><h3>Governance</h3><p>VLQ holders can propose and vote on supported network rule changes. Passing and execution are tracked separately, and executed setting updates create public rule-change history.</p></article>
             <article class="glass card"><h3>Treasury</h3><p>Five percent of mining rewards flow into the public treasury. Spending proposals now track approval, payout pending state, confirmed payment, and ledger entries.</p></article>
             <article class="glass card"><h3>Starter Faucet</h3><p>New users can request a small treasury-backed VLQ starter claim when funds are available. Faucet payouts are real pending transactions, not newly minted coins.</p></article>
@@ -182,7 +183,7 @@
             <a class="glass card link-card" href="storage.html"><h3>Storage Reliability</h3><p>See atomic writes, backups, health checks, and corruption recovery guidance.</p></a>
             <a class="glass card link-card" href="storage-adapters.html"><h3>Storage Adapters</h3><p>Review the JSON adapter boundary and future SQLite/PostgreSQL migration rules.</p></a>
             <a class="glass card link-card" href="storage-adapter-interface.html"><h3>Adapter Interface</h3><p>See the storage adapter contract, current ownership audit, and production safety rules.</p></a>
-            <a class="glass card link-card" href="postgres-adapter.html"><h3>PostgreSQL Adapter</h3><p>Review the experimental shadow-only adapter, feature flags, read parity, and write blocking.</p></a>
+            <a class="glass card link-card" href="postgres-adapter.html"><h3>PostgreSQL Adapter</h3><p>Review the preparation-only shadow adapter, feature flags, read parity, and write blocking.</p></a>
             <a class="glass card link-card" href="schema-map.html"><h3>Schema Map</h3><p>Map current JSON state into future database-style tables for dry-run planning.</p></a>
             <a class="glass card link-card" href="postgres-readiness.html"><h3>PostgreSQL Readiness</h3><p>See why PostgreSQL is the preferred future managed database target and why it is not active yet.</p></a>
             <a class="glass card link-card" href="postgres-shadow-migration.html"><h3>PostgreSQL Shadow Migration</h3><p>Run a guarded local or CI-only PostgreSQL rehearsal using copied JSON state and fake CI fixtures.</p></a>
@@ -217,7 +218,7 @@
             <a class="glass card link-card" href="deploy.html"><h3>Deploy Notes</h3><p>Review lower-level production deployment details.</p></a>
             <a class="glass card link-card" href="operator.html"><h3>Operator Dashboard</h3><p>Use protected monitoring, incident, backup, and moderation tools.</p></a>
             <a class="glass card link-card" href="privacy.html"><h3>Privacy</h3><p>Understand what Vorliq stores and what stays local.</p></a>
-            <a class="glass card link-card" href="terms.html"><h3>Terms</h3><p>Read the responsible-use terms for the experimental platform.</p></a>
+            <a class="glass card link-card" href="terms.html"><h3>Terms</h3><p>Read the responsible-use terms for the Vorliq platform.</p></a>
           </div>
         </div>
       </section>
@@ -245,7 +246,7 @@
             <img src="logo.png" alt="" aria-hidden="true" />
             <strong>Vorliq</strong>
           </div>
-          <p>2026 Vorliq. Experimental open-source community blockchain software. All rights reserved.</p>
+          <p>2026 Vorliq. Community savings bank software built on its own blockchain. All rights reserved.</p>
         </div>
         <div class="socials" aria-label="Official Vorliq social links">
           <a class="button social-button" href="https://discord.gg/qpX5sHD4pC" target="_blank" rel="noopener noreferrer" aria-label="Open Vorliq on Discord"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.3 8.7c2.4-.7 5-.7 7.4 0M9.1 15.2c2 .7 3.8 .7 5.8 0M8.8 12.9h.01M15.2 12.9h.01M7.4 5.5c3-1.2 6.2-1.2 9.2 0 1.7 2.4 2.6 5.2 2.7 8.4-2.1 1.6-4.1 2.5-6.1 2.8l-.8-1.4M11.6 15.3l-.8 1.4c-2-.3-4-1.2-6.1-2.8.1-3.2 1-6 2.7-8.4"/></svg><span>Discord</span></a>

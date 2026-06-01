@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vorliq PostgreSQL Readiness</title>
-  <link rel="stylesheet" href="style.css">
-</head>
+    <link rel="stylesheet" href="style.css" data-docs-rebuilt-style />
+  </head>
 <body>
   <main>
     <h1>PostgreSQL Readiness</h1>
@@ -22,7 +22,7 @@
       <li><code>database/schema.sql</code> maps future tables.</li>
       <li><code>database/indexes.sql</code> drafts future read indexes.</li>
       <li><code>database/constraints.sql</code> documents future safety constraints.</li>
-      <li><code>blockchain/storage_adapters/postgres_adapter.py</code> provides experimental shadow reads.</li>
+      <li><code>blockchain/storage_adapters/postgres_adapter.py</code> provides shadow-mode preparation reads.</li>
       <li><code>tools/postgres_schema_check.py</code> checks files without connecting to PostgreSQL.</li>
       <li><code>tools/simulate_postgres_import.py</code> simulates import ordering without database writes.</li>
       <li><code>tools/run_shadow_migration_rehearsal.py --check-adapter</code> runs a guarded local or CI-only PostgreSQL shadow import, parity check, and adapter read parity check.</li>

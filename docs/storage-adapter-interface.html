@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vorliq Storage Adapter Interface</title>
-  <link rel="stylesheet" href="style.css">
-</head>
+    <link rel="stylesheet" href="style.css" data-docs-rebuilt-style />
+  </head>
 <body>
   <main>
     <h1>Storage Adapter Interface</h1>
@@ -21,7 +21,7 @@
     </ul>
 
     <h2>Interface</h2>
-    <p>The Python interface lives under <code>blockchain/storage_adapters/</code>. It defines domain methods for chain, pending transactions, lending, exchange, governance, treasury, profiles, forum, registry, faucet, price discovery, achievements, and health. The JSON adapter wraps the existing hardened <code>Storage</code> class. The PostgreSQL adapter is experimental and shadow-only.</p>
+    <p>The Python interface lives under <code>blockchain/storage_adapters/</code>. It defines domain methods for chain, pending transactions, lending, exchange, governance, treasury, profiles, forum, registry, faucet, price discovery, achievements, and health. The JSON adapter wraps the existing hardened <code>Storage</code> class. The PostgreSQL adapter is preparation-only and shadow-mode.</p>
 
     <h2>Production Contract</h2>
     <p>Production readiness must continue to report <code>storage_backend: json</code>, <code>active_storage_adapter: json</code>, <code>postgres_active: false</code>, <code>postgres_adapter_enabled: false</code>, and <code>postgres_write_mode: disabled</code>. No production route should connect to a production PostgreSQL database in this release.</p>

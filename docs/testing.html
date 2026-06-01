@@ -31,6 +31,7 @@
       .warning { border-color:rgba(255,101,116,.44); }
       footer { border-top:1px solid var(--border); padding:24px 0; color:var(--muted); }
     </style>
+    <link rel="stylesheet" href="style.css" data-docs-rebuilt-style />
   </head>
   <body>
     <header>
@@ -106,6 +107,6 @@ node ../tools/check_readiness.js https://vorliq.org --allow-warning</code></pre>
         <p>GitHub Actions runs blockchain, backend, frontend, and read-only Playwright E2E checks. Deployment only proceeds after the CI workflow succeeds. The production deployment workflow performs server-side health, backup, incident, heartbeat, deployment checks, then runs the public readiness gate with warnings allowed but failures blocked.</p>
       </section>
     </main>
-    <footer><div class="wrap">2026 Vorliq. Tests improve confidence, but users should still understand the experimental nature of VLQ software.</div></footer>
+    <footer><div class="wrap">2026 Vorliq. Tests improve confidence, but users should still understand that VLQ software and network rules can evolve.</div></footer>
   </body>
 </html>

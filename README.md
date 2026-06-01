@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 ![Coin: VLQ](https://img.shields.io/badge/coin-VLQ-6c63ff.svg)
 
-Vorliq is a community savings and lending platform built on its own lightweight blockchain. The native coin is VLQ.
+Vorliq is a community savings bank built on its own blockchain with the VLQ coin.
 
 - Live app: https://vorliq.org
 - Public docs: https://vorliq.github.io/Vorliq
@@ -16,7 +16,7 @@ Vorliq is a community savings and lending platform built on its own lightweight 
 
 ## What Vorliq Is
 
-Vorliq is open-source software for communities that want shared records around VLQ wallets, mining, transactions, savings coordination, community lending workflows, governance, forum activity, node registry data, and public network health.
+Vorliq is open-source community savings bank software for groups that want shared records around VLQ wallets, mining, transactions, savings coordination, community lending workflows, governance, forum activity, node registry data, and public network health.
 
 The project includes:
 
@@ -28,7 +28,7 @@ The project includes:
 
 ## What Vorliq Is Not
 
-Vorliq is experimental community software, not regulated financial advice or a provider of financial services. VLQ has no guaranteed market value. Users control their own wallets and private keys, and Vorliq cannot recover lost private keys or wallet passwords.
+Vorliq is not regulated financial advice, not a regulated bank, and not a provider of licensed financial services. VLQ has no guaranteed market value. Users control their own wallets and private keys, and Vorliq cannot recover lost private keys or wallet passwords.
 
 Do not paste private keys, seed phrases, passwords, admin tokens, or secrets into public forms, support messages, chat, issues, or logs.
 
