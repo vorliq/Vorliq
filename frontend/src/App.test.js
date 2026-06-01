@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import App from "./App";
 import IncidentBanner from "./components/IncidentBanner";
-import { ONBOARDING_KEY } from "./components/Onboarding";
 import { AuthProvider } from "./context/AuthContext";
 import { AuthContext } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
@@ -1110,49 +1109,37 @@ afterEach(() => {
 });
 
 test("App renders without crashing inside its providers", async () => {
-  window.localStorage.setItem(ONBOARDING_KEY, "true");
-
   render(<App />);
 
-  expect(await screen.findByRole("heading", { level: 1, name: /vorliq/i })).toBeInTheDocument();
+  expect(
+    await screen.findByRole("heading", {
+      level: 1,
+      name: /your community's platform\. your rules\./i,
+    })
+  ).toBeInTheDocument();
   expect(screen.getByRole("navigation")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /^more/i })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /^create your account$/i })).toHaveAttribute("href", "/register");
+  expect(screen.getByText(/Vorliq is a savings and lending platform built for real communities/i)).toBeInTheDocument();
 });
 
-test("Theme toggle switches between readable dark and light theme states", async () => {
-  window.localStorage.setItem(ONBOARDING_KEY, "true");
-
+test("Production shell is dark only and no longer exposes the old theme toggle", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
   expect(document.documentElement).toHaveAttribute("data-theme", "dark");
-
-  await userEvent.click(screen.getAllByRole("button", { name: /switch to light theme/i })[0]);
-
-  expect(document.documentElement).toHaveAttribute("data-theme", "light");
-  expect(window.localStorage.getItem("vorliq_theme")).toBe("light");
-
-  await userEvent.click(screen.getAllByRole("button", { name: /switch to dark theme/i })[0]);
-
-  expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+  expect(screen.queryByRole("button", { name: /switch to light theme/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /switch to dark theme/i })).not.toBeInTheDocument();
 });
 
-test("onboarding appears for a first-time visitor and can be skipped", async () => {
+test("Production homepage replaces the legacy onboarding modal", async () => {
   render(<App />);
 
-  expect(await screen.findByRole("dialog")).toHaveTextContent(/welcome to vorliq/i);
-
-  await userEvent.click(screen.getByRole("button", { name: /^skip$/i }));
-
-  await waitFor(() => {
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-  expect(window.localStorage.getItem(ONBOARDING_KEY)).toBe("true");
+  expect(await screen.findByRole("heading", { level: 1, name: /your community's platform/i })).toBeInTheDocument();
+  expect(screen.queryByRole("dialog", { name: /welcome to vorliq/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /^skip$/i })).not.toBeInTheDocument();
 });
 
 test("App exposes a keyboard skip link to the main content", async () => {
-  window.localStorage.setItem(ONBOARDING_KEY, "true");
-
   render(<App />);
 
   expect(await screen.findByRole("link", { name: /skip to main content/i })).toHaveAttribute(
@@ -1162,37 +1149,35 @@ test("App exposes a keyboard skip link to the main content", async () => {
   expect(document.querySelector("main#main-content")).toBeInTheDocument();
 });
 
-test("onboarding dialog has ARIA semantics and progress text", async () => {
+test("Homepage navigation exposes current product routes", async () => {
   render(<App />);
 
-  const dialog = await screen.findByRole("dialog");
+  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  const nav = screen.getByRole("navigation");
 
-  expect(dialog).toHaveAttribute("aria-modal", "true");
-  expect(dialog).toHaveAttribute("aria-labelledby", "onboarding-title");
-  expect(dialog).toHaveAttribute("aria-describedby", "onboarding-description");
-  expect(screen.getAllByText(/step 1 of 4/i).length).toBeGreaterThan(0);
+  expect(within(nav).getByRole("link", { name: /how it works/i })).toHaveAttribute("href", "/#how-it-works");
+  expect(within(nav).getByRole("link", { name: /^features$/i })).toHaveAttribute("href", "/features");
+  expect(within(nav).getByRole("link", { name: /^community$/i })).toHaveAttribute("href", "/#community");
+  expect(within(nav).getByRole("link", { name: /^learn$/i })).toHaveAttribute("href", "/#learn");
+  expect(within(nav).getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
+  expect(within(nav).getByRole("link", { name: /^create account$/i })).toHaveAttribute("href", "/register");
 });
 
-test("onboarding supports keyboard next, previous, and escape close", async () => {
+test("Homepage has responsible product wording and no external wallet integration copy", async () => {
   render(<App />);
 
-  expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
 
-  fireEvent.keyDown(document, { key: "ArrowRight" });
-  expect(await screen.findByText(/create your wallet/i)).toBeInTheDocument();
-
-  fireEvent.keyDown(document, { key: "ArrowLeft" });
-  expect(await within(screen.getByRole("dialog")).findByText(/welcome to vorliq/i)).toBeInTheDocument();
-
-  fireEvent.keyDown(document, { key: "Enter" });
-  expect(await screen.findByText(/create your wallet/i)).toBeInTheDocument();
-
-  fireEvent.keyDown(document, { key: "Escape" });
-
-  await waitFor(() => {
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-  expect(window.localStorage.getItem(ONBOARDING_KEY)).toBe("true");
+  expect(screen.getByText(/Vorliq is a savings and lending platform built for real communities/i)).toBeInTheDocument();
+  expect(screen.getByText(/No Ethereum\. No Solana\. Just Vorliq\./i)).toBeInTheDocument();
+  expect(screen.queryByText(/MetaMask/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/WalletConnect/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/wallet-connect|connect wallet/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/regulated bank/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/investment product/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/custody provider/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/legal lender/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/guaranteed return/i)).not.toBeInTheDocument();
 });
 
 test("Dashboard shows a first-user Get Started section with core actions", async () => {
@@ -1225,32 +1210,29 @@ test("Dashboard shows branded official social icon links", async () => {
 });
 
 test("mobile hamburger announces expanded state when opened", async () => {
-  window.localStorage.setItem(ONBOARDING_KEY, "true");
-
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
   const hamburger = screen.getByRole("button", { name: /open navigation menu/i });
 
   expect(hamburger).toHaveAttribute("aria-expanded", "false");
   await userEvent.click(hamburger);
   expect(hamburger).toHaveAttribute("aria-expanded", "true");
-  expect(hamburger).toHaveAttribute("aria-controls", "mobile-navigation");
+  expect(hamburger).toHaveAttribute("aria-controls", "mobile-product-navigation");
 });
 
 test("mobile drawer traps focus and closes from outside click", async () => {
-  window.localStorage.setItem(ONBOARDING_KEY, "true");
-
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
   const hamburger = screen.getByRole("button", { name: /open navigation menu/i });
   await userEvent.click(hamburger);
 
   const drawer = screen.getByRole("dialog", { name: /navigation menu/i });
   expect(drawer).toHaveAttribute("aria-modal", "true");
   expect(drawer.closest("nav")).toBeNull();
-  expect(within(drawer).getByRole("link", { name: /dashboard/i })).toBeInTheDocument();
+  expect(within(drawer).getByRole("link", { name: /^features$/i })).toHaveAttribute("href", "/features");
+  expect(within(drawer).getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
 
   const focusTargets = drawer.querySelectorAll("a, button");
   focusTargets[focusTargets.length - 1].focus();
@@ -1261,64 +1243,74 @@ test("mobile drawer traps focus and closes from outside click", async () => {
   fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
   expect(focusTargets[focusTargets.length - 1]).toHaveFocus();
 
-  fireEvent.click(document.querySelector(".mobile-drawer-backdrop"));
+  fireEvent.keyDown(document, { key: "Escape" });
   expect(hamburger).toHaveAttribute("aria-expanded", "false");
   expect(document.body).not.toHaveClass("mobile-nav-open");
 });
 
-test("More menu opens, exposes grouped links, and closes accessibly", async () => {
-  window.localStorage.setItem(ONBOARDING_KEY, "true");
-
+test("New product shell removes old More menu and notification bell controls", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
-  const moreButton = screen.getByRole("button", { name: /^more/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
 
-  expect(moreButton).toHaveAttribute("aria-haspopup", "menu");
-  expect(moreButton).toHaveAttribute("aria-expanded", "false");
-
-  await userEvent.click(moreButton);
-
-  expect(moreButton).toHaveAttribute("aria-expanded", "true");
-  const moreMenu = screen.getByRole("menu", { name: /more navigation/i });
-  expect(moreMenu).toHaveClass("open");
-  expect(within(moreMenu).getByRole("menuitem", { name: /chat/i })).toHaveAttribute("href", "/chat");
-  expect(within(moreMenu).getByRole("menuitem", { name: /whitepaper/i })).toHaveAttribute("href", "/whitepaper");
-
-  fireEvent.keyDown(document, { key: "Escape" });
-
-  expect(moreButton).toHaveAttribute("aria-expanded", "false");
-
-  await userEvent.click(moreButton);
-  expect(moreButton).toHaveAttribute("aria-expanded", "true");
-  fireEvent.pointerDown(document.body);
-  expect(moreButton).toHaveAttribute("aria-expanded", "false");
-
-  await userEvent.click(moreButton);
-  await userEvent.click(within(moreMenu).getByRole("menuitem", { name: /chat/i }));
-  expect(moreButton).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("button", { name: /^more/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /open notifications page/i })).not.toBeInTheDocument();
 });
 
-test("notification bell opens the notifications page", async () => {
-  window.localStorage.setItem(ONBOARDING_KEY, "true");
-
+test("Footer renders official community links without Reddit", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
-  await userEvent.click(screen.getAllByRole("button", { name: /open notifications page/i })[0]);
-
-  expect(await screen.findByRole("heading", { level: 1, name: /^notifications$/i })).toBeInTheDocument();
-});
-
-test("Footer renders one social link group", async () => {
-  window.localStorage.setItem(ONBOARDING_KEY, "true");
-
-  render(<App />);
-
-  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
   const footer = document.querySelector("footer");
 
   expect(footer.querySelectorAll(".social-links")).toHaveLength(1);
+  expect(within(footer).getByRole("link", { name: /open vorliq on github/i })).toHaveAttribute("href", "https://github.com/vorliq/Vorliq");
+  expect(within(footer).getByRole("link", { name: /open vorliq on x/i })).toHaveAttribute("href", "https://x.com/vorliq");
+  expect(within(footer).getByRole("link", { name: /open vorliq on telegram/i })).toHaveAttribute("href", "https://t.me/Vorliq");
+  expect(within(footer).getByRole("link", { name: /open vorliq on discord/i })).toHaveAttribute("href", "https://discord.gg/qpX5sHD4pC");
+  expect(within(footer).queryByRole("link", { name: /reddit/i })).not.toBeInTheDocument();
+});
+
+test("Features route states responsible limits without wallet-connect integrations", async () => {
+  window.history.pushState({}, "", "/features");
+
+  render(<App />);
+
+  expect(
+    await screen.findByRole("heading", {
+      level: 1,
+      name: /savings, lending, and shared records for real communities/i,
+    })
+  ).toBeInTheDocument();
+  expect(screen.getByText(/Vorliq does not describe itself as a regulated bank, investment product, legal lender, custody provider, or guaranteed return product/i)).toBeInTheDocument();
+  expect(screen.getByText(/No external wallet connection systems\./i)).toBeInTheDocument();
+  expect(screen.getByText(/No third party blockchain dependency\./i)).toBeInTheDocument();
+  expect(screen.queryByText(/MetaMask|WalletConnect|wallet-connect|connect wallet/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Ethereum|Bitcoin|Solana/i)).not.toBeInTheDocument();
+});
+
+test("Register route renders safe account creation without private key collection", async () => {
+  window.history.pushState({}, "", "/register");
+
+  render(<App />);
+
+  expect(await screen.findByRole("heading", { level: 1, name: /create your vorliq account safely/i })).toBeInTheDocument();
+  expect(screen.getByLabelText(/^password$/i)).toHaveAttribute("type", "password");
+  expect(screen.getByLabelText(/confirm password/i)).toHaveAttribute("type", "password");
+  expect(screen.getByLabelText(/private key cannot be recovered by vorliq/i)).toHaveAttribute("type", "checkbox");
+  expect(screen.queryByRole("textbox", { name: /private key/i })).not.toBeInTheDocument();
+  expect(screen.getByText(/never asks you to paste a private key/i)).toBeInTheDocument();
+  expect(screen.queryByText(/MetaMask|WalletConnect|wallet-connect|connect wallet/i)).not.toBeInTheDocument();
+});
+
+test("Dashboard route still renders the existing real dashboard", async () => {
+  window.history.pushState({}, "", "/dashboard");
+
+  render(<App />);
+
+  expect(await screen.findByRole("heading", { level: 1, name: /^vorliq dashboard$/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /get started with vorliq/i })).toBeInTheDocument();
+  expect(await screen.findByText(/block production/i)).toBeInTheDocument();
 });
 
 test("Login page shows wallet creation when no wallet is stored", () => {
@@ -1352,11 +1344,9 @@ test("wallet safety confirmation blocks wallet creation until checked", async ()
 });
 
 test("Footer exposes a public Risk Notice link", async () => {
-  window.localStorage.setItem(ONBOARDING_KEY, "true");
-
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /vorliq/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
   const footer = document.querySelector("footer");
 
   expect(within(footer).getByRole("link", { name: /risk notice/i })).toHaveAttribute(
@@ -2009,6 +1999,38 @@ test("Blockchain explorer loads pending transactions and links to tx details", a
   expect(await screen.findByRole("heading", { name: /pending transactions/i })).toBeInTheDocument();
   expect(await screen.findByText(/pending-tx/i)).toBeInTheDocument();
   expect(screen.getByText(/pending-tx/i).closest("a")).toHaveAttribute("href", "/tx/pending-tx");
+});
+
+test("Blockchain page renders a loading state before public chain data resolves", () => {
+  api.get.mockImplementation((path) => {
+    if (["/chain/summary", "/chain/blocks", "/transactions", "/transactions/pending", "/health"].includes(path)) {
+      return new Promise(() => {});
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Blockchain />, "/blockchain");
+
+  expect(screen.getByRole("heading", { level: 1, name: /vorliq blockchain/i })).toBeInTheDocument();
+  expect(screen.getByText(/loading blockchain explorer/i)).toBeInTheDocument();
+});
+
+test("Blockchain page handles unavailable public chain endpoints safely", async () => {
+  api.get.mockImplementation((path) => {
+    if (["/chain/summary", "/chain/blocks", "/transactions", "/transactions/pending", "/health"].includes(path)) {
+      return Promise.reject(new Error("public endpoint unavailable"));
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Blockchain />, "/blockchain");
+
+  expect(await screen.findByRole("heading", { level: 1, name: /vorliq blockchain/i })).toBeInTheDocument();
+  expect(await screen.findByText(/No public total-wallet endpoint is available/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/^Unavailable$/i).length).toBeGreaterThanOrEqual(3);
+  expect(screen.getByText(/No blocks are available from the public API right now/i)).toBeInTheDocument();
+  expect(screen.getByText(/No pending transactions are waiting right now/i)).toBeInTheDocument();
+  expect(screen.getByText(/Transaction history is unavailable or empty/i)).toBeInTheDocument();
 });
 
 test("Registry tabs render active node card with sync status", async () => {

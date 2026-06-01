@@ -64,7 +64,7 @@ function Register() {
             A Vorliq account starts with an encrypted browser wallet for VLQ. The app creates the wallet through the existing public API and stores the encrypted backup locally in this browser.
           </p>
           <div className="mt-8 grid gap-4">
-            <SafetyItem title="No external wallets" body="Vorliq does not use MetaMask, WalletConnect, gas fees, or third party chains." />
+            <SafetyItem title="No external wallets" body="Vorliq does not use external wallet connection systems, gas fees, or third party chains." />
             <SafetyItem title="No private key paste box" body="This page never asks you to paste a private key, seed phrase, admin token, or password from another service." />
           </div>
         </div>

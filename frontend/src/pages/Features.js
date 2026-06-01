@@ -20,7 +20,7 @@ const pillars = [
     title: "Blockchain",
     icon: Blocks,
     body:
-      "VLQ runs on Vorliq's own lightweight blockchain. There is no Ethereum, Bitcoin, Solana, MetaMask, WalletConnect, gas fee, or outside validator dependency.",
+      "VLQ runs on Vorliq's own lightweight blockchain. There is no outside wallet connection, gas fee, or outside validator dependency.",
   },
   {
     title: "Community",
@@ -81,7 +81,7 @@ function Features() {
         </Reveal>
         <Card className="grid gap-4 p-6">
           {[
-            "No external wallet-connect systems.",
+            "No external wallet connection systems.",
             "No third party blockchain dependency.",
             "No guaranteed return claims.",
             "No request for users to paste private keys into public forms.",
