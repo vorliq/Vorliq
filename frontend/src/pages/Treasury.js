@@ -218,6 +218,9 @@ function Treasury() {
         <p className="subtitle">
           Five percent of every mining reward flows into the Vorliq community treasury. Spending is tracked through proposals, payout transactions, and a public ledger.
         </p>
+        <p className="help-text">
+          <Link to="/vlq">See treasury VLQ movement in the overview.</Link>
+        </p>
       </section>
 
       <ErrorMessage message={errorMessage} />

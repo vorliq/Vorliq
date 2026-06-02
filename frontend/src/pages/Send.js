@@ -219,6 +219,9 @@ function Send() {
           Transactions are signed locally in your browser before they are submitted to the
           Vorliq blockchain API.
         </p>
+        <p className="help-text">
+          <Link to="/vlq">Understand pending and confirmed VLQ movement.</Link>
+        </p>
       </section>
 
       <ErrorMessage message={errorMessage} />
@@ -432,6 +435,9 @@ function Send() {
               </button>
               <Link className="button secondary small-button" to={`/tx/${submittedTransaction.tx_id}`}>
                 Open Transaction Detail
+              </Link>
+              <Link className="button secondary small-button" to="/vlq">
+                VLQ Overview
               </Link>
               <button className="button small-button" type="button" onClick={() => setStep("details")}>
                 Send Another

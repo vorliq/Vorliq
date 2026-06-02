@@ -91,6 +91,9 @@ function Faucet() {
         <p className="subtitle">
           The faucet sends a small starter amount from the community treasury when funds are available. It does not mint new VLQ, and the transaction must be mined before it is confirmed.
         </p>
+        <p className="help-text">
+          <Link to="/vlq">See how starter VLQ moves from pending to confirmed.</Link>
+        </p>
       </section>
 
       <ErrorMessage message={errorMessage} />

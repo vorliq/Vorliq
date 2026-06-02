@@ -260,6 +260,9 @@ function Wallet() {
 
         <section className="card card-pad stack">
           <h2>Check Balance</h2>
+          <p className="help-text">
+            Need the bigger picture? <Link to="/vlq">Open the VLQ overview</Link> to compare confirmed balance, pending movement, faucet status, mining rewards, and treasury records.
+          </p>
           <form className="form" onSubmit={checkBalance}>
             <div className="field">
               <label htmlFor="balance-address">Wallet Address</label>
@@ -284,6 +287,8 @@ function Wallet() {
               {balance.address}
               {"\n"}
               Balance: {balance.balance} {balance.coin}
+              {"\n"}
+              <Link to="/vlq">View VLQ movement overview</Link>
             </div>
           )}
         </section>

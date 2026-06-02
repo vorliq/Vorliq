@@ -104,6 +104,9 @@ function Features() {
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <ButtonLink to="/blockchain">Open Blockchain</ButtonLink>
+            <Link className="inline-flex items-center justify-center rounded-full border border-vorliq-border px-5 py-3 text-sm font-black text-white" to="/vlq">
+              Understand VLQ
+            </Link>
             <Link className="inline-flex items-center justify-center rounded-full border border-vorliq-border px-5 py-3 text-sm font-black text-white" to="/register">
               Create Account
             </Link>

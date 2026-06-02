@@ -35,6 +35,7 @@ const footerGroups = [
     title: "Learn",
     links: [
       { label: "What is VLQ?", to: "/features" },
+      { label: "VLQ Overview", to: "/vlq" },
       { label: "Vorliq Chain", to: "/blockchain" },
       { label: "Whitepaper", to: "/whitepaper" },
       { label: "Transparency", to: "/transparency" },

@@ -50,6 +50,7 @@ import Stats from "./pages/Stats";
 import TransactionDetail from "./pages/TransactionDetail";
 import Transparency from "./pages/Transparency";
 import Treasury from "./pages/Treasury";
+import VLQ from "./pages/VLQ";
 import Wallet from "./pages/Wallet";
 import Whitepaper from "./pages/Whitepaper";
 
@@ -120,6 +121,7 @@ function AppShell() {
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/features" element={<Features />} />
+          <Route path="/vlq" element={<VLQ />} />
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/send" element={<Send />} />
           <Route path="/blockchain" element={<Blockchain />} />

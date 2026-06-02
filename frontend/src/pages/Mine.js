@@ -121,6 +121,9 @@ function Mine() {
           Mining collects pending transactions into a proof-of-work block. The miner reward is
           split with the public treasury and queued as a real pending transaction for a later block.
         </p>
+        <p className="help-text">
+          <Link to="/vlq">View current VLQ reward and pending pool status.</Link>
+        </p>
       </section>
 
       <ErrorMessage message={errorMessage} />

@@ -17,6 +17,7 @@ import Governance from "./pages/Governance";
 import Treasury from "./pages/Treasury";
 import Faucet from "./pages/Faucet";
 import Mine from "./pages/Mine";
+import VLQ from "./pages/VLQ";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Leaderboard from "./pages/Leaderboard";
@@ -638,6 +639,8 @@ function defaultApiGet(path) {
         success: true,
         current_block_height: 0,
         current_mining_reward: 50,
+        halving_interval: 210000,
+        maximum_supply: 21000000,
         total_issued: 0,
       },
     });
@@ -1277,6 +1280,7 @@ test("Dashboard shows account-aware wallet data and actions when a wallet is unl
   expect(within(walletDashboard).getByRole("link", { name: /get starter vlq/i })).toHaveAttribute("href", "/faucet?address=VLQ_TEST_ADDRESS_123456");
   expect(within(walletDashboard).getByRole("link", { name: /send vlq/i })).toHaveAttribute("href", "/send");
   expect(within(walletDashboard).getByRole("link", { name: /explorer/i })).toHaveAttribute("href", "/blockchain");
+  expect(within(walletDashboard).getByRole("link", { name: /vlq overview/i })).toHaveAttribute("href", "/vlq");
   expect(walletDashboard.querySelector('a[href="/tx/wallet-activity-tx"]')).toBeInTheDocument();
 });
 
@@ -1458,6 +1462,7 @@ test("Footer renders official community links without Reddit", async () => {
   expect(within(footer).getByRole("link", { name: /open vorliq on x/i })).toHaveAttribute("href", "https://x.com/vorliq");
   expect(within(footer).getByRole("link", { name: /open vorliq on telegram/i })).toHaveAttribute("href", "https://t.me/Vorliq");
   expect(within(footer).getByRole("link", { name: /open vorliq on discord/i })).toHaveAttribute("href", "https://discord.gg/qpX5sHD4pC");
+  expect(within(footer).getByRole("link", { name: /vlq overview/i })).toHaveAttribute("href", "/vlq");
   expect(within(footer).queryByRole("link", { name: /reddit/i })).not.toBeInTheDocument();
 });
 
@@ -1476,8 +1481,26 @@ test("Features route states responsible limits without wallet-connect integratio
   expect(screen.getByText(/not as regulated banking, legal lending, custody, exchange services, or a promise of value/i)).toBeInTheDocument();
   expect(screen.getByText(/Native Vorliq wallet flow\./i)).toBeInTheDocument();
   expect(screen.getByText(/No third party blockchain dependency\./i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /understand vlq/i })).toHaveAttribute("href", "/vlq");
   expect(screen.queryByText(/MetaMask|WalletConnect|wallet-connect|connect wallet/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/Ethereum|Bitcoin|Solana/i)).not.toBeInTheDocument();
+});
+
+test("VLQ overview explains confirmed and pending movement from public APIs", async () => {
+  renderWithProviders(<VLQ />, "/vlq");
+
+  expect(await screen.findByRole("heading", { level: 1, name: /understand vlq inside vorliq/i })).toBeInTheDocument();
+  expect(screen.getByText(/VLQ is the native coin used by Vorliq wallets/i)).toBeInTheDocument();
+  expect(screen.getByText(/Confirmed supply issued/i)).toBeInTheDocument();
+  expect(screen.getByText(/Maximum supply rule/i)).toBeInTheDocument();
+  expect(screen.getByText(/Pending to confirmed/i)).toBeInTheDocument();
+  expect(screen.getByText(/Faucet status/i)).toBeInTheDocument();
+  expect(screen.getByText(/Reward status/i)).toBeInTheDocument();
+  expect(screen.getByText(/Public treasury movement/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /open explorer/i })).toHaveAttribute("href", "/blockchain");
+  expect(screen.getByRole("link", { name: /check a balance/i })).toHaveAttribute("href", "/wallet");
+  expect(screen.queryByText(/MetaMask|WalletConnect|wallet-connect|connect wallet/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Ethereum|Bitcoin|Solana|Reddit/i)).not.toBeInTheDocument();
 });
 
 test("Register route renders safe account creation without private key collection", async () => {

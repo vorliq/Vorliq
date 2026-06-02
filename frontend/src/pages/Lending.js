@@ -241,6 +241,9 @@ function Lending() {
         <p className="subtitle">
           Request VLQ, vote with wallet balance, track issuance transactions, and repay loans once they are active on-chain.
         </p>
+        <p className="help-text">
+          <Link to="/vlq">Review how VLQ lending movement becomes confirmed.</Link>
+        </p>
       </section>
 
       <ErrorMessage message={errorMessage} />

@@ -298,6 +298,7 @@ function Dashboard() {
         <div className="hero-actions">
           <Link className="button brand-button" to="/login">Create Wallet</Link>
           <Link className="button secondary brand-button-secondary" to="/faucet">Get Starter VLQ</Link>
+          <Link className="button secondary brand-button-secondary" to="/vlq">Understand VLQ</Link>
           <Link className="button secondary brand-button-secondary" to="/mine">Mine VLQ</Link>
           <Link className="button secondary brand-button-secondary" to="/forum">Explore Forum</Link>
           <Link className="button secondary brand-button-secondary" to="/transparency">View Transparency</Link>
@@ -342,6 +343,9 @@ function Dashboard() {
                 </Link>
                 <Link className="button secondary small-button" to="/blockchain">
                   Explorer
+                </Link>
+                <Link className="button secondary small-button" to="/vlq">
+                  VLQ Overview
                 </Link>
               </div>
             </div>
