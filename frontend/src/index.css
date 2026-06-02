@@ -1592,6 +1592,24 @@ summary {
   padding: 13px 14px;
 }
 
+.faucet-claim-list .history-row {
+  grid-template-columns: minmax(88px, max-content) minmax(0, 1fr) max-content max-content;
+}
+
+.faucet-claim-list .history-row > *,
+.faucet-claim-list .address-identity {
+  min-width: 0;
+}
+
+.faucet-claim-list .history-row > a,
+.faucet-claim-list .history-row > span {
+  overflow-wrap: anywhere;
+}
+
+.faucet-claim-list .status-badge {
+  max-width: 100%;
+}
+
 .health-row {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) 110px;

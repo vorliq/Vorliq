@@ -172,7 +172,7 @@ function Faucet() {
 
 function ClaimList({ title, claims, empty }) {
   return (
-    <section className="card card-pad stack">
+    <section className="card card-pad stack faucet-claim-list">
       <h2>{title}</h2>
       {claims.length === 0 ? (
         <div className="empty-state">{empty}</div>
