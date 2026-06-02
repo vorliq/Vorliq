@@ -12,6 +12,7 @@ import { apiErrorMessage } from "../helpers/errors";
 
 const quickLinks = [
   { to: "/blockchain", label: "Blockchain", detail: "Inspect blocks and transactions" },
+  { to: "/network", label: "Network", detail: "View public node and decentralization status" },
   { to: "/wallet", label: "Wallet", detail: "Create and check your VLQ wallet" },
   { to: "/faucet", label: "Faucet", detail: "Request starter VLQ from the treasury" },
   { to: "/send", label: "Send", detail: "Move VLQ to another member" },

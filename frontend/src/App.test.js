@@ -1233,6 +1233,7 @@ test("Dashboard shows a first-user Get Started section with core actions", async
   expect(within(getStarted).getByRole("link", { name: /governance/i })).toHaveAttribute("href", "/governance");
   expect(await screen.findByText(/block production/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /^blockchain inspect blocks and transactions$/i })).toHaveAttribute("href", "/blockchain");
+  expect(screen.getByRole("link", { name: /^network view public node and decentralization status$/i })).toHaveAttribute("href", "/network");
   expect(screen.getByText(/treasury per block/i)).toBeInTheDocument();
 });
 
