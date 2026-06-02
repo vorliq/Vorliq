@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { toast } from "react-toastify";
@@ -13,10 +13,12 @@ const PAGE_SIZE = 12;
 
 function Blockchain() {
   const navigate = useNavigate();
+  const addressResultsRef = useRef(null);
   const [snapshot, setSnapshot] = useState(null);
   const [blocks, setBlocks] = useState([]);
   const [hasMoreBlocks, setHasMoreBlocks] = useState(false);
   const [addressResults, setAddressResults] = useState([]);
+  const [addressTotal, setAddressTotal] = useState(null);
   const [addressSearch, setAddressSearch] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -46,6 +48,14 @@ function Blockchain() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!addressSearch) return undefined;
+    const timer = window.setTimeout(() => {
+      addressResultsRef.current?.scrollIntoView({ block: "start" });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [addressSearch, addressResults.length]);
 
   async function loadMoreBlocks() {
     setLoadingMore(true);
@@ -98,6 +108,7 @@ function Blockchain() {
       });
       setAddressSearch(term);
       setAddressResults(addressResponse.data.transactions || []);
+      setAddressTotal(addressResponse.data.total ?? (addressResponse.data.transactions || []).length);
       setErrorMessage("");
     } catch (error) {
       setErrorMessage(`No block, transaction, or wallet history matched ${shortHash(term)}.`);
@@ -157,17 +168,21 @@ function Blockchain() {
                 value={snapshot?.unavailable.holders ? "Unavailable" : snapshot?.holderTotal ?? "Unavailable"}
                 note="Public holder count comes from the leaderboard endpoint."
               />
-              <ExplorerStat label="Total blocks" value={summary.total_blocks ?? "Unavailable"} />
-              <ExplorerStat label="Total transactions" value={summary.total_transactions ?? "Unavailable"} />
+              <ExplorerStat label="Total blocks" value={snapshot?.unavailable.summary ? "Unavailable" : summary.total_blocks ?? "Unavailable"} />
+              <ExplorerStat label="Confirmed transactions" value={snapshot?.unavailable.confirmedTransactions ? "Unavailable" : summary.total_transactions ?? snapshot?.confirmedTotal ?? "Unavailable"} />
               <ExplorerStat
                 label="Pending transactions"
                 value={
                   snapshot?.unavailable.pendingTransactions || snapshot?.pendingTotal == null
                     ? "Unavailable"
                     : snapshot.pendingTotal
-                }
+                  }
               />
-              <ExplorerStat label="Chain health" value={summary.chain_valid ? "Valid" : "Unavailable"} tone={summary.chain_valid ? "teal" : "gold"} />
+              <ExplorerStat
+                label="Chain health"
+                value={snapshot?.unavailable.summary ? "Unavailable" : summary.chain_valid ? "Valid" : "Review"}
+                tone={snapshot?.unavailable.summary ? "gold" : summary.chain_valid ? "teal" : "gold"}
+              />
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
@@ -178,6 +193,8 @@ function Blockchain() {
                 </div>
                 {blocks.length ? (
                   blocks.map((block) => <BlockRow block={block} key={block.hash || block.index} />)
+                ) : snapshot?.unavailable.blocks ? (
+                  <EmptyState>Block history is unavailable from the public API right now.</EmptyState>
                 ) : (
                   <EmptyState>No blocks are available from the public API right now.</EmptyState>
                 )}
@@ -202,6 +219,8 @@ function Blockchain() {
                   snapshot.pendingTransactions.map((transaction) => (
                     <TransactionRow transaction={transaction} key={transaction.tx_id} />
                   ))
+                ) : snapshot?.unavailable.pendingTransactions ? (
+                  <EmptyState>Pending transaction data is unavailable from the public API right now.</EmptyState>
                 ) : (
                   <EmptyState>No pending transactions are waiting right now.</EmptyState>
                 )}
@@ -211,8 +230,8 @@ function Blockchain() {
 
             <Card className="grid gap-4 p-5">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="text-2xl font-black text-white">Latest Transactions</h2>
-                <span className="text-sm font-bold text-vorliq-muted">Confirmed and pending public records</span>
+                <h2 className="text-2xl font-black text-white">Recent Confirmed Transactions</h2>
+                <span className="text-sm font-bold text-vorliq-muted">Mined public transaction records</span>
               </div>
               {transactions.length ? (
                 <div className="grid gap-3 md:grid-cols-2">
@@ -220,28 +239,35 @@ function Blockchain() {
                     <TransactionRow transaction={transaction} key={transaction.tx_id || index} />
                   ))}
                 </div>
+              ) : snapshot?.unavailable.confirmedTransactions ? (
+                <EmptyState>Confirmed transaction history is unavailable from the public API right now.</EmptyState>
               ) : (
-                <EmptyState>Transaction history is unavailable or empty.</EmptyState>
+                <EmptyState>No confirmed transactions are available right now.</EmptyState>
               )}
             </Card>
 
             {addressSearch && (
-              <Card className="grid gap-4 p-5">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <span className="text-xs font-black uppercase tracking-[0.12em] text-vorliq-muted">Wallet History</span>
-                    <h2 className="font-mono text-2xl font-black text-white">{shortHash(addressSearch)}</h2>
+              <div ref={addressResultsRef}>
+                <Card className="grid gap-4 p-5">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <span className="text-xs font-black uppercase tracking-[0.12em] text-vorliq-muted">Wallet History</span>
+                      <h2 className="font-mono text-2xl font-black text-white">{shortHash(addressSearch)}</h2>
+                      <p className="mt-2 text-sm font-semibold text-vorliq-muted">
+                        {addressTotal === null ? "Showing public transaction matches." : `${addressTotal} public transaction match${addressTotal === 1 ? "" : "es"}.`}
+                      </p>
+                    </div>
+                    <Link className="rounded-full border border-vorliq-border px-4 py-2 text-sm font-black text-white" to={`/profile?address=${encodeURIComponent(addressSearch)}`}>
+                      View Profile
+                    </Link>
                   </div>
-                  <Link className="rounded-full border border-vorliq-border px-4 py-2 text-sm font-black text-white" to={`/profile?address=${encodeURIComponent(addressSearch)}`}>
-                    View Profile
-                  </Link>
-                </div>
-                {addressResults.length ? (
-                  addressResults.map((transaction) => <TransactionRow transaction={transaction} key={transaction.tx_id} />)
-                ) : (
-                  <EmptyState>No transactions found for this wallet address.</EmptyState>
-                )}
-              </Card>
+                  {addressResults.length ? (
+                    addressResults.map((transaction) => <TransactionRow transaction={transaction} key={transaction.tx_id} />)
+                  ) : (
+                    <EmptyState>No transactions found for this wallet address.</EmptyState>
+                  )}
+                </Card>
+              </div>
             )}
           </>
         )}
@@ -275,17 +301,35 @@ function BlockRow({ block }) {
 }
 
 function TransactionRow({ transaction }) {
+  const status = String(transaction.status || "confirmed").toLowerCase();
+  const txId = transaction.tx_id || transaction.id;
+  if (!txId) {
+    return (
+      <div className="rounded-lg border border-vorliq-border bg-[#0A0E1A]/72 p-4">
+        <StatusPill tone={status === "pending" ? "gold" : "teal"}>{status === "pending" ? "Pending" : "Confirmed"}</StatusPill>
+        <strong className="mt-3 block text-sm text-white">Transaction ID unavailable</strong>
+        <span className="mt-2 block break-all font-mono text-xs text-vorliq-muted">
+          From {shortHash(transaction.sender_address || transaction.sender)}
+        </span>
+      </div>
+    );
+  }
   return (
-    <div className="rounded-lg border border-vorliq-border bg-[#0A0E1A]/72 p-4">
+    <Link className="rounded-lg border border-vorliq-border bg-[#0A0E1A]/72 p-4 transition hover:border-vorliq-accent" to={`/tx/${encodeURIComponent(txId)}`}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <StatusPill tone={transaction.status === "pending" ? "gold" : "teal"}>{transaction.status || "confirmed"}</StatusPill>
+        <StatusPill tone={status === "pending" ? "gold" : "teal"}>{status === "pending" ? "Pending" : "Confirmed"}</StatusPill>
         <span className="font-mono text-sm font-black text-vorliq-muted">{formatVlq(transaction.amount)}</span>
       </div>
-      <Link className="mt-3 block break-all font-mono text-sm font-black text-white hover:text-vorliq-accent" to={`/tx/${transaction.tx_id}`}>
-        {shortHash(transaction.tx_id)}
-      </Link>
-      <span className="mt-2 block break-all font-mono text-xs text-vorliq-muted">{shortHash(transaction.sender_address || transaction.sender)}</span>
-    </div>
+      <strong className="mt-3 block break-all font-mono text-sm text-white">{shortHash(txId)}</strong>
+      <span className="mt-2 block break-all font-mono text-xs text-vorliq-muted">
+        From {shortHash(transaction.sender_address || transaction.sender)}
+      </span>
+      {transaction.receiver_address && (
+        <span className="mt-1 block break-all font-mono text-xs text-vorliq-muted">
+          To {shortHash(transaction.receiver_address)}
+        </span>
+      )}
+    </Link>
   );
 }
 

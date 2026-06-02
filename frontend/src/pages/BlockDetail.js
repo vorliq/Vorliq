@@ -54,6 +54,9 @@ function BlockDetail() {
         <p className="subtitle">
           Review a mined VLQ block, its proof-of-work metadata, and included transactions.
         </p>
+        <p className="help-text">
+          <Link to="/blockchain">Back to blockchain explorer</Link>
+        </p>
       </section>
 
       <ErrorMessage message={errorMessage} />
@@ -66,7 +69,7 @@ function BlockDetail() {
               <span className="eyebrow">Block #{block.index}</span>
               <h2>{shortHash(block.hash)}</h2>
             </div>
-            <button className="button secondary small-button" type="button" onClick={() => copy(block.hash, "Block hash")}>
+            <button className="button secondary small-button" type="button" disabled={!block.hash} onClick={() => copy(block.hash, "Block hash")}>
               Copy Hash
             </button>
           </div>
@@ -97,7 +100,7 @@ function BlockDetail() {
               <div className="stack">
                 {block.transactions.map((transaction) => (
                   <Link className="transaction-item explorer-transaction-link" to={`/tx/${transaction.tx_id}`} key={transaction.tx_id}>
-                    <span className={`status-badge ${transaction.status}`}>{transaction.status}</span>
+                    <span className={`status-badge ${statusClass(transaction.status)}`}>{statusLabel(transaction.status)}</span>
                     <strong>{shortHash(transaction.tx_id)}</strong>
                     <span>{transaction.amount} VLQ</span>
                     <span>{transaction.type || transaction.category || "transfer"}</span>
@@ -126,6 +129,17 @@ function Meta({ label, value }) {
 function shortHash(value) {
   if (!value) return "Unknown";
   return value.length > 24 ? `${value.slice(0, 14)}...${value.slice(-8)}` : value;
+}
+
+function statusClass(status) {
+  const normalized = String(status || "confirmed").toLowerCase();
+  if (normalized === "pending" || normalized === "confirmed") return normalized;
+  return "unknown";
+}
+
+function statusLabel(status) {
+  const normalized = statusClass(status);
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
 function formatTime(timestamp) {

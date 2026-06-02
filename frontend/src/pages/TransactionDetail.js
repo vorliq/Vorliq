@@ -56,6 +56,9 @@ function TransactionDetail() {
         <p className="subtitle">
           Inspect whether a VLQ transaction is pending in the pool or confirmed in a mined block.
         </p>
+        <p className="help-text">
+          <Link to="/blockchain">Back to blockchain explorer</Link>
+        </p>
       </section>
 
       <ErrorMessage message={errorMessage} />
@@ -68,7 +71,7 @@ function TransactionDetail() {
               <span className={`status-badge ${statusClass(transaction.status)}`}>{statusLabel(transaction.status)}</span>
               <h2>{shortId(transaction.tx_id)}</h2>
             </div>
-            <button className="button secondary small-button" type="button" onClick={() => copy(transaction.tx_id, "Transaction ID")}>
+            <button className="button secondary small-button" type="button" disabled={!transaction.tx_id} onClick={() => copy(transaction.tx_id, "Transaction ID")}>
               Copy ID
             </button>
           </div>
@@ -101,9 +104,9 @@ function TransactionDetail() {
           )}
 
           <button className="text-button" type="button" onClick={() => setRawOpen((open) => !open)}>
-            {rawOpen ? "Hide safe JSON" : "Show safe JSON"}
+            {rawOpen ? "Hide public fields" : "Show public fields"}
           </button>
-          {rawOpen && <pre className="code-box">{JSON.stringify(transaction, null, 2)}</pre>}
+          {rawOpen && <pre className="code-box">{JSON.stringify(publicTransactionFields(transaction), null, 2)}</pre>}
         </section>
       )}
 
@@ -125,8 +128,8 @@ function IdentityPanel({ label, address, onCopy }) {
     <div className="meta-item identity-panel">
       <span className="meta-label">{label}</span>
       <AddressIdentity address={address} compact />
-      <span className="meta-value">{address}</span>
-      <button className="button secondary small-button" type="button" onClick={() => onCopy(address, label)}>
+      <span className="meta-value">{address || "Unavailable"}</span>
+      <button className="button secondary small-button" type="button" disabled={!address} onClick={() => onCopy(address, label)}>
         Copy {label}
       </button>
     </div>
@@ -156,6 +159,23 @@ function statusClass(status) {
 function statusLabel(status) {
   const normalized = statusClass(status);
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function publicTransactionFields(transaction) {
+  return {
+    tx_id: transaction.tx_id || null,
+    status: transaction.status || null,
+    type: transaction.type || transaction.category || "transfer",
+    amount: transaction.amount ?? null,
+    sender_address: transaction.sender_address || null,
+    receiver_address: transaction.receiver_address || null,
+    timestamp: transaction.timestamp ?? null,
+    block_index: transaction.block_index ?? null,
+    block_hash: transaction.block_hash || null,
+    confirmations: transaction.confirmations ?? null,
+    signature_present: Boolean(transaction.signature_present),
+    public_key_present: Boolean(transaction.public_key_present),
+  };
 }
 
 function formatTime(timestamp) {

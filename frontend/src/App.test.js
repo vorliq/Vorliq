@@ -1196,6 +1196,7 @@ test("Dashboard shows a first-user Get Started section with core actions", async
   expect(within(getStarted).getByRole("link", { name: /mine vlq/i })).toHaveAttribute("href", "/mine");
   expect(within(getStarted).getByRole("link", { name: /governance/i })).toHaveAttribute("href", "/governance");
   expect(await screen.findByText(/block production/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /^blockchain inspect blocks and transactions$/i })).toHaveAttribute("href", "/blockchain");
   expect(screen.getByText(/treasury per block/i)).toBeInTheDocument();
 });
 
@@ -2052,7 +2053,46 @@ test("Transaction detail page renders status and block link", async () => {
   expect(await screen.findByRole("heading", { name: /transaction detail/i })).toBeInTheDocument();
   expect(await screen.findByText(/confirmed/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /view block/i })).toHaveAttribute("href", "/block/0000abc");
+  expect(screen.getByRole("link", { name: /back to blockchain explorer/i })).toHaveAttribute("href", "/blockchain");
   expect(screen.queryByText(/private key/i)).not.toBeInTheDocument();
+});
+
+test("Transaction detail public fields omit raw signature material", async () => {
+  api.get.mockImplementation((path) => {
+    if (path.startsWith("/transactions/")) {
+      return Promise.resolve({
+        data: {
+          success: true,
+          transaction: {
+            tx_id: "tx-public-fields",
+            status: "confirmed",
+            sender_address: "VLQ_SENDER",
+            receiver_address: "VLQ_RECEIVER",
+            amount: 4,
+            type: "transfer",
+            timestamp: 1715791000,
+            block_index: 1,
+            block_hash: "0000abc",
+            confirmations: 2,
+            signature_present: true,
+            public_key_present: true,
+            signature: "RAW_SIGNATURE_SHOULD_NOT_RENDER",
+            public_key: "RAW_PUBLIC_KEY_SHOULD_NOT_RENDER",
+          },
+        },
+      });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<TransactionDetail />, "/tx/tx-public-fields");
+
+  expect(await screen.findByRole("heading", { name: /transaction detail/i })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: /show public fields/i }));
+
+  expect(screen.getByText(/signature_present/i)).toBeInTheDocument();
+  expect(screen.queryByText(/RAW_SIGNATURE_SHOULD_NOT_RENDER/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/RAW_PUBLIC_KEY_SHOULD_NOT_RENDER/i)).not.toBeInTheDocument();
 });
 
 test("Block detail page renders transactions with tx links", async () => {
@@ -2082,6 +2122,7 @@ test("Block detail page renders transactions with tx links", async () => {
 
   expect(await screen.findByRole("heading", { name: /block detail/i })).toBeInTheDocument();
   expect(screen.getByText(/block #2/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /back to blockchain explorer/i })).toHaveAttribute("href", "/blockchain");
   expect(await screen.findByText(/tx-one/i)).toBeInTheDocument();
   expect(screen.getByText(/tx-one/i).closest("a")).toHaveAttribute("href", "/tx/tx-one");
 });
@@ -2104,6 +2145,42 @@ test("Blockchain explorer loads pending transactions and links to tx details", a
   expect(await screen.findByRole("heading", { name: /pending transactions/i })).toBeInTheDocument();
   expect(await screen.findByText(/pending-tx/i)).toBeInTheDocument();
   expect(screen.getByText(/pending-tx/i).closest("a")).toHaveAttribute("href", "/tx/pending-tx");
+});
+
+test("Blockchain explorer address search scrolls directly to wallet results", async () => {
+  const scrollIntoView = jest.fn();
+  Element.prototype.scrollIntoView = scrollIntoView;
+
+  api.get.mockImplementation((path) => {
+    if (path.startsWith("/transactions/")) {
+      return Promise.reject(new Error("not a transaction"));
+    }
+    if (path.startsWith("/chain/block/")) {
+      return Promise.reject(new Error("not a block"));
+    }
+    if (path === "/chain/address") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          transactions: [{ tx_id: "address-tx", status: "confirmed", sender_address: "VLQ_ADDRESS_SEARCH", receiver_address: "VLQ_B", amount: 7 }],
+          total: 1,
+        },
+      });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Blockchain />, "/blockchain");
+
+  await screen.findByRole("heading", { level: 1, name: /vorliq blockchain/i });
+  fireEvent.change(screen.getByLabelText(/search block, transaction, or wallet address/i), {
+    target: { value: "VLQ_ADDRESS_SEARCH" },
+  });
+  await userEvent.click(screen.getByRole("button", { name: /search explorer/i }));
+
+  expect(await screen.findByText(/1 public transaction match/i)).toBeInTheDocument();
+  expect(screen.getByText(/address-tx/i).closest("a")).toHaveAttribute("href", "/tx/address-tx");
+  await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
 });
 
 test("Blockchain page renders a loading state before public chain data resolves", () => {
@@ -2133,9 +2210,9 @@ test("Blockchain page handles unavailable public chain endpoints safely", async 
   expect(await screen.findByRole("heading", { level: 1, name: /vorliq blockchain/i })).toBeInTheDocument();
   expect(await screen.findByText(/Public holder count comes from the leaderboard endpoint/i)).toBeInTheDocument();
   expect(screen.getAllByText(/^Unavailable$/i).length).toBeGreaterThanOrEqual(3);
-  expect(screen.getByText(/No blocks are available from the public API right now/i)).toBeInTheDocument();
-  expect(screen.getByText(/No pending transactions are waiting right now/i)).toBeInTheDocument();
-  expect(screen.getByText(/Transaction history is unavailable or empty/i)).toBeInTheDocument();
+  expect(screen.getByText(/Block history is unavailable from the public API right now/i)).toBeInTheDocument();
+  expect(screen.getByText(/Pending transaction data is unavailable from the public API right now/i)).toBeInTheDocument();
+  expect(screen.getByText(/Confirmed transaction history is unavailable from the public API right now/i)).toBeInTheDocument();
 });
 
 test("Registry tabs render active node card with sync status", async () => {
