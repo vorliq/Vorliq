@@ -34,12 +34,12 @@ test.describe("responsive layout and visual guardrails", () => {
     await prepareReadOnlyPage(page);
     await safeGoto(page, "/");
 
-    const hamburger = page.locator('button[aria-controls="mobile-navigation"]');
+    const hamburger = page.locator('button[aria-controls="mobile-product-navigation"]');
     await expect(hamburger).toHaveAttribute("aria-expanded", "false");
     await hamburger.evaluate((button) => button.click());
     await expect(hamburger).toHaveAttribute("aria-expanded", "true");
 
-    const drawer = page.locator("#mobile-navigation");
+    const drawer = page.locator("#mobile-product-navigation");
     await expect(drawer).toBeVisible();
     await expect(drawer).toHaveAttribute("aria-modal", "true");
 
@@ -47,37 +47,25 @@ test.describe("responsive layout and visual guardrails", () => {
     expect(drawerBox).toBeTruthy();
     const topElementClass = await page.evaluate(({ x, y }) => {
       const element = document.elementFromPoint(x, y);
-      return element?.closest("#mobile-navigation")?.id || "";
+      return element?.closest("#mobile-product-navigation")?.id || "";
     }, { x: drawerBox.x + 24, y: drawerBox.y + 24 });
-    expect(topElementClass).toBe("mobile-navigation");
+    expect(topElementClass).toBe("mobile-product-navigation");
 
-    await drawer.getByRole("link", { name: /^Wallet$/i }).evaluate((link) => link.click());
+    await drawer.getByRole("link", { name: /^Features$/i }).evaluate((link) => link.click());
     await expect(hamburger).toHaveAttribute("aria-expanded", "false");
   });
 
-  test("desktop More menu opens, layers above content, and closes", async ({ page }) => {
+  test("desktop rebuilt navigation exposes primary links without old More menu", async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await prepareReadOnlyPage(page);
     await safeGoto(page, "/mine");
 
-    const more = page.getByRole("button", { name: /^More/i });
-    await more.evaluate((button) => button.click());
-    await expect(more).toHaveAttribute("aria-expanded", "true");
-
-    const menu = page.locator("#more-navigation");
-    await expect(menu).toBeVisible();
-    await expect(menu.getByRole("menuitem", { name: "Treasury" })).toBeVisible();
-
-    const menuBox = await menu.boundingBox();
-    expect(menuBox).toBeTruthy();
-    const topElementId = await page.evaluate(({ x, y }) => {
-      const element = document.elementFromPoint(x, y);
-      return element?.closest("#more-navigation")?.id || "";
-    }, { x: menuBox.x + Math.min(40, menuBox.width / 2), y: menuBox.y + 20 });
-    expect(topElementId).toBe("more-navigation");
-
-    await page.keyboard.press("Escape");
-    await expect(more).toHaveAttribute("aria-expanded", "false");
+    const navbar = page.locator(".navbar");
+    await expect(navbar).toBeVisible();
+    await expect(navbar.getByRole("link", { name: "Features" })).toBeVisible();
+    await expect(navbar.getByRole("link", { name: "Create Account" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^More/i })).toHaveCount(0);
+    await expect(page.locator("#more-navigation")).toHaveCount(0);
   });
 
   test("footer social links render once with SVG icon buttons", async ({ page }) => {
@@ -88,8 +76,9 @@ test.describe("responsive layout and visual guardrails", () => {
     const footer = page.locator("footer.site-footer");
     await expect(footer).toBeVisible();
     await expect(footer.locator(".social-links")).toHaveCount(1);
-    await expect(footer.locator(".social-links a")).toHaveCount(5);
-    await expect(footer.locator(".social-links a svg")).toHaveCount(5);
+    await expect(footer.locator(".social-links a")).toHaveCount(4);
+    await expect(footer.locator(".social-links a svg")).toHaveCount(4);
+    await expect(footer).not.toContainText(/reddit/i);
   });
 
   test("top logo is visible and dashboard does not repeat a giant middle logo", async ({ page }) => {
@@ -103,7 +92,8 @@ test.describe("responsive layout and visual guardrails", () => {
     expect(logoBox.width).toBeGreaterThanOrEqual(30);
     expect(logoBox.height).toBeGreaterThanOrEqual(30);
 
-    await expect(page.locator(".brand-background")).toBeVisible();
+    const pageBackground = await page.locator("body").evaluate((body) => getComputedStyle(body).backgroundColor);
+    expect(pageBackground).toMatch(/rgb\((0|[1-2]?\d|3[0-5]),\s*(0|[1-2]?\d|3[0-5]),\s*(0|[1-2]?\d|3[0-5])\)/);
     await expect(page.locator("main img[alt*='logo' i]")).toHaveCount(0);
   });
 });

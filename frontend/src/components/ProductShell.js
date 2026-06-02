@@ -111,7 +111,7 @@ export function ProductNav() {
 
   return (
     <header
-      className={`sticky top-0 z-[1000] border-b transition duration-300 ${
+      className={`navbar sticky top-0 z-[1000] border-b transition duration-300 ${
         scrolled
           ? "border-white/10 bg-[#0A0E1A]/82 shadow-panel backdrop-blur-xl"
           : "border-transparent bg-[#0A0E1A]/55 backdrop-blur-md"
@@ -123,7 +123,7 @@ export function ProductNav() {
       >
         Skip to main content
       </a>
-      <nav className="mx-auto flex min-h-[72px] w-[min(1180px,calc(100%_-_32px))] items-center justify-between gap-5">
+      <nav className="navbar-inner mx-auto flex min-h-[72px] w-[min(1180px,calc(100%_-_32px))] items-center justify-between gap-5">
         <BrandLockup />
         <div className="hidden items-center gap-2 md:flex" aria-label="Primary navigation">
           {navLinks.map((link) => (
@@ -156,14 +156,14 @@ export function ProductNav() {
       {open && (
         <>
           <div
-            className="fixed inset-0 z-[1001] bg-black/50 backdrop-blur-sm transition md:hidden"
+            className="mobile-drawer-backdrop nav-open fixed inset-0 z-[1001] bg-black/50 backdrop-blur-sm transition md:hidden"
             aria-hidden="true"
             onClick={() => setOpen(false)}
           />
           <aside
             ref={menuRef}
             id="mobile-product-navigation"
-            className="fixed bottom-0 right-0 top-0 z-[1002] w-[min(90vw,390px)] border-l border-vorliq-border bg-[#0A0E1A] p-5 shadow-panel transition-transform duration-300 md:hidden"
+            className="mobile-drawer nav-open fixed bottom-0 right-0 top-0 z-[1002] w-[min(90vw,390px)] overflow-y-auto border-l border-vorliq-border bg-[#0A0E1A] p-5 shadow-panel transition-transform duration-300 md:hidden"
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
@@ -182,7 +182,7 @@ export function ProductNav() {
             </div>
             <div className="grid gap-2">
               {navLinks.map((link) => (
-                <NavItem key={link.label} link={link} mobile />
+                <NavItem key={link.label} link={link} mobile onClick={() => setOpen(false)} />
               ))}
             </div>
             <div className="mt-8 grid gap-3">
@@ -200,13 +200,14 @@ export function ProductNav() {
   );
 }
 
-function NavItem({ link, mobile = false }) {
+function NavItem({ link, mobile = false, onClick }) {
   return (
     <Link
       className={`rounded-full font-extrabold text-vorliq-muted transition hover:bg-white/[0.05] hover:text-white ${
         mobile ? "px-4 py-3 text-base" : "px-4 py-2 text-sm"
       }`}
       to={link.to}
+      onClick={onClick}
     >
       {link.label}
     </Link>
@@ -215,9 +216,9 @@ function NavItem({ link, mobile = false }) {
 
 export function BrandLockup({ compact = false }) {
   return (
-    <Link className="inline-flex min-w-0 items-center gap-3 text-white" to="/">
+    <Link className="brand inline-flex min-w-0 items-center gap-3 text-white" to="/">
       <img
-        className={`${compact ? "h-8 w-8" : "h-10 w-10"} rounded-full object-contain drop-shadow-[0_0_16px_rgba(0,198,167,0.32)]`}
+        className={`brand-logo ${compact ? "h-8 w-8" : "h-10 w-10"} rounded-full object-contain drop-shadow-[0_0_16px_rgba(0,198,167,0.32)]`}
         src={logo}
         alt="Vorliq logo"
       />
@@ -228,16 +229,16 @@ export function BrandLockup({ compact = false }) {
 
 export function ProductFooter() {
   return (
-    <footer className="relative z-10 border-t border-vorliq-border bg-[#070B15]">
-      <div className="mx-auto grid w-[min(1180px,calc(100%_-_32px))] gap-10 py-12 lg:grid-cols-[1.1fr_1.9fr]">
-        <div className="grid content-start gap-5">
+    <footer className="site-footer relative z-10 border-t border-vorliq-border bg-[#070B15]">
+      <div className="footer-inner mx-auto grid w-[min(1180px,calc(100%_-_32px))] gap-10 py-12 lg:grid-cols-[1.1fr_1.9fr]">
+        <div className="footer-brand grid content-start gap-5">
           <BrandLockup compact />
           <p className="max-w-sm text-sm leading-7 text-vorliq-muted">Community savings and lending on the blockchain.</p>
           <SocialLinks compact />
         </div>
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="footer-links grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {footerGroups.map((group) => (
-            <div className="grid content-start gap-3" key={group.title}>
+            <div className="footer-link-group grid content-start gap-3" key={group.title}>
               <h2 className="text-sm font-black uppercase tracking-[0.12em] text-white">{group.title}</h2>
               {group.links.map((link) =>
                 link.to ? (
