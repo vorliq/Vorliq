@@ -118,7 +118,7 @@ function Home() {
 function Hero() {
   return (
     <section className="relative overflow-hidden">
-      <div className="absolute left-1/2 top-24 h-72 w-72 -translate-x-1/2 rounded-full bg-vorliq-accent/10 blur-3xl" aria-hidden="true" />
+      <div className="pointer-events-none absolute left-1/2 top-24 h-72 w-72 -translate-x-1/2 rounded-full bg-vorliq-accent/10 blur-3xl" aria-hidden="true" />
       <div className="mx-auto grid min-h-[calc(100svh-72px)] w-[min(1180px,calc(100%_-_32px))] items-center gap-10 py-14 lg:grid-cols-[1fr_0.9fr] lg:py-16">
         <motion.div
           initial={{ opacity: 0, y: 22 }}
@@ -201,7 +201,7 @@ function DashboardMockup() {
 
   return (
     <Card className="relative overflow-hidden p-5">
-      <div className="absolute right-8 top-8 h-28 w-28 rounded-full bg-vorliq-accent/15 blur-3xl" aria-hidden="true" />
+      <div className="pointer-events-none absolute right-8 top-8 h-28 w-28 rounded-full bg-vorliq-accent/15 blur-3xl" aria-hidden="true" />
       <div className="relative grid gap-5">
         <div className="flex items-center justify-between gap-4 border-b border-vorliq-border pb-4">
           <div>
@@ -522,7 +522,7 @@ function FinalCta() {
         transition={{ duration: 0.32 }}
       >
         <Card className="relative overflow-hidden p-8 md:p-12">
-          <div className="absolute right-10 top-10 h-48 w-48 rounded-full bg-vorliq-accent/15 blur-3xl" aria-hidden="true" />
+          <div className="pointer-events-none absolute right-10 top-10 h-48 w-48 rounded-full bg-vorliq-accent/15 blur-3xl" aria-hidden="true" />
           <div className="relative grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
               <h2 className="text-[clamp(2rem,5vw,3.6rem)] font-black leading-tight text-white">Ready to Build with Your Community?</h2>

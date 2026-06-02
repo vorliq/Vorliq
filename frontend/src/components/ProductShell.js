@@ -63,6 +63,15 @@ export function ProductNav() {
   }, [location.pathname, location.hash]);
 
   useEffect(() => {
+    if (!location.hash) return undefined;
+    const targetId = decodeURIComponent(location.hash.slice(1));
+    const timer = window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({ block: "start" });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [location.pathname, location.hash]);
+
+  useEffect(() => {
     function onScroll() {
       setScrolled(window.scrollY > 12);
     }
@@ -110,48 +119,50 @@ export function ProductNav() {
   }, [open]);
 
   return (
-    <header
-      className={`navbar sticky top-0 z-[1000] border-b transition duration-300 ${
-        scrolled
-          ? "border-white/10 bg-[#0A0E1A]/82 shadow-panel backdrop-blur-xl"
-          : "border-transparent bg-[#0A0E1A]/55 backdrop-blur-md"
-      }`}
-    >
-      <a
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[1200] focus:rounded-lg focus:bg-vorliq-accent focus:px-4 focus:py-3 focus:font-black focus:text-[#06101c]"
-        href="#main-content"
+    <>
+      <header
+        className={`navbar sticky top-0 z-[1000] border-b transition duration-300 ${
+          scrolled
+            ? "border-white/10 bg-[#0A0E1A]/82 shadow-panel backdrop-blur-xl"
+            : "border-transparent bg-[#0A0E1A]/55 backdrop-blur-md"
+        }`}
       >
-        Skip to main content
-      </a>
-      <nav className="navbar-inner mx-auto flex min-h-[72px] w-[min(1180px,calc(100%_-_32px))] items-center justify-between gap-5">
-        <BrandLockup />
-        <div className="hidden items-center gap-2 md:flex" aria-label="Primary navigation">
-          {navLinks.map((link) => (
-            <NavItem key={link.label} link={link} />
-          ))}
-        </div>
-        <div className="hidden items-center gap-3 md:flex">
-          <Link className="rounded-full px-4 py-2 text-sm font-extrabold text-vorliq-muted transition hover:text-white" to="/login">
-            Sign In
-          </Link>
-          <Link
-            className="rounded-full bg-vorliq-accent px-5 py-2.5 text-sm font-black text-[#06101c] shadow-glow transition hover:translate-y-[-1px]"
-            to="/register"
-          >
-            Create Account
-          </Link>
-        </div>
-        <button
-          className="grid h-11 w-11 place-items-center rounded-full border border-vorliq-border bg-white/[0.04] text-white md:hidden"
-          type="button"
-          aria-label="Open navigation menu"
-          aria-controls="mobile-product-navigation"
-          aria-expanded={open}
-          onClick={() => setOpen(true)}
+        <a
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[1200] focus:rounded-lg focus:bg-vorliq-accent focus:px-4 focus:py-3 focus:font-black focus:text-[#06101c]"
+          href="#main-content"
         >
-          <Menu size={21} aria-hidden="true" />
-        </button>
-      </nav>
+          Skip to main content
+        </a>
+        <nav className="navbar-inner mx-auto flex min-h-[72px] w-[min(1180px,calc(100%_-_32px))] items-center justify-between gap-5">
+          <BrandLockup />
+          <div className="hidden items-center gap-2 md:flex" aria-label="Primary navigation">
+            {navLinks.map((link) => (
+              <NavItem key={link.label} link={link} />
+            ))}
+          </div>
+          <div className="hidden items-center gap-3 md:flex">
+            <Link className="rounded-full px-4 py-2 text-sm font-extrabold text-vorliq-muted transition hover:text-white" to="/login">
+              Sign In
+            </Link>
+            <Link
+              className="rounded-full bg-vorliq-accent px-5 py-2.5 text-sm font-black text-[#06101c] shadow-glow transition hover:translate-y-[-1px]"
+              to="/register"
+            >
+              Create Account
+            </Link>
+          </div>
+          <button
+            className="grid h-11 w-11 place-items-center rounded-full border border-vorliq-border bg-white/[0.04] text-white md:hidden"
+            type="button"
+            aria-label="Open navigation menu"
+            aria-controls="mobile-product-navigation"
+            aria-expanded={open}
+            onClick={() => setOpen(true)}
+          >
+            <Menu size={21} aria-hidden="true" />
+          </button>
+        </nav>
+      </header>
 
       {open && (
         <>
@@ -169,7 +180,7 @@ export function ProductNav() {
             aria-label="Navigation menu"
           >
             <div className="mb-7 flex items-center justify-between">
-              <BrandLockup />
+              <BrandLockup onClick={() => setOpen(false)} />
               <button
                 ref={closeButtonRef}
                 className="grid h-10 w-10 place-items-center rounded-full border border-vorliq-border text-white"
@@ -186,17 +197,17 @@ export function ProductNav() {
               ))}
             </div>
             <div className="mt-8 grid gap-3">
-              <Link className="rounded-full border border-vorliq-border px-5 py-3 text-center font-extrabold text-white" to="/login">
+              <Link className="rounded-full border border-vorliq-border px-5 py-3 text-center font-extrabold text-white" to="/login" onClick={() => setOpen(false)}>
                 Sign In
               </Link>
-              <Link className="rounded-full bg-vorliq-accent px-5 py-3 text-center font-black text-[#06101c] shadow-glow" to="/register">
+              <Link className="rounded-full bg-vorliq-accent px-5 py-3 text-center font-black text-[#06101c] shadow-glow" to="/register" onClick={() => setOpen(false)}>
                 Create Account
               </Link>
             </div>
           </aside>
         </>
       )}
-    </header>
+    </>
   );
 }
 
@@ -214,9 +225,9 @@ function NavItem({ link, mobile = false, onClick }) {
   );
 }
 
-export function BrandLockup({ compact = false }) {
+export function BrandLockup({ compact = false, onClick }) {
   return (
-    <Link className="brand inline-flex min-w-0 items-center gap-3 text-white" to="/">
+    <Link className="brand inline-flex min-w-0 items-center gap-3 text-white" to="/" onClick={onClick}>
       <img
         className={`brand-logo ${compact ? "h-8 w-8" : "h-10 w-10"} rounded-full object-contain drop-shadow-[0_0_16px_rgba(0,198,167,0.32)]`}
         src={logo}

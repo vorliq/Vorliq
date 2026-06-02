@@ -3215,12 +3215,13 @@ th {
   }
 
   .mobile-drawer {
-    top: var(--nav-height);
+    top: 0;
     left: auto;
     right: 0;
     bottom: 0;
     width: min(92vw, 390px);
-    max-height: calc(100dvh - var(--nav-height));
+    height: 100dvh;
+    max-height: 100dvh;
     border-block: 0;
     border-right: 0;
     border-radius: 0;
@@ -3238,7 +3239,7 @@ th {
 
   .mobile-drawer-backdrop.nav-open {
     position: fixed;
-    inset: var(--nav-height) 0 0;
+    inset: 0;
     z-index: 1001;
     display: block;
     background: rgba(0, 5, 14, 0.58);
@@ -3324,7 +3325,14 @@ th {
   }
 
   .stats-table {
-    min-width: 560px;
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .stats-table th,
+  .stats-table td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .brand-background::before {

@@ -1234,6 +1234,7 @@ test("mobile drawer traps focus and closes from outside click", async () => {
   const drawer = screen.getByRole("dialog", { name: /navigation menu/i });
   expect(drawer).toHaveAttribute("aria-modal", "true");
   expect(drawer.closest("nav")).toBeNull();
+  expect(drawer.closest("header")).toBeNull();
   expect(within(drawer).getByRole("link", { name: /^features$/i })).toHaveAttribute("href", "/features");
   expect(within(drawer).getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
 
@@ -1249,6 +1250,89 @@ test("mobile drawer traps focus and closes from outside click", async () => {
   fireEvent.keyDown(document, { key: "Escape" });
   expect(hamburger).toHaveAttribute("aria-expanded", "false");
   expect(document.body).not.toHaveClass("mobile-nav-open");
+});
+
+test("mobile drawer content is hidden when closed and drawer links close cleanly", async () => {
+  render(<App />);
+
+  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
+
+  const hamburger = screen.getByRole("button", { name: /open navigation menu/i });
+  await userEvent.click(hamburger);
+
+  let drawer = screen.getByRole("dialog", { name: /navigation menu/i });
+  expect(drawer.querySelectorAll(".brand")).toHaveLength(1);
+  expect(within(drawer).getByRole("button", { name: /close navigation menu/i }).closest("#mobile-product-navigation")).toBe(drawer);
+
+  await userEvent.click(within(drawer).getByRole("link", { name: /^features$/i }));
+  await waitFor(() => expect(window.location.pathname).toBe("/features"));
+  expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
+  expect(document.body).not.toHaveClass("mobile-nav-open");
+
+  await userEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
+  drawer = screen.getByRole("dialog", { name: /navigation menu/i });
+  await userEvent.click(within(drawer).getByRole("link", { name: /create account/i }));
+  await waitFor(() => expect(window.location.pathname).toBe("/register"));
+  expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
+  drawer = screen.getByRole("dialog", { name: /navigation menu/i });
+  await userEvent.click(within(drawer).getByRole("link", { name: /create account/i }));
+  expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
+});
+
+test("mobile drawer backdrop closes without leaving hidden overlay content", async () => {
+  render(<App />);
+
+  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await userEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
+
+  expect(screen.getByRole("dialog", { name: /navigation menu/i })).toBeInTheDocument();
+  const backdrop = document.querySelector(".mobile-drawer-backdrop");
+  expect(backdrop).toBeInTheDocument();
+  fireEvent.click(backdrop);
+
+  expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
+  expect(document.body).not.toHaveClass("mobile-nav-open");
+});
+
+test("mobile drawer hash link closes and scrolls to the target section", async () => {
+  const scrollIntoView = jest.fn();
+  Element.prototype.scrollIntoView = scrollIntoView;
+
+  render(<App />);
+
+  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await userEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
+
+  const drawer = screen.getByRole("dialog", { name: /navigation menu/i });
+  await userEvent.click(within(drawer).getByRole("link", { name: /how it works/i }));
+
+  await waitFor(() => expect(window.location.hash).toBe("#how-it-works"));
+  expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
+  await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+});
+
+test("primary CTAs navigate with one click to their route targets", async () => {
+  render(<App />);
+
+  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await userEvent.click(screen.getByRole("link", { name: /create your account/i }));
+  await waitFor(() => expect(window.location.pathname).toBe("/register"));
+
+  cleanup();
+  window.history.pushState({}, "", "/features");
+  render(<App />);
+  await userEvent.click(await screen.findByRole("link", { name: /open blockchain/i }));
+  await waitFor(() => expect(window.location.pathname).toBe("/blockchain"));
+
+  cleanup();
+  window.history.pushState({}, "", "/dashboard");
+  render(<App />);
+  await screen.findByRole("heading", { name: /vorliq dashboard/i });
+  await userEvent.click(screen.getAllByRole("link", { name: /get starter vlq/i })[0]);
+  await waitFor(() => expect(window.location.pathname).toBe("/faucet"));
 });
 
 test("New product shell removes old More menu and notification bell controls", async () => {
