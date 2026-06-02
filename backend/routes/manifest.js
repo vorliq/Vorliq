@@ -137,7 +137,7 @@ async function buildNetworkManifest(options = {}) {
     project: {
       name: "Vorliq",
       version: "1.0.0",
-      description: "An experimental open-source community blockchain platform built on its own VLQ network.",
+      description: "A community savings bank built on its own blockchain with the VLQ coin.",
     },
     urls: {
       website: "https://vorliq.org",

@@ -27,7 +27,7 @@ const getStartedSteps = [
     step: "Step 1",
     title: "Read the safety notice",
     body:
-      "Vorliq is experimental self-custody software. Start by reading the transparency page and wallet safety guide so you understand private keys, backups, and live-network risk.",
+      "Vorliq is a community savings bank built on its own blockchain with the VLQ coin. Start by reading the transparency page and wallet safety guide so you understand private keys, backups, and live-network risk.",
     links: [
       { to: "/transparency", label: "Read Transparency" },
       { href: "https://vorliq.github.io/Vorliq/wallet-safety.html", label: "Wallet Safety" },
@@ -67,6 +67,32 @@ const getStartedSteps = [
   },
 ];
 
+const dashboardRequests = [
+  { key: "summary", label: "chain summary", request: () => api.get("/chain/summary") },
+  { key: "featured", label: "featured posts", request: () => api.get("/forum/featured", { params: { limit: 3 } }) },
+  { key: "lending", label: "lending summary", request: () => api.get("/lending/summary") },
+  { key: "exchange", label: "exchange summary", request: () => api.get("/exchange/summary") },
+  { key: "governance", label: "governance summary", request: () => api.get("/governance/summary") },
+  { key: "treasury", label: "treasury summary", request: () => api.get("/treasury/summary") },
+  { key: "mining", label: "mining status", request: () => api.get("/mining/status") },
+];
+
+function displayValue(source, value, suffix = "") {
+  if (!source || value === null || value === undefined || value === "") {
+    return "Unavailable";
+  }
+
+  return `${value}${suffix}`;
+}
+
+function statusValue(source, ok, readyLabel, reviewLabel = "Needs review") {
+  if (!source || ok === null || ok === undefined) {
+    return "Unavailable";
+  }
+
+  return ok ? readyLabel : reviewLabel;
+}
+
 function Dashboard() {
   const [summary, setSummary] = useState(null);
   const [lendingSummary, setLendingSummary] = useState(null);
@@ -75,6 +101,7 @@ function Dashboard() {
   const [treasurySummary, setTreasurySummary] = useState(null);
   const [miningStatus, setMiningStatus] = useState(null);
   const [featuredPosts, setFeaturedPosts] = useState([]);
+  const [resourceErrors, setResourceErrors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -83,40 +110,43 @@ function Dashboard() {
     let mounted = true;
 
     async function loadDashboard() {
-      try {
-        const [
-          summaryResponse,
-          featuredResponse,
-          lendingResponse,
-          exchangeResponse,
-          governanceResponse,
-          treasuryResponse,
-          miningResponse,
-        ] = await Promise.all([
-          api.get("/chain/summary"),
-          api.get("/forum/featured", { params: { limit: 3 } }),
-          api.get("/lending/summary"),
-          api.get("/exchange/summary"),
-          api.get("/governance/summary"),
-          api.get("/treasury/summary"),
-          api.get("/mining/status"),
-        ]);
-        if (mounted) {
+      const results = await Promise.all(
+        dashboardRequests.map((resource) =>
+          resource
+            .request()
+            .then((response) => ({ ...resource, ok: true, data: response.data }))
+            .catch((error) => ({ ...resource, ok: false, error }))
+        )
+      );
+
+      if (mounted) {
+        const data = Object.fromEntries(results.filter((result) => result.ok).map((result) => [result.key, result.data]));
+        const failures = results.filter((result) => !result.ok);
+        const allFailed = failures.length === results.length;
+
+        setSummary(data.summary?.summary || null);
+        setLendingSummary(data.lending?.summary || null);
+        setExchangeSummary(data.exchange?.summary || null);
+        setGovernanceSummary(data.governance?.summary || null);
+        setTreasurySummary(data.treasury?.summary || null);
+        setMiningStatus(data.mining?.status || null);
+        setFeaturedPosts((data.featured?.posts || []).slice(0, 3));
+        setResourceErrors(
+          failures.map((failure) => ({
+            key: failure.key,
+            label: failure.label,
+            message: apiErrorMessage(failure.error, `${failure.label} is unavailable.`),
+          }))
+        );
+
+        if (allFailed) {
+          const message = "Dashboard data is unavailable right now.";
+          setErrorMessage(message);
+          toast.error(message);
+        } else {
           setErrorMessage("");
-          setSummary(summaryResponse.data.summary || {});
-          setLendingSummary(lendingResponse.data.summary || {});
-          setExchangeSummary(exchangeResponse.data.summary || {});
-          setGovernanceSummary(governanceResponse.data.summary || {});
-          setTreasurySummary(treasuryResponse.data.summary || {});
-          setMiningStatus(miningResponse.data.status || {});
-          setFeaturedPosts((featuredResponse.data.posts || []).slice(0, 3));
           setLastUpdated(new Date());
         }
-      } catch (error) {
-        const message = apiErrorMessage(error, "Unable to load blockchain dashboard.");
-        setErrorMessage(message);
-        toast.error(message);
-      } finally {
         if (mounted) {
           setLoading(false);
         }
@@ -132,25 +162,31 @@ function Dashboard() {
 
   const stats = useMemo(() => {
     return {
-      blocks: summary?.total_blocks ?? 0,
-      transactions: summary?.total_transactions ?? 0,
-      reward: summary?.current_mining_reward ?? 50,
-      blockHeight: summary?.block_height ?? 0,
-      totalIssued: summary?.total_issued ?? 0,
-      valid: Boolean(summary?.chain_valid),
-      pendingVotes: lendingSummary?.pending_vote_count ?? 0,
-      activeLoans: (lendingSummary?.active_count ?? 0) + (lendingSummary?.overdue_count ?? 0) + (lendingSummary?.repayment_pending_count ?? 0),
-      openOffers: exchangeSummary?.open_count ?? 0,
-      activeTrades: exchangeSummary?.active_trades_count ?? 0,
-      activeProposals: governanceSummary?.active_count ?? 0,
-      executedRuleChanges: governanceSummary?.executed_count ?? 0,
+      blocks: displayValue(summary, summary?.total_blocks),
+      transactions: displayValue(summary, summary?.total_transactions),
+      reward: displayValue(summary, summary?.current_mining_reward, " VLQ"),
+      blockHeight: displayValue(summary, summary?.block_height),
+      totalIssued: displayValue(summary, summary?.total_issued, " VLQ"),
+      chainStatus: statusValue(summary, summary?.chain_valid, "Chain Valid"),
+      chainStatusTone: summary?.chain_valid ? "green" : "gold",
+      pendingVotes: displayValue(lendingSummary, lendingSummary?.pending_vote_count),
+      activeLoans: displayValue(
+        lendingSummary,
+        (lendingSummary?.active_count ?? 0) + (lendingSummary?.overdue_count ?? 0) + (lendingSummary?.repayment_pending_count ?? 0)
+      ),
+      openOffers: displayValue(exchangeSummary, exchangeSummary?.open_count),
+      activeTrades: displayValue(exchangeSummary, exchangeSummary?.active_trades_count),
+      activeProposals: displayValue(governanceSummary, governanceSummary?.active_count),
+      executedRuleChanges: displayValue(governanceSummary, governanceSummary?.executed_count),
       latestRuleChange: governanceSummary?.latest_executed_rule_change?.category,
-      treasuryBalance: treasurySummary?.current_balance ?? 0,
-      activeTreasury: treasurySummary?.active_proposal_count ?? 0,
-      pendingTreasuryPayouts: treasurySummary?.pending_payout_count ?? 0,
-      canMineNow: Boolean(miningStatus?.can_mine_now),
-      nextBlockWait: miningStatus?.seconds_until_next_allowed_block ?? 0,
-      treasuryPerBlock: miningStatus?.treasury_reward_per_block ?? 0,
+      treasuryBalance: displayValue(treasurySummary, treasurySummary?.current_balance, " VLQ"),
+      activeTreasury: displayValue(treasurySummary, treasurySummary?.active_proposal_count),
+      pendingTreasuryPayouts: displayValue(treasurySummary, treasurySummary?.pending_payout_count),
+      blockProduction: miningStatus
+        ? statusValue(miningStatus, miningStatus.can_mine_now, "Ready", `${miningStatus.seconds_until_next_allowed_block ?? 0}s`)
+        : "Unavailable",
+      blockProductionTone: miningStatus?.can_mine_now ? "green" : "gold",
+      treasuryPerBlock: displayValue(miningStatus, miningStatus?.treasury_reward_per_block, " VLQ"),
     };
   }, [exchangeSummary, governanceSummary, lendingSummary, miningStatus, summary, treasurySummary]);
 
@@ -160,8 +196,9 @@ function Dashboard() {
         <span className="section-eyebrow brand-pill">Live Network Console</span>
         <h1>Vorliq Dashboard</h1>
         <p className="subtitle">
-          Vorliq is experimental open-source community blockchain software for wallets, mining,
-          lending, exchange, governance, and transparent public records.
+          Vorliq is a community savings bank built on its own blockchain with the VLQ coin,
+          bringing wallets, mining, lending, exchange, governance, and transparent public records
+          into one network.
         </p>
         <div className="hero-actions">
           <Link className="button brand-button" to="/login">Create Wallet</Link>
@@ -224,13 +261,11 @@ function Dashboard() {
             </div>
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Mining Reward</span>
-              <span className="stat-value">{stats.reward} VLQ</span>
+              <span className="stat-value">{stats.reward}</span>
             </div>
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Chain Status</span>
-              <span className={`stat-value ${stats.valid ? "green" : "red"}`}>
-                {stats.valid ? "Chain Valid" : "Chain Invalid"}
-              </span>
+              <span className={`stat-value ${stats.chainStatusTone}`}>{stats.chainStatus}</span>
             </div>
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Current Block Height</span>
@@ -238,7 +273,7 @@ function Dashboard() {
             </div>
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Total VLQ Issued</span>
-              <span className="stat-value">{stats.totalIssued} VLQ</span>
+              <span className="stat-value">{stats.totalIssued}</span>
             </div>
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Pending Loan Votes</span>
@@ -270,7 +305,7 @@ function Dashboard() {
             </div>
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Treasury Balance</span>
-              <span className="stat-value">{stats.treasuryBalance} VLQ</span>
+              <span className="stat-value">{stats.treasuryBalance}</span>
             </div>
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Treasury Proposals</span>
@@ -282,15 +317,18 @@ function Dashboard() {
             </div>
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Block Production</span>
-              <span className={`stat-value ${stats.canMineNow ? "green" : "gold"}`}>
-                {stats.canMineNow ? "Ready" : `${stats.nextBlockWait}s`}
-              </span>
+              <span className={`stat-value ${stats.blockProductionTone}`}>{stats.blockProduction}</span>
             </div>
             <div className="card card-pad glass-card stat-card">
               <span className="stat-label">Treasury Per Block</span>
-              <span className="stat-value">{stats.treasuryPerBlock} VLQ</span>
+              <span className="stat-value">{stats.treasuryPerBlock}</span>
             </div>
           </div>
+          {resourceErrors.length > 0 && (
+            <div className="empty-state" role="status">
+              Some dashboard data is unavailable right now: {resourceErrors.map((error) => error.label).join(", ")}.
+            </div>
+          )}
         </section>
       )}
 

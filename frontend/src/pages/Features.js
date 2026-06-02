@@ -76,7 +76,7 @@ function Features() {
         <Reveal>
           <h2 className="text-[clamp(2rem,5vw,3.4rem)] font-black leading-tight text-white">What Vorliq is not</h2>
           <p className="mt-4 text-lg leading-8 text-vorliq-muted">
-            Responsible wording matters. Vorliq describes itself as experimental community software, not as regulated financial services or a promise of value.
+            Responsible wording matters. Vorliq describes itself as a community savings bank product experience, not as regulated banking, legal lending, custody, exchange services, or a promise of value.
           </p>
         </Reveal>
         <Card className="grid gap-4 p-6">

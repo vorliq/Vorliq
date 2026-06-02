@@ -1285,7 +1285,8 @@ test("Features route states responsible limits without wallet-connect integratio
       name: /savings, lending, and shared records for real communities/i,
     })
   ).toBeInTheDocument();
-  expect(screen.getByText(/Vorliq describes itself as experimental community software, not as regulated financial services or a promise of value/i)).toBeInTheDocument();
+  expect(screen.getByText(/Vorliq describes itself as a community savings bank product experience/i)).toBeInTheDocument();
+  expect(screen.getByText(/not as regulated banking, legal lending, custody, exchange services, or a promise of value/i)).toBeInTheDocument();
   expect(screen.getByText(/Native Vorliq wallet flow\./i)).toBeInTheDocument();
   expect(screen.getByText(/No third party blockchain dependency\./i)).toBeInTheDocument();
   expect(screen.queryByText(/MetaMask|WalletConnect|wallet-connect|connect wallet/i)).not.toBeInTheDocument();
@@ -1314,6 +1315,23 @@ test("Dashboard route still renders the existing real dashboard", async () => {
   expect(await screen.findByRole("heading", { level: 1, name: /^vorliq dashboard$/i })).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: /get started with vorliq/i })).toBeInTheDocument();
   expect(await screen.findByText(/block production/i)).toBeInTheDocument();
+});
+
+test("Dashboard keeps core live data visible when an optional summary is unavailable", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/exchange/summary") {
+      return Promise.reject({ response: { data: { message: "Exchange summary unavailable" } } });
+    }
+
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Dashboard />, "/dashboard");
+
+  expect(await screen.findByText(/block production/i)).toBeInTheDocument();
+  expect(screen.getByText(/some dashboard data is unavailable right now/i)).toBeInTheDocument();
+  expect(screen.getByText(/exchange summary/i)).toBeInTheDocument();
+  expect(screen.getByText(/open exchange offers/i).parentElement).toHaveTextContent(/Unavailable/i);
 });
 
 test("Login page shows wallet creation when no wallet is stored", () => {
@@ -2136,10 +2154,10 @@ test("IncidentBanner renders a warning when an active major incident is returned
   expect(screen.getByRole("link", { name: /view status/i })).toHaveAttribute("href", "https://status.vorliq.org");
 });
 
-test("Transparency page renders experimental and self custody notices from the manifest flow", async () => {
+test("Transparency page renders live software and self custody notices from the manifest flow", async () => {
   renderWithProviders(<Transparency />, "/transparency");
 
-  expect(await screen.findByRole("heading", { name: /experimental software/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /live community software/i })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: /user-controlled keys/i })).toBeInTheDocument();
   expect(screen.getByText(/lost keys cannot be recovered by vorliq/i)).toBeInTheDocument();
   expect(await screen.findByText(/abc123/i)).toBeInTheDocument();

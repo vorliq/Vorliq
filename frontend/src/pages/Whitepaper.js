@@ -12,8 +12,9 @@ function Whitepaper() {
         <span className="eyebrow">Vorliq Whitepaper</span>
         <h1>Community blockchain software on an independent chain</h1>
         <p className="subtitle">
-          Vorliq is experimental open-source software for communities that want to test
-          transparent wallets, signed transactions, community requests, and governance using VLQ.
+          Vorliq is a community savings bank built on its own blockchain with the VLQ coin,
+          giving communities transparent wallets, signed transactions, community requests, and
+          governance using VLQ.
         </p>
       </section>
 
@@ -59,7 +60,7 @@ function Whitepaper() {
             Vorliq runs its own proof of work blockchain with a difficulty target of four
             leading zeros. Miners search for a valid nonce that produces a block hash matching
             this target, and the resulting proof makes it costly to rewrite history while
-            remaining lightweight enough for the application to demonstrate the full process.
+            remaining lightweight enough for community operators to inspect the full process.
           </p>
           <p>
             Transactions are signed with SECP256K1 elliptic curve cryptography. Every block
@@ -110,9 +111,11 @@ function Whitepaper() {
         <section>
           <h2>Responsible Use</h2>
           <p>
-            Vorliq is experimental community software, not regulated financial advice or a
-            provider of financial services. Users are responsible for their own keys, actions,
-            local laws, counterparties, and risk decisions.
+            Vorliq uses community savings bank to describe the product experience. It does not
+            claim regulated banking status, formal financial-services status, legal lending
+            status, custody guarantees, exchange status, investment advice, or guaranteed
+            financial returns. Users are responsible for their own keys, actions, local laws,
+            counterparties, and risk decisions.
           </p>
         </section>
 

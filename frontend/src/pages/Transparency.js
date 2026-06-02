@@ -75,8 +75,9 @@ function Transparency() {
         <span className="eyebrow">Public Trust</span>
         <h1>Transparency</h1>
         <p className="subtitle">
-          Vorliq is public blockchain software. This page explains what is live, what is still
-          experimental, how user-controlled keys work, and where anyone can verify the network.
+          Vorliq is a community savings bank built on its own blockchain with the VLQ coin. This
+          page explains what is live, how user-controlled keys work, and where anyone can verify
+          the network.
         </p>
       </section>
 
@@ -84,11 +85,11 @@ function Transparency() {
 
       <section className="transparency-grid">
         <article className="card card-pad transparency-notice experimental">
-          <h2>Experimental Software</h2>
+          <h2>Live Community Software</h2>
           <p>
-            Vorliq is live and usable, but it is still early software. VLQ is not listed on
-            exchanges, has no guaranteed market value, and should not be treated as a promise
-            of financial return. The network is young and users should test carefully.
+            Vorliq is live and usable community software. VLQ is not listed on exchanges, has no
+            guaranteed market value, and should not be treated as a promise of financial return.
+            The network is young, and users should act carefully.
           </p>
         </article>
 
@@ -114,11 +115,14 @@ function Transparency() {
       <section className="card card-pad health-section">
         <h2>Risk and Limitations</h2>
         <p>
-          Vorliq is experimental community software, not regulated financial advice or a
-          provider of financial services. The public node at vorliq.org is a convenience gateway
-          for visitors, not a guarantee that the network is fully decentralized. Decentralization
-          improves only as more independent operators run nodes, keep their own backups, and
-          verify the chain for themselves.
+          Vorliq uses community savings bank to describe the product experience: community
+          savings and lending activity recorded on Vorliq's own blockchain with VLQ. It does not
+          claim regulated banking status, formal financial-services status, legal lending status,
+          custody guarantees, exchange status, investment advice, or guaranteed financial returns.
+          The public node at vorliq.org is a convenience gateway for visitors, not a guarantee
+          that the network is fully decentralized. Decentralization improves only as more
+          independent operators run nodes, keep their own backups, and verify the chain for
+          themselves.
         </p>
       </section>
 
