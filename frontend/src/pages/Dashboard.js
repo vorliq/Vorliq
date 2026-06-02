@@ -6,6 +6,7 @@ import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
 import SocialLinks from "../components/SocialLinks";
 import Spinner from "../components/Spinner";
+import { useAuth } from "../context/AuthContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
@@ -94,7 +95,16 @@ function statusValue(source, ok, readyLabel, reviewLabel = "Needs review") {
   return ok ? readyLabel : reviewLabel;
 }
 
+function walletBalanceValue(balancePayload) {
+  if (!balancePayload || balancePayload.balance === null || balancePayload.balance === undefined || balancePayload.balance === "") {
+    return "Unavailable";
+  }
+
+  return `${balancePayload.balance} ${balancePayload.coin || "VLQ"}`;
+}
+
 function Dashboard() {
+  const { clearLocalWallet, isLoggedIn, logout, wallet } = useAuth();
   const [summary, setSummary] = useState(null);
   const [lendingSummary, setLendingSummary] = useState(null);
   const [exchangeSummary, setExchangeSummary] = useState(null);
@@ -106,6 +116,10 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [walletSummary, setWalletSummary] = useState(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletErrors, setWalletErrors] = useState([]);
+  const [clearWalletConfirmed, setClearWalletConfirmed] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -161,6 +175,71 @@ function Dashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadWalletDashboard() {
+      if (!wallet?.address) {
+        setWalletSummary(null);
+        setWalletErrors([]);
+        setWalletLoading(false);
+        return;
+      }
+
+      setWalletLoading(true);
+      const resources = [
+        {
+          key: "balance",
+          label: "wallet balance",
+          request: () => api.get("/wallet/balance", { params: { address: wallet.address } }),
+        },
+        {
+          key: "activity",
+          label: "wallet activity",
+          request: () => api.get("/chain/address", { params: { address: wallet.address, limit: 8 } }),
+        },
+        {
+          key: "faucet",
+          label: "faucet claims",
+          request: () => api.get("/faucet/claims", { params: { address: wallet.address } }),
+        },
+      ];
+
+      const results = await Promise.all(
+        resources.map((resource) =>
+          resource
+            .request()
+            .then((response) => ({ ...resource, ok: true, data: response.data }))
+            .catch((error) => ({ ...resource, ok: false, error }))
+        )
+      );
+
+      if (!mounted) return;
+
+      const data = Object.fromEntries(results.filter((result) => result.ok).map((result) => [result.key, result.data]));
+      const failures = results.filter((result) => !result.ok);
+      setWalletSummary({
+        balance: data.balance || null,
+        activity: data.activity || null,
+        faucetClaims: data.faucet?.claims || [],
+      });
+      setWalletErrors(
+        failures.map((failure) => ({
+          key: failure.key,
+          label: failure.label,
+          message: apiErrorMessage(failure.error, `${failure.label} is unavailable.`),
+        }))
+      );
+      setWalletLoading(false);
+    }
+
+    loadWalletDashboard();
+
+    return () => {
+      mounted = false;
+    };
+  }, [wallet?.address]);
+
   const stats = useMemo(() => {
     return {
       blocks: displayValue(summary, summary?.total_blocks),
@@ -191,6 +270,21 @@ function Dashboard() {
     };
   }, [exchangeSummary, governanceSummary, lendingSummary, miningStatus, summary, treasurySummary]);
 
+  function lockSession() {
+    logout();
+    toast.info("Wallet session locked. The encrypted backup remains in this browser.");
+  }
+
+  function removeLocalWallet() {
+    if (!clearWalletConfirmed) {
+      toast.error("Confirm that you want to remove the encrypted wallet backup from this browser.");
+      return;
+    }
+    clearLocalWallet();
+    setClearWalletConfirmed(false);
+    toast.success("Encrypted wallet backup removed from this browser.");
+  }
+
   return (
     <div className="page">
       <section className="hero dashboard-brand-hero glass-section">
@@ -211,6 +305,151 @@ function Dashboard() {
       </section>
 
       <ErrorMessage message={errorMessage} />
+
+      <section className="glass-section account-dashboard-card" aria-labelledby="wallet-dashboard-title">
+        <div className="section-title">
+          <div>
+            <span className="section-eyebrow">Wallet Setup</span>
+            <h2 id="wallet-dashboard-title">{isLoggedIn ? "Your Wallet Dashboard" : "Start With A Vorliq Wallet"}</h2>
+          </div>
+          {isLoggedIn ? (
+            <div className="button-row">
+              <button className="button secondary small-button" type="button" onClick={lockSession}>
+                Lock Session
+              </button>
+              <Link className="button secondary small-button" to="/account">
+                Wallet Safety
+              </Link>
+            </div>
+          ) : (
+            <Link className="button small-button" to="/register">
+              Create Wallet
+            </Link>
+          )}
+        </div>
+
+        {isLoggedIn && wallet?.address ? (
+          <div className="grid account-aware-grid">
+            <div className="card card-pad glass-card wallet-overview-card">
+              <span className="stat-label">Wallet Address</span>
+              <span className="value-box mono-wrap">{wallet.address}</span>
+              <div className="button-row">
+                <Link className="button secondary small-button" to={`/faucet?address=${encodeURIComponent(wallet.address)}`}>
+                  Get Starter VLQ
+                </Link>
+                <Link className="button secondary small-button" to="/send">
+                  Send VLQ
+                </Link>
+                <Link className="button secondary small-button" to="/blockchain">
+                  Explorer
+                </Link>
+              </div>
+            </div>
+
+            <div className="card card-pad glass-card wallet-overview-card">
+              <span className="stat-label">Confirmed Balance</span>
+              <span className="stat-value">
+                {walletLoading
+                  ? "Loading..."
+                  : walletBalanceValue(walletSummary?.balance)}
+              </span>
+              <p className="help-text">Loaded from the existing public balance endpoint. No private key is sent.</p>
+            </div>
+
+            <div className="card card-pad glass-card wallet-overview-card">
+              <span className="stat-label">Recent Wallet Activity</span>
+              {walletLoading ? (
+                <Spinner label="Loading wallet activity..." />
+              ) : walletSummary?.activity?.transactions?.length ? (
+                <div className="history-list compact-history-list">
+                  {walletSummary.activity.transactions.slice(0, 4).map((transaction, index) => (
+                    <WalletActivityRow transaction={transaction} walletAddress={wallet.address} key={`${transaction.tx_id || transaction.block_index}-${index}`} />
+                  ))}
+                </div>
+              ) : walletErrors.some((error) => error.key === "activity") ? (
+                <div className="empty-state">Wallet activity is unavailable from the public address endpoint right now.</div>
+              ) : (
+                <div className="empty-state">No public wallet activity found yet.</div>
+              )}
+            </div>
+
+            <div className="card card-pad glass-card wallet-overview-card">
+              <span className="stat-label">Faucet Claims</span>
+              {walletLoading ? (
+                <Spinner label="Loading faucet claims..." />
+              ) : walletSummary?.faucetClaims?.length ? (
+                <div className="history-list compact-history-list">
+                  {walletSummary.faucetClaims.slice(0, 3).map((claim) => (
+                    <div className="history-row" key={claim.claim_id}>
+                      <span className={`status-badge ${claim.status}`}>{claim.status}</span>
+                      <span>{claim.amount} VLQ</span>
+                      {claim.tx_id ? <Link to={`/tx/${claim.tx_id}`}>View Tx</Link> : <span>{claim.reason || "No transaction yet"}</span>}
+                    </div>
+                  ))}
+                </div>
+              ) : walletErrors.some((error) => error.key === "faucet") ? (
+                <div className="empty-state">Faucet claim history is unavailable right now.</div>
+              ) : (
+                <div className="empty-state">No faucet claims found for this wallet.</div>
+              )}
+            </div>
+
+            <div className="card card-pad glass-card wallet-overview-card">
+              <span className="stat-label">Local Wallet Controls</span>
+              <p className="help-text">
+                Locking clears only the current session. Removing local wallet data deletes the encrypted wallet backup from this browser.
+              </p>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={clearWalletConfirmed}
+                  onChange={(event) => setClearWalletConfirmed(event.target.checked)}
+                />
+                <span>I understand this removes the encrypted wallet backup from this browser.</span>
+              </label>
+              <button className="button secondary small-button" type="button" disabled={!clearWalletConfirmed} onClick={removeLocalWallet}>
+                Clear Local Wallet
+              </button>
+            </div>
+
+            {walletErrors.length > 0 && (
+              <div className="empty-state" role="status">
+                Some wallet dashboard data is unavailable right now: {walletErrors.map((error) => error.label).join(", ")}.
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="get-started-grid">
+            <article className="get-started-step">
+              <span className="step-pill">Wallet</span>
+              <h3>Create or import safely</h3>
+              <p>
+                Create an encrypted browser wallet or import an existing encrypted Vorliq backup. Private keys stay local and are never sent to the backend.
+              </p>
+              <div className="button-row">
+                <Link className="button small-button" to="/register">
+                  Create Wallet
+                </Link>
+                <Link className="button secondary small-button" to="/login">
+                  Import Existing Wallet
+                </Link>
+              </div>
+            </article>
+            <article className="get-started-step">
+              <span className="step-pill">Safety</span>
+              <h3>Back up before funding</h3>
+              <p>
+                Save your encrypted backup and password before requesting starter VLQ or sending funds. Vorliq cannot recover a lost private key.
+              </p>
+              <div className="button-row">
+                <Link className="button secondary small-button" to="/transparency">
+                  Learn Safety
+                </Link>
+              </div>
+            </article>
+          </div>
+        )}
+      </section>
 
       <section className="card card-pad glass-section get-started-card" aria-labelledby="get-started-title">
         <div className="section-title">
@@ -397,6 +636,23 @@ function Dashboard() {
           <Link className="button secondary brand-button-secondary" to="/chat">Open Chat</Link>
         </div>
       </section>
+    </div>
+  );
+}
+
+function WalletActivityRow({ transaction, walletAddress }) {
+  const sent = transaction.sender_address === walletAddress;
+  const txId = transaction.tx_id;
+  const otherParty = sent ? transaction.receiver_address : transaction.sender_address;
+  const status = transaction.status || "confirmed";
+
+  return (
+    <div className="history-row">
+      <span className={`status-badge ${status}`}>{status}</span>
+      <span className={`direction ${sent ? "sent" : "received"}`}>{sent ? "Sent" : "Received"}</span>
+      <span className="mono-wrap">{otherParty || "Unknown address"}</span>
+      <span>{transaction.amount} VLQ</span>
+      {txId ? <Link to={`/tx/${txId}`}>View Tx</Link> : <span>No transaction ID</span>}
     </div>
   );
 }

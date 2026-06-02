@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
@@ -15,7 +15,8 @@ import { apiErrorMessage } from "../helpers/errors";
 import { exportEncryptedWalletBackup, getLastWalletBackupAt, loadWallet } from "../helpers/storage";
 
 function Account() {
-  const { wallet } = useAuth();
+  const navigate = useNavigate();
+  const { clearLocalWallet, logout, wallet } = useAuth();
   const { addNotification } = useNotifications();
   const previousIncomingCountRef = useRef(null);
   const [balance, setBalance] = useState(null);
@@ -39,6 +40,7 @@ function Account() {
   const [revealPassword, setRevealPassword] = useState("");
   const [revealedPrivateKey, setRevealedPrivateKey] = useState("");
   const [lastBackupAt, setLastBackupAt] = useState(() => getLastWalletBackupAt());
+  const [clearWalletConfirmed, setClearWalletConfirmed] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -261,6 +263,24 @@ function Account() {
     setRevealOpen(false);
   }
 
+  function lockWalletSession() {
+    hidePrivateKey();
+    logout();
+    toast.info("Wallet session locked. The encrypted backup remains in this browser.");
+    navigate("/login", { replace: true });
+  }
+
+  function removeSavedWallet() {
+    if (!clearWalletConfirmed) {
+      toast.error("Confirm that you want to remove the encrypted wallet backup from this browser.");
+      return;
+    }
+    hidePrivateKey();
+    clearLocalWallet();
+    toast.success("Encrypted wallet backup removed from this browser.");
+    navigate("/login", { replace: true });
+  }
+
   async function repayLoan(loanId) {
     setRepayingLoanId(loanId);
     try {
@@ -375,6 +395,9 @@ function Account() {
             >
               Reveal Private Key
             </button>
+            <button className="button secondary small-button" type="button" onClick={lockWalletSession}>
+              Lock Session
+            </button>
           </div>
         </div>
         <div className="grid account-wallet-grid">
@@ -475,6 +498,24 @@ function Account() {
             </div>
           </div>
         )}
+
+        <div className="private-key-warning">
+          <strong>Clear local wallet data</strong>
+          <p>
+            This removes the encrypted wallet backup from this browser. It does not delete public blockchain records, reverse transactions, or recover a lost backup.
+          </p>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={clearWalletConfirmed}
+              onChange={(event) => setClearWalletConfirmed(event.target.checked)}
+            />
+            <span>I understand this removes the encrypted wallet backup from this browser.</span>
+          </label>
+          <button className="button secondary small-button" type="button" disabled={!clearWalletConfirmed} onClick={removeSavedWallet}>
+            Clear Saved Wallet
+          </button>
+        </div>
       </section>
 
       <section className="card card-pad account-section">

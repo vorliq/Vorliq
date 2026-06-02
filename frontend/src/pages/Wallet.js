@@ -21,6 +21,8 @@ function Wallet() {
   const [safetyConfirmed, setSafetyConfirmed] = useState(false);
   const [backupPassword, setBackupPassword] = useState("");
   const [backupCreated, setBackupCreated] = useState(false);
+  const [privateKeyRevealConfirmed, setPrivateKeyRevealConfirmed] = useState(false);
+  const [privateKeyVisible, setPrivateKeyVisible] = useState(false);
 
   async function createWallet() {
     if (!safetyConfirmed) {
@@ -32,6 +34,8 @@ function Wallet() {
     try {
       const response = await api.post("/wallet/create");
       setWallet(response.data);
+      setPrivateKeyRevealConfirmed(false);
+      setPrivateKeyVisible(false);
       setErrorMessage("");
       toast.success("New VLQ wallet created.");
     } catch (error) {
@@ -211,11 +215,42 @@ function Wallet() {
               </div>
               <div className="field">
                 <label>Private Key</label>
-                <div className="value-box">{wallet.private_key}</div>
-                <p className="warning">
-                  Save this private key now. It is shown only so you can back it up, and it
-                  cannot be recovered by Vorliq later.
-                </p>
+                <div className="private-key-warning">
+                  <strong>{privateKeyVisible ? "Private key visible" : "Private key hidden"}</strong>
+                  <p>
+                    Reveal the raw key only if you are on a trusted device and need it for backup. Prefer the encrypted backup file for normal wallet recovery.
+                  </p>
+                  <label className="checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={privateKeyRevealConfirmed}
+                      onChange={(event) => setPrivateKeyRevealConfirmed(event.target.checked)}
+                    />
+                    <span>I am in a private place and understand anyone with this key can spend this wallet's VLQ.</span>
+                  </label>
+                  {privateKeyVisible ? (
+                    <>
+                      <div className="value-box">{wallet.private_key}</div>
+                      <div className="button-row">
+                        <button className="button secondary small-button" type="button" onClick={() => copyText(wallet.private_key, "Private key")}>
+                          Copy Private Key
+                        </button>
+                        <button className="button secondary small-button" type="button" onClick={() => setPrivateKeyVisible(false)}>
+                          Hide Private Key
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <button
+                      className="button secondary small-button"
+                      type="button"
+                      disabled={!privateKeyRevealConfirmed}
+                      onClick={() => setPrivateKeyVisible(true)}
+                    >
+                      Reveal Private Key
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ) : (

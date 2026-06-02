@@ -178,6 +178,17 @@ function defaultApiGet(path) {
     });
   }
 
+  if (path === "/wallet/balance") {
+    return Promise.resolve({
+      data: {
+        success: true,
+        address: "VLQ_TEST_ADDRESS_123456",
+        balance: 42,
+        coin: "VLQ",
+      },
+    });
+  }
+
   if (path === "/lending/summary") {
     return Promise.resolve({
       data: {
@@ -1097,9 +1108,31 @@ function renderWithProviders(ui, route = "/") {
   );
 }
 
+function renderWithAuth(ui, auth, route = "/") {
+  const defaultAuth = {
+    wallet: null,
+    isLoggedIn: false,
+    login: jest.fn(),
+    logout: jest.fn(),
+    clearLocalWallet: jest.fn(),
+    createAndSaveWallet: jest.fn(),
+  };
+
+  return render(
+    <ThemeProvider>
+      <NotificationProvider>
+        <AuthContext.Provider value={{ ...defaultAuth, ...auth }}>
+          <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
+        </AuthContext.Provider>
+      </NotificationProvider>
+    </ThemeProvider>
+  );
+}
+
 beforeEach(() => {
   window.history.pushState({}, "", "/");
   window.localStorage.clear();
+  window.sessionStorage.clear();
   jest.clearAllMocks();
   api.get.mockImplementation(defaultApiGet);
   api.post.mockResolvedValue({ data: { success: true } });
@@ -1198,6 +1231,75 @@ test("Dashboard shows a first-user Get Started section with core actions", async
   expect(await screen.findByText(/block production/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /^blockchain inspect blocks and transactions$/i })).toHaveAttribute("href", "/blockchain");
   expect(screen.getByText(/treasury per block/i)).toBeInTheDocument();
+});
+
+test("Dashboard shows account-aware wallet data and actions when a wallet is unlocked", async () => {
+  api.get.mockImplementation((path, options) => {
+    if (path === "/wallet/balance") {
+      expect(options.params.address).toBe("VLQ_TEST_ADDRESS_123456");
+      return Promise.resolve({ data: { success: true, address: "VLQ_TEST_ADDRESS_123456", balance: 42, coin: "VLQ" } });
+    }
+
+    if (path === "/chain/address") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          transactions: [
+            {
+              tx_id: "wallet-activity-tx",
+              status: "confirmed",
+              sender_address: "VLQ_TEST_ADDRESS_123456",
+              receiver_address: "VLQ_RECEIVER_ADDRESS",
+              amount: 3,
+              block_index: 4,
+            },
+          ],
+        },
+      });
+    }
+
+    return defaultApiGet(path);
+  });
+
+  const auth = {
+    wallet: { address: "VLQ_TEST_ADDRESS_123456", public_key: "TEST_PUBLIC_KEY" },
+    isLoggedIn: true,
+    logout: jest.fn(),
+    clearLocalWallet: jest.fn(),
+  };
+
+  renderWithAuth(<Dashboard />, auth, "/dashboard");
+
+  expect(await screen.findByRole("heading", { name: /your wallet dashboard/i })).toBeInTheDocument();
+  const walletDashboard = screen.getByRole("heading", { name: /your wallet dashboard/i }).closest("section");
+  expect(await screen.findByText(/42 VLQ/i)).toBeInTheDocument();
+  expect(screen.getByText(/loaded from the existing public balance endpoint/i)).toBeInTheDocument();
+  expect(within(walletDashboard).getByRole("link", { name: /get starter vlq/i })).toHaveAttribute("href", "/faucet?address=VLQ_TEST_ADDRESS_123456");
+  expect(within(walletDashboard).getByRole("link", { name: /send vlq/i })).toHaveAttribute("href", "/send");
+  expect(within(walletDashboard).getByRole("link", { name: /explorer/i })).toHaveAttribute("href", "/blockchain");
+  expect(walletDashboard.querySelector('a[href="/tx/wallet-activity-tx"]')).toBeInTheDocument();
+});
+
+test("Dashboard can clear the encrypted local wallet only after explicit confirmation", async () => {
+  const clearLocalWallet = jest.fn();
+  const auth = {
+    wallet: { address: "VLQ_TEST_ADDRESS_123456", public_key: "TEST_PUBLIC_KEY" },
+    isLoggedIn: true,
+    logout: jest.fn(),
+    clearLocalWallet,
+  };
+
+  renderWithAuth(<Dashboard />, auth, "/dashboard");
+
+  await screen.findByRole("heading", { name: /your wallet dashboard/i });
+  const clearButton = screen.getByRole("button", { name: /clear local wallet/i });
+  expect(clearButton).toBeDisabled();
+
+  await userEvent.click(screen.getByLabelText(/removes the encrypted wallet backup from this browser/i));
+  expect(clearButton).toBeEnabled();
+
+  await userEvent.click(clearButton);
+  expect(clearLocalWallet).toHaveBeenCalledTimes(1);
 });
 
 test("Dashboard shows branded official social icon links", async () => {
@@ -1447,6 +1549,12 @@ test("wallet safety confirmation blocks wallet creation until checked", async ()
   await waitFor(() => {
     expect(api.post).toHaveBeenCalledWith("/wallet/create");
   });
+
+  expect(await screen.findByText(/private key hidden/i)).toBeInTheDocument();
+  const revealButton = screen.getByRole("button", { name: /reveal private key/i });
+  expect(revealButton).toBeDisabled();
+  await userEvent.click(screen.getByLabelText(/anyone with this key can spend this wallet's VLQ/i));
+  expect(revealButton).toBeEnabled();
 });
 
 test("Footer exposes a public Risk Notice link", async () => {
@@ -1644,6 +1752,34 @@ test("Account loan section handles active lifecycle statuses", async () => {
   expect(screen.getByRole("button", { name: /^repay$/i })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: /faucet claims/i })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /open faucet/i })).toHaveAttribute("href", "/faucet?address=VLQ_ME");
+});
+
+test("Account requires confirmation before clearing the saved local wallet", async () => {
+  const clearLocalWallet = jest.fn();
+
+  renderWithAuth(
+    <Routes>
+      <Route path="/account" element={<Account />} />
+      <Route path="/login" element={<Login />} />
+    </Routes>,
+    {
+      wallet: { address: "VLQ_ME", public_key: "TEST_PUBLIC_KEY" },
+      isLoggedIn: true,
+      logout: jest.fn(),
+      clearLocalWallet,
+    },
+    "/account"
+  );
+
+  expect(await screen.findByRole("heading", { name: /my wallet/i })).toBeInTheDocument();
+  const clearButton = screen.getByRole("button", { name: /clear saved wallet/i });
+  expect(clearButton).toBeDisabled();
+
+  await userEvent.click(screen.getByLabelText(/removes the encrypted wallet backup from this browser/i));
+  expect(clearButton).toBeEnabled();
+
+  await userEvent.click(clearButton);
+  expect(clearLocalWallet).toHaveBeenCalledTimes(1);
 });
 
 test("Exchange lifecycle tabs render open offer cards and risk notice", async () => {

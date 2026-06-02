@@ -3349,6 +3349,7 @@ th {
 }
 
 .dashboard-brand-hero.glass-section,
+.account-dashboard-card.glass-section,
 .get-started-card.glass-section,
 .quick-links-card.glass-section,
 .featured-community-card.glass-section,
@@ -3361,6 +3362,7 @@ th {
 }
 
 .dashboard-brand-hero.glass-section::before,
+.account-dashboard-card.glass-section::before,
 .get-started-card.glass-section::before,
 .quick-links-card.glass-section::before,
 .featured-community-card.glass-section::before,
@@ -3368,6 +3370,7 @@ th {
   display: none;
 }
 
+.account-dashboard-card.glass-section,
 .get-started-card.glass-section,
 .quick-links-card.glass-section,
 .featured-community-card.glass-section,

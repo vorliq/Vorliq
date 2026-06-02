@@ -3,6 +3,7 @@ import {
   exportEncryptedWalletBackup,
   hasWallet,
   importEncryptedWalletBackup,
+  loadStoredWalletPublicInfo,
   loadWallet,
   saveWallet,
 } from "./storage";
@@ -41,6 +42,16 @@ test("wallet backup export never contains the plaintext private key", async () =
   expect(backup.encrypted_private_key).toBeTruthy();
   expect(backup.encryption_method).toBe("PBKDF2-SHA256-AES-GCM");
   expect(JSON.stringify(backup)).not.toContain(wallet.private_key);
+});
+
+test("stored wallet public info can be restored without decrypting the private key", async () => {
+  await saveWallet(wallet, "strong-password");
+
+  expect(loadStoredWalletPublicInfo()).toEqual({
+    address: wallet.address,
+    public_key: wallet.public_key,
+  });
+  expect(JSON.stringify(loadStoredWalletPublicInfo())).not.toContain(wallet.private_key);
 });
 
 test("wallet backup import fails with the wrong password and does not save a wallet", async () => {

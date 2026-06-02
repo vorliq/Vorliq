@@ -219,6 +219,18 @@ export function hasWallet() {
   return Boolean(window.localStorage.getItem(WALLET_STORAGE_KEY));
 }
 
+export function loadStoredWalletPublicInfo() {
+  try {
+    const storedWallet = getStoredEncryptedWallet();
+    return {
+      address: storedWallet.address,
+      public_key: storedWallet.public_key,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function getLastWalletBackupAt() {
   return window.localStorage.getItem(WALLET_LAST_BACKUP_KEY);
 }
