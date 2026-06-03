@@ -182,17 +182,33 @@ function ClaimList({ title, claims, empty }) {
       ) : (
         <div className="history-list">
           {claims.map((claim) => (
-            <div className="history-row" key={claim.claim_id}>
-              <span className={`status-badge ${claim.status}`}>{claim.status}</span>
-              <span><AddressIdentity address={claim.wallet_address} compact /></span>
-              <span>{claim.amount} VLQ</span>
-              {claim.tx_id ? <Link to={`/tx/${claim.tx_id}`}>View Tx</Link> : <span>No tx</span>}
+            <div className="history-row faucet-claim-row" key={claim.claim_id}>
+              <div className="faucet-claim-status">
+                <span className={`status-badge ${claim.status}`}>{formatClaimStatus(claim.status)}</span>
+              </div>
+              <div className="faucet-claim-member">
+                <span className="meta-label">Claimant</span>
+                <AddressIdentity address={claim.wallet_address} compact />
+              </div>
+              <div className="faucet-claim-amount">
+                <span className="meta-label">Amount</span>
+                <strong>{claim.amount} VLQ</strong>
+              </div>
+              <div className="faucet-claim-tx">
+                <span className="meta-label">Transaction</span>
+                {claim.tx_id ? <Link className="hash-text" to={`/tx/${claim.tx_id}`}>View Tx</Link> : <span>No tx</span>}
+              </div>
             </div>
           ))}
         </div>
       )}
     </section>
   );
+}
+
+function formatClaimStatus(status) {
+  if (!status) return "Unknown";
+  return String(status).replace(/_/g, " ");
 }
 
 export default Faucet;

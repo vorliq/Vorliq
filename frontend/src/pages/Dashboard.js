@@ -18,7 +18,7 @@ const quickLinks = [
   { to: "/send", label: "Send", detail: "Move VLQ to another member" },
   { to: "/mine", label: "Mine", detail: "Mine blocks and support the chain" },
   { to: "/lending", label: "Lending", detail: "Request or vote on community loans" },
-  { to: "/exchange", label: "Exchange", detail: "Post buy and sell offers" },
+  { to: "/exchange", label: "Exchange", detail: "Coordinate community requests" },
   { to: "/governance", label: "Governance", detail: "Vote on network changes" },
   { to: "/forum", label: "Forum", detail: "Post messages and reply to members" },
   { to: "/registry", label: "Registry", detail: "Find and connect to public nodes" },

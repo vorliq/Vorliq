@@ -1593,7 +1593,16 @@ summary {
 }
 
 .faucet-claim-list .history-row {
-  grid-template-columns: minmax(88px, max-content) minmax(0, 1fr) max-content max-content;
+  align-items: start;
+  border: 1px solid rgba(24, 215, 201, 0.16);
+  border-radius: var(--radius-md);
+  grid-template-areas:
+    "status"
+    "member"
+    "amount"
+    "tx";
+  grid-template-columns: minmax(0, 1fr);
+  padding: 14px;
 }
 
 .faucet-claim-list .history-row > *,
@@ -1601,13 +1610,59 @@ summary {
   min-width: 0;
 }
 
-.faucet-claim-list .history-row > a,
-.faucet-claim-list .history-row > span {
+.faucet-claim-list .address-identity {
+  align-items: flex-start;
+  width: 100%;
+}
+
+.faucet-claim-list .address-identity > span {
+  max-width: 100%;
+}
+
+.faucet-claim-list .address-identity strong,
+.faucet-claim-list .address-identity small,
+.faucet-claim-amount strong,
+.faucet-claim-tx {
   overflow-wrap: anywhere;
+}
+
+.faucet-claim-status { grid-area: status; }
+.faucet-claim-member { grid-area: member; }
+.faucet-claim-amount { grid-area: amount; }
+.faucet-claim-tx { grid-area: tx; }
+
+.faucet-claim-member,
+.faucet-claim-amount,
+.faucet-claim-tx {
+  display: grid;
+  gap: 5px;
 }
 
 .faucet-claim-list .status-badge {
   max-width: 100%;
+  overflow-wrap: normal;
+  white-space: normal;
+  word-break: normal;
+}
+
+.faucet-claim-list .trust-labels {
+  align-items: flex-start;
+  max-width: 100%;
+}
+
+.faucet-claim-list .trust-badge {
+  max-width: 100%;
+  overflow-wrap: normal;
+  white-space: normal;
+  word-break: normal;
+}
+
+@media (min-width: 720px) {
+  .faucet-claim-list .history-row {
+    grid-template-areas: "status member amount tx";
+    grid-template-columns: minmax(118px, max-content) minmax(0, 1fr) minmax(82px, max-content) minmax(74px, max-content);
+    align-items: center;
+  }
 }
 
 .health-row {

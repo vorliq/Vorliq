@@ -1234,6 +1234,7 @@ test("Dashboard shows a first-user Get Started section with core actions", async
   expect(await screen.findByText(/block production/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /^blockchain inspect blocks and transactions$/i })).toHaveAttribute("href", "/blockchain");
   expect(screen.getByRole("link", { name: /^network view public node and decentralization status$/i })).toHaveAttribute("href", "/network");
+  expect(screen.getByRole("link", { name: /^exchange coordinate community requests$/i })).toHaveAttribute("href", "/exchange");
   expect(screen.getByText(/treasury per block/i)).toBeInTheDocument();
 });
 
@@ -2045,6 +2046,53 @@ test("Faucet page renders and success state shows tx link", async () => {
 
   expect(await screen.findByText(/faucet-tx-success/i)).toBeInTheDocument();
   expect(screen.getByText(/faucet-tx-success/i).closest("a")).toHaveAttribute("href", "/tx/faucet-tx-success");
+});
+
+test("Faucet claim cards keep long badges and transaction states readable", async () => {
+  const longAddress = "VLQ_LONG_WALLET_ADDRESS_1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  api.get.mockImplementation((path, options) => {
+    if (path === "/faucet/summary") {
+      return Promise.resolve({ data: { success: true, summary: { starter_amount: 1, treasury_balance: 250, pending_claims: 2, confirmed_claims: 1 } } });
+    }
+    if (path === "/faucet/recent" || path === "/faucet/claims") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          claims: [
+            { claim_id: `${path}-rate`, wallet_address: longAddress, amount: 1, status: "rate_limited", tx_id: null },
+            { claim_id: `${path}-pending`, wallet_address: `${longAddress}_PENDING`, amount: 1, status: "pending", tx_id: "pending-faucet-transaction-id-with-long-value" },
+            { claim_id: `${path}-confirmed`, wallet_address: `${longAddress}_CONFIRMED`, amount: 1, status: "confirmed", tx_id: "confirmed-faucet-transaction-id-with-long-value" },
+          ],
+        },
+      });
+    }
+    if (path === "/profiles/profile") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          profile: {
+            wallet_address: options?.params?.address,
+            display_name: "Very Long Faucet Claimant Display Name",
+            trust_labels: ["Wallet Verified", "Active Contributor", "New Member"],
+          },
+        },
+      });
+    }
+    return defaultApiGet(path, options);
+  });
+
+  renderWithProviders(<Faucet />, `/faucet?address=${longAddress}`);
+
+  expect(await screen.findByRole("heading", { name: /my faucet claims/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /recent public claims/i })).toBeInTheDocument();
+  expect(await screen.findAllByText(/wallet verified/i)).toHaveLength(6);
+  expect(screen.getAllByText(/active contributor/i)).toHaveLength(6);
+  expect(screen.getAllByText(/new member/i)).toHaveLength(6);
+  expect(screen.getAllByText(/rate limited/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/no tx/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByRole("link", { name: /view tx/i })[0]).toHaveAttribute("href", "/tx/pending-faucet-transaction-id-with-long-value");
+  expect(screen.getAllByText(/amount/i).length).toBeGreaterThan(0);
+  expect(document.querySelectorAll(".faucet-claim-row").length).toBe(6);
 });
 
 test("Faucet claim form validates wallet address", async () => {
