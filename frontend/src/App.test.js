@@ -403,6 +403,7 @@ function defaultApiGet(path) {
         settings: {
           mining_reward: { default: 50, current: 25, changed: true },
           difficulty: { default: 4, current: 4, changed: false },
+          exchange_limit: { default: 5, current: 5, changed: false },
         },
       },
     });
@@ -2001,6 +2002,9 @@ test("Governance lifecycle tabs render active proposal cards", async () => {
   expect(screen.getByRole("button", { name: /my governance/i })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /rule changes/i })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /all history/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /how governance works/i })).toBeInTheDocument();
+  expect(screen.getByText(/passed pending execution/i)).toBeInTheDocument();
+  expect(screen.getByText(/community request limit/i)).toBeInTheDocument();
   expect(await screen.findByText(/adjust mining reward/i)).toBeInTheDocument();
   expect(screen.getAllByText(/active/i).length).toBeGreaterThan(0);
 });
@@ -2021,6 +2025,8 @@ test("Governance propose form shows validation guidance", async () => {
   await userEvent.click(await screen.findByRole("button", { name: /propose change/i }));
 
   expect(await screen.findByText(/mining reward must be greater than 0/i)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText(/category/i), { target: { value: "exchange_limit" } });
+  expect(await screen.findByText(/community request limit must be between 1 and 1000/i)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText(/category/i), { target: { value: "general" } });
   expect(await screen.findByText(/general proposals are advisory/i)).toBeInTheDocument();
 });

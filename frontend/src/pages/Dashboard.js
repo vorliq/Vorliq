@@ -20,7 +20,7 @@ const quickLinks = [
   { to: "/treasury", label: "Treasury", detail: "Track public funding and payouts" },
   { to: "/lending", label: "Lending", detail: "Request or vote on community loans" },
   { to: "/exchange", label: "Community Requests", detail: "Coordinate peer requests" },
-  { to: "/governance", label: "Governance", detail: "Vote on network changes" },
+  { to: "/governance", label: "Governance", detail: "Review proposals and rule-change history" },
   { to: "/forum", label: "Forum", detail: "Post messages and reply to members" },
   { to: "/registry", label: "Registry", detail: "Find and connect to public nodes" },
   { to: "/health", label: "Health", detail: "Check node status and deployment" },
@@ -65,7 +65,7 @@ const getStartedSteps = [
     links: [
       { to: "/forum", label: "Forum" },
       { to: "/chat", label: "Chat" },
-      { to: "/exchange", label: "Exchange" },
+      { to: "/exchange", label: "Community Requests" },
       { to: "/governance", label: "Governance" },
     ],
   },

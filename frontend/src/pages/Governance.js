@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
@@ -14,7 +15,7 @@ const categories = [
   ["difficulty", "Block Difficulty"],
   ["loan_limit", "Maximum Loan Amount"],
   ["loan_interest", "Loan Interest Rate"],
-  ["exchange_limit", "Exchange Offer Limit"],
+  ["exchange_limit", "Community Request Limit"],
   ["general", "General Proposal"],
 ];
 
@@ -31,9 +32,26 @@ const categoryGuidance = {
   difficulty: "Difficulty must be an integer between 2 and 8.",
   loan_limit: "Loan limit must be greater than 0 and no more than 1000000 VLQ.",
   loan_interest: "Loan interest must be between 0 and 100 percent. Existing decimal-style values are still accepted.",
-  exchange_limit: "Exchange offer limit must be between 1 and 1000.",
+  exchange_limit: "Community request limit must be between 1 and 1000.",
   general: "General proposals are advisory. They can pass, but they do not automatically execute settings.",
 };
+
+const lifecycleStates = [
+  ["active", "Open for VLQ-weighted voting before the proposal deadline."],
+  ["passed_pending_execution", "Passed quorum and approval rules, then waits for the existing execution path to record the outcome."],
+  ["executed", "The supported setting change or advisory record was applied and recorded."],
+  ["rejected", "No vote weight reached the rejection threshold."],
+  ["expired", "The voting deadline passed before the proposal reached a final outcome."],
+  ["cancelled", "The proposer cancelled before votes were cast."],
+];
+
+const governanceLinks = [
+  ["/treasury", "Treasury", "Community funding proposals and payout records"],
+  ["/lending", "Lending", "Community loan votes and repayment lifecycle"],
+  ["/blockchain", "Blockchain", "Blocks, transactions, and pending records"],
+  ["/readiness", "Readiness", "Deployment and network readiness checks"],
+  ["/audit", "Audit", "Public verification and audit records"],
+];
 
 const initialForm = {
   proposerAddress: "",
@@ -45,6 +63,22 @@ const initialForm = {
 
 function categoryLabel(category) {
   return categories.find(([value]) => value === category)?.[1] || String(category || "").replace(/_/g, " ");
+}
+
+function statusLabel(status) {
+  const labels = {
+    active: "Active",
+    passed_pending_execution: "Passed pending execution",
+    executed: "Executed",
+    rejected: "Rejected",
+    expired: "Expired",
+    cancelled: "Cancelled",
+  };
+  return labels[status] || String(status || "unknown").replace(/_/g, " ");
+}
+
+function statusMeaning(status) {
+  return lifecycleStates.find(([value]) => value === status)?.[1] || "This proposal is using a legacy or unknown status from the public API.";
 }
 
 function formatDate(timestamp) {
@@ -244,6 +278,7 @@ function Governance() {
     () => allProposals.filter((proposal) => proposal.status !== "active"),
     [allProposals]
   );
+  const settingsEntries = useMemo(() => Object.entries(settings || {}), [settings]);
 
   return (
     <div className="page">
@@ -267,6 +302,73 @@ function Governance() {
           <SummaryCard label="Total Votes" value={summary.total_votes || 0} />
         </section>
       )}
+
+      <section className="card card-pad stack" aria-label="Governance lifecycle clarity">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">Lifecycle</span>
+            <h2>How governance works</h2>
+          </div>
+        </div>
+        <p>
+          Governance is Vorliq's public rule-change and community decision record for its own blockchain.
+          Members can read proposals, review current governable settings, and inspect executed rule-change
+          history without wallet context.
+        </p>
+        <div className="lifecycle-grid">
+          {lifecycleStates.map(([state, meaning]) => (
+            <article className="lifecycle-step" key={state}>
+              <span className={`status-badge ${state}`}>{statusLabel(state)}</span>
+              <p>{meaning}</p>
+            </article>
+          ))}
+        </div>
+        <div className="risk-box">
+          <strong>Wallet and operator context</strong>
+          <p>
+            Proposals and votes use a public wallet address and existing wallet context. This page does not
+            ask for raw private keys or backup passwords. Public users can propose, vote, load their own
+            governance records, or cancel their own active no-vote proposal; admin-only execution controls
+            are not shown here.
+          </p>
+        </div>
+        <div className="button-row" aria-label="Related governance areas">
+          {governanceLinks.map(([to, label, detail]) => (
+            <Link className="button secondary small-button" to={to} key={to} title={detail}>
+              {label}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="card card-pad stack" aria-label="Current governable settings">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">Current Settings</span>
+            <h2>Governable Settings</h2>
+          </div>
+        </div>
+        {settingsEntries.length === 0 ? (
+          <div className="empty-state">Current governable settings are unavailable from the public API right now.</div>
+        ) : (
+          <div className="governance-grid">
+            {settingsEntries.map(([key, setting]) => (
+              <article className="lifecycle-step" key={key}>
+                <h3>{categoryLabel(key)}</h3>
+                <div className="meta-item">
+                  <span className="meta-label">Current</span>
+                  <span className="meta-value">{formatValue(setting.current)}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Default</span>
+                  <span className="meta-value">{formatValue(setting.default)}</span>
+                </div>
+                <p className="muted-text">{setting.changed ? "Changed by an executed governance record." : "Still matches the default setting."}</p>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       <div className="tab-list">
         {tabs.map(([value, label]) => (
@@ -315,6 +417,10 @@ function Governance() {
           <div className="risk-box">
             <strong>Validation guidance</strong>
             <p>{categoryGuidance[form.category]}</p>
+          </div>
+          <div className="risk-box">
+            <strong>Wallet context</strong>
+            <p>Submit proposals with a public wallet address. Do not enter private keys or backup passwords in governance forms.</p>
           </div>
           <form className="form" onSubmit={submitProposal}>
             <div className="field">
@@ -438,26 +544,28 @@ function ProposalCard({
   const yesPercent = totalWeight > 0 ? (Number(proposal.yes_vote_weight || 0) / totalWeight) * 100 : 0;
   const noPercent = totalWeight > 0 ? 100 - yesPercent : 0;
   const quorumPercent = quorum > 0 ? Math.min((totalWeight / quorum) * 100, 100) : 0;
+  const proposalDescription = proposal.description || "No governance proposal description provided.";
   const description =
-    expanded || compact || proposal.description.length <= 220
-      ? proposal.description
-      : `${proposal.description.slice(0, 220)}...`;
+    expanded || compact || proposalDescription.length <= 220
+      ? proposalDescription
+      : `${proposalDescription.slice(0, 220)}...`;
 
   return (
     <article className="governance-card">
       <div className="section-title">
         <div>
-          <h2>{proposal.title}</h2>
-          <span className={`status-badge ${proposal.status}`}>{String(proposal.status).replace(/_/g, " ")}</span>
+          <h2>{proposal.title || "Untitled governance proposal"}</h2>
+          <span className={`status-badge ${proposal.status}`}>{statusLabel(proposal.status)}</span>
         </div>
         <span className={`governance-badge ${proposal.category}`}>{categoryLabel(proposal.category)}</span>
       </div>
       <p>{description}</p>
-      {!compact && proposal.description.length > 220 && onToggle && (
+      {!compact && proposalDescription.length > 220 && onToggle && (
         <button className="text-button" type="button" onClick={onToggle}>
           {expanded ? "Show Less" : "Read More"}
         </button>
       )}
+      <p className="muted-text">{statusMeaning(proposal.status)}</p>
       <div className="meta-item">
         <span className="meta-label">Proposal ID</span>
         <span className="meta-value mono-wrap">{proposal.proposal_id}</span>
@@ -498,6 +606,12 @@ function ProposalCard({
         </div>
         <p className="muted-text">Quorum progress: {quorumPercent.toFixed(0)}% ({totalWeight} / {quorum} VLQ)</p>
       </div>
+      {!compact && proposal.status === "active" && (
+        <div className="risk-box">
+          <strong>Voting context</strong>
+          <p>Votes use public wallet addresses and VLQ balance weight. This form never needs a raw private key.</p>
+        </div>
+      )}
       {proposal.rule_change_id && (
         <p className="muted-text">Rule change: <span className="mono-wrap">{proposal.rule_change_id}</span></p>
       )}
@@ -507,7 +621,7 @@ function ProposalCard({
           <div className="governance-timeline">
             {proposal.status_history.map((entry, index) => (
               <article className="timeline-entry" key={`${proposal.proposal_id}-history-${index}`}>
-                <strong>{String(entry.status).replace(/_/g, " ")}</strong>
+                <strong>{statusLabel(entry.status)}</strong>
                 <p>{entry.note}</p>
                 <span className="muted-text">{formatDate(entry.timestamp)}</span>
               </article>
@@ -565,6 +679,7 @@ function RuleChanges({ ruleChanges }) {
               <h3>{categoryLabel(change.category)}</h3>
               <p>{formatValue(change.old_value)} to {formatValue(change.new_value)}</p>
               <p className="muted-text">Proposal <span className="mono-wrap">{change.proposal_id}</span></p>
+              <p className="muted-text">Rule change <span className="mono-wrap">{change.rule_change_id}</span></p>
               <p className="muted-text">Applied {formatDate(change.applied_at)} at block {change.applied_block_height}</p>
             </article>
           ))}

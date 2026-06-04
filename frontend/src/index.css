@@ -1404,6 +1404,7 @@ summary {
 .status-badge.approved,
 .status-badge.paid,
 .status-badge.repaid,
+.status-badge.executed,
 .health-icon.online {
   background: var(--success);
   color: var(--on-status);
@@ -1419,6 +1420,7 @@ summary {
 .status-badge.vlq_pending,
 .status-badge.vlq_confirmed,
 .status-badge.active,
+.status-badge.passed_pending_execution,
 .status-badge.accepted,
 .status-badge.minor {
   background: var(--warning);
@@ -1484,6 +1486,7 @@ summary {
 
 .status-badge.cancelled,
 .status-badge.rejected,
+.status-badge.expired,
 .status-badge.overdue,
 .status-badge.disputed,
 .status-badge.major,
