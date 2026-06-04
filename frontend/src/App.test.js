@@ -2214,10 +2214,16 @@ test("Account protected route redirects to login behavior when no wallet is load
   expect(screen.getAllByText(/create your vorliq wallet/i).length).toBeGreaterThan(0);
 });
 
-test("Send page logged-out manual mode shows the private-key safety warning", () => {
+test("Send page logged-out manual mode is behind advanced disclosure", async () => {
   renderWithProviders(<Send />, "/send");
 
-  expect(screen.getByText(/pasted private keys are never saved/i)).toBeInTheDocument();
+  expect(screen.getByText(/use saved-wallet signing/i)).toBeInTheDocument();
+  expect(screen.queryByLabelText(/sender private key/i)).not.toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole("button", { name: /advanced manual signing/i }));
+
+  expect(screen.getByText(/saved-wallet signing is safer/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/sender private key/i)).toBeInTheDocument();
 });
 
 test("Mine page displays a cooldown message when the API returns a mining cooldown error", async () => {

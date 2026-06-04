@@ -33,6 +33,7 @@ function Send() {
   const [balance, setBalance] = useState(null);
   const [lastSubmitted, setLastSubmitted] = useState(null);
   const [duplicateOverride, setDuplicateOverride] = useState(false);
+  const [manualModeOpen, setManualModeOpen] = useState(false);
 
   useEffect(() => {
     if (isLoggedIn && wallet?.address) {
@@ -87,6 +88,8 @@ function Send() {
   const duplicateAttempt =
     lastSubmitted?.fingerprint === transactionFingerprint &&
     Date.now() - lastSubmitted.submittedAt < DUPLICATE_WINDOW_MS;
+  const sendFormAvailable = isLoggedIn || manualModeOpen;
+  const hasConfirmedBalance = balance !== undefined && balance !== null && Number.isFinite(Number(balance));
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -110,6 +113,11 @@ function Send() {
     event.preventDefault();
     setErrorMessage("");
 
+    if (!sendFormAvailable) {
+      toast.error("Unlock a saved wallet or open Advanced manual signing before reviewing a send.");
+      return;
+    }
+
     if (!form.senderAddress.trim() || !form.senderPublicKey.trim() || !form.receiverAddress.trim() || !form.amount) {
       toast.error("Fill in every transaction field.");
       return;
@@ -129,6 +137,11 @@ function Send() {
     event.preventDefault();
 
     if (sending) return;
+    if (!sendFormAvailable) {
+      toast.error("Unlock a saved wallet or open Advanced manual signing before sending.");
+      return;
+    }
+
     if (!review.canSubmit) {
       const message = review.errors[0] || "Review the transaction details before sending.";
       setErrorMessage(message);
@@ -201,6 +214,23 @@ function Send() {
     }
   }
 
+  function openManualMode() {
+    setManualModeOpen(true);
+    setErrorMessage("");
+    setStep("details");
+  }
+
+  function cancelManualMode() {
+    setManualModeOpen(false);
+    setScannerOpen(false);
+    setSubmittedTransaction(null);
+    setDuplicateOverride(false);
+    setErrorMessage("");
+    setStep("details");
+    setForm(initialForm);
+    setWalletPassword("");
+  }
+
   async function copyText(value, label) {
     try {
       await navigator.clipboard.writeText(String(value || ""));
@@ -232,7 +262,7 @@ function Send() {
             <span className="eyebrow">Step {step === "details" ? "1" : step === "review" ? "2" : "3"} of 3</span>
             <h2>{step === "details" ? "Enter Transaction Details" : step === "review" ? "Review Transaction" : "Pending Transaction"}</h2>
           </div>
-          {step === "details" && (
+          {step === "details" && sendFormAvailable && (
             <button className="button secondary compact" type="button" onClick={() => setScannerOpen((current) => !current)}>
               {scannerOpen ? "Close Scanner" : "Scan QR Code"}
             </button>
@@ -260,17 +290,35 @@ function Send() {
                   the backend.
                 </p>
               </div>
-            ) : (
+            ) : manualModeOpen ? (
               <div className="private-key-warning">
-                <strong>Manual private key mode</strong>
+                <strong>Advanced manual private-key signing</strong>
                 <p>
-                  Avoid manual mode unless necessary. Pasted private keys are never saved by this
-                  form and are cleared after a send attempt, but any private key exposure can put
-                  the wallet at risk.
+                  Saved-wallet signing is safer because the key is decrypted locally only when
+                  signing is needed. Use manual signing only if you understand the risk. This form
+                  does not save the private key, does not put it in the URL, and clears the field
+                  after submit or cancel.
                 </p>
+              </div>
+            ) : (
+              <div className="wallet-safety-box send-wallet-recommendation">
+                <strong>Use saved-wallet signing</strong>
+                <p>
+                  Unlock an encrypted Vorliq wallet to sign locally without pasting a private key.
+                  If you have not saved a wallet in this browser yet, create one or import an
+                  encrypted backup first.
+                </p>
+                <div className="button-row">
+                  <Link className="button" to="/login">Unlock or Import Wallet</Link>
+                  <Link className="button secondary" to="/register">Create Wallet</Link>
+                  <button className="button ghost" type="button" onClick={openManualMode}>
+                    Advanced Manual Signing
+                  </button>
+                </div>
               </div>
             )}
 
+            {sendFormAvailable && (
             <form className="form" onSubmit={continueToReview}>
               <div className="field">
                 <label htmlFor="sender-address">Sender Address</label>
@@ -339,7 +387,7 @@ function Send() {
                   value={form.amount}
                   onChange={(event) => updateField("amount", event.target.value)}
                 />
-                {Number.isFinite(Number(balance)) && <p className="help-text">Confirmed balance available for review: {balance} VLQ.</p>}
+                {hasConfirmedBalance && <p className="help-text">Confirmed balance available for review: {balance} VLQ.</p>}
               </div>
 
               {review.errors.map((error) => (
@@ -352,7 +400,13 @@ function Send() {
               <button className="button" type="submit">
                 Review Transaction
               </button>
+              {!isLoggedIn && (
+                <button className="button secondary" type="button" onClick={cancelManualMode}>
+                  Cancel Manual Signing
+                </button>
+              )}
             </form>
+            )}
           </>
         )}
 
@@ -370,6 +424,7 @@ function Send() {
               <ReviewItem label="Sender address" value={review.sender.address} />
               <ReviewItem label="Receiver address" value={review.receiver.address} />
               <ReviewItem label="Amount" value={`${review.amount} VLQ`} />
+              <ReviewItem label="Network fee" value="Not shown by current public API" />
               <ReviewItem label="Estimated status" value="Pending until mined" />
               <ReviewItem label="Receiver validation" value={review.receiver.looksValid ? "Looks valid" : "Warnings present"} />
               <ReviewItem label="Local signing" value={isLoggedIn ? "Private key stays in browser" : "Manual key is not persisted"} />
@@ -412,6 +467,11 @@ function Send() {
               <button className="button secondary" type="button" onClick={() => setStep("details")} disabled={sending}>
                 Back
               </button>
+              {!isLoggedIn && (
+                <button className="button secondary" type="button" onClick={cancelManualMode} disabled={sending}>
+                  Cancel Manual Signing
+                </button>
+              )}
               <button className="button" type="submit" disabled={sending || !review.canSubmit || (duplicateAttempt && !duplicateOverride)}>
                 {sending ? "Sending..." : "Confirm and Send"}
               </button>

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -50,11 +50,15 @@ function renderSend(auth = { isLoggedIn: false, wallet: null }) {
 }
 
 async function fillManualDetails({ amount = "2", to = receiver, from = sender } = {}) {
-  await userEvent.type(screen.getByLabelText(/sender address/i), from);
-  await userEvent.type(screen.getByLabelText(/sender private key/i), "PRIVATE_KEY");
-  await userEvent.type(screen.getByLabelText(/sender public key/i), "PUBLIC_KEY");
-  await userEvent.type(screen.getByLabelText(/receiver address/i), to);
-  await userEvent.type(screen.getByLabelText(/amount of vlq/i), amount);
+  const advancedButton = screen.queryByRole("button", { name: /advanced manual signing/i });
+  if (advancedButton) {
+    await userEvent.click(advancedButton);
+  }
+  fireEvent.change(screen.getByLabelText(/sender address/i), { target: { value: from } });
+  fireEvent.change(screen.getByLabelText(/sender private key/i), { target: { value: "PRIVATE_KEY" } });
+  fireEvent.change(screen.getByLabelText(/sender public key/i), { target: { value: "PUBLIC_KEY" } });
+  fireEvent.change(screen.getByLabelText(/receiver address/i), { target: { value: to } });
+  fireEvent.change(screen.getByLabelText(/amount of vlq/i), { target: { value: amount } });
 }
 
 describe("Send safety flow", () => {
@@ -121,11 +125,32 @@ describe("Send safety flow", () => {
     expect(screen.getAllByText(/private key stays in browser/i).length).toBeGreaterThan(0);
   });
 
-  test("manual private key warning appears", () => {
+  test("manual private key mode is hidden behind an advanced disclosure", async () => {
     renderSend();
 
-    expect(screen.getByText(/manual private key mode/i)).toBeInTheDocument();
-    expect(screen.getByText(/pasted private keys are never saved/i)).toBeInTheDocument();
+    expect(screen.getByText(/use saved-wallet signing/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /unlock or import wallet/i })).toHaveAttribute("href", "/login");
+    expect(screen.getByRole("link", { name: /create wallet/i })).toHaveAttribute("href", "/register");
+    expect(screen.queryByLabelText(/sender private key/i)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /advanced manual signing/i }));
+
+    expect(screen.getByText(/advanced manual private-key signing/i)).toBeInTheDocument();
+    expect(screen.getByText(/saved-wallet signing is safer/i)).toBeInTheDocument();
+    expect(screen.getByText(/does not put it in the url/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/sender private key/i)).toBeInTheDocument();
+  });
+
+  test("canceling advanced manual mode clears sensitive input", async () => {
+    renderSend();
+
+    await userEvent.click(screen.getByRole("button", { name: /advanced manual signing/i }));
+    fireEvent.change(screen.getByLabelText(/sender private key/i), { target: { value: "PRIVATE_KEY" } });
+    await userEvent.click(screen.getByRole("button", { name: /cancel manual signing/i }));
+
+    expect(screen.queryByLabelText(/sender private key/i)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /advanced manual signing/i }));
+    expect(screen.getByLabelText(/sender private key/i)).toHaveValue("");
   });
 
   test("tx result shows tx_id and pending explanation", async () => {
@@ -137,6 +162,11 @@ describe("Send safety flow", () => {
     expect(await screen.findByText(/tx-safe-123/i)).toBeInTheDocument();
     expect(screen.getByText(/mining confirmation is required/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /open transaction detail/i })).toHaveAttribute("href", "/tx/tx-safe-123");
+    expect(api.post).toHaveBeenCalledWith("/transaction/send", expect.any(Object));
+    expect(Object.keys(api.post.mock.calls[0][1])).not.toEqual(
+      expect.arrayContaining(["senderPrivateKey", "private_key", "sender_private_key"])
+    );
+    expect(JSON.stringify(api.post.mock.calls[0][1])).not.toContain("PRIVATE_KEY");
   });
 
   test("duplicate send protection requires explicit confirmation", async () => {

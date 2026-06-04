@@ -191,6 +191,8 @@ function Wallet() {
               <div className="empty-state">
                 Need starter VLQ? The faucet can send a small treasury-funded transaction when funds are available.{" "}
                 <Link to={`/faucet?address=${wallet.address}`}>Open Faucet</Link>
+                {" "}|{" "}
+                <Link to="/send">Send VLQ</Link>
               </div>
               <section className="receive-panel">
                 <h2>Receive VLQ</h2>
