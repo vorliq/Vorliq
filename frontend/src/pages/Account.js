@@ -31,7 +31,6 @@ function Account() {
   const [allAchievements, setAllAchievements] = useState([]);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [repayingLoanId, setRepayingLoanId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
   const [exportPassword, setExportPassword] = useState("");
@@ -279,27 +278,6 @@ function Account() {
     clearLocalWallet();
     toast.success("Encrypted wallet backup removed from this browser.");
     navigate("/login", { replace: true });
-  }
-
-  async function repayLoan(loanId) {
-    setRepayingLoanId(loanId);
-    try {
-      const response = await api.post("/lending/repay", {
-        loan_id: loanId,
-        repayer_address: wallet.address,
-      });
-      setLoans((current) =>
-        current.map((loan) => (loan.loan_id === loanId ? response.data.loan : loan))
-      );
-      setErrorMessage("");
-      toast.success("Repayment submitted. Mining confirmation will mark the loan repaid.");
-    } catch (error) {
-      const message = apiErrorMessage(error, "Unable to repay loan.");
-      setErrorMessage(message);
-      toast.error(message);
-    } finally {
-      setRepayingLoanId(null);
-    }
   }
 
   function exportTransactionsAsCsv() {
@@ -633,14 +611,16 @@ function Account() {
                 )}
               </div>
               {["active", "overdue"].includes(loan.status) && !loan.repayment_tx_id && (
-                <button
-                  className="button"
-                  type="button"
-                  disabled={repayingLoanId === loan.loan_id}
-                  onClick={() => repayLoan(loan.loan_id)}
-                >
-                  {repayingLoanId === loan.loan_id ? "Repaying..." : "Repay"}
-                </button>
+                <div className="wallet-safety-box lending-action-box">
+                  <strong>Repayment uses local send review</strong>
+                  <p>
+                    Review the repayment amount and sign on the Send page. Private keys stay local
+                    to your saved wallet flow.
+                  </p>
+                  <Link className="button small-button" to="/send">
+                    Review Repayment In Send
+                  </Link>
+                </div>
               )}
             </article>
           ))}

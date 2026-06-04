@@ -25,6 +25,56 @@ const tabs = [
   ["history", "Loan History"],
 ];
 
+const lifecycleSteps = [
+  {
+    status: "pending_vote",
+    title: "Pending vote",
+    body: "Members can vote. No lending pool VLQ has moved yet.",
+  },
+  {
+    status: "approved_pending_issue",
+    title: "Approved, pending issuance",
+    body: "The vote passed and an issuance transaction is waiting for mining confirmation.",
+  },
+  {
+    status: "active",
+    title: "Active",
+    body: "Issuance is confirmed on-chain and repayment is expected by the due block.",
+  },
+  {
+    status: "repayment_pending",
+    title: "Repayment pending",
+    body: "A repayment transaction is visible but still pending mining confirmation.",
+  },
+  {
+    status: "repaid",
+    title: "Repaid",
+    body: "Repayment has been confirmed on-chain.",
+  },
+  {
+    status: "overdue",
+    title: "Overdue",
+    body: "The due block has passed and repayment is still needed or unconfirmed.",
+  },
+  {
+    status: "rejected",
+    title: "Rejected",
+    body: "The loan did not pass voting and no issuance should occur.",
+  },
+  {
+    status: "expired",
+    title: "Expired",
+    body: "The request is no longer open and should not issue VLQ.",
+  },
+  {
+    status: "cancelled",
+    title: "Cancelled",
+    body: "The request was cancelled and should not issue VLQ.",
+  },
+];
+
+const historyStatuses = new Set(["repaid", "rejected", "expired", "cancelled"]);
+
 function Lending() {
   const { isLoggedIn, wallet } = useAuth();
   const { addNotification } = useNotifications();
@@ -40,7 +90,6 @@ function Lending() {
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [loanActionId, setLoanActionId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [lastRepayment, setLastRepayment] = useState(null);
 
   async function loadLoans({ quiet = false } = {}) {
     try {
@@ -134,7 +183,7 @@ function Lending() {
   const buckets = useMemo(() => ({
     activeVotes: loans.filter((loan) => loan.status === "pending_vote"),
     activeLoans: loans.filter((loan) => ["approved_pending_issue", "active", "repayment_pending", "overdue"].includes(loan.status)),
-    history: loans.filter((loan) => ["repaid", "rejected"].includes(loan.status)),
+    history: loans.filter((loan) => historyStatuses.has(loan.status)),
   }), [loans]);
 
   function updateRequest(field, value) {
@@ -201,64 +250,87 @@ function Lending() {
     }
   }
 
-  async function repayLoan(loan) {
-    const repayerAddress = myAddress.trim() || wallet?.address || "";
-    if (!repayerAddress) {
-      toast.error("Enter your wallet address in My Loans before repaying.");
-      setActiveTab("mine");
-      return;
-    }
-
-    setLoanActionId(`${loan.loan_id}:repay`);
-    try {
-      const response = await api.post("/lending/repay", {
-        loan_id: loan.loan_id,
-        repayer_address: repayerAddress,
-      });
-      setLastRepayment({
-        loanId: loan.loan_id,
-        txId: response.data.repayment_tx_id,
-        amount: response.data.repayment_amount,
-      });
-      toast.success("Repayment submitted. It will be final after mining confirmation.");
-      setErrorMessage("");
-      await loadLoans({ quiet: true });
-      await loadMyLoans(repayerAddress, { quiet: true });
-    } catch (error) {
-      const message = apiErrorMessage(error, "Unable to repay loan.");
-      setErrorMessage(message);
-      toast.error(message);
-    } finally {
-      setLoanActionId("");
-    }
-  }
-
   return (
     <div className="page">
       <section className="hero">
         <span className="eyebrow">Community Lending</span>
         <h1>Lending</h1>
         <p className="subtitle">
-          Request VLQ, vote with wallet balance, track issuance transactions, and repay loans once they are active on-chain.
+          Request VLQ from the community lending pool, vote with wallet balance, and track each loan from pending vote through confirmed repayment.
         </p>
         <p className="help-text">
-          <Link to="/vlq">Review how VLQ lending movement becomes confirmed.</Link>
+          <Link to="/vlq">Review how VLQ lending movement becomes confirmed.</Link>{" "}
+          <Link to="/blockchain">Open explorer.</Link>
         </p>
       </section>
 
       <ErrorMessage message={errorMessage} />
       <RiskNotice />
 
-      {summary && (
+      <section className="grid lending-guide-grid">
+        <div className="card card-pad stack">
+          <span className="eyebrow">Read-only status</span>
+          <h2>Lending lifecycle</h2>
+          <p className="help-text">
+            Lending records come from the existing public lending APIs. Counts and loans are shown only when those APIs return data; missing data is marked unavailable rather than shown as zero.
+          </p>
+          <div className="lifecycle-grid">
+            {lifecycleSteps.map((step) => (
+              <div className="lifecycle-step" key={step.status}>
+                <span className={`status-badge ${step.status}`}>{step.title}</span>
+                <p>{step.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card card-pad stack">
+          <span className="eyebrow">Wallet actions</span>
+          <h2>Wallet requirements</h2>
+          <p className="help-text">
+            Loan requests and votes use your public wallet address. Repayment is a VLQ movement, so use the Send page to review and sign locally with a saved wallet.
+          </p>
+          <div className="button-row">
+            <Link className="button small-button" to={isLoggedIn ? "/send" : "/login"}>
+              {isLoggedIn ? "Open Send Review" : "Unlock Wallet"}
+            </Link>
+            <Link className="button secondary small-button" to="/wallet">
+              Wallet Tools
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {summary ? (
         <section className="card card-pad">
           <div className="grid stats-grid">
-            <SummaryStat label="Pending Votes" value={summary.pending_vote_count} />
-            <SummaryStat label="Active Loans" value={summary.active_count + summary.overdue_count + summary.repayment_pending_count} />
-            <SummaryStat label="Repaid" value={summary.repaid_count} />
-            <SummaryStat label="VLQ Active" value={`${formatNumber(summary.total_vlq_active)} VLQ`} />
+            <SummaryStat label="Pending Votes" value={summaryValue(summary, "pending_vote_count")} />
+            <SummaryStat label="Approved Pending" value={summaryValue(summary, "approved_pending_issue_count")} />
+            <SummaryStat label="Active Loans" value={sumSummary(summary, ["active_count", "overdue_count", "repayment_pending_count"])} />
+            <SummaryStat label="Repaid" value={summaryValue(summary, "repaid_count")} />
+            <SummaryStat label="VLQ Active" value={summaryValue(summary, "total_vlq_active", " VLQ")} />
+            <SummaryStat label="VLQ Repaid" value={summaryValue(summary, "total_vlq_repaid", " VLQ")} />
           </div>
         </section>
-      )}
+      ) : !loadingLoans ? (
+        <section className="empty-state" role="status">
+          Lending summary is unavailable right now. Loan records below will show only if the loan list API returned safely.
+        </section>
+      ) : null}
+
+      <section className="card card-pad stack">
+        <h2>Pending vs confirmed lending movement</h2>
+        <div className="grid meta-grid">
+          <div className="meta-item">
+            <span className="meta-label">Pending movement</span>
+            <span className="meta-value">Approved issuance or repayment transactions that are not mined yet.</span>
+          </div>
+          <div className="meta-item">
+            <span className="meta-label">Confirmed movement</span>
+            <span className="meta-value">Issuance or repayment transactions with explorer records in a confirmed block.</span>
+          </div>
+        </div>
+      </section>
 
       <nav className="tabs" aria-label="Lending sections">
         {tabs.map(([key, label]) => (
@@ -277,8 +349,18 @@ function Lending() {
         <section className="card card-pad stack">
           <h2>Request a Loan</h2>
           <p className="help-text">
-            Approval opens an issuance transaction from the community lending pool. Funds are not confirmed until that transaction is mined into a block.
+            Approval opens an issuance transaction from the community lending pool. Funds are not confirmed until that transaction is mined into a block. Use your public wallet address, not a private key.
           </p>
+          {!isLoggedIn && (
+            <div className="wallet-safety-box">
+              <strong>Wallet needed for lending</strong>
+              <p>Create or unlock a saved wallet first if you want Vorliq to prefill your public address and keep repayment signing local.</p>
+              <div className="button-row">
+                <Link className="button small-button" to="/login">Unlock Wallet</Link>
+                <Link className="button secondary small-button" to="/register">Create Wallet</Link>
+              </div>
+            </div>
+          )}
           <form className="form" onSubmit={submitLoanRequest}>
             <div className="field">
               <label htmlFor="loan-requester">Requester Wallet Address</label>
@@ -357,14 +439,7 @@ function Lending() {
           loading={loadingLoans}
           renderActions={(loan) => (
             canRepay(loan, myAddress || wallet?.address) ? (
-              <button
-                className="button small-button"
-                type="button"
-                disabled={loanActionId === `${loan.loan_id}:repay`}
-                onClick={() => repayLoan(loan)}
-              >
-                {loanActionId === `${loan.loan_id}:repay` ? "Submitting..." : "Repay"}
-              </button>
+              <RepaymentAction loan={loan} />
             ) : null
           )}
         />
@@ -394,12 +469,6 @@ function Lending() {
               Load
             </button>
           </div>
-          {lastRepayment?.txId && (
-            <div className="success-box">
-              Repayment submitted for {formatNumber(lastRepayment.amount)} VLQ.{" "}
-              <Link to={`/tx/${lastRepayment.txId}`}>View transaction</Link>
-            </div>
-          )}
           {loadingMyLoans && <Spinner label="Loading member loans..." />}
           {!loadingMyLoans && myLoans.loans.length === 0 && (
             <div className="empty-state">No borrowed or voted loans for this address.</div>
@@ -413,14 +482,7 @@ function Lending() {
                     loan={loan}
                     key={loan.loan_id}
                     actions={canRepay(loan, myAddress) ? (
-                      <button
-                        className="button small-button"
-                        type="button"
-                        disabled={loanActionId === `${loan.loan_id}:repay`}
-                        onClick={() => repayLoan(loan)}
-                      >
-                        {loanActionId === `${loan.loan_id}:repay` ? "Submitting..." : "Repay"}
-                      </button>
+                      <RepaymentAction loan={loan} />
                     ) : null}
                   />
                 ))}
@@ -441,7 +503,7 @@ function Lending() {
       {activeTab === "history" && (
         <LoanSection
           title="Loan History"
-          empty="No rejected or repaid loan records yet."
+          empty="No final loan records yet."
           loans={buckets.history}
           loading={loadingLoans}
         />
@@ -507,10 +569,15 @@ function LoanCard({ actions, loan }) {
           {loan.blocks_until_due !== null && loan.blocks_until_due !== undefined ? ` (${loan.blocks_until_due} blocks)` : ""}
         </span>
       </div>
+      <div className="meta-item">
+        <span className="meta-label">VLQ Movement</span>
+        <span className="meta-value">{movementLabel(loan)}</span>
+      </div>
 
       <div className="button-row">
         {loan.issuance_tx_id && <Link className="button secondary small-button" to={`/tx/${loan.issuance_tx_id}`}>Issuance Tx</Link>}
         {loan.repayment_tx_id && <Link className="button secondary small-button" to={`/tx/${loan.repayment_tx_id}`}>Repayment Tx</Link>}
+        <Link className="button secondary small-button" to="/blockchain">Explorer</Link>
       </div>
 
       <div className="vote-bar-wrap">
@@ -542,6 +609,22 @@ function LoanCard({ actions, loan }) {
   );
 }
 
+function RepaymentAction({ loan }) {
+  return (
+    <div className="wallet-safety-box lending-action-box">
+      <strong>Repayment uses local send review</strong>
+      <p>
+        Repay {formatNumber(loan.repayment_amount)} VLQ only after reviewing the borrower, amount,
+        and any lending pool instructions exposed by the current network state. The Send page signs
+        locally with your saved wallet.
+      </p>
+      <Link className="button small-button" to="/send">
+        Review Repayment In Send
+      </Link>
+    </div>
+  );
+}
+
 function SummaryStat({ label, value }) {
   return (
     <div className="card card-pad stat-card compact-stat">
@@ -562,6 +645,29 @@ function canRepay(loan, address) {
 
 function statusLabel(status) {
   return String(status || "").replace(/_/g, " ");
+}
+
+function movementLabel(loan) {
+  if (loan.repayment_tx_id) return "Repayment transaction visible; confirmation depends on block inclusion.";
+  if (loan.issuance_tx_id && loan.status === "active") return "Issuance confirmed; repayment is outstanding.";
+  if (loan.issuance_tx_id) return "Issuance transaction pending confirmation.";
+  if (loan.status === "pending_vote") return "No lending pool VLQ has moved.";
+  if (historyStatuses.has(loan.status)) return "No active lending movement.";
+  return "Movement state unavailable from the public loan record.";
+}
+
+function summaryValue(summary, key, suffix = "") {
+  if (!summary || summary[key] === null || summary[key] === undefined || summary[key] === "") {
+    return "Unavailable";
+  }
+  return `${formatNumber(summary[key])}${suffix}`;
+}
+
+function sumSummary(summary, keys) {
+  if (!summary || keys.some((key) => summary[key] === null || summary[key] === undefined || summary[key] === "")) {
+    return "Unavailable";
+  }
+  return formatNumber(keys.reduce((total, key) => total + Number(summary[key] || 0), 0));
 }
 
 function formatDate(timestamp) {

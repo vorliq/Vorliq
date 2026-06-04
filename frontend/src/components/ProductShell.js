@@ -8,6 +8,7 @@ import SocialLinks from "./SocialLinks";
 const navLinks = [
   { label: "How It Works", to: "/#how-it-works" },
   { label: "Features", to: "/features" },
+  { label: "Lending", to: "/lending" },
   { label: "Community", to: "/#community" },
   { label: "Learn", to: "/#learn" },
 ];
@@ -19,6 +20,7 @@ const footerGroups = [
       { label: "Features", to: "/features" },
       { label: "Dashboard", to: "/dashboard" },
       { label: "Blockchain", to: "/blockchain" },
+      { label: "Lending", to: "/lending" },
       { label: "Create Account", to: "/register" },
     ],
   },
@@ -136,12 +138,12 @@ export function ProductNav() {
         </a>
         <nav className="navbar-inner mx-auto flex min-h-[72px] w-[min(1180px,calc(100%_-_32px))] items-center justify-between gap-5">
           <BrandLockup />
-          <div className="hidden items-center gap-2 md:flex" aria-label="Primary navigation">
+          <div className="hidden items-center gap-2 lg:flex" aria-label="Primary navigation">
             {navLinks.map((link) => (
               <NavItem key={link.label} link={link} />
             ))}
           </div>
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-3 lg:flex">
             <Link className="rounded-full px-4 py-2 text-sm font-extrabold text-vorliq-muted transition hover:text-white" to="/login">
               Sign In
             </Link>
@@ -153,7 +155,7 @@ export function ProductNav() {
             </Link>
           </div>
           <button
-            className="grid h-11 w-11 place-items-center rounded-full border border-vorliq-border bg-white/[0.04] text-white md:hidden"
+            className="grid h-11 w-11 place-items-center rounded-full border border-vorliq-border bg-white/[0.04] text-white lg:hidden"
             type="button"
             aria-label="Open navigation menu"
             aria-controls="mobile-product-navigation"
@@ -168,14 +170,14 @@ export function ProductNav() {
       {open && (
         <>
           <div
-            className="mobile-drawer-backdrop nav-open fixed inset-0 z-[1001] bg-black/50 backdrop-blur-sm transition md:hidden"
+            className="mobile-drawer-backdrop nav-open fixed inset-0 z-[1001] bg-black/50 backdrop-blur-sm transition lg:hidden"
             aria-hidden="true"
             onClick={() => setOpen(false)}
           />
           <aside
             ref={menuRef}
             id="mobile-product-navigation"
-            className="mobile-drawer nav-open fixed bottom-0 right-0 top-0 z-[1002] w-[min(90vw,390px)] overflow-y-auto border-l border-vorliq-border bg-[#0A0E1A] p-5 shadow-panel transition-transform duration-300 md:hidden"
+            className="mobile-drawer nav-open fixed bottom-0 right-0 top-0 z-[1002] w-[min(90vw,390px)] overflow-y-auto border-l border-vorliq-border bg-[#0A0E1A] p-5 shadow-panel transition-transform duration-300 lg:hidden"
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"

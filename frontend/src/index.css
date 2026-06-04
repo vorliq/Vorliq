@@ -1339,6 +1339,40 @@ summary {
   gap: 16px;
 }
 
+.lending-guide-grid {
+  align-items: stretch;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.55fr);
+  gap: 16px;
+  margin-top: clamp(22px, 4vw, 38px);
+}
+
+.lifecycle-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.lifecycle-step,
+.lending-action-box {
+  overflow-wrap: anywhere;
+}
+
+.lifecycle-step {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(2, 8, 23, 0.42);
+  padding: 12px;
+}
+
+.lifecycle-step p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
 .three-column {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -2288,6 +2322,8 @@ summary {
   .three-column,
   .meta-grid,
   .block-meta,
+  .lending-guide-grid,
+  .lifecycle-grid,
   .loan-grid,
   .exchange-grid,
   .governance-grid,

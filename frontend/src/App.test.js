@@ -1195,6 +1195,7 @@ test("Homepage navigation exposes current product routes", async () => {
 
   expect(within(nav).getByRole("link", { name: /how it works/i })).toHaveAttribute("href", "/#how-it-works");
   expect(within(nav).getByRole("link", { name: /^features$/i })).toHaveAttribute("href", "/features");
+  expect(within(nav).getByRole("link", { name: /^lending$/i })).toHaveAttribute("href", "/lending");
   expect(within(nav).getByRole("link", { name: /^community$/i })).toHaveAttribute("href", "/#community");
   expect(within(nav).getByRole("link", { name: /^learn$/i })).toHaveAttribute("href", "/#learn");
   expect(within(nav).getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
@@ -1465,6 +1466,7 @@ test("Footer renders official community links without Reddit", async () => {
   expect(within(footer).getByRole("link", { name: /open vorliq on telegram/i })).toHaveAttribute("href", "https://t.me/Vorliq");
   expect(within(footer).getByRole("link", { name: /open vorliq on discord/i })).toHaveAttribute("href", "https://discord.gg/qpX5sHD4pC");
   expect(within(footer).getByRole("link", { name: /vlq overview/i })).toHaveAttribute("href", "/vlq");
+  expect(within(footer).getByRole("link", { name: /^lending$/i })).toHaveAttribute("href", "/lending");
   expect(within(footer).queryByRole("link", { name: /reddit/i })).not.toBeInTheDocument();
 });
 
@@ -1726,12 +1728,95 @@ test("Lending page renders lifecycle tabs and active vote cards", async () => {
   expect(await screen.findByRole("button", { name: /active votes/i })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /active loans/i })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /my loans/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /lending lifecycle/i })).toBeInTheDocument();
+  expect(screen.getByText(/no lending pool vlq has moved yet/i)).toBeInTheDocument();
+  expect(screen.getByText(/pending vs confirmed lending movement/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /open explorer/i })).toHaveAttribute("href", "/blockchain");
 
   await userEvent.click(screen.getByRole("button", { name: /active votes/i }));
 
   expect(await screen.findByText(/build a community tool/i)).toBeInTheDocument();
   expect(screen.getAllByText(/pending vote/i).length).toBeGreaterThan(0);
   expect(screen.getByRole("button", { name: /vote yes/i })).toBeInTheDocument();
+});
+
+test("Lending page routes active repayments through the Send review flow", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/lending/summary") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          summary: {
+            total_loans: 1,
+            pending_vote_count: 0,
+            approved_pending_issue_count: 0,
+            active_count: 1,
+            repayment_pending_count: 0,
+            repaid_count: 0,
+            overdue_count: 0,
+            rejected_count: 0,
+            total_vlq_active: 25,
+            total_vlq_repaid: 0,
+          },
+        },
+      });
+    }
+    if (path === "/lending/loans") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          loans: [
+            {
+              loan_id: "loan-active-send-review-1",
+              requester_address: "VLQ_ME",
+              amount: 25,
+              repayment_amount: 27.5,
+              reason: "Repair shared tools",
+              status: "active",
+              created_at: 1715791000,
+              due_block: 1005,
+              blocks_until_due: 99,
+              issuance_tx_id: "issue-tx-1",
+              yes_vote_weight: 50,
+              no_vote_weight: 0,
+              votes: {},
+            },
+          ],
+          total: 1,
+        },
+      });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithAuth(<Lending />, { wallet: { address: "VLQ_ME", public_key: "PUBLIC_ONLY" }, isLoggedIn: true }, "/lending");
+
+  await userEvent.click(await screen.findByRole("button", { name: /active loans/i }));
+
+  expect(await screen.findByText(/repair shared tools/i)).toBeInTheDocument();
+  expect(screen.getByText(/issuance confirmed; repayment is outstanding/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /issuance tx/i })).toHaveAttribute("href", "/tx/issue-tx-1");
+  expect(screen.getByRole("link", { name: /review repayment in send/i })).toHaveAttribute("href", "/send");
+  expect(screen.queryByRole("button", { name: /^repay$/i })).not.toBeInTheDocument();
+  expect(api.post).not.toHaveBeenCalledWith("/lending/repay", expect.anything());
+});
+
+test("Lending page marks missing summary fields unavailable instead of fake zeroes", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/lending/summary") {
+      return Promise.resolve({ data: { success: true, summary: { pending_vote_count: 1 } } });
+    }
+    if (path === "/lending/loans") {
+      return Promise.resolve({ data: { success: true, loans: [], total: 0 } });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Lending />, "/lending");
+
+  expect(await screen.findByText(/pending votes/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/unavailable/i).length).toBeGreaterThan(0);
+  expect(screen.getByText(/lending records come from the existing public lending apis/i)).toBeInTheDocument();
 });
 
 test("Lending My Loans can use an entered wallet address", async () => {
@@ -1804,7 +1889,8 @@ test("Account loan section handles active lifecycle statuses", async () => {
   expect(await screen.findByRole("heading", { name: /my active loans/i })).toBeInTheDocument();
   expect(await screen.findByText(/loan-active-/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /issuance tx/i })).toHaveAttribute("href", "/tx/issue-tx");
-  expect(screen.getByRole("button", { name: /^repay$/i })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /review repayment in send/i })).toHaveAttribute("href", "/send");
+  expect(screen.queryByRole("button", { name: /^repay$/i })).not.toBeInTheDocument();
   expect(screen.getByRole("heading", { name: /faucet claims/i })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /open faucet/i })).toHaveAttribute("href", "/faucet?address=VLQ_ME");
 });
