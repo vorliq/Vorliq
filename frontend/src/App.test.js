@@ -2107,7 +2107,7 @@ test("Treasury tabs render overview and active proposal card", async () => {
   await userEvent.click(screen.getByRole("button", { name: /active proposals/i }));
 
   expect(await screen.findByText(/fund security review/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/active/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/pending vote/i).length).toBeGreaterThan(0);
 });
 
 test("Treasury overview summary renders", async () => {
@@ -2116,6 +2116,28 @@ test("Treasury overview summary renders", async () => {
   expect(await screen.findByText(/treasury balance/i)).toBeInTheDocument();
   expect(await screen.findByText(/250 VLQ/i)).toBeInTheDocument();
   expect(screen.getByText(/total received/i)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /treasury lifecycle/i })).toBeInTheDocument();
+  expect(screen.getByText(/missing summary fields are marked unavailable/i)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /what treasury supports/i })).toBeInTheDocument();
+  expect(screen.getByText(/pending vs confirmed treasury movement/i)).toBeInTheDocument();
+  expect(screen.getAllByRole("link", { name: /^faucet$/i })[0]).toHaveAttribute("href", "/faucet");
+  expect(screen.getAllByRole("link", { name: /^lending$/i })[0]).toHaveAttribute("href", "/lending");
+  expect(screen.getAllByRole("link", { name: /^explorer$/i })[0]).toHaveAttribute("href", "/blockchain");
+});
+
+test("Treasury overview marks missing summary fields unavailable", async () => {
+  api.get.mockImplementation((path, options) => {
+    if (path === "/treasury/summary") {
+      return Promise.resolve({ data: { success: true, summary: { current_balance: 250 } } });
+    }
+    return defaultApiGet(path, options);
+  });
+
+  renderWithProviders(<Treasury />, "/treasury");
+
+  expect(await screen.findByText(/treasury balance/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/unavailable/i).length).toBeGreaterThanOrEqual(4);
+  expect(screen.queryByText(/total received/i)?.parentElement).not.toHaveTextContent("0 VLQ");
 });
 
 test("Treasury ledger tab renders public entries", async () => {
@@ -2126,6 +2148,7 @@ test("Treasury ledger tab renders public entries", async () => {
   expect(await screen.findByRole("heading", { name: /treasury inflows and payouts/i })).toBeInTheDocument();
   expect(await screen.findByText(/treasury mining reward/i)).toBeInTheDocument();
   expect(screen.getByText(/payout paid/i)).toBeInTheDocument();
+  expect(screen.getAllByRole("link", { name: /^tx$/i })[0]).toHaveAttribute("href", "/tx/reward-tx-1");
 });
 
 test("Treasury proposal form shows treasury balance max and risk notice", async () => {
@@ -2136,6 +2159,20 @@ test("Treasury proposal form shows treasury balance max and risk notice", async 
 
   expect(await screen.findByText(/maximum request right now/i)).toBeInTheDocument();
   expect(screen.getByPlaceholderText(/maximum 250 vlq/i)).toBeInTheDocument();
+  expect(screen.getByText(/public payout execution controls are not exposed/i)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /execute payout/i })).not.toBeInTheDocument();
+});
+
+test("Treasury history links paid proposals to explorer records", async () => {
+  renderWithProviders(<Treasury />, "/treasury");
+
+  await userEvent.click(await screen.findByRole("button", { name: /history/i }));
+
+  expect(await screen.findByText(/paid docs work/i)).toBeInTheDocument();
+  expect(screen.getByText(/confirmed treasury movement/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /payout tx/i })).toHaveAttribute("href", "/tx/treasury-tx-1");
+  expect(screen.getByRole("link", { name: /block #3/i })).toHaveAttribute("href", "/block/3");
+  expect(screen.getAllByRole("link", { name: /^explorer$/i })[0]).toHaveAttribute("href", "/blockchain");
 });
 
 test("Faucet page renders and success state shows tx link", async () => {

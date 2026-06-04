@@ -17,6 +17,7 @@ const quickLinks = [
   { to: "/faucet", label: "Faucet", detail: "Request starter VLQ from the treasury" },
   { to: "/send", label: "Send", detail: "Move VLQ to another member" },
   { to: "/mine", label: "Mine", detail: "Mine blocks and support the chain" },
+  { to: "/treasury", label: "Treasury", detail: "Track public funding and payouts" },
   { to: "/lending", label: "Lending", detail: "Request or vote on community loans" },
   { to: "/exchange", label: "Exchange", detail: "Coordinate community requests" },
   { to: "/governance", label: "Governance", detail: "Vote on network changes" },

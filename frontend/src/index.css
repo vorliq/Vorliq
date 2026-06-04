@@ -1402,6 +1402,7 @@ summary {
 .status-badge.passed,
 .status-badge.confirmed,
 .status-badge.approved,
+.status-badge.paid,
 .status-badge.repaid,
 .health-icon.online {
   background: var(--success);
@@ -1412,6 +1413,8 @@ summary {
 .status-badge.pending,
 .status-badge.pending_vote,
 .status-badge.approved_pending_issue,
+.status-badge.passed_pending_payout,
+.status-badge.payout_pending,
 .status-badge.repayment_pending,
 .status-badge.vlq_pending,
 .status-badge.vlq_confirmed,
