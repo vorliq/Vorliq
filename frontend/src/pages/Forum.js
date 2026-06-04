@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
@@ -27,15 +28,10 @@ const forumCategories = [
   { value: "general", label: "General" },
   { value: "mining", label: "Mining" },
   { value: "lending", label: "Lending" },
-  { value: "exchange", label: "Exchange" },
+  { value: "exchange", label: "Community Requests" },
   { value: "governance", label: "Governance" },
   { value: "technical", label: "Technical" },
 ];
-
-function shortAddress(address) {
-  if (!address) return "Unknown";
-  return address.length > 12 ? `${address.slice(0, 12)}...` : address;
-}
 
 function formatTime(timestamp) {
   return new Date(timestamp * 1000).toLocaleString();
@@ -62,41 +58,6 @@ function readImageFile(file, onLoad) {
   reader.readAsDataURL(file);
 }
 
-function TipForm({ form, onChange, onSubmit }) {
-  return (
-    <div className="tip-form">
-      <input
-        className="input"
-        type="text"
-        aria-label="Your wallet address for tip"
-        placeholder="Your wallet address"
-        value={form.senderAddress}
-        onChange={(event) => onChange("senderAddress", event.target.value)}
-      />
-      <textarea
-        className="textarea"
-        aria-label="Your private key for tip"
-        placeholder="Your private key"
-        value={form.privateKey}
-        onChange={(event) => onChange("privateKey", event.target.value)}
-      />
-      <input
-        className="input"
-        type="number"
-        min="1"
-        max="100"
-        aria-label="Tip amount in VLQ"
-        placeholder="Amount 1-100 VLQ"
-        value={form.amount}
-        onChange={(event) => onChange("amount", event.target.value)}
-      />
-      <button className="button" type="button" onClick={onSubmit}>
-        Send Tip
-      </button>
-    </div>
-  );
-}
-
 function Forum() {
   const [posts, setPosts] = useState([]);
   const [featuredPosts, setFeaturedPosts] = useState([]);
@@ -109,7 +70,6 @@ function Forum() {
   const [activeTab, setActiveTab] = useState("featured");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [tipForms, setTipForms] = useState({});
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [loadingPost, setLoadingPost] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -310,55 +270,6 @@ function Forum() {
     }
   }
 
-  function updateTipForm(key, field, value) {
-    setTipForms((current) => ({
-      ...current,
-      [key]: {
-        senderAddress: "",
-        privateKey: "",
-        amount: "",
-        ...current[key],
-        [field]: value,
-      },
-    }));
-  }
-
-  function toggleTipForm(key) {
-    setTipForms((current) => ({
-      ...current,
-      [key]: current[key] ? undefined : { senderAddress: "", privateKey: "", amount: "" },
-    }));
-  }
-
-  async function sendTip(type, payload, key, receiverAddress) {
-    const tipForm = tipForms[key];
-    if (!tipForm?.senderAddress.trim() || !tipForm.privateKey.trim() || !tipForm.amount) {
-      toast.error("Enter your wallet address, private key, and tip amount.");
-      return;
-    }
-
-    try {
-      await api.post(type === "post" ? "/forum/tip/post" : "/forum/tip/reply", {
-        ...payload,
-        sender_address: tipForm.senderAddress.trim(),
-        sender_private_key: tipForm.privateKey,
-        receiver_address: receiverAddress,
-        amount: Number(tipForm.amount),
-      });
-      toast.success(`You tipped ${tipForm.amount} VLQ to ${shortAddress(receiverAddress)}.`);
-      setTipForms((current) => ({ ...current, [key]: undefined }));
-      if (selectedPostId) {
-        await loadPost(selectedPostId);
-      }
-      await loadPosts({ quiet: true });
-      await loadFeaturedPosts({ quiet: true });
-    } catch (error) {
-      const message = apiErrorMessage(error, "Unable to send tip.");
-      setErrorMessage(message);
-      toast.error(message);
-    }
-  }
-
   return (
     <div className="page">
       <section className="hero">
@@ -370,6 +281,41 @@ function Forum() {
       </section>
 
       <ErrorMessage message={errorMessage} />
+
+      <section className="card card-pad stack" aria-label="Forum and moderation clarity">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">Community Layer</span>
+            <h2>How the forum works</h2>
+          </div>
+        </div>
+        <p>
+          The forum is a public coordination space for Vorliq members. Posts, replies, images, wallet
+          addresses, votes, feature votes, reports, and moderation labels can be visible to other users.
+        </p>
+        <div className="lifecycle-grid">
+          <article className="lifecycle-step">
+            <h3>Public read-only</h3>
+            <p>Anyone can read visible posts, replies, authors, public wallet identities, and featured-post signals.</p>
+          </article>
+          <article className="lifecycle-step">
+            <h3>Wallet context</h3>
+            <p>Posting, replying, upvoting, featuring, and reporting use public wallet addresses. They do not require private keys.</p>
+          </article>
+          <article className="lifecycle-step">
+            <h3>Moderation</h3>
+            <p>Reports create a review queue. Moderator and admin actions are protected and are not shown as public controls.</p>
+          </article>
+        </div>
+        <div className="risk-box">
+          <strong>Never share secrets in community content</strong>
+          <p>
+            Do not post private keys, wallet passwords, backup files, seed phrases, admin tokens, raw logs,
+            private documents, or sensitive personal information. VLQ movement should be reviewed and signed
+            locally on the <Link className="text-button" to="/send">Send</Link> page.
+          </p>
+        </div>
+      </section>
 
       <section className="two-column grid">
         <div className="card card-pad stack">
@@ -473,22 +419,10 @@ function Forum() {
                     {post.image_data && <img className="forum-thumb" src={post.image_data} alt="Forum attachment" />}
                     <small>{formatTime(post.timestamp)}</small>
                   </div>
-                  <button className="button secondary small-button" type="button" onClick={() => toggleTipForm(`post:${post.post_id}`)}>
-                    Tip
-                  </button>
                   <button className="button secondary small-button" type="button" onClick={() => featurePost(post.post_id)}>
                     Feature this Post
                   </button>
                   <ReportButton targetType="forum_post" targetId={post.post_id} />
-                  {tipForms[`post:${post.post_id}`] && (
-                    <TipForm
-                      form={tipForms[`post:${post.post_id}`]}
-                      onChange={(field, value) => updateTipForm(`post:${post.post_id}`, field, value)}
-                      onSubmit={() =>
-                        sendTip("post", { post_id: post.post_id }, `post:${post.post_id}`, post.author_address)
-                      }
-                    />
-                  )}
                 </article>
               ))}
             </div>
@@ -623,22 +557,10 @@ function Forum() {
                   Upvote
                 </button>
               </div>
-              <button className="button secondary small-button" type="button" onClick={() => toggleTipForm(`post:${selectedPost.post_id}`)}>
-                Tip This Post
-              </button>
               <button className="button secondary small-button" type="button" onClick={() => featurePost(selectedPost.post_id)}>
                 Feature this Post
               </button>
               <ReportButton targetType="forum_post" targetId={selectedPost.post_id} />
-              {tipForms[`post:${selectedPost.post_id}`] && (
-                <TipForm
-                  form={tipForms[`post:${selectedPost.post_id}`]}
-                  onChange={(field, value) => updateTipForm(`post:${selectedPost.post_id}`, field, value)}
-                  onSubmit={() =>
-                    sendTip("post", { post_id: selectedPost.post_id }, `post:${selectedPost.post_id}`, selectedPost.author_address)
-                  }
-                />
-              )}
 
               <section className="stack">
                 <h2>Replies</h2>
@@ -652,24 +574,7 @@ function Forum() {
                         <AddressIdentity address={reply.author_address} compact /> - {reply.vote_count} votes - {reply.tips?.length || 0} tips -{" "}
                         {formatTime(reply.timestamp)}
                       </span>
-                      <button className="button secondary small-button" type="button" onClick={() => toggleTipForm(`reply:${reply.reply_id}`)}>
-                        Tip Reply
-                      </button>
                       <ReportButton targetType="forum_reply" targetId={reply.reply_id} />
-                      {tipForms[`reply:${reply.reply_id}`] && (
-                        <TipForm
-                          form={tipForms[`reply:${reply.reply_id}`]}
-                          onChange={(field, value) => updateTipForm(`reply:${reply.reply_id}`, field, value)}
-                          onSubmit={() =>
-                            sendTip(
-                              "reply",
-                              { post_id: selectedPost.post_id, reply_id: reply.reply_id },
-                              `reply:${reply.reply_id}`,
-                              reply.author_address
-                            )
-                          }
-                        />
-                      )}
                     </article>
                   ))
                 ) : (

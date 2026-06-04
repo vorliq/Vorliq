@@ -22,6 +22,7 @@ const quickLinks = [
   { to: "/exchange", label: "Community Requests", detail: "Coordinate peer requests" },
   { to: "/governance", label: "Governance", detail: "Review proposals and rule-change history" },
   { to: "/forum", label: "Forum", detail: "Post messages and reply to members" },
+  { to: "/profiles", label: "Profiles", detail: "View public wallet-linked profiles" },
   { to: "/registry", label: "Registry", detail: "Find and connect to public nodes" },
   { to: "/health", label: "Health", detail: "Check node status and deployment" },
 ];
@@ -64,6 +65,7 @@ const getStartedSteps = [
       "Once you understand the basics, introduce yourself, chat with members, coordinate community requests, and vote on governance.",
     links: [
       { to: "/forum", label: "Forum" },
+      { to: "/profiles", label: "Profiles" },
       { to: "/chat", label: "Chat" },
       { to: "/exchange", label: "Community Requests" },
       { to: "/governance", label: "Governance" },

@@ -239,6 +239,46 @@ function Profile() {
 
       <ErrorMessage message={errorMessage} />
 
+      <section className="card card-pad stack" aria-label="Profile privacy and identity clarity">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">Public Identity</span>
+            <h2>How profiles work</h2>
+          </div>
+        </div>
+        <p>
+          A Vorliq profile is public community identity for one wallet address. It can help members recognize
+          posts, replies, governance activity, lending activity, and other public community records without
+          treating the profile as legal identity verification.
+        </p>
+        <div className="lifecycle-grid">
+          <article className="lifecycle-step">
+            <h3>Public information</h3>
+            <p>Display name, bio, public links, avatar style, reputation, badges, wallet verification status, and activity summary can be visible.</p>
+          </article>
+          <article className="lifecycle-step">
+            <h3>Account context</h3>
+            <p>You can edit only the profile for the logged-in wallet address. Viewing profiles is public read-only.</p>
+          </article>
+          <article className="lifecycle-step">
+            <h3>Reports</h3>
+            <p>Profile reports create a protected moderation review record. Admin moderation tools are not public controls.</p>
+          </article>
+        </div>
+        <div className="risk-box">
+          <strong>Never publish wallet secrets</strong>
+          <p>
+            Do not put private keys, backup passwords, backup files, seed phrases, admin tokens, raw logs,
+            private documents, or sensitive personal information in profile fields or reports.
+          </p>
+        </div>
+        <div className="button-row">
+          <Link className="button secondary small-button" to="/wallet">Wallet Tools</Link>
+          <Link className="button secondary small-button" to="/blockchain">Open Explorer</Link>
+          <Link className="button secondary small-button" to="/forum">Forum</Link>
+        </div>
+      </section>
+
       <section className="card card-pad profile-search-section">
         <form className="form inline-form" onSubmit={searchProfile}>
           <input
@@ -317,7 +357,8 @@ function Profile() {
               <span className="eyebrow">Edit Public Profile</span>
               <h2>{profile ? "Update your profile" : "Create your public profile"}</h2>
               <p className="help-text">
-                Everything saved here is public and linked to your wallet address. Do not post private information.
+                Everything saved here is public and linked to your wallet address. Do not post private keys,
+                backup passwords, admin tokens, backup files, raw logs, or private personal information.
               </p>
               <form className="form" onSubmit={saveProfile}>
                 <div className="field">
@@ -373,7 +414,8 @@ function Profile() {
                 <span className="eyebrow">Wallet Verification</span>
                 <h3>{profile?.verified_wallet ? "Wallet verified" : "Verify Wallet"}</h3>
                 <p className="help-text">
-                  Sign a short challenge locally to prove this profile is controlled by your wallet. Your private key stays in this browser.
+                  Sign a short challenge locally to prove this profile is controlled by your wallet. Your
+                  private key stays in this browser and is not sent to the backend.
                 </p>
                 <form className="form" onSubmit={verifyWithLocalWallet}>
                   <label htmlFor="profile-verification-password">Wallet password</label>
@@ -392,7 +434,7 @@ function Profile() {
               </div>
               <div className="profile-verification-box">
                 <span className="eyebrow">Manual Verification</span>
-                <p className="help-text">Use this only if you sign the challenge in another trusted wallet tool. Do not paste private keys here.</p>
+                <p className="help-text">Use this only if you sign the challenge in another trusted wallet tool. Paste only the public key and signature, never a private key or wallet password.</p>
                 <button className="button secondary small-button" type="button" onClick={requestChallenge}>Get Challenge</button>
                 <form className="form" onSubmit={submitManualVerification}>
                   <label htmlFor="manual-verification-message">Challenge message</label>
@@ -467,7 +509,7 @@ function ActivitySummary({ summary }) {
     ["Achievements", summary.achievements || 0],
     ["Forum posts", summary.forum_posts || 0],
     ["Forum replies", summary.forum_replies || 0],
-    ["Trades", summary.completed_exchange_trades || 0],
+    ["Completed coordinations", summary.completed_exchange_trades || 0],
     ["Loans repaid", summary.repaid_loans || 0],
     ["Governance votes", summary.governance_votes || 0],
     ["Treasury votes", summary.treasury_votes || 0],

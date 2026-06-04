@@ -20,6 +20,7 @@ import Mine from "./pages/Mine";
 import VLQ from "./pages/VLQ";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
+import Forum from "./pages/Forum";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
 import Send from "./pages/Send";
@@ -1530,6 +1531,16 @@ test("Dashboard route still renders the existing real dashboard", async () => {
   expect(await screen.findByRole("heading", { level: 1, name: /^vorliq dashboard$/i })).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: /get started with vorliq/i })).toBeInTheDocument();
   expect(await screen.findByText(/block production/i)).toBeInTheDocument();
+  expect(screen.getAllByRole("link", { name: /^profiles$/i }).some((link) => link.getAttribute("href") === "/profiles")).toBe(true);
+});
+
+test("Profiles route aliases the public profile page", async () => {
+  window.history.pushState({}, "", "/profiles");
+
+  render(<App />);
+
+  expect(await screen.findByRole("heading", { level: 1, name: /^profiles$/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /how profiles work/i })).toBeInTheDocument();
 });
 
 test("Dashboard keeps core live data visible when an optional summary is unavailable", async () => {
@@ -1639,7 +1650,7 @@ test("Profile page renders a public member profile", async () => {
             avatar_style: "cyan",
             reputation_score: 22,
             badges: ["Node Runner"],
-            activity_summary: { forum_posts: 1 },
+            activity_summary: { forum_posts: 1, completed_exchange_trades: 2 },
           },
         },
       });
@@ -1652,6 +1663,10 @@ test("Profile page renders a public member profile", async () => {
   expect(await screen.findByRole("heading", { name: /mina vlq/i })).toBeInTheDocument();
   expect(screen.getByText("22")).toBeInTheDocument();
   expect(screen.getByText(/reputation score/i)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /how profiles work/i })).toBeInTheDocument();
+  expect(screen.getByText(/public community identity for one wallet address/i)).toBeInTheDocument();
+  expect(screen.getByText(/completed coordinations/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /wallet tools/i })).toHaveAttribute("href", "/wallet");
 });
 
 test("Profile form validation blocks short display names", async () => {
@@ -1692,6 +1707,47 @@ test("AddressIdentity shows profile display name when a profile exists", async (
   renderWithProviders(<AddressIdentity address="VLQ_MEMBER" />);
 
   expect(await screen.findByText(/profile name/i)).toBeInTheDocument();
+});
+
+test("Forum explains public coordination and reports do not request secrets", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/forum/featured" || path === "/forum/posts") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          posts: [
+            {
+              post_id: "post-1",
+              title: "Node coordination update",
+              category: "general",
+              author_address: "VLQ_MEMBER_ADDRESS",
+              vote_count: 2,
+              feature_vote_count: 1,
+              replies: [],
+              tips: [],
+              timestamp: 1715791000,
+            },
+          ],
+        },
+      });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Forum />, "/forum");
+
+  expect(await screen.findByRole("heading", { name: /how the forum works/i })).toBeInTheDocument();
+  expect(screen.getByText(/public coordination space for vorliq members/i)).toBeInTheDocument();
+  expect(screen.getByText(/moderator and admin actions are protected/i)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /tip/i })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/private key|wallet password|backup password|seed phrase|admin token/i)).not.toBeInTheDocument();
+
+  await userEvent.click(await screen.findByRole("button", { name: /^report$/i }));
+
+  expect(screen.getByRole("form", { name: /report content/i })).toBeInTheDocument();
+  expect(screen.getByText(/describe the public issue only/i)).toBeInTheDocument();
+  expect(screen.getByText(/public reporters do not receive admin controls/i)).toBeInTheDocument();
+  expect(screen.queryByLabelText(/private key|wallet password|backup password|seed phrase|admin token/i)).not.toBeInTheDocument();
 });
 
 test("Leaderboard includes a Top Reputation tab", async () => {

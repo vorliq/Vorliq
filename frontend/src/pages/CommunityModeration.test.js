@@ -81,7 +81,8 @@ test("Report modal renders from profile page", async () => {
   await userEvent.click(await screen.findByRole("button", { name: /report/i }));
 
   expect(screen.getByRole("form", { name: /report content/i })).toBeInTheDocument();
-  expect(screen.getByText(/Reports create a review queue only/i)).toBeInTheDocument();
+  expect(screen.getByText(/describe the public issue only/i)).toBeInTheDocument();
+  expect(screen.getByText(/public reporters do not receive admin controls/i)).toBeInTheDocument();
 });
 
 test("Forum hidden and locked states render safely", async () => {

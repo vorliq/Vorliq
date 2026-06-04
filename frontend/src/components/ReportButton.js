@@ -58,11 +58,15 @@ function ReportButton({ targetType, targetId, defaultReporter = "" }) {
             Description
             <textarea className="textarea" value={description} maxLength={1000} onChange={(event) => setDescription(event.target.value)} required />
           </label>
+          <p className="help-text">
+            Describe the public issue only. Do not include private keys, wallet passwords, backup files,
+            seed phrases, admin tokens, raw logs, private documents, or sensitive personal information.
+          </p>
           <label>
             Reporter wallet address optional
             <input className="input" value={reportedBy} maxLength={160} onChange={(event) => setReportedBy(event.target.value)} />
           </label>
-          <p className="help-text">Reports create a review queue only. Content is not removed automatically.</p>
+          <p className="help-text">Reports create a protected moderator review queue only. Content is not removed automatically, and public reporters do not receive admin controls.</p>
           <div className="button-row">
             <button className="button" type="submit" disabled={submitting}>{submitting ? "Submitting..." : "Submit Report"}</button>
             <button className="button secondary" type="button" onClick={() => setOpen(false)}>Cancel</button>
