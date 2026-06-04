@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -9,7 +9,7 @@ import { hasWallet, importEncryptedWalletBackup } from "../helpers/storage";
 
 function Login() {
   const navigate = useNavigate();
-  const { createAndSaveWallet, isLoggedIn, login } = useAuth();
+  const { clearLocalWallet, createAndSaveWallet, isLoggedIn, login } = useAuth();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [safetyConfirmed, setSafetyConfirmed] = useState(false);
@@ -18,7 +18,8 @@ function Login() {
   const [importing, setImporting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const walletExists = useMemo(() => hasWallet(), []);
+  const [walletExists, setWalletExists] = useState(() => hasWallet());
+  const [clearWalletConfirmed, setClearWalletConfirmed] = useState(false);
 
   async function createWallet(event) {
     event.preventDefault();
@@ -72,6 +73,7 @@ function Login() {
       const backup = JSON.parse(text);
       await importEncryptedWalletBackup(backup, importPassword);
       await login(importPassword);
+      setWalletExists(true);
       setErrorMessage("");
       toast.success("Wallet backup imported and unlocked.");
       navigate("/account");
@@ -105,6 +107,22 @@ function Login() {
     }
   }
 
+  function clearSavedWallet() {
+    if (!clearWalletConfirmed) {
+      toast.error("Confirm that you want to remove the encrypted wallet backup from this browser.");
+      return;
+    }
+    clearLocalWallet();
+    setWalletExists(false);
+    setPassword("");
+    setConfirmPassword("");
+    setImportFile(null);
+    setImportPassword("");
+    setClearWalletConfirmed(false);
+    setErrorMessage("");
+    toast.success("Encrypted wallet backup removed from this browser.");
+  }
+
   if (isLoggedIn) {
     return <Navigate to="/account" replace />;
   }
@@ -113,117 +131,204 @@ function Login() {
     <div className="page auth-page">
       <section className="hero">
         <span className="eyebrow">Member Access</span>
-        <h1>{walletExists ? "Welcome Back" : "Create Your Vorliq Wallet"}</h1>
+        <h1>{walletExists ? "Unlock saved wallet" : "Create or restore your Vorliq wallet"}</h1>
         <p className="subtitle">
-          Your wallet is encrypted in this browser with your password. Vorliq cannot recover
-          the password or private key for you.
+          Vorliq wallets are encrypted in this browser with your password. Unlocking or
+          importing decrypts locally; Vorliq does not send your backup password or private key
+          to the server.
         </p>
       </section>
 
       <ErrorMessage message={errorMessage} />
 
-      <section className="card card-pad auth-card">
+      <section className="auth-card stack">
         {walletExists ? (
-          <form className="form" onSubmit={unlockWallet}>
-            <h2>Welcome Back</h2>
-            <div className="field">
-              <label htmlFor="unlock-password">Password</label>
-              <input
-                id="unlock-password"
-                className="input"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="current-password"
-              />
-            </div>
-            <button className="button" type="submit" disabled={loading}>
-              {loading ? "Unlocking..." : "Unlock Wallet"}
-            </button>
-          </form>
-        ) : (
-          <div className="stack">
-            <form className="form" onSubmit={createWallet}>
-              <h2>Create Your Vorliq Wallet</h2>
-              <div className="wallet-safety-box">
-                <strong>Private keys are self-custody</strong>
-                <p>
-                  Vorliq cannot recover your private key or password. Anyone with your private
-                  key can control this wallet. Save your encrypted backup and keep your
-                  password somewhere safe.
+          <>
+            <section className="card card-pad stack wallet-entry-panel primary">
+              <div>
+                <span className="eyebrow">Saved in this browser</span>
+                <h2>Unlock saved wallet</h2>
+                <p className="help-text">
+                  Use the password for the encrypted wallet already stored in this browser.
+                  Decryption happens locally so you can reach Dashboard, Account, and Send
+                  without uploading a backup file.
                 </p>
-                <label className="checkbox-row">
+              </div>
+              <form className="form" onSubmit={unlockWallet}>
+                <div className="field">
+                  <label htmlFor="unlock-password">Wallet Password</label>
                   <input
-                    type="checkbox"
-                    checked={safetyConfirmed}
-                    onChange={(event) => setSafetyConfirmed(event.target.checked)}
+                    id="unlock-password"
+                    className="input"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="current-password"
                   />
-                  <span>I understand that my private key cannot be recovered by Vorliq.</span>
-                </label>
-              </div>
-              <div className="field">
-                <label htmlFor="create-password">Password</label>
-                <input
-                  id="create-password"
-                  className="input"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  autoComplete="new-password"
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="confirm-password">Confirm Password</label>
-                <input
-                  id="confirm-password"
-                  className="input"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  autoComplete="new-password"
-                />
-              </div>
-              <button className="button" type="submit" disabled={loading || !safetyConfirmed}>
-                {loading ? "Creating..." : "Create Wallet and Set Password"}
-              </button>
-            </form>
+                </div>
+                <button className="button" type="submit" disabled={loading}>
+                  {loading ? "Unlocking..." : "Unlock Saved Wallet"}
+                </button>
+              </form>
+            </section>
 
-            <form className="form wallet-import-panel" onSubmit={importWallet}>
-              <h2>Import Wallet Backup</h2>
-              <p className="help-text">
-                Choose a <strong>vorliq-wallet-backup.json</strong> file and enter the password
-                used to encrypt it. The app decrypts locally to confirm the password before
-                saving anything in this browser.
-              </p>
-              <div className="field">
-                <label htmlFor="wallet-import-file">Wallet Backup JSON</label>
-                <input
-                  id="wallet-import-file"
-                  className="input"
-                  type="file"
-                  accept="application/json,.json"
-                  onChange={(event) => setImportFile(event.target.files?.[0] || null)}
-                />
+            <section className="card card-pad stack wallet-entry-panel">
+              <div>
+                <span className="eyebrow">Restore</span>
+                <h2>Import encrypted wallet backup</h2>
+                <p className="help-text">
+                  Use this when restoring your wallet on this browser or another device. Choose
+                  your <strong>vorliq-wallet-backup.json</strong> file and enter the backup
+                  password. Vorliq checks it locally and never asks for a raw private key paste.
+                </p>
               </div>
-              <div className="field">
-                <label htmlFor="wallet-import-password">Backup Password</label>
-                <input
-                  id="wallet-import-password"
-                  className="input"
-                  type="password"
-                  value={importPassword}
-                  onChange={(event) => setImportPassword(event.target.value)}
-                  autoComplete="current-password"
-                />
+              <ImportWalletForm
+                importFile={importFile}
+                importPassword={importPassword}
+                importing={importing}
+                onFileChange={setImportFile}
+                onPasswordChange={setImportPassword}
+                onSubmit={importWallet}
+              />
+            </section>
+
+            <section className="card card-pad stack wallet-entry-panel">
+              <div>
+                <span className="eyebrow">Start over</span>
+                <h2>Create new wallet or clear saved wallet</h2>
+                <p className="help-text">
+                  To create a different wallet in this browser, first remove the saved encrypted
+                  backup below. Clearing local data does not change public blockchain records or
+                  recover a lost backup.
+                </p>
               </div>
-              <button className="button secondary" type="submit" disabled={importing}>
-                {importing ? "Importing..." : "Import Wallet Backup"}
-              </button>
-            </form>
-          </div>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={clearWalletConfirmed}
+                  onChange={(event) => setClearWalletConfirmed(event.target.checked)}
+                />
+                <span>I understand this removes the encrypted wallet backup from this browser.</span>
+              </label>
+              <div className="button-row">
+                <button className="button secondary" type="button" disabled={!clearWalletConfirmed} onClick={clearSavedWallet}>
+                  Clear Saved Wallet
+                </button>
+              </div>
+            </section>
+          </>
+        ) : (
+          <>
+            <section className="card card-pad stack wallet-entry-panel primary">
+              <div>
+                <span className="eyebrow">New wallet</span>
+                <h2>Create your Vorliq wallet</h2>
+                <p className="help-text">
+                  Create a new VLQ wallet for this browser. You will choose a password that
+                  encrypts the private key locally.
+                </p>
+              </div>
+              <form className="form" onSubmit={createWallet}>
+                <div className="wallet-safety-box">
+                  <strong>Private keys are self-custody</strong>
+                  <p>
+                    Vorliq cannot recover your private key or password. Anyone with your private
+                    key can control this wallet. Save your encrypted backup and keep your
+                    password somewhere safe.
+                  </p>
+                  <label className="checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={safetyConfirmed}
+                      onChange={(event) => setSafetyConfirmed(event.target.checked)}
+                    />
+                    <span>I understand that my private key cannot be recovered by Vorliq.</span>
+                  </label>
+                </div>
+                <div className="field">
+                  <label htmlFor="create-password">Password</label>
+                  <input
+                    id="create-password"
+                    className="input"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="confirm-password">Confirm Password</label>
+                  <input
+                    id="confirm-password"
+                    className="input"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <button className="button" type="submit" disabled={loading || !safetyConfirmed}>
+                  {loading ? "Creating..." : "Create Wallet and Set Password"}
+                </button>
+              </form>
+            </section>
+
+            <section className="card card-pad stack wallet-entry-panel">
+              <div>
+                <span className="eyebrow">Restore</span>
+                <h2>Import encrypted wallet backup</h2>
+                <p className="help-text">
+                  Already have a <strong>vorliq-wallet-backup.json</strong> file? Restore it on
+                  this browser or another device with the backup password. The file and password
+                  are used locally; Vorliq does not send them to the server.
+                </p>
+              </div>
+              <ImportWalletForm
+                importFile={importFile}
+                importPassword={importPassword}
+                importing={importing}
+                onFileChange={setImportFile}
+                onPasswordChange={setImportPassword}
+                onSubmit={importWallet}
+              />
+            </section>
+          </>
         )}
       </section>
     </div>
+  );
+}
+
+function ImportWalletForm({ importFile, importPassword, importing, onFileChange, onPasswordChange, onSubmit }) {
+  return (
+    <form className="form wallet-import-panel" onSubmit={onSubmit}>
+      <div className="field">
+        <label htmlFor="wallet-import-file">Encrypted Wallet Backup JSON</label>
+        <input
+          id="wallet-import-file"
+          className="input"
+          type="file"
+          accept="application/json,.json"
+          onChange={(event) => onFileChange(event.target.files?.[0] || null)}
+        />
+        <p className="help-text">{importFile ? importFile.name : "Use the encrypted backup exported from Vorliq."}</p>
+      </div>
+      <div className="field">
+        <label htmlFor="wallet-import-password">Backup Password</label>
+        <input
+          id="wallet-import-password"
+          className="input"
+          type="password"
+          value={importPassword}
+          onChange={(event) => onPasswordChange(event.target.value)}
+          autoComplete="current-password"
+        />
+        <p className="help-text">This password is used locally to decrypt the backup and is not sent to Vorliq.</p>
+      </div>
+      <button className="button secondary" type="submit" disabled={importing}>
+        {importing ? "Importing..." : "Import Encrypted Backup"}
+      </button>
+    </form>
   );
 }
 

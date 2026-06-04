@@ -870,6 +870,7 @@ html[data-glow="reduced"] .brand-network {
 .transaction-item,
 .qr-panel,
 .wallet-safety-box,
+.wallet-entry-panel,
 .wallet-import-panel,
 .wallet-action-panel,
 .private-key-warning,
@@ -1582,6 +1583,19 @@ summary {
 .auth-page .hero,
 .auth-card {
   width: min(640px, 100%);
+}
+
+.wallet-entry-panel {
+  min-width: 0;
+}
+
+.wallet-entry-panel .help-text,
+.wallet-import-panel .help-text {
+  overflow-wrap: anywhere;
+}
+
+.wallet-entry-panel.primary {
+  border-color: rgba(24, 215, 201, 0.32);
 }
 
 .history-row {

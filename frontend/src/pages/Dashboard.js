@@ -60,7 +60,7 @@ const getStartedSteps = [
     step: "Step 4",
     title: "Join the community",
     body:
-      "Once you understand the basics, introduce yourself, chat with members, trade offers, and vote on community governance.",
+      "Once you understand the basics, introduce yourself, chat with members, coordinate community requests, and vote on governance.",
     links: [
       { to: "/forum", label: "Forum" },
       { to: "/chat", label: "Chat" },

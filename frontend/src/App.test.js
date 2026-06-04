@@ -59,7 +59,7 @@ jest.mock("react-toastify", () => ({
 const walletResponse = {
   address: "VLQ_TEST_ADDRESS_123456",
   public_key: "TEST_PUBLIC_KEY",
-  private_key: "TEST_PRIVATE_KEY",
+  private_key: "REDACTED_TEST_SIGNING_MATERIAL",
 };
 
 function defaultApiGet(path) {
@@ -1549,9 +1549,39 @@ test("Dashboard keeps core live data visible when an optional summary is unavail
 test("Login page shows wallet creation when no wallet is stored", () => {
   renderWithProviders(<Login />, "/login");
 
+  expect(screen.getByRole("heading", { level: 1, name: /create or restore your vorliq wallet/i })).toBeInTheDocument();
   expect(screen.getAllByText(/create your vorliq wallet/i).length).toBeGreaterThan(0);
   expect(screen.getByRole("button", { name: /create wallet and set password/i })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: /import wallet backup/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /import encrypted wallet backup/i })).toBeInTheDocument();
+  expect(screen.getByText(/restore it on this browser or another device/i)).toBeInTheDocument();
+  expect(screen.getByText(/vorliq does not send them to the server/i)).toBeInTheDocument();
+  expect(screen.queryByRole("textbox", { name: /private key/i })).not.toBeInTheDocument();
+});
+
+test("Login page makes saved wallet unlock the primary path and gates clear saved wallet", async () => {
+  window.localStorage.setItem("vorliq_wallet", JSON.stringify({ address: "VLQ_SAVED_ADDRESS" }));
+  const login = jest.fn().mockResolvedValue({ address: "VLQ_SAVED_ADDRESS", public_key: "PUBLIC_ONLY" });
+  const clearLocalWallet = jest.fn(() => window.localStorage.removeItem("vorliq_wallet"));
+
+  renderWithAuth(<Login />, { login, clearLocalWallet }, "/login");
+
+  expect(screen.getByRole("heading", { level: 1, name: /unlock saved wallet/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /unlock saved wallet/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /import encrypted wallet backup/i })).toBeInTheDocument();
+  expect(screen.getByText(/restoring your wallet on this browser or another device/i)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /create new wallet or clear saved wallet/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /clear saved wallet/i })).toBeDisabled();
+  expect(screen.queryByRole("textbox", { name: /private key/i })).not.toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "REDACTED_TEST_WALLET_SECRET" } });
+  await userEvent.click(screen.getByRole("button", { name: /unlock saved wallet/i }));
+  await waitFor(() => expect(login).toHaveBeenCalledWith("REDACTED_TEST_WALLET_SECRET"));
+
+  await userEvent.click(screen.getByLabelText(/removes the encrypted wallet backup from this browser/i));
+  await userEvent.click(screen.getByRole("button", { name: /clear saved wallet/i }));
+  expect(clearLocalWallet).toHaveBeenCalled();
+  expect(screen.getByRole("heading", { level: 1, name: /create or restore your vorliq wallet/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /create wallet and set password/i })).toBeInTheDocument();
 });
 
 test("wallet safety confirmation blocks wallet creation until checked", async () => {
@@ -2123,7 +2153,7 @@ test("Wallet page contains faucet callout after wallet creation", async () => {
 test("wallet backup import rejects invalid JSON", async () => {
   renderWithProviders(<Login />, "/login");
 
-  fireEvent.change(screen.getByLabelText(/wallet backup json/i), {
+  fireEvent.change(screen.getByLabelText(/encrypted wallet backup json/i), {
     target: {
       files: [
         {
@@ -2135,9 +2165,9 @@ test("wallet backup import rejects invalid JSON", async () => {
   });
 
   fireEvent.change(screen.getByLabelText(/backup password/i), {
-    target: { value: "correct horse battery staple" },
+    target: { value: "REDACTED_TEST_BACKUP_SECRET" },
   });
-  await userEvent.click(screen.getByRole("button", { name: /^import wallet backup$/i }));
+  await userEvent.click(screen.getByRole("button", { name: /^import encrypted backup$/i }));
 
   expect(await screen.findByText(/wallet backup is invalid or the password is incorrect/i)).toBeInTheDocument();
 });
@@ -2145,7 +2175,7 @@ test("wallet backup import rejects invalid JSON", async () => {
 test("wallet backup import rejects invalid wallet backup structure", async () => {
   renderWithProviders(<Login />, "/login");
 
-  fireEvent.change(screen.getByLabelText(/wallet backup json/i), {
+  fireEvent.change(screen.getByLabelText(/encrypted wallet backup json/i), {
     target: {
       files: [
         {
@@ -2157,9 +2187,9 @@ test("wallet backup import rejects invalid wallet backup structure", async () =>
   });
 
   fireEvent.change(screen.getByLabelText(/backup password/i), {
-    target: { value: "correct horse battery staple" },
+    target: { value: "REDACTED_TEST_BACKUP_SECRET" },
   });
-  await userEvent.click(screen.getByRole("button", { name: /^import wallet backup$/i }));
+  await userEvent.click(screen.getByRole("button", { name: /^import encrypted backup$/i }));
 
   expect(await screen.findByText(/wallet backup is invalid or the password is incorrect/i)).toBeInTheDocument();
 });
@@ -2180,7 +2210,7 @@ test("Account protected route redirects to login behavior when no wallet is load
     "/account"
   );
 
-  expect(await screen.findByRole("heading", { name: /import wallet backup/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /import encrypted wallet backup/i })).toBeInTheDocument();
   expect(screen.getAllByText(/create your vorliq wallet/i).length).toBeGreaterThan(0);
 });
 
