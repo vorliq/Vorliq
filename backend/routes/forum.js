@@ -2,6 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const { handleRouteError } = require("./routeError");
 const { paginationParams } = require("../pagination");
+const { sendError } = require("../utils/apiResponse");
 
 const router = express.Router();
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
@@ -91,22 +92,16 @@ router.post("/api/forum/feature", async (req, res) => {
   }
 });
 
-router.post("/api/forum/tip/post", async (req, res) => {
-  try {
-    const response = await axios.post(`${flaskUrl}/forum/tip/post`, req.body);
-    res.status(response.status).json(response.data);
-  } catch (error) {
-    return handleRouteError(res, error, "POST /api/forum/tip/post", "Unable to tip forum post.");
-  }
-});
+function retiredForumTipEndpoint(req, res) {
+  return sendError(
+    res,
+    410,
+    "FORUM_TIPPING_RETIRED",
+    "Forum tipping by private key has been retired. Use saved-wallet local signing flows only."
+  );
+}
 
-router.post("/api/forum/tip/reply", async (req, res) => {
-  try {
-    const response = await axios.post(`${flaskUrl}/forum/tip/reply`, req.body);
-    res.status(response.status).json(response.data);
-  } catch (error) {
-    return handleRouteError(res, error, "POST /api/forum/tip/reply", "Unable to tip forum reply.");
-  }
-});
+router.post("/api/forum/tip/post", retiredForumTipEndpoint);
+router.post("/api/forum/tip/reply", retiredForumTipEndpoint);
 
 module.exports = router;

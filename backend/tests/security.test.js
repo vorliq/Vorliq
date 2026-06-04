@@ -48,6 +48,51 @@ describe("security validation", () => {
     expect(axios.post).not.toHaveBeenCalled();
   });
 
+  test("retires forum post tipping without forwarding unsafe signing fields", async () => {
+    const dummyMarker = "REDACTED_DUMMY_SIGNING_MATERIAL";
+
+    const response = await request(app)
+      .post("/api/forum/tip/post")
+      .set(forwarded("203.0.113.18"))
+      .send({
+        post_id: "post-1",
+        sender_address: "VLQ_SENDER",
+        sender_private_key: dummyMarker,
+        receiver_address: "VLQ_RECEIVER",
+        amount: 1,
+      });
+
+    expect(response.status).toBe(410);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe("FORUM_TIPPING_RETIRED");
+    expect(response.body.message).toMatch(/retired/i);
+    expect(JSON.stringify(response.body)).not.toContain(dummyMarker);
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  test("retires forum reply tipping without forwarding unsafe signing fields", async () => {
+    const dummyMarker = "REDACTED_DUMMY_SIGNING_MATERIAL";
+
+    const response = await request(app)
+      .post("/api/forum/tip/reply")
+      .set(forwarded("203.0.113.19"))
+      .send({
+        post_id: "post-1",
+        reply_id: "reply-1",
+        sender_address: "VLQ_SENDER",
+        sender_private_key: dummyMarker,
+        receiver_address: "VLQ_RECEIVER",
+        amount: 1,
+      });
+
+    expect(response.status).toBe(410);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe("FORUM_TIPPING_RETIRED");
+    expect(response.body.message).toMatch(/retired/i);
+    expect(JSON.stringify(response.body)).not.toContain(dummyMarker);
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
   test("rejects invalid exchange offers", async () => {
     const response = await request(app)
       .post("/api/exchange/offer")
