@@ -90,7 +90,7 @@
         <h2>Fix a stale node</h2>
         <pre><code>sudo systemctl restart vorliq-heartbeat.service
 curl -I https://node.example.org/api/health
-node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
+node tools/node_doctor.js --base-url https://community-node.example --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
         <p>Also check DNS, HTTPS certificates, backend service state, and the configured public node URL.</p>
       </section>
 
@@ -99,7 +99,7 @@ node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://
         <p>Do not manually edit <code>chain.json</code>, rewrite historical blocks, or change block hashes. First run verified bootstrap in dry-run mode. Only write chain data on a new node or after a deliberate backup and a clean verification report.</p>
         <pre><code>python3.12 tools/bootstrap_chain_from_public_node.py --trusted-node https://vorliq.org --data-dir ./blockchain/data
 node tools/bootstrap_verify_node.js https://vorliq.org
-node tools/node_doctor.js --base-url http://127.0.0.1:5000 --trusted-node https://vorliq.org</code></pre>
+node tools/node_doctor.js --base-url https://community-node.example --trusted-node https://vorliq.org</code></pre>
       </section>
 
       <section>

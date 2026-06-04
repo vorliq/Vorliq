@@ -11,7 +11,10 @@ const sdkTarget = path.join(publicRoot, "sdk");
 
 fs.rmSync(docsTarget, { recursive: true, force: true });
 fs.cpSync(docsSource, docsTarget, { recursive: true });
-fs.copyFileSync(path.join(docsSource, "pitch.html"), path.join(publicRoot, "pitch.html"));
+const rootPitchHtml = fs
+  .readFileSync(path.join(docsSource, "pitch.html"), "utf8")
+  .replace('href="style.css" data-docs-rebuilt-style', 'href="docs/style.css" data-docs-rebuilt-style');
+fs.writeFileSync(path.join(publicRoot, "pitch.html"), rootPitchHtml);
 
 fs.mkdirSync(sdkTarget, { recursive: true });
 fs.copyFileSync(path.join(repoRoot, "sdk", "README.md"), path.join(sdkTarget, "README.md"));

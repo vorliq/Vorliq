@@ -86,7 +86,7 @@
 
       <section>
         <h2>Operator alerts and duplicate suppression</h2>
-        <p>The scheduled maintenance runner calls <code>http://127.0.0.1:5000/api/nodes/monitor</code>. It logs sanitized warnings, calls the configured <code>alert.sh</code> path for repeated warnings or critical alerts, and suppresses duplicates by alert code and node URL. The state file stores only alert code, node URL, first seen, last seen, count, last alerted time, and status.</p>
+        <p>The scheduled maintenance runner calls a configured monitor endpoint such as <code>https://community-node.example/api/nodes/monitor</code>. It logs sanitized warnings, calls the configured <code>alert.sh</code> path for repeated warnings or critical alerts, and suppresses duplicates by alert code and node URL. The state file stores only alert code, node URL, first seen, last seen, count, last alerted time, and status.</p>
       </section>
 
       <section>
@@ -98,12 +98,12 @@
         <h2>Fix stale heartbeat</h2>
         <pre><code>sudo systemctl restart vorliq-heartbeat.service
 curl -I https://node.example.org/api/health
-node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
+node tools/node_doctor.js --base-url https://community-node.example --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
       </section>
 
       <section>
         <h2>Investigate a fork warning</h2>
-        <pre><code>node tools/node_doctor.js --base-url http://127.0.0.1:5000 --trusted-node https://vorliq.org
+        <pre><code>node tools/node_doctor.js --base-url https://community-node.example --trusted-node https://vorliq.org
 node tools/bootstrap_verify_node.js https://vorliq.org
 python3.12 tools/bootstrap_chain_from_public_node.py --trusted-node https://vorliq.org --data-dir ./blockchain/data</code></pre>
         <p>Do not manually edit <code>chain.json</code>, rewrite historical blocks, or change block hashes. Use verified dry-run bootstrap first, then recover deliberately from backup if needed.</p>

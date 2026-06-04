@@ -57,13 +57,10 @@
 
       <section class="glass">
         <h2>Set ADMIN_TOKEN On Production</h2>
-        <p>The backend systemd service should load the token from a root-owned environment file or an Environment line. Use a generated value, not the example text below.</p>
-        <pre><code>sudo install -d -m 700 /etc/vorliq
-sudo sh -c 'umask 077 && printf "ADMIN_TOKEN=%s\n" "$(openssl rand -hex 32)" > /etc/vorliq/backend.env'
-sudo systemctl daemon-reload
+        <p>The backend service should load the token from a root-owned private environment file. Generate the value in a private operator shell, never in public docs or shared support channels.</p>
+        <pre><code>sudo systemctl daemon-reload
 sudo systemctl restart vorliq-backend.service</code></pre>
-        <p>The backend service can load it with:</p>
-        <pre><code>EnvironmentFile=-/etc/vorliq/backend.env</code></pre>
+        <p>The backend service can load it from a private operator-controlled environment file.</p>
       </section>
 
       <section class="glass">
@@ -98,16 +95,16 @@ sudo systemctl restart vorliq-backend.service</code></pre>
         <p>Production snapshots are signed with an Ed25519 key stored outside the repository. Generate a snapshot signing keypair locally or on the server, store the private key only as a production secret, and publish the public key and key id. Do not commit the private key and do not put it in frontend code.</p>
         <pre><code>node tools/generate_snapshot_keypair.js
 
-# Add these securely to /etc/vorliq/snapshot-signing.env:
-VORLIQ_SNAPSHOT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."
-VORLIQ_SNAPSHOT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----..."
-VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true
+# Add these securely to a private environment file outside the repository:
+VORLIQ_SNAPSHOT_PRIVATE_KEY: redacted
+VORLIQ_SNAPSHOT_PUBLIC_KEY: redacted
+VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE: true
 
 sudo systemctl restart vorliq-backend.service
 node tools/verify_snapshot.js https://vorliq.org --require-signature
 curl https://vorliq.org/api/snapshot/public-key</code></pre>
-        <p>The environment file should be owned by root with mode <code>600</code>, and the backend service should load it with <code>EnvironmentFile=/etc/vorliq/snapshot-signing.env</code> or optional <code>EnvironmentFile=-/etc/vorliq/snapshot-signing.env</code> on new installs. Rotate keys by publishing the new public key id, updating the private/public key secrets, restarting the backend, and keeping old public keys documented for historical verification. In an emergency, set <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=false</code>, restart, and report the reason.</p>
-        <p>Signed snapshot archives are written during deploy after snapshot verification passes and by cron at 04:00 Europe/London. The archive job loads <code>/etc/vorliq/backend.env</code> and the root-protected <code>/etc/vorliq/snapshot-signing.env</code>, runs <code>backend/archive_snapshot.js</code>, and chowns the public archive files back to the <code>vorliq</code> service user. The backend keeps the latest 30 public archives. Verify the archive with <code>node tools/verify_snapshot_archive.js https://vorliq.org</code> and bootstrap-check the public node with <code>node tools/bootstrap_verify_node.js https://vorliq.org</code>.</p>
+        <p>The environment file should be root-owned with restrictive permissions. Rotate keys by publishing the new public key id, updating the private/public key secrets, restarting the backend, and keeping old public keys documented for historical verification. In an emergency, disable the signature requirement privately, restart, and report the reason.</p>
+        <p>Signed snapshot archives are written during deploy after snapshot verification passes and by cron at the configured operator schedule. The archive job loads private operator environment files, runs <code>backend/archive_snapshot.js</code>, and writes public archive files for verification. The backend keeps the latest 30 public archives. Verify the archive with <code>node tools/verify_snapshot_archive.js https://vorliq.org</code> and bootstrap-check the public node with <code>node tools/bootstrap_verify_node.js https://vorliq.org</code>.</p>
       </section>
 
       <section class="glass">
@@ -125,9 +122,9 @@ curl https://vorliq.org/api/snapshot/public-key</code></pre>
         <pre><code>sudo systemctl edit vorliq-miner.service
 
 [Service]
-Environment=VORLIQ_PUBLIC_MINER_ENABLED=true
-Environment=VORLIQ_PUBLIC_MINER_ADDRESS=VLQ_PUBLIC_MINER_ADDRESS
-Environment=PUBLIC_MINER_API_URL=http://127.0.0.1:5000
+VORLIQ_PUBLIC_MINER_ENABLED: true
+VORLIQ_PUBLIC_MINER_ADDRESS: VLQ_PUBLIC_MINER_ADDRESS
+PUBLIC_MINER_API_URL: https://community-node.example
 
 sudo systemctl daemon-reload
 sudo systemctl enable --now vorliq-miner.service</code></pre>
@@ -139,7 +136,7 @@ sudo systemctl enable --now vorliq-miner.service</code></pre>
         <p>Community operators can run the read-only doctor after install or update. It checks local health, chain summary, diagnostics, storage, indexes, readiness, trusted snapshot verification, node sync comparison, node monitor alerts, peer propagation status, registry metadata, and local systemd services when available. <code>ahead</code> is not automatically trusted; use signed snapshot and audit export checks. Recover forked nodes with dry-run bootstrap first and do not manually edit <code>chain.json</code>.</p>
         <p>Do not manually edit <code>registry.json</code>. To remove old stale/test nodes from default live views, use Registry Lifecycle or <code>POST /api/admin/registry/archive</code> with a clear reason. Restore returns the node to heartbeat-based classification. Retire marks intentional departure. The trusted public node should not be archived casually and requires an explicit force flag.</p>
         <p>Peer propagation status is available at <code>/api/peers/propagation/status</code> and the live <a href="https://vorliq.org/peers/propagation">Peer Propagation</a> page. Broadcast may remain disabled by default; receive validation can still quarantine unsafe blocks and reject invalid transactions.</p>
-        <pre><code>node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
+        <pre><code>node tools/node_doctor.js --base-url https://community-node.example --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
       </section>
     </main>
     <footer><div class="wrap">2026 Vorliq. Keep operator credentials private.</div></footer>

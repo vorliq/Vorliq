@@ -65,12 +65,12 @@ const summary = await sdk.getChainSummary();</pre>
       <h2>Local-Only Signing Placeholder</h2>
       <pre>await sdk.sendTransaction(
   "SENDER_ADDRESS",
-  "-----BEGIN EC PRIVATE KEY-----\\nFAKE_LOCAL_ONLY_EXAMPLE\\n-----END EC PRIVATE KEY-----",
-  "-----BEGIN PUBLIC KEY-----\\nFAKE_PUBLIC_KEY\\n-----END PUBLIC KEY-----",
+  "redacted-private-key",
+  "redacted-public-key",
   "RECEIVER_ADDRESS",
   1
 );</pre>
-      <p>The private key above is deliberately fake. Do not expose real private keys in app code, logs, docs, analytics, bug reports, or backend requests.</p>
+      <p>The signing key placeholder above is deliberately redacted. Do not expose real private keys in app code, logs, docs, analytics, bug reports, or backend requests.</p>
     </section>
   </main>
 </body>

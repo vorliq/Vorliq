@@ -60,11 +60,8 @@ node tools/verify_snapshot.js https://vorliq.org --require-signature</code></pre
       </section>
       <section>
         <h2>Production Configuration</h2>
-        <pre><code># /etc/vorliq/snapshot-signing.env
-VORLIQ_SNAPSHOT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."
-VORLIQ_SNAPSHOT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----..."
-VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code></pre>
-        <p>Use a root-owned server environment file with mode <code>600</code> or an equivalent secret manager. Restart the backend after changing keys, then verify <code>/api/snapshot/verify</code> and <code>node tools/verify_snapshot.js https://vorliq.org --require-signature</code>. Never put the private key in frontend code, GitHub Pages, screenshots, logs, or public issue comments.</p>
+        <p>Store the snapshot signing private key, public key, and signature requirement flag in a private environment file outside the repository. Do not print the key material in public docs, logs, screenshots, or support requests. Public examples should use placeholders such as <code>redacted</code>.</p>
+        <p>Use a root-owned private environment file or an equivalent secret manager. Restart the backend after changing keys, then verify <code>/api/snapshot/verify</code> and <code>node tools/verify_snapshot.js https://vorliq.org --require-signature</code>. Never put the private key in frontend code, GitHub Pages, screenshots, logs, or public issue comments.</p>
       </section>
       <section>
         <h2>Key Rotation</h2>

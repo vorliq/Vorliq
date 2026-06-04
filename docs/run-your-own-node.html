@@ -86,15 +86,15 @@ sudo bash install_verified_node.sh</code></pre>
       <section>
         <h2>Verified Chain Bootstrap</h2>
         <p>After the trusted public node verifies, the installer asks whether to run a dry-run chain bootstrap. Dry-run is the default and writes nothing. It checks the signed snapshot, audit manifest, chain export hash, block hashes, previous-hash links, latest hash, transaction ordering, and public-data secret scan.</p>
-        <pre><code>python3.12 tools/bootstrap_chain_from_public_node.py --trusted-node https://vorliq.org --data-dir /home/vorliq/app/blockchain/data</code></pre>
+        <pre><code>python3.12 tools/bootstrap_chain_from_public_node.py --trusted-node https://vorliq.org --data-dir /path/to/vorliq/blockchain/data</code></pre>
         <p>Write mode is off by default. Use it only for a new node or after a deliberate backup. See the <a href="bootstrap-chain.html">Verified Chain Bootstrap</a> guide before using force mode manually.</p>
       </section>
 
       <section>
         <h2>Check The Node</h2>
         <p>Run the doctor after install or after updates. It is read-only and prints PASS, WARN, or FAIL with suggested commands when possible.</p>
-        <pre><code>cd /home/vorliq/app
-node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
+          <pre><code>cd /path/to/vorliq
+node tools/node_doctor.js --base-url https://community-node.example --public-url https://node.example.org --trusted-node https://vorliq.org</code></pre>
         <p>Open <a href="https://vorliq.org/nodes/compare">Node Sync</a> to compare your node with the trusted public chain. <code>behind</code> means your node is lower, <code>ahead</code> is not automatically trusted, <code>forked</code> requires recovery checks, <code>stale</code> usually needs heartbeat or DNS repair, and <code>unreachable</code> means diagnostics could not be checked.</p>
       </section>
 
@@ -102,9 +102,9 @@ node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://
         <article>
           <h2>Update Safely</h2>
           <p>Back up first, then update code and rebuild dependencies. Do not delete <code>blockchain/data</code>, rewrite historical blocks, change block hashes, or switch storage backend during a routine update.</p>
-          <pre><code>cd /home/vorliq/app
+          <pre><code>cd /path/to/vorliq
 sudo bash deployment/update_server.sh
-node tools/node_doctor.js --base-url http://127.0.0.1:5000 --public-url https://node.example.org</code></pre>
+node tools/node_doctor.js --base-url https://community-node.example --public-url https://node.example.org</code></pre>
         </article>
         <article>
           <h2>Read Logs</h2>
@@ -118,7 +118,7 @@ sudo journalctl -u vorliq-heartbeat.service -f</code></pre>
       <section>
         <h2>Back Up Node Data</h2>
         <p>Back up the blockchain data folder before updates, server moves, or manual maintenance. Test restores on a separate machine before relying on a backup. Never restore over live data unless you have verified the backup and understand the impact.</p>
-        <pre><code>sudo tar -czf vorliq-data-backup.tgz -C /home/vorliq/app/blockchain data</code></pre>
+        <pre><code>sudo tar -czf vorliq-data-backup.tgz -C /path/to/vorliq/blockchain data</code></pre>
       </section>
 
       <section class="callout">

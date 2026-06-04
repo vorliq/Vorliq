@@ -4,9 +4,9 @@ The Vorliq SDK is the official JavaScript library for building applications on t
 
 ## Responsible Use
 
-Vorliq is experimental open-source community blockchain software. VLQ has no guaranteed market value and should not be represented as a guaranteed-value asset, investment product, bank deposit, or promised source of income. Applications built with this SDK should clearly disclose the experimental status of the network, the self-custody model, and the fact that users are responsible for their own keys, actions, local laws, and risk decisions.
+Vorliq is open-source community savings bank software built on its own blockchain with the VLQ coin. VLQ has no guaranteed market value and should not be represented as a guaranteed-value asset, investment product, bank deposit, or promised source of income. Applications built with this SDK should clearly disclose the self-custody model and the fact that users are responsible for their own keys, actions, local laws, and risk decisions.
 
-Developers should not collect or store users private keys unless they fully understand custody risk and have a strong security model. In most cases, applications should sign locally on the user's device, avoid logging private keys, avoid sending keys to servers, and give users plain warnings before they create transactions, exchange offers, lending requests, mining actions, governance votes, or treasury votes.
+Developers should not collect or store users private keys unless they fully understand custody risk and have a strong security model. In most cases, applications should sign locally on the user's device, avoid logging private keys, avoid sending keys to servers, and give users plain warnings before they create transactions, peer community requests, lending requests, mining actions, governance votes, or treasury votes.
 
 Before sending VLQ, applications should show a review step with the sender address, receiver address, amount, pending-until-mined status, address validation result, and a clear warning that transactions cannot be reversed. The SDK exposes `validateAddress(address)`, `isReservedAddress(address)`, and `createTransactionReview(from, to, amount)` to support that flow.
 
@@ -312,7 +312,7 @@ async function main() {
 main().catch(console.error);
 ```
 
-Exchange offers are peer-to-peer community records. Vorliq can track the VLQ transaction side and both-party completion confirmations, but it cannot enforce off-chain payment, goods, services, or delivery.
+Peer community requests are community coordination records. Vorliq can track the VLQ transaction side and both-party completion confirmations, but it cannot enforce off-chain payment, goods, services, or delivery.
 
 ```js
 const { VorliqSDK } = require("./dist/vorliq-sdk");
@@ -472,8 +472,8 @@ async function main() {
 
   const result = await vorliq.sendTransaction(
     review.from,
-    "-----BEGIN EC PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END EC PRIVATE KEY-----",
-    "-----BEGIN PUBLIC KEY-----\nYOUR_PUBLIC_KEY\n-----END PUBLIC KEY-----",
+    "redacted-private-key",
+    "redacted-public-key",
     review.to,
     review.amount
   );

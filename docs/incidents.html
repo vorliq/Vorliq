@@ -97,10 +97,10 @@
 
       <section>
         <h2>Create an Incident</h2>
-        <p>Use the protected API to create an incident. Replace <code>ADMIN_TOKEN_HERE</code> with the production admin token on the server or in a private operator shell.</p>
+        <p>Use the protected API to create an incident from a private operator shell. The authorization value is redacted in public examples.</p>
         <pre><code>curl -X POST https://vorliq.org/api/incidents \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ADMIN_TOKEN_HERE" \
+  -H "Authorization: Bearer redacted" \
   -d '{
     "title": "Public node is degraded",
     "description": "The public API is responding slowly while the operator investigates.",
@@ -113,7 +113,7 @@
         <p>Move an incident through <code>investigating</code>, <code>identified</code>, <code>monitoring</code>, and <code>resolved</code> as the work progresses.</p>
         <pre><code>curl -X PATCH https://vorliq.org/api/incidents/INCIDENT_ID_HERE \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ADMIN_TOKEN_HERE" \
+  -H "Authorization: Bearer redacted" \
   -d '{
     "status": "monitoring",
     "description": "A fix has been deployed and the operator is watching recovery."
@@ -124,7 +124,7 @@
         <h2>Resolve an Incident</h2>
         <p>Resolve the incident when the service has recovered and no user-facing maintenance banner is needed.</p>
         <pre><code>curl -X POST https://vorliq.org/api/incidents/INCIDENT_ID_HERE/resolve \
-  -H "Authorization: Bearer ADMIN_TOKEN_HERE"</code></pre>
+  -H "Authorization: Bearer redacted"</code></pre>
       </section>
     </main>
 

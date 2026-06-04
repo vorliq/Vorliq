@@ -63,7 +63,7 @@ sudo apt install -y nodejs</pre>
 
       <section>
         <h2>Clone and Configure Vorliq</h2>
-        <p>Clone Vorliq, install the Python dependencies, install the Node.js backend, and build the React frontend. For a public node, configure the Flask blockchain API to listen on all interfaces by running it with <code>VORLIQ_HOST=0.0.0.0</code> and port <code>5001</code>.</p>
+        <p>Clone Vorliq, install the Python dependencies, install the Node.js backend, and build the React frontend. For a public node, configure the Flask blockchain API with operator-chosen bind host and port settings such as <code>VORLIQ_HOST=example-bind-address</code> and <code>VORLIQ_PORT=example-port</code>.</p>
         <pre>git clone https://github.com/vorliq/Vorliq.git
 cd Vorliq/blockchain
 python3.12 -m venv .venv
@@ -84,10 +84,10 @@ Description=Vorliq Blockchain API
 After=network.target
 
 [Service]
-WorkingDirectory=/home/ubuntu/Vorliq/blockchain
-Environment=VORLIQ_HOST=0.0.0.0
-Environment=VORLIQ_PORT=5001
-ExecStart=/home/ubuntu/Vorliq/blockchain/.venv/bin/python app.py
+WorkingDirectory=/path/to/vorliq/blockchain
+Environment=VORLIQ_HOST=example-bind-address
+Environment=VORLIQ_PORT=example-port
+ExecStart=/path/to/vorliq/blockchain/.venv/bin/python app.py
 Restart=always
 
 [Install]
@@ -97,20 +97,20 @@ Description=Vorliq Backend API
 After=network.target
 
 [Service]
-WorkingDirectory=/home/ubuntu/Vorliq/backend
-Environment=PORT=5000
-Environment=FLASK_URL=http://127.0.0.1:5001
-ExecStart=/usr/bin/node index.js
+WorkingDirectory=/path/to/vorliq/backend
+Environment=PORT=example-port
+Environment=FLASK_URL=https://community-node.example
+ExecStart=node index.js
 Restart=always
 
 [Install]
 WantedBy=multi-user.target</pre>
         <p>Public node operators can add optional registry identity environment variables to the backend service. These values are public metadata used by the heartbeat script and should not contain secrets.</p>
-        <pre>Environment=VORLIQ_NODE_URL=https://node.example.org
-Environment=VORLIQ_NODE_NAME=Example Vorliq Node
-Environment=VORLIQ_NODE_REGION=Europe
-Environment=VORLIQ_NODE_COUNTRY=United Kingdom
-Environment=VORLIQ_OPERATOR_WALLET=VLQ_PUBLIC_OPERATOR_ADDRESS</pre>
+        <pre>VORLIQ_NODE_URL: https://node.example.org
+VORLIQ_NODE_NAME: Example Vorliq Node
+VORLIQ_NODE_REGION: Example Region
+VORLIQ_NODE_COUNTRY: Example Country
+VORLIQ_OPERATOR_WALLET: VLQ_PUBLIC_OPERATOR_ADDRESS</pre>
       </section>
 
       <section>
@@ -130,26 +130,24 @@ Environment=VORLIQ_OPERATOR_WALLET=VLQ_PUBLIC_OPERATOR_ADDRESS</pre>
         <p>Vorliq production snapshots are signed, and required signatures should remain enabled after live verification. Generate keys locally or on the server, store the private key only as a protected backend secret, and publish only the public key and key id. Do not commit the private key, add it to frontend code, paste it into public logs, or put it in deployment docs.</p>
         <pre>node tools/generate_snapshot_keypair.js
 
-# Add these securely to /etc/vorliq/snapshot-signing.env:
-VORLIQ_SNAPSHOT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----..."
-VORLIQ_SNAPSHOT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----..."
-VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true
+# Add these securely to a private environment file outside the repository:
+VORLIQ_SNAPSHOT_PRIVATE_KEY: redacted
+VORLIQ_SNAPSHOT_PUBLIC_KEY: redacted
+VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE: true
 
 sudo systemctl restart vorliq-backend.service
 node tools/verify_snapshot.js https://vorliq.org
 node tools/verify_snapshot.js https://vorliq.org --require-signature
 curl https://vorliq.org/api/snapshot/public-key</pre>
-        <p>The file should be owned by root with mode <code>600</code>, and the backend service should load it with <code>EnvironmentFile=/etc/vorliq/snapshot-signing.env</code> or optional <code>EnvironmentFile=-/etc/vorliq/snapshot-signing.env</code> on new installs. Set <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE=true</code> only after the signed snapshot verifies. In an emergency, set it to <code>false</code>, restart, and report the reason. Rotate keys by publishing the new public key id, updating the backend secrets, restarting the backend, and keeping prior public keys documented for historical verification. Signed snapshots prove snapshot provenance from the configured signing key; they do not prove legal, banking, financial, or investment status.</p>
+        <p>The file should be root-owned with restrictive permissions, and the backend service should load it from a private operator-controlled location. Set <code>VORLIQ_REQUIRE_SNAPSHOT_SIGNATURE</code> only after the signed snapshot verifies. In an emergency, disable the requirement privately, restart, and report the reason. Rotate keys by publishing the new public key id, updating the backend secrets, restarting the backend, and keeping prior public keys documented for historical verification. Signed snapshots prove snapshot provenance from the configured signing key; they do not prove legal, banking, financial, or investment status.</p>
       </section>
 
       <section>
         <h2>Operator Admin Token</h2>
-        <p>Production incident and operator dashboard routes are protected by <code>ADMIN_TOKEN</code>. The automated deployment creates a strong random token in <code>/etc/vorliq/backend.env</code> when one is not already present and loads it through the backend systemd service. Do not commit this token, print it in logs, or share it publicly.</p>
-        <pre>sudo mkdir -p /etc/vorliq
-sudo sh -c 'umask 077 && printf "ADMIN_TOKEN=%s\n" "$(openssl rand -hex 32)" > /etc/vorliq/backend.env'
-sudo systemctl daemon-reload
+        <p>Production incident and operator dashboard routes are protected by an admin token. The automated deployment creates a strong random token when one is not already present and loads it through the backend service. Do not commit this token, print it in logs, or share it publicly.</p>
+        <pre>sudo systemctl daemon-reload
 sudo systemctl restart vorliq-backend.service</pre>
-        <p>The backend service should include <code>EnvironmentFile=-/etc/vorliq/backend.env</code> or an equivalent <code>Environment=ADMIN_TOKEN=...</code> line in <code>/etc/systemd/system/vorliq-backend.service</code>. Use the environment file when possible so the token is not copied into documentation or shell history.</p>
+        <p>The backend service should load the admin token from a private operator-controlled environment file. Use the environment file when possible so the token is not copied into documentation or shell history.</p>
         <p>Operators can use this token privately with the protected dashboard at <code>https://vorliq.org/admin</code> and the incident API described in the incident response guide.</p>
       </section>
 
@@ -160,7 +158,7 @@ sudo systemctl restart vorliq-backend.service</pre>
   listen 80;
   server_name your-domain-or-ip;
 
-  root /home/ubuntu/Vorliq/frontend/build;
+  root /path/to/vorliq/frontend/build;
   index index.html;
 
   location / {
@@ -168,7 +166,7 @@ sudo systemctl restart vorliq-backend.service</pre>
   }
 
   location /api/ {
-    proxy_pass http://127.0.0.1:5000/api/;
+    proxy_pass https://community-node.example/api/;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
   }
