@@ -74,14 +74,14 @@
 
       <section class="section card danger">
         <h2>Server Recovery Is Not Wallet Recovery</h2>
-        <p>Server recovery restores the public Vorliq node: the blockchain data folder, public transactions, forum content, lending records, exchange offers, governance data, treasury data, price signals, achievements, and safe operational logs. It does not restore a user's private wallet key.</p>
+        <p>Server recovery restores the public Vorliq node: the blockchain data folder, public transactions, forum content, lending records, peer community request records, governance data, treasury data, price signals, achievements, and safe operational metadata. It does not restore a user's private wallet key.</p>
         <p>Wallet recovery depends on the user's own backup. A user can recover a wallet only if they still have the private key or an encrypted wallet backup plus the password for that backup. The production server backup cannot recreate a lost private key, cannot reveal a wallet password, and cannot move VLQ from a wallet whose key has been lost.</p>
       </section>
 
       <section class="section card">
         <h2>What Is Backed Up</h2>
-        <p>The backup archive contains the complete <code>/home/vorliq/app/blockchain/data</code> folder. This is the critical node state folder used by the Python blockchain API. It includes the saved chain, pending transactions, peer list, node registry, lending records, exchange offers, governance proposals and settings, treasury proposals, price signals, forum posts, achievements, and operational blockchain logs when those files exist.</p>
-        <p>The backup also includes protected JSON and safe log files from <code>/home/vorliq/app/backend/data</code>. Useful <code>.bak</code> files are included so a recent pre-write copy is available during investigation. It does not include <code>.env</code> files, private keys, SSH keys, <code>node_modules</code>, frontend build artifacts, dependency caches, or unrelated large files.</p>
+        <p>The backup archive contains the node data folder, for example <code>/path/to/vorliq/blockchain/data</code>. This is the critical node state folder used by the Python blockchain API. It includes the saved chain, pending transactions, peer list, node registry, lending records, peer community request records, governance proposals and settings, treasury proposals, price signals, forum posts, achievements, and safe operational metadata when those files exist.</p>
+        <p>The backup also includes protected JSON and safe diagnostic summaries from a backend data folder such as <code>/path/to/vorliq/backend/data</code>. Useful <code>.bak</code> files are included so a recent pre-write copy is available during investigation. It does not include <code>.env</code> files, private keys, SSH keys, <code>node_modules</code>, frontend build artifacts, dependency caches, or unrelated large files.</p>
         <p>The public signed snapshot archive is not a backup replacement. It is a transparency aid for comparing recent signed public state. Use <code>node tools/verify_snapshot_archive.js https://vorliq.org</code>, <code>node tools/bootstrap_verify_node.js https://vorliq.org</code>, and the dry-run command in <a href="bootstrap-chain.html">Verified Chain Bootstrap</a> during recovery checks, but restore node state only from verified backups or intentionally chosen known-good chain data.</p>
       </section>
 
@@ -94,18 +94,18 @@
       <section class="section grid">
         <article class="card">
           <h2>Where Backups Live</h2>
-          <p>Production backups are written to <code>/home/vorliq/backups</code> on the server. Archive names follow the exact format <code>vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz</code>. Each successful backup also writes a contents listing next to the archive and appends a line to <code>/home/vorliq/backups/backup.log</code>.</p>
+          <p>Production backups are written to a protected backup directory such as <code>/path/to/vorliq/backups</code>. Archive names follow the example format <code>vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz</code>. Each successful backup can write a redacted contents summary next to the archive and append an <code>example-log-entry</code> to a private backup log.</p>
         </article>
         <article class="card">
           <h2>Schedule And Retention</h2>
-          <p>The production cron job runs <code>/home/vorliq/backup.sh</code> daily at 02:15 server time. The script keeps the last 14 days of backup archives and deletes older backup archives after a new backup has been created and verified.</p>
+          <p>The production cron job runs the backup script on a regular schedule. The script keeps the last 14 days of backup archives and deletes older backup archives after a new backup has been created and verified.</p>
         </article>
       </section>
 
       <section class="section card">
         <h2>Verify A Backup</h2>
         <p>Before restoring, verify that the archive opens cleanly and that every critical JSON file and useful <code>.bak</code> file inside the backup is valid JSON. This command does not modify live data.</p>
-        <pre><code>sudo /home/vorliq/app/deployment/verify_backup.sh /home/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz</code></pre>
+        <pre><code>sudo /path/to/vorliq/deployment/verify_backup.sh /path/to/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz</code></pre>
       </section>
 
       <section class="section card">
@@ -130,13 +130,13 @@ sudo apt-get install -y git
 git clone https://github.com/vorliq/Vorliq.git /tmp/Vorliq
 cd /tmp/Vorliq
 sudo bash deployment/setup_server.sh
-sudo bash /home/vorliq/app/deployment/configure_server.sh
-sudo mkdir -p /home/vorliq/backups
-sudo cp /tmp/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz /home/vorliq/backups/
-sudo bash /home/vorliq/app/deployment/verify_backup.sh /home/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz
-sudo bash /home/vorliq/app/deployment/restore_backup.sh /home/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz --dry-run
+sudo bash /path/to/vorliq/deployment/configure_server.sh
+sudo mkdir -p /path/to/vorliq/backups
+sudo cp /tmp/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz /path/to/vorliq/backups/
+sudo bash /path/to/vorliq/deployment/verify_backup.sh /path/to/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz
+sudo bash /path/to/vorliq/deployment/restore_backup.sh /path/to/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz --dry-run
 sudo systemctl stop vorliq-backend.service vorliq-blockchain.service vorliq-heartbeat.service
-sudo bash /home/vorliq/app/deployment/restore_backup.sh /home/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz
+sudo bash /path/to/vorliq/deployment/restore_backup.sh /path/to/vorliq/backups/vorliq-backup-YYYY-MM-DD-HHMMSS.tar.gz
 curl -fsS http://localhost:5000/api/health
 curl -fsS http://localhost:5000/api/diagnostics</code></pre>
       </section>
@@ -148,7 +148,7 @@ curl -fsS http://localhost:5000/api/diagnostics</code></pre>
 
       <section class="section card">
         <h2>If The Server Fails</h2>
-        <p>Start by preserving the newest backup archive from <code>/home/vorliq/backups</code>. If the old server is still reachable, copy the newest archive off the server with <code>scp</code>. If the server is gone, restore from the external copy or snapshot that contains the same backup folder. Bring up a clean Ubuntu server, install Vorliq from GitHub, verify the archive, run the restore script in dry-run mode, then perform the live restore only after verification passes.</p>
+        <p>Start by preserving the newest backup archive from the protected backup directory. If the old server is still reachable, copy the newest archive off the server with a secure file-transfer method. If the server is gone, restore from the external copy or snapshot that contains the same backup folder. Bring up a clean Ubuntu server, install Vorliq from GitHub, verify the archive, run the restore script in dry-run mode, then perform the live restore only after verification passes.</p>
       </section>
     </main>
 

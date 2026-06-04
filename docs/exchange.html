@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Vorliq Exchange Lifecycle</title>
-    <meta name="description" content="How Vorliq peer-to-peer exchange offers, VLQ transactions, completion confirmations, and disputes work." />
+    <title>Vorliq Community Request Lifecycle</title>
+    <meta name="description" content="How Vorliq peer community requests, VLQ transactions, completion confirmations, and disputes work." />
     <style>
       :root { --bg:#020817; --panel:rgba(8,14,28,.56); --border:rgba(24,215,201,.24); --text:#fff; --muted:#c7d2e4; --green:#86e33b; --cyan:#18d7c9; --blue:#1479ff; --warn:#ffd166; }
       * { box-sizing:border-box; }
@@ -40,27 +40,27 @@
         <a class="brand" href="index.html">Vorliq</a>
         <div>
           <a class="button" href="index.html">Docs Home</a>
-          <a class="button primary" href="https://vorliq.org/exchange">Open Exchange</a>
+          <a class="button primary" href="https://vorliq.org/exchange">Open Community Requests</a>
         </div>
       </nav>
     </header>
     <main class="wrap">
       <section class="hero">
-        <span class="eyebrow">Peer-to-peer community offers</span>
-        <h1>Exchange Lifecycle</h1>
-        <p class="subtitle">Vorliq exchange offers let members post buy or sell terms for VLQ. The platform tracks offer acceptance, the VLQ transaction, both-party completion confirmations, and disputes. Vorliq cannot enforce off-chain cash, goods, services, labor, delivery, or any other agreed value.</p>
+        <span class="eyebrow">Peer community requests</span>
+        <h1>Community Request Lifecycle</h1>
+        <p class="subtitle">Vorliq community requests let members coordinate terms for requesting VLQ or offering VLQ. The platform tracks request acceptance, the VLQ transaction, both-party completion confirmations, and disputes. Vorliq cannot enforce off-chain cash, goods, services, labor, delivery, or any other agreed value.</p>
       </section>
 
       <section class="grid">
-        <article class="panel"><h2>Buy vs Sell</h2><p>A sell offer means the creator is offering to send VLQ. A buy offer means the creator wants to receive VLQ, so the acceptor is expected to send VLQ.</p></article>
-        <article class="panel"><h2>Accepted</h2><p><span class="status">accepted</span> means both parties agreed to the offer terms. It does not mean the VLQ transfer or off-chain value has completed.</p></article>
-        <article class="panel"><h2>VLQ Pending</h2><p>Users send VLQ through the normal signed Send flow, then paste the transaction ID into the exchange trade. The trade becomes <span class="status">vlq_pending</span> until mined.</p></article>
-        <article class="panel"><h2>VLQ Confirmed</h2><p>When the transaction is confirmed on-chain, the trade becomes <span class="status">vlq_confirmed</span>. The off-chain part of the deal is still a participant responsibility.</p></article>
-        <article class="panel"><h2>Completed</h2><p>Both creator and acceptor must confirm completion before the trade becomes <span class="status">completed</span>.</p></article>
-        <article class="panel"><h2>Disputes</h2><p>Either participant can mark an active trade as <span class="status">disputed</span> with a public reason. This pass records disputes; it does not resolve them or reverse transactions.</p></article>
-        <article class="panel"><h2>Mobile Support</h2><p>The Expo mobile app can post and accept offers, open the Send screen for the expected VLQ transfer, record an existing transaction ID, confirm completion, and open dispute records. It never needs a private key for exchange action screens.</p></article>
+        <article class="panel"><h2>Request Direction</h2><p>An offering VLQ request means the creator expects to send VLQ. A requesting VLQ request means the creator wants to receive VLQ, so the acceptor is expected to send VLQ.</p></article>
+        <article class="panel"><h2>Accepted</h2><p><span class="status">accepted</span> means both parties agreed to the coordination terms. It does not mean the VLQ transfer or off-chain value has completed.</p></article>
+        <article class="panel"><h2>VLQ Pending</h2><p>Users send VLQ through the normal signed Send flow, then paste the transaction ID into the community request record. The request becomes <span class="status">vlq_pending</span> until mined.</p></article>
+        <article class="panel"><h2>VLQ Confirmed</h2><p>When the transaction is confirmed on-chain, the request becomes <span class="status">vlq_confirmed</span>. The off-chain part of the coordination is still a participant responsibility.</p></article>
+        <article class="panel"><h2>Completed</h2><p>Both creator and acceptor must confirm completion before the request becomes <span class="status">completed</span>.</p></article>
+        <article class="panel"><h2>Disputes</h2><p>Either participant can mark an active request as <span class="status">disputed</span> with a public reason. This pass records disputes; it does not resolve them or reverse transactions.</p></article>
+        <article class="panel"><h2>Mobile Support</h2><p>The Expo mobile app can post and accept community requests, open the Send screen for the expected VLQ transfer, record an existing transaction ID, confirm completion, and open dispute records. It never needs a private key for community request action screens.</p></article>
       </section>
     </main>
-    <footer><div class="wrap">Use exchange offers carefully. Never share private keys, passwords, recovery phrases, or sensitive personal information in exchange descriptions or disputes.</div></footer>
+    <footer><div class="wrap">Use community requests carefully. Never share private keys, passwords, recovery phrases, or sensitive personal information in request descriptions or disputes.</div></footer>
   </body>
 </html>
