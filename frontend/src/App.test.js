@@ -267,7 +267,7 @@ function defaultApiGet(path) {
             offer_type: "sell",
             amount: 12,
             price: "local goods",
-            description: "Community market trade",
+            description: "Community coordination request",
             status: "open",
             created_at: 1715791000,
             timestamp: 1715791000,
@@ -282,7 +282,7 @@ function defaultApiGet(path) {
             offer_type: "sell",
             amount: 7,
             price: "services",
-            description: "Active exchange trade",
+            description: "Active coordination record",
             status: "accepted",
             created_at: 1715791000,
             accepted_at: 1715792000,
@@ -1235,7 +1235,7 @@ test("Dashboard shows a first-user Get Started section with core actions", async
   expect(await screen.findByText(/block production/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /^blockchain inspect blocks and transactions$/i })).toHaveAttribute("href", "/blockchain");
   expect(screen.getByRole("link", { name: /^network view public node and decentralization status$/i })).toHaveAttribute("href", "/network");
-  expect(screen.getByRole("link", { name: /^exchange coordinate community requests$/i })).toHaveAttribute("href", "/exchange");
+  expect(screen.getByRole("link", { name: /^community requests coordinate peer requests$/i })).toHaveAttribute("href", "/exchange");
   expect(screen.getByText(/treasury per block/i)).toBeInTheDocument();
 });
 
@@ -1544,8 +1544,8 @@ test("Dashboard keeps core live data visible when an optional summary is unavail
 
   expect(await screen.findByText(/block production/i)).toBeInTheDocument();
   expect(screen.getByText(/some dashboard data is unavailable right now/i)).toBeInTheDocument();
-  expect(screen.getByText(/exchange summary/i)).toBeInTheDocument();
-  expect(screen.getByText(/open exchange offers/i).parentElement).toHaveTextContent(/Unavailable/i);
+  expect(screen.getByText(/community request summary/i)).toBeInTheDocument();
+  expect(screen.getByText(/open community requests/i).parentElement).toHaveTextContent(/Unavailable/i);
 });
 
 test("Login page shows wallet creation when no wallet is stored", () => {
@@ -1923,19 +1923,19 @@ test("Account requires confirmation before clearing the saved local wallet", asy
   expect(clearLocalWallet).toHaveBeenCalledTimes(1);
 });
 
-test("Exchange lifecycle tabs render open offer cards and risk notice", async () => {
+test("Exchange lifecycle tabs render open request cards and risk notice", async () => {
   renderWithProviders(<Exchange />, "/exchange");
 
-  expect(await screen.findByRole("button", { name: /browse offers/i })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /post offer/i })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /my trades/i })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /active trades/i })).toBeInTheDocument();
-  expect(screen.getByLabelText(/risk notice/i)).toHaveTextContent(/exchange offers/i);
-  expect(await screen.findByText(/community market trade/i)).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: /browse requests/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /post request/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /my requests/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /active coordination/i })).toBeInTheDocument();
+  expect(screen.getByLabelText(/risk notice/i)).toHaveTextContent(/peer community requests/i);
+  expect(await screen.findByText(/community coordination request/i)).toBeInTheDocument();
   expect(screen.getAllByText(/open/i).length).toBeGreaterThan(0);
 });
 
-test("Exchange My Trades state renders record tx form for active trade", async () => {
+test("Exchange My Requests state renders record tx form for active coordination", async () => {
   api.get.mockImplementation((path) => {
     if (path === "/exchange/summary") return defaultApiGet(path);
     if (path === "/exchange/offers") return defaultApiGet(path);
@@ -1951,7 +1951,7 @@ test("Exchange My Trades state renders record tx form for active trade", async (
               offer_type: "sell",
               amount: 7,
               price: "services",
-              description: "Active exchange trade",
+              description: "Active coordination record",
               status: "accepted",
               created_at: 1715791000,
               accepted_at: 1715792000,
@@ -1968,7 +1968,7 @@ test("Exchange My Trades state renders record tx form for active trade", async (
               offer_type: "sell",
               amount: 7,
               price: "services",
-              description: "Active exchange trade",
+              description: "Active coordination record",
               status: "accepted",
               created_at: 1715791000,
               accepted_at: 1715792000,
@@ -1984,11 +1984,11 @@ test("Exchange My Trades state renders record tx form for active trade", async (
 
   renderWithProviders(<Exchange />, "/exchange");
 
-  await userEvent.click(await screen.findByRole("button", { name: /my trades/i }));
-  fireEvent.change(screen.getByLabelText(/wallet address for my trades search/i), { target: { value: "VLQ_CREATOR" } });
+  await userEvent.click(await screen.findByRole("button", { name: /my requests/i }));
+  fireEvent.change(screen.getByLabelText(/wallet address for my requests search/i), { target: { value: "VLQ_CREATOR" } });
   await userEvent.click(screen.getByRole("button", { name: /^load$/i }));
 
-  expect(await screen.findByText(/active exchange trade/i)).toBeInTheDocument();
+  expect(await screen.findByText(/active coordination record/i)).toBeInTheDocument();
   expect(await screen.findByRole("button", { name: /record vlq transaction/i })).toBeInTheDocument();
   expect(screen.getByLabelText(/vlq transaction id/i)).toBeInTheDocument();
 });

@@ -19,7 +19,7 @@ const quickLinks = [
   { to: "/mine", label: "Mine", detail: "Mine blocks and support the chain" },
   { to: "/treasury", label: "Treasury", detail: "Track public funding and payouts" },
   { to: "/lending", label: "Lending", detail: "Request or vote on community loans" },
-  { to: "/exchange", label: "Exchange", detail: "Coordinate community requests" },
+  { to: "/exchange", label: "Community Requests", detail: "Coordinate peer requests" },
   { to: "/governance", label: "Governance", detail: "Vote on network changes" },
   { to: "/forum", label: "Forum", detail: "Post messages and reply to members" },
   { to: "/registry", label: "Registry", detail: "Find and connect to public nodes" },
@@ -75,7 +75,7 @@ const dashboardRequests = [
   { key: "summary", label: "chain summary", request: () => api.get("/chain/summary") },
   { key: "featured", label: "featured posts", request: () => api.get("/forum/featured", { params: { limit: 3 } }) },
   { key: "lending", label: "lending summary", request: () => api.get("/lending/summary") },
-  { key: "exchange", label: "exchange summary", request: () => api.get("/exchange/summary") },
+  { key: "exchange", label: "community request summary", request: () => api.get("/exchange/summary") },
   { key: "governance", label: "governance summary", request: () => api.get("/governance/summary") },
   { key: "treasury", label: "treasury summary", request: () => api.get("/treasury/summary") },
   { key: "mining", label: "mining status", request: () => api.get("/mining/status") },
@@ -294,7 +294,7 @@ function Dashboard() {
         <h1>Vorliq Dashboard</h1>
         <p className="subtitle">
           Vorliq is a community savings bank built on its own blockchain with the VLQ coin,
-          bringing wallets, mining, lending, exchange, governance, and transparent public records
+          bringing wallets, mining, lending, community coordination, governance, and transparent public records
           into one network.
         </p>
         <div className="hero-actions">
@@ -530,11 +530,11 @@ function Dashboard() {
               <span className="stat-value">{stats.activeLoans}</span>
             </div>
             <div className="card card-pad glass-card stat-card">
-              <span className="stat-label">Open Exchange Offers</span>
+              <span className="stat-label">Open Community Requests</span>
               <span className="stat-value">{stats.openOffers}</span>
             </div>
             <div className="card card-pad glass-card stat-card">
-              <span className="stat-label">Active Trades</span>
+              <span className="stat-label">Active Coordinations</span>
               <span className="stat-value">{stats.activeTrades}</span>
             </div>
             <div className="card card-pad glass-card stat-card">

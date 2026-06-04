@@ -19,11 +19,11 @@ const initialOfferForm = {
 };
 
 const tabs = [
-  ["browse", "Browse Offers"],
-  ["post", "Post Offer"],
-  ["mine", "My Trades"],
-  ["active", "Active Trades"],
-  ["history", "Trade History"],
+  ["browse", "Browse Requests"],
+  ["post", "Post Request"],
+  ["mine", "My Requests"],
+  ["active", "Active Coordination"],
+  ["history", "Request History"],
 ];
 
 function Exchange() {
@@ -81,7 +81,7 @@ function Exchange() {
       });
       setErrorMessage("");
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to load your trades.");
+      const message = apiErrorMessage(error, "Unable to load your exchange requests.");
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -142,7 +142,7 @@ function Exchange() {
         price: offerForm.price.trim(),
         description: offerForm.description.trim(),
       });
-      toast.success(`Offer posted: ${response.data.offer_id}`);
+      toast.success(`Request posted: ${response.data.offer_id}`);
       setOfferForm(initialOfferForm);
       setErrorMessage("");
       await loadExchange({ quiet: true });
@@ -169,7 +169,7 @@ function Exchange() {
         offer_id: offer.offer_id,
         acceptor_address: acceptorAddress,
       });
-      toast.success("Offer accepted. Record the VLQ transaction after it is sent.");
+      toast.success("Request accepted. Record the VLQ transaction after it is sent.");
       setAcceptAddresses((current) => ({ ...current, [offer.offer_id]: "" }));
       setMyAddress(acceptorAddress);
       await loadExchange({ quiet: true });
@@ -186,7 +186,7 @@ function Exchange() {
   async function cancelOffer(offer) {
     const callerAddress = myAddress.trim();
     if (!callerAddress) {
-      toast.error("Enter your wallet address in My Trades first.");
+      toast.error("Enter your wallet address in My Requests first.");
       setActiveTab("mine");
       return;
     }
@@ -194,7 +194,7 @@ function Exchange() {
     await runOfferAction(offer, "cancel", () => api.post("/exchange/cancel", {
       offer_id: offer.offer_id,
       caller_address: callerAddress,
-    }), "Offer cancelled.");
+    }), "Request cancelled.");
   }
 
   async function recordVlqTx(offer) {
@@ -217,7 +217,7 @@ function Exchange() {
   async function confirmComplete(offer) {
     const callerAddress = myAddress.trim();
     if (!callerAddress) {
-      toast.error("Enter your wallet address in My Trades first.");
+      toast.error("Enter your wallet address in My Requests first.");
       setActiveTab("mine");
       return;
     }
@@ -241,7 +241,7 @@ function Exchange() {
       offer_id: offer.offer_id,
       caller_address: callerAddress,
       reason,
-    }), "Trade marked as disputed.");
+    }), "Coordination marked as disputed.");
     setDisputeInputs((current) => ({ ...current, [offer.offer_id]: "" }));
   }
 
@@ -254,7 +254,7 @@ function Exchange() {
       await loadExchange({ quiet: true });
       if (myAddress.trim()) await loadMyTrades(myAddress.trim());
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to update this trade.");
+      const message = apiErrorMessage(error, "Unable to update this request.");
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -265,10 +265,10 @@ function Exchange() {
   return (
     <div className="page">
       <section className="hero">
-        <span className="eyebrow">Peer to Peer Marketplace</span>
-        <h1>Exchange</h1>
+        <span className="eyebrow">Peer Community Requests</span>
+        <h1>Community Exchange Requests</h1>
         <p className="subtitle">
-          Post buy and sell offers for VLQ, accept community trades, track the VLQ transaction, and confirm completion after both sides finish their off-chain agreement.
+          Coordinate peer community requests for VLQ, accept member coordination records, track the VLQ transaction, and confirm completion after both sides finish their off-chain agreement.
         </p>
       </section>
 
@@ -278,8 +278,8 @@ function Exchange() {
       {summary && (
         <section className="card card-pad">
           <div className="grid stats-grid">
-            <SummaryStat label="Open Offers" value={summary.open_count} />
-            <SummaryStat label="Active Trades" value={summary.active_trades_count} />
+            <SummaryStat label="Open Requests" value={summary.open_count} />
+            <SummaryStat label="Active Coordinations" value={summary.active_trades_count} />
             <SummaryStat label="Completed" value={summary.completed_count} />
             <SummaryStat label="Disputed" value={summary.disputed_count} />
           </div>
@@ -297,26 +297,26 @@ function Exchange() {
       {activeTab === "browse" && (
         <section className="card card-pad stack">
           <div className="section-title">
-            <h2>Browse Offers</h2>
+            <h2>Browse Requests</h2>
             <button className="button secondary small-button" type="button" onClick={() => loadExchange()}>
               Refresh
             </button>
           </div>
           <div className="grid two-column">
             <div className="field">
-              <label htmlFor="exchange-type-filter">Type</label>
+              <label htmlFor="exchange-type-filter">Request type</label>
               <select id="exchange-type-filter" className="input" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
                 <option value="all">all</option>
-                <option value="buy">buy</option>
-                <option value="sell">sell</option>
+                <option value="buy">requesting VLQ</option>
+                <option value="sell">offering VLQ</option>
               </select>
             </div>
             <div className="field">
               <label htmlFor="exchange-search">Search terms</label>
-              <input id="exchange-search" className="input" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="price, description, or address" />
+              <input id="exchange-search" className="input" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="terms, description, or address" />
             </div>
           </div>
-          {loadingOffers ? <Spinner label="Loading open offers..." /> : (
+          {loadingOffers ? <Spinner label="Loading open requests..." /> : (
             <OfferGrid
               actionId={actionId}
               acceptAddresses={acceptAddresses}
@@ -330,9 +330,9 @@ function Exchange() {
 
       {activeTab === "post" && (
         <section className="card card-pad stack">
-          <h2>Post Offer</h2>
+          <h2>Post Request</h2>
           <p className="help-text">
-            The price field can describe money, goods, services, or any agreed value. Vorliq records the offer and VLQ transaction, but it cannot enforce off-chain delivery.
+            The terms field can describe goods, services, community support, or any agreed value. Vorliq records the request and VLQ transaction, but it cannot enforce off-chain delivery.
           </p>
           <form className="form" onSubmit={submitOffer}>
             <div className="field">
@@ -340,10 +340,10 @@ function Exchange() {
               <input id="exchange-wallet" className="input" type="text" value={offerForm.creatorAddress} onChange={(event) => updateOfferForm("creatorAddress", event.target.value)} />
             </div>
             <div className="field">
-              <label htmlFor="exchange-type">Offer Type</label>
+              <label htmlFor="exchange-type">Request Type</label>
               <select id="exchange-type" className="input" value={offerForm.offerType} onChange={(event) => updateOfferForm("offerType", event.target.value)}>
-                <option value="buy">buy</option>
-                <option value="sell">sell</option>
+                <option value="buy">requesting VLQ</option>
+                <option value="sell">offering VLQ</option>
               </select>
             </div>
             <div className="field">
@@ -351,15 +351,15 @@ function Exchange() {
               <input id="exchange-amount" className="input" type="number" min="0.000001" step="0.000001" value={offerForm.amount} onChange={(event) => updateOfferForm("amount", event.target.value)} />
             </div>
             <div className="field">
-              <label htmlFor="exchange-price">Price or Exchange Terms</label>
-              <input id="exchange-price" className="input" type="text" placeholder="for example 10 USD, goods, services, or agreed terms" value={offerForm.price} onChange={(event) => updateOfferForm("price", event.target.value)} />
+              <label htmlFor="exchange-price">Coordination Terms</label>
+              <input id="exchange-price" className="input" type="text" placeholder="goods, services, community support, or agreed terms" value={offerForm.price} onChange={(event) => updateOfferForm("price", event.target.value)} />
             </div>
             <div className="field">
               <label htmlFor="exchange-description">Description</label>
               <textarea id="exchange-description" className="textarea" value={offerForm.description} onChange={(event) => updateOfferForm("description", event.target.value)} />
             </div>
             <button className="button" type="submit" disabled={submitting}>
-              {submitting ? "Submitting..." : "Submit Offer"}
+              {submitting ? "Submitting..." : "Submit Request"}
             </button>
           </form>
         </section>
@@ -368,16 +368,16 @@ function Exchange() {
       {activeTab === "mine" && (
         <section className="card card-pad stack">
           <div className="section-title">
-            <h2>My Trades</h2>
+            <h2>My Requests</h2>
             <button className="button secondary small-button" type="button" onClick={() => loadMyTrades()}>
               Refresh
             </button>
           </div>
           <form className="form inline-form" onSubmit={(event) => { event.preventDefault(); loadMyTrades(); }}>
-            <input className="input" type="text" aria-label="Wallet address for My Trades search" placeholder="Wallet address" value={myAddress} onChange={(event) => setMyAddress(event.target.value)} />
+            <input className="input" type="text" aria-label="Wallet address for My Requests search" placeholder="Wallet address" value={myAddress} onChange={(event) => setMyAddress(event.target.value)} />
             <button className="button" type="submit">Load</button>
           </form>
-          {loadingMine ? <Spinner label="Loading your trades..." /> : (
+          {loadingMine ? <Spinner label="Loading your requests..." /> : (
             <TradeGrid
               actionId={actionId}
               disputeInputs={disputeInputs}
@@ -399,7 +399,7 @@ function Exchange() {
         <TradeSection
           actionId={actionId}
           disputeInputs={disputeInputs}
-          empty="No active trades right now."
+          empty="No active coordination records right now."
           loading={loadingOffers}
           myAddress={myAddress}
           offers={activeTrades}
@@ -410,13 +410,13 @@ function Exchange() {
           recordTxInputs={recordTxInputs}
           setDisputeInputs={setDisputeInputs}
           setRecordTxInputs={setRecordTxInputs}
-          title="Active Trades"
+          title="Active Coordination"
         />
       )}
 
       {activeTab === "history" && (
         <TradeSection
-          empty="No completed or cancelled trades yet."
+          empty="No completed or cancelled coordination records yet."
           loading={loadingOffers}
           myAddress={myAddress}
           offers={tradeHistory}
@@ -429,7 +429,7 @@ function Exchange() {
 
 function OfferGrid({ acceptAddresses, actionId, offers, onAccept, setAcceptAddresses }) {
   if (offers.length === 0) {
-    return <div className="empty-state">No open exchange offers are available yet.</div>;
+    return <div className="empty-state">No open community requests are available yet.</div>;
   }
 
   return (
@@ -469,7 +469,7 @@ function TradeSection(props) {
 
 function TradeGrid(props) {
   if (props.offers.length === 0) {
-    return <div className="empty-state">{props.empty || "No trades found for this wallet address."}</div>;
+    return <div className="empty-state">{props.empty || "No coordination records found for this wallet address."}</div>;
   }
 
   return (
@@ -488,7 +488,7 @@ function TradeDetails({ offer, showStatus = true }) {
   return (
     <>
       <div className="section-title">
-        <span className={`exchange-badge ${offer.offer_type}`}>{offer.offer_type}</span>
+        <span className={`exchange-badge ${offer.offer_type}`}>{offerTypeLabel(offer.offer_type)}</span>
         {showStatus && <span className={`status-badge ${offer.status}`}>{statusLabel(offer.status)}</span>}
       </div>
       <h3>{formatNumber(offer.amount)} VLQ</h3>
@@ -620,6 +620,10 @@ function SummaryStat({ label, value }) {
       <span className="stat-value">{value ?? 0}</span>
     </div>
   );
+}
+
+function offerTypeLabel(type) {
+  return type === "sell" ? "offering VLQ" : "requesting VLQ";
 }
 
 function userRole(offer, address) {
