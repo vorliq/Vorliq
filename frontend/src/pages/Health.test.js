@@ -38,7 +38,11 @@ beforeEach(() => {
       },
       "/migration/readiness": { success: true, migration_supported: "dry_run_only", future_database_target: "postgresql", storage_backend: "json", database_enabled: false, postgres_active: false, postgres_schema_present: true, migration_phase: "preparation", chain_source_of_truth: "json", indexes_derived: true, rollback_plan_required: true },
       "/incidents/active": { success: true, incidents: [] },
-      "/reports/weekly": { success: true, stats: { active_users: 1, transactions: 2 }, generated_at: "2026-05-25T12:00:00.000Z" },
+      "/reports/weekly": {
+        success: true,
+        stats: { active_users: 1, transactions: 2, new_exchange_offers: 3, new_exchange_trades_completed: 4 },
+        generated_at: "2026-05-25T12:00:00.000Z",
+      },
       "/mining/status": { success: true, status: { current_block_height: 42, can_mine_now: true, seconds_until_next_allowed_block: 0, current_difficulty: 4, miner_reward_after_treasury: 45, treasury_reward_per_block: 5 } },
     };
     return Promise.resolve({ data: responses[path] || { success: true } });
@@ -63,4 +67,8 @@ test("Health shows snapshot summary", async () => {
   expect(screen.getByRole("link", { name: /open snapshot verification/i })).toHaveAttribute("href", "/snapshot");
   expect(screen.getByRole("link", { name: /open snapshot archive/i })).toHaveAttribute("href", "/snapshot-archive");
   expect(screen.getByText(/protected operator channels/i)).toBeInTheDocument();
+  expect(screen.getByText(/new community requests/i)).toBeInTheDocument();
+  expect(screen.getByText(/completed coordination records/i)).toBeInTheDocument();
+  expect(screen.queryByText(/new exchange offers/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/exchange offers/i)).not.toBeInTheDocument();
 });

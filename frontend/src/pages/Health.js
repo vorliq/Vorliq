@@ -31,6 +31,15 @@ function getPublicNodeDisplayUrl(nodeUrl, fallback = "Node endpoint hidden") {
   }
 }
 
+const weeklyReportLabels = {
+  new_exchange_offers: "New community requests",
+  new_exchange_trades_completed: "Completed coordination records",
+};
+
+function weeklyReportLabel(key) {
+  return weeklyReportLabels[key] || key.replaceAll("_", " ");
+}
+
 function Health() {
   const [diagnostics, setDiagnostics] = useState(null);
   const [deployment, setDeployment] = useState(null);
@@ -964,7 +973,7 @@ function Health() {
               .filter(([key]) => !["generated_at"].includes(key))
               .map(([key, value]) => (
                 <div className="stat-card" key={key}>
-                  <span>{key.replaceAll("_", " ")}</span>
+                  <span>{weeklyReportLabel(key)}</span>
                   <strong>{String(value)}</strong>
                 </div>
               ))}
