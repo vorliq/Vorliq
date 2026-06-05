@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 _TEST_DATA_DIR = tempfile.TemporaryDirectory()
 os.environ["VORLIQ_DATA_DIR"] = _TEST_DATA_DIR.name
@@ -11,6 +12,7 @@ from app import app, node, peer_events, storage
 from block import Block
 from blockchain import Blockchain
 from peer_propagation import PeerEventLog
+from network import Network
 from transaction import SYSTEM_ADDRESS, Transaction
 from wallet import Wallet
 
@@ -141,6 +143,44 @@ class PeerPropagationTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["reason"], "invalid_hash")
+
+    def test_legacy_receive_block_route_is_retired_without_mutation(self):
+        marker = "dummy-private-key-marker-never-reflect"
+        initial_height = node.blockchain.get_block_height()
+
+        response = self.client.post(
+            "/receive_block",
+            json={
+                "index": initial_height + 1,
+                "transactions": [],
+                "previous_hash": "0" * 64,
+                "nonce": 1,
+                "hash": "bad",
+                "raw_payload": marker,
+            },
+        )
+
+        serialized = response.get_data(as_text=True)
+        body = response.get_json()
+        self.assertEqual(response.status_code, 410)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["error"]["code"], "LEGACY_PEER_BLOCK_RETIRED")
+        self.assertEqual(node.blockchain.get_block_height(), initial_height)
+        self.assertNotIn(marker, serialized)
+
+    def test_legacy_network_block_broadcast_uses_safe_peer_block_route(self):
+        network = Network()
+        network.register_peer("https://community-node.example")
+
+        with patch("network.requests.post") as post:
+            post.return_value.raise_for_status.return_value = None
+            network.broadcast_block({"index": 1})
+
+        post.assert_called_once_with(
+            "https://community-node.example/api/peer/block",
+            json={"block": {"index": 1}},
+            timeout=5,
+        )
 
     def test_peer_event_log_is_capped_and_safe(self):
         event_log = PeerEventLog(storage.data_dir / "peer_events_cap_test.json", retention_limit=3)

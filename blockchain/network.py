@@ -47,7 +47,7 @@ class Network:
     def broadcast_block(self, block: dict[str, Any]) -> None:
         for peer in self.get_peers():
             try:
-                response = requests.post(f"{peer}/receive_block", json=block, timeout=5)
+                response = requests.post(f"{peer}/api/peer/block", json={"block": block}, timeout=5)
                 response.raise_for_status()
                 vorliq_logger.info("Block broadcast succeeded to %s", peer)
             except requests.RequestException as exc:

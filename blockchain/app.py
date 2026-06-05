@@ -1707,66 +1707,19 @@ def admin_peer_propagation_status():
 
 @app.post("/receive_block")
 def receive_block():
-    try:
-        data = request.get_json(force=True)
-        received_block = Block.from_dict(data)
-        latest_block = node.blockchain.get_latest_block()
-
-        if received_block.hash == latest_block.hash:
-            return jsonify({"success": True, "message": "Block already exists"}), 200
-
-        valid_previous_hash = received_block.previous_hash == latest_block.hash
-        valid_proof = received_block.hash.startswith("0" * node.blockchain.difficulty)
-
-        if valid_previous_hash and valid_proof and node.blockchain.add_block(received_block):
-            node.blockchain.prune_pending_transactions(drop_system_rewards=False)
-            _sync_lending_pool(save=False)
-            _sync_exchange(save=False)
-            _sync_treasury(save=False)
-            _sync_faucet(save=False)
-            storage.save_chain(node.blockchain)
-            storage.save_pending(node.blockchain.pending_transactions)
-            _rebuild_indexes(save=True)
-            storage.save_lending_pool(lending_pool)
-            storage.save_exchange(exchange)
-            storage.save_treasury(treasury)
-            storage.save_faucet(faucet)
-            return jsonify({"success": True, "message": "Block accepted"}), 201
-
-        updated = network.sync_chain(node.blockchain)
-        if updated:
-            _sync_lending_pool(save=False)
-            _sync_exchange(save=False)
-            _sync_treasury(save=False)
-            _sync_faucet(save=False)
-            storage.save_chain(node.blockchain)
-            _rebuild_indexes(save=True)
-            storage.save_lending_pool(lending_pool)
-            storage.save_exchange(exchange)
-            storage.save_treasury(treasury)
-            storage.save_faucet(faucet)
-        return jsonify(
+    return (
+        jsonify(
             {
                 "success": False,
-                "message": "Received block was not valid for the local chain",
-                "chain_updated": updated,
+                "error": {
+                    "code": "LEGACY_PEER_BLOCK_RETIRED",
+                    "message": "Legacy block receive has been retired. Use /peer/block so peer blocks are validated and quarantined safely.",
+                },
+                "message": "Legacy block receive has been retired. Use /peer/block so peer blocks are validated and quarantined safely.",
             }
-        ), 409
-    except Exception as exc:
-        updated = network.sync_chain(node.blockchain)
-        if updated:
-            _sync_lending_pool(save=False)
-            _sync_exchange(save=False)
-            _sync_treasury(save=False)
-            _sync_faucet(save=False)
-            storage.save_chain(node.blockchain)
-            _rebuild_indexes(save=True)
-            storage.save_lending_pool(lending_pool)
-            storage.save_exchange(exchange)
-            storage.save_treasury(treasury)
-            storage.save_faucet(faucet)
-        vorliq_logger.error("Receive block endpoint failed: %s", exc)
-        return jsonify({"success": False, "error": str(exc), "chain_updated": updated}), 400
+        ),
+        410,
+    )
 
 
 @app.get("/peers/sync")
