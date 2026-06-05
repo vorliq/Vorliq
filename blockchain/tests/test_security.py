@@ -411,11 +411,14 @@ class SecurityEndpointTests(unittest.TestCase):
         get_balance.assert_not_called()
 
     def test_treasury_proposal_rejects_invalid_category(self):
+        proposer = Wallet().address
+        recipient = Wallet().address
+
         response = self.client.post(
             "/treasury/propose",
             json={
-                "proposer_address": "VLQ_PROPOSER",
-                "recipient_address": "VLQ_RECIPIENT",
+                "proposer_address": proposer,
+                "recipient_address": recipient,
                 "title": "Spend",
                 "description": "Fund useful community work.",
                 "category": "private",
@@ -425,6 +428,114 @@ class SecurityEndpointTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("category", response.get_json()["error"])
+
+    def test_direct_treasury_proposal_rejects_reserved_recipient(self):
+        response = self.client.post(
+            "/treasury/propose",
+            json={
+                "proposer_address": Wallet().address,
+                "recipient_address": TREASURY_ADDRESS,
+                "title": "Spend",
+                "description": "Fund useful community work.",
+                "category": "security",
+                "requested_amount": 10,
+            },
+        )
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("reserved system", body["error"])
+
+    def test_direct_treasury_proposal_rejects_client_supplied_balance(self):
+        response = self.client.post(
+            "/treasury/propose",
+            json={
+                "proposer_address": Wallet().address,
+                "recipient_address": Wallet().address,
+                "title": "Spend",
+                "description": "Fund useful community work.",
+                "category": "security",
+                "requested_amount": 10,
+                "treasury_balance": 1000000,
+            },
+        )
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("derived by the server", body["error"])
+
+    def test_direct_treasury_vote_rejects_reserved_voter(self):
+        response = self.client.post(
+            "/treasury/vote",
+            json={"proposal_id": "treasury_1", "voter_address": "SYSTEM", "vote": "yes"},
+        )
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("reserved system", body["error"])
+
+    def test_direct_treasury_vote_rejects_client_supplied_vote_weight(self):
+        voter = Wallet().address
+
+        with patch("app.node.blockchain.get_balance", return_value=10) as get_balance:
+            response = self.client.post(
+                "/treasury/vote",
+                json={
+                    "proposal_id": "treasury_1",
+                    "voter_address": voter,
+                    "voter_wallet_address": voter,
+                    "voter_balance": 1000000,
+                    "vote": "yes",
+                },
+            )
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("derived by the server", body["error"])
+        get_balance.assert_not_called()
+
+    def test_direct_treasury_vote_rejects_mismatched_balance_source(self):
+        voter = Wallet().address
+        other_wallet = Wallet().address
+
+        with patch("app.node.blockchain.get_balance", return_value=10) as get_balance:
+            response = self.client.post(
+                "/treasury/vote",
+                json={
+                    "proposal_id": "treasury_1",
+                    "voter_address": voter,
+                    "voter_wallet_address": other_wallet,
+                    "vote": "yes",
+                },
+            )
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("must match voter address", body["error"])
+        get_balance.assert_not_called()
+
+    def test_direct_treasury_cancel_rejects_mismatched_proposer_source(self):
+        proposer = Wallet().address
+        other_wallet = Wallet().address
+
+        response = self.client.post(
+            "/treasury/cancel",
+            json={
+                "proposal_id": "treasury_1",
+                "proposer_address": proposer,
+                "proposer_wallet_address": other_wallet,
+            },
+        )
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("must match proposer address", body["error"])
 
 
 if __name__ == "__main__":

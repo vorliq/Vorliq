@@ -1073,13 +1073,35 @@ def get_my_treasury():
 def create_treasury_proposal():
     try:
         data = _json_body()
+        proposer_address = _require_public_wallet_address(
+            data.get("proposer_address") or data.get("proposerAddress"),
+            "proposer address",
+        )
+        proposer_wallet_address = data.get("proposer_wallet_address") or data.get("proposerWalletAddress") or proposer_address
+        proposer_wallet_address = _require_public_wallet_address(proposer_wallet_address, "proposer wallet address")
+        if proposer_wallet_address != proposer_address:
+            raise ValueError("proposer wallet address must match proposer address")
+        recipient_address = _require_public_wallet_address(
+            data.get("recipient_address") or data.get("recipientAddress"),
+            "recipient address",
+        )
+        if (
+            data.get("treasury_balance") is not None
+            or data.get("treasuryBalance") is not None
+            or data.get("current_treasury_balance") is not None
+            or data.get("currentTreasuryBalance") is not None
+            or data.get("source_balance") is not None
+            or data.get("sourceBalance") is not None
+            or data.get("balance") is not None
+        ):
+            raise ValueError("treasury balance is derived by the server")
         proposal_id = treasury.create_proposal(
-            proposer_address=_require_text(data.get("proposer_address") or data.get("proposerAddress"), "proposer address", 160),
+            proposer_address=proposer_address,
             title=_require_text(data.get("title"), "title", MAX_TEXT_LENGTHS["proposal_title"]),
             description=_require_text(data.get("description"), "description", MAX_TEXT_LENGTHS["proposal_description"]),
             category=_require_enum(data.get("category"), "category", Treasury.VALID_CATEGORIES),
             requested_amount=_require_number(data.get("requested_amount") or data.get("requestedAmount"), "requested amount", 1_000_000),
-            recipient_address=_require_text(data.get("recipient_address") or data.get("recipientAddress"), "recipient address", 160),
+            recipient_address=recipient_address,
             current_blockchain=node.blockchain,
         )
         storage.save_treasury(treasury)
@@ -1092,8 +1114,29 @@ def create_treasury_proposal():
 @app.post("/treasury/vote")
 def vote_on_treasury_proposal():
     try:
-        data = request.get_json(force=True)
-        voter_address = data.get("voter_address") or data.get("voterAddress")
+        data = _json_body()
+        voter_address = _require_public_wallet_address(
+            data.get("voter_address") or data.get("voterAddress"),
+            "voter address",
+        )
+        voter_wallet_address = (
+            data.get("voter_wallet_address") or data.get("voterWalletAddress") or voter_address
+        )
+        voter_wallet_address = _require_public_wallet_address(voter_wallet_address, "voter wallet address")
+        if voter_wallet_address != voter_address:
+            raise ValueError("voter wallet address must match voter address")
+        if (
+            data.get("voter_balance") is not None
+            or data.get("voterBalance") is not None
+            or data.get("vote_weight") is not None
+            or data.get("voteWeight") is not None
+            or data.get("voting_balance") is not None
+            or data.get("votingBalance") is not None
+            or data.get("balance") is not None
+            or data.get("source_balance") is not None
+            or data.get("sourceBalance") is not None
+        ):
+            raise ValueError("voter balance is derived by the server")
         voter_balance = node.blockchain.get_balance(voter_address)
         proposal = treasury.vote_on_proposal(
             proposal_id=data.get("proposal_id") or data.get("proposalId"),
@@ -1117,9 +1160,17 @@ def vote_on_treasury_proposal():
 def cancel_treasury_proposal():
     try:
         data = _json_body()
+        proposer_address = _require_public_wallet_address(
+            data.get("proposer_address") or data.get("proposerAddress"),
+            "proposer address",
+        )
+        proposer_wallet_address = data.get("proposer_wallet_address") or data.get("proposerWalletAddress") or proposer_address
+        proposer_wallet_address = _require_public_wallet_address(proposer_wallet_address, "proposer wallet address")
+        if proposer_wallet_address != proposer_address:
+            raise ValueError("proposer wallet address must match proposer address")
         proposal = treasury.cancel_proposal(
             proposal_id=data.get("proposal_id") or data.get("proposalId"),
-            proposer_address=data.get("proposer_address") or data.get("proposerAddress"),
+            proposer_address=proposer_address,
         )
         storage.save_treasury(treasury)
         return jsonify({"success": True, "proposal": proposal})
