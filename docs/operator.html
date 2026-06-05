@@ -64,6 +64,12 @@
           <li>Verify <code>/api/readiness</code>, <code>/api/deployment</code>, snapshot verification, and the operator dashboard after rotation.</li>
           <li>Keep <code>backend/.env</code> untracked and ignored. Commit only placeholder examples such as <code>backend/.env.example</code>.</li>
         </ul>
+        <p>Use the <a href="secret-rotation.html">Secret Rotation Readiness</a> checklist before rotating affected categories.</p>
+      </section>
+
+      <section class="glass warning">
+        <h2>Retired Forum Tip Route Note</h2>
+        <p>Direct <code>/forum/tip/post</code> and <code>/forum/tip/reply</code> are not usable public tip routes on the public origin, but currently return 405 HTML rather than JSON 410. The API routes return 410. Keep this behavior documented unless future backend routing cleanly normalizes it.</p>
       </section>
 
       <section class="glass">
