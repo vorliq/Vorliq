@@ -5,6 +5,8 @@ jest.mock("axios");
 
 const app = require("../index");
 
+const validMiner = "3MNQE1X7T4Bz9kLmNpQrStUvWx";
+
 function forwarded(ip) {
   return { "X-Forwarded-For": ip };
 }
@@ -34,6 +36,17 @@ describe("security validation", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.message).toMatch(/miner address/i);
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  test("rejects reserved mining reward recipients before proxying", async () => {
+    const response = await request(app)
+      .post("/api/mine")
+      .set(forwarded("203.0.113.20"))
+      .send({ miner_address: "SYSTEM" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toMatch(/reserved system/i);
     expect(axios.post).not.toHaveBeenCalled();
   });
 
@@ -186,7 +199,7 @@ describe("security validation", () => {
       lastResponse = await request(app)
         .post("/api/mine")
         .set(forwarded("203.0.113.18"))
-        .send({ miner_address: "VLQ_MINER" });
+        .send({ miner_address: validMiner });
     }
 
     expect(lastResponse.status).toBe(429);

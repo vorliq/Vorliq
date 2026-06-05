@@ -48,6 +48,16 @@ class BlockchainTests(unittest.TestCase):
         self.assertEqual(blockchain.pending_transactions[1].receiver_address, blockchain.TREASURY_ADDRESS)
         self.assertEqual(blockchain.pending_transactions[1].amount, 2.5)
 
+    def test_reserved_addresses_cannot_receive_public_mining_rewards(self):
+        blockchain = Blockchain()
+
+        with self.assertRaises(ValueError) as context:
+            blockchain.mine_pending_transactions("SYSTEM")
+
+        self.assertIn("reserved system", str(context.exception))
+        self.assertEqual(len(blockchain.chain), 1)
+        self.assertEqual(len(blockchain.pending_transactions), 0)
+
     def test_halving_calculation(self):
         blockchain = Blockchain()
         self.assertEqual(blockchain.get_current_mining_reward(), 50)

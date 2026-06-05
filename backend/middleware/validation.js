@@ -142,7 +142,11 @@ function validateBody(req, res, next) {
   }
 
   if (path === "/api/mine") {
-    validateAddress(req, res, body, ["miner_address", "minerAddress"], "miner address");
+    const minerAddress = validatePublicWalletAddress(req, res, body, ["miner_address", "minerAddress"], "miner address");
+    if (res.headersSent) return;
+    if (SYSTEM_ADDRESSES.has(minerAddress) || isReservedAddress(minerAddress)) {
+      return reject(req, res, "reserved system addresses cannot receive public mining rewards.");
+    }
   }
 
   if (req.method === "POST" && path === "/api/forum/post") {

@@ -664,7 +664,10 @@ def create_transaction():
 def mine_block():
     try:
         data = _json_body()
-        miner_address = _require_text(data.get("miner_address") or data.get("minerAddress"), "miner address", 160)
+        miner_address = _require_public_wallet_address(
+            data.get("miner_address") or data.get("minerAddress"),
+            "miner address",
+        )
         raw_block = node.mine_new_block(miner_address)
         block = node.blockchain.get_block_detail(str(raw_block["index"])) or raw_block
         _sync_lending_pool(save=False)

@@ -106,6 +106,14 @@ class SecurityEndpointTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("base58", response.get_json()["error"])
 
+    def test_public_mine_endpoint_rejects_reserved_miner(self):
+        response = self.client.post("/mine", json={"miner_address": "SYSTEM"})
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("reserved system", body["error"])
+
     def test_internal_system_transactions_still_allowed(self):
         blockchain = Blockchain()
 

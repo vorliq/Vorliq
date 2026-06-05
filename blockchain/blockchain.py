@@ -150,6 +150,9 @@ class Blockchain:
     def mine_pending_transactions(self, miner_address: str) -> Block:
         if not miner_address:
             raise ValueError("miner_address is required")
+        miner_address = str(miner_address).replace("\x00", "").strip()
+        if miner_address in SYSTEM_ADDRESSES or miner_address == self.TREASURY_ADDRESS:
+            raise ValueError("reserved system addresses cannot receive public mining rewards")
 
         latest_block = self.get_latest_block()
         elapsed_seconds = time.time() - latest_block.timestamp
