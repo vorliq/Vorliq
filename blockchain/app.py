@@ -144,6 +144,15 @@ def _json_body() -> dict:
     return data
 
 
+def _require_admin_request():
+    admin_token = os.environ.get("ADMIN_TOKEN", "")
+    authorization = request.headers.get("Authorization", "")
+    provided_token = authorization.removeprefix("Bearer ").strip() if authorization.startswith("Bearer ") else ""
+    if not admin_token or not provided_token or provided_token != admin_token:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+    return None
+
+
 def _pick(data: dict, *names: str):
     for name in names:
         if data.get(name) is not None:
@@ -1828,6 +1837,9 @@ def get_registry_lifecycle():
 
 @app.post("/registry/admin/archive")
 def admin_archive_registry_node():
+    unauthorized = _require_admin_request()
+    if unauthorized:
+        return unauthorized
     try:
         data = _json_body()
         archived_node = node_registry.archive_node(
@@ -1846,6 +1858,9 @@ def admin_archive_registry_node():
 
 @app.post("/registry/admin/restore")
 def admin_restore_registry_node():
+    unauthorized = _require_admin_request()
+    if unauthorized:
+        return unauthorized
     try:
         data = _json_body()
         restored_node = node_registry.restore_node(
@@ -1862,6 +1877,9 @@ def admin_restore_registry_node():
 
 @app.post("/registry/admin/retire")
 def admin_retire_registry_node():
+    unauthorized = _require_admin_request()
+    if unauthorized:
+        return unauthorized
     try:
         data = _json_body()
         retired_node = node_registry.retire_node(
@@ -2333,6 +2351,9 @@ def _admin_bool(value: object, field_name: str) -> bool:
 
 @app.post("/forum/admin/pin")
 def admin_pin_forum_post():
+    unauthorized = _require_admin_request()
+    if unauthorized:
+        return unauthorized
     try:
         data = _json_body()
         post = forum.set_pinned(
@@ -2348,6 +2369,9 @@ def admin_pin_forum_post():
 
 @app.post("/forum/admin/feature")
 def admin_feature_forum_post():
+    unauthorized = _require_admin_request()
+    if unauthorized:
+        return unauthorized
     try:
         data = _json_body()
         post = forum.set_featured(
@@ -2363,6 +2387,9 @@ def admin_feature_forum_post():
 
 @app.get("/forum/admin/posts")
 def admin_get_forum_posts():
+    unauthorized = _require_admin_request()
+    if unauthorized:
+        return unauthorized
     try:
         limit, offset = _pagination()
         posts, total, has_more = _page([_public_forum_post(post, include_hidden_replies=True) for post in forum.get_all_posts(include_hidden=True)], limit, offset)
@@ -2373,6 +2400,9 @@ def admin_get_forum_posts():
 
 @app.post("/forum/admin/moderate")
 def admin_moderate_forum_content():
+    unauthorized = _require_admin_request()
+    if unauthorized:
+        return unauthorized
     try:
         data = _json_body()
         target_type = _require_enum(data.get("target_type") or data.get("targetType") or "post", "target type", {"post", "reply"})

@@ -99,4 +99,22 @@ describe("admin routes", () => {
     expect(response.status).toBe(401);
     expect(axios.post).not.toHaveBeenCalled();
   });
+
+  test("forum moderation proxy forwards validated admin authorization to Flask", async () => {
+    axios.post.mockResolvedValueOnce({ status: 200, data: { success: true, post: { post_id: "post", pinned: true } } });
+
+    const response = await request(app)
+      .post("/api/admin/moderation/forum/pin")
+      .set("Authorization", "Bearer admin-test-token")
+      .send({ post_id: "post", pinned: true });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(axios.post).toHaveBeenCalledWith(
+      expect.stringContaining("/forum/admin/pin"),
+      { post_id: "post", pinned: true },
+      { headers: { Authorization: "Bearer admin-test-token" } }
+    );
+    expect(JSON.stringify(response.body)).not.toContain("admin-test-token");
+  });
 });

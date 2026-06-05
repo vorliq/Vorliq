@@ -206,6 +206,74 @@ class SecurityEndpointTests(unittest.TestCase):
         self.assertIn("saved-wallet local signing flows", body["message"])
         self.assertNotIn(marker, serialized)
 
+    def test_direct_forum_admin_mutation_requires_admin_token(self):
+        previous_token = os.environ.get("ADMIN_TOKEN")
+        os.environ["ADMIN_TOKEN"] = "admin-test-token"
+        try:
+            response = self.client.post(
+                "/forum/admin/pin",
+                json={"post_id": "post_1", "pinned": True},
+            )
+        finally:
+            if previous_token is None:
+                os.environ.pop("ADMIN_TOKEN", None)
+            else:
+                os.environ["ADMIN_TOKEN"] = previous_token
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 401)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["message"], "Unauthorized")
+
+    def test_direct_forum_admin_mutation_allows_authorized_operator(self):
+        previous_token = os.environ.get("ADMIN_TOKEN")
+        os.environ["ADMIN_TOKEN"] = "admin-test-token"
+        try:
+            create_response = self.client.post(
+                "/forum/post",
+                json={
+                    "author_address": "VLQ_AUTHOR",
+                    "title": "Moderation test",
+                    "body": "Safe public test content.",
+                    "category": "general",
+                },
+            )
+            post_id = create_response.get_json()["post_id"]
+            response = self.client.post(
+                "/forum/admin/pin",
+                headers={"Authorization": "Bearer admin-test-token"},
+                json={"post_id": post_id, "pinned": True},
+            )
+        finally:
+            if previous_token is None:
+                os.environ.pop("ADMIN_TOKEN", None)
+            else:
+                os.environ["ADMIN_TOKEN"] = previous_token
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(body["success"])
+        self.assertTrue(body["post"]["pinned"])
+
+    def test_direct_registry_admin_mutation_requires_admin_token(self):
+        previous_token = os.environ.get("ADMIN_TOKEN")
+        os.environ["ADMIN_TOKEN"] = "admin-test-token"
+        try:
+            response = self.client.post(
+                "/registry/admin/archive",
+                json={"node_url": "https://community-node.example", "reason": "Lifecycle review"},
+            )
+        finally:
+            if previous_token is None:
+                os.environ.pop("ADMIN_TOKEN", None)
+            else:
+                os.environ["ADMIN_TOKEN"] = previous_token
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 401)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["message"], "Unauthorized")
+
     def test_lending_request_rejects_invalid_amount(self):
         response = self.client.post(
             "/lending/request",

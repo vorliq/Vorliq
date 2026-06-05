@@ -290,7 +290,9 @@ async function postLifecycleAction(action, req, res) {
         message: "Trusted public node cannot be archived without force=true.",
       });
     }
-    const response = await axios.post(`${flaskUrl}/registry/admin/${action}`, payload);
+    const response = await axios.post(`${flaskUrl}/registry/admin/${action}`, payload, {
+      headers: { Authorization: req.get("authorization") || "" },
+    });
     failIfUnsafe(response.data);
     return res.status(response.status).json(response.data);
   } catch (error) {

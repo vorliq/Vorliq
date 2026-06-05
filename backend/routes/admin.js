@@ -142,6 +142,16 @@ async function flaskGet(pathname, options = {}) {
   return response.data || {};
 }
 
+function flaskAdminOptions(req, options = {}) {
+  return {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: req.get("authorization") || "",
+    },
+  };
+}
+
 function text(value, max = 500) {
   return String(value || "").replace(/[<>]/g, "").trim().slice(0, max);
 }
@@ -400,7 +410,7 @@ router.post("/api/admin/backups/verify", async (req, res) => {
 
 router.get("/api/admin/moderation/forum", async (req, res) => {
   try {
-    const data = await flaskGet("/forum/admin/posts", { params: { limit: 25, offset: 0 } });
+    const data = await flaskGet("/forum/admin/posts", flaskAdminOptions(req, { params: { limit: 25, offset: 0 } }));
     const posts = await Promise.all((data.posts || []).map(moderationPost));
     return res.json({ success: true, posts, total: safeNumber(data.total, posts.length) });
   } catch (error) {
@@ -446,7 +456,7 @@ router.post("/api/admin/moderation/forum/pin", async (req, res) => {
     const response = await axios.post(`${flaskUrl}/forum/admin/pin`, {
       post_id: requireLimitedText(req.body?.post_id || req.body?.postId, "post ID", 128),
       pinned: booleanValue(req.body?.pinned, "pinned"),
-    });
+    }, flaskAdminOptions(req));
     return res.status(response.status).json(response.data);
   } catch (error) {
     const status = error.status || error.response?.status || 400;
@@ -459,7 +469,7 @@ router.post("/api/admin/moderation/forum/feature", async (req, res) => {
     const response = await axios.post(`${flaskUrl}/forum/admin/feature`, {
       post_id: requireLimitedText(req.body?.post_id || req.body?.postId, "post ID", 128),
       featured: booleanValue(req.body?.featured, "featured"),
-    });
+    }, flaskAdminOptions(req));
     return res.status(response.status).json(response.data);
   } catch (error) {
     const status = error.status || error.response?.status || 400;
@@ -475,7 +485,7 @@ router.post("/api/admin/moderation/forum/moderate", async (req, res) => {
       reply_id: text(req.body?.reply_id || req.body?.replyId, 128),
       status: requireLimitedText(req.body?.status, "moderation status", 20),
       reason: text(req.body?.reason, 240),
-    });
+    }, flaskAdminOptions(req));
     return res.status(response.status).json(response.data);
   } catch (error) {
     const status = error.status || error.response?.status || 400;

@@ -176,11 +176,15 @@ describe("registry trust routes", () => {
     expect(response.status).toBe(200);
     expect(response.body.node.lifecycle_status).toBe("archived");
     expect(JSON.stringify(response.body)).not.toContain("registry-admin-test");
-    expect(axios.post).toHaveBeenCalledWith("http://localhost:5001/registry/admin/archive", {
-      node_url: "https://old.example.org",
-      reason: "old test node",
-      force: false,
-    });
+    expect(axios.post).toHaveBeenCalledWith(
+      "http://localhost:5001/registry/admin/archive",
+      {
+        node_url: "https://old.example.org",
+        reason: "old test node",
+        force: false,
+      },
+      { headers: { Authorization: "Bearer registry-admin-test" } }
+    );
 
     if (originalToken === undefined) delete process.env.ADMIN_TOKEN;
     else process.env.ADMIN_TOKEN = originalToken;
