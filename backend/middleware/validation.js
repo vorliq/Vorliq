@@ -200,8 +200,30 @@ function validateBody(req, res, next) {
   if (path === "/api/lending/vote") {
     requireText(req, res, body, ["loan_id", "loanId"], "loan ID", 128);
     if (res.headersSent) return;
-    validateAddress(req, res, body, ["voter_address", "voterAddress"], "voter address");
+    const voterAddress = validatePublicWalletAddress(req, res, body, ["voter_address", "voterAddress"], "voter address");
     if (res.headersSent) return;
+    if (SYSTEM_ADDRESSES.has(voterAddress) || isReservedAddress(voterAddress)) {
+      return reject(req, res, "system-controlled addresses cannot cast public lending votes.");
+    }
+    const voterWalletAddress = get(body, "voter_wallet_address", "voterWalletAddress");
+    if (voterWalletAddress !== undefined) {
+      const normalizedWalletAddress = validatePublicWalletAddress(
+        req,
+        res,
+        body,
+        ["voter_wallet_address", "voterWalletAddress"],
+        "voter wallet address"
+      );
+      if (res.headersSent) return;
+      if (normalizedWalletAddress !== voterAddress) {
+        return reject(req, res, "voter wallet address must match voter address.");
+      }
+    }
+    if (
+      get(body, "voter_balance", "voterBalance", "vote_weight", "voteWeight", "voting_balance", "votingBalance", "balance") !== undefined
+    ) {
+      return reject(req, res, "voter balance is derived by the server.");
+    }
     requireEnum(req, res, body, ["vote"], "vote", new Set(["yes", "no"]));
   }
 

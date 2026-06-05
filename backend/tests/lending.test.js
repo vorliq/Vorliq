@@ -6,6 +6,9 @@ jest.mock("axios");
 const app = require("../index");
 const { clearCache } = require("../cache");
 
+const validVoter = "3MNQE1X7T4Bz9kLmNpQrStUvWx";
+const otherValidVoter = "7YWHMfk9JZe9LMQaPq2X3B4C5D";
+
 beforeEach(() => {
   jest.clearAllMocks();
   clearCache();
@@ -97,5 +100,59 @@ describe("lending routes", () => {
       loan_id: "loan-1",
       repayer_address: "VLQ_BORROWER",
     });
+  });
+
+  test("rejects reserved lending vote identity before proxying", async () => {
+    const response = await request(app)
+      .post("/api/lending/vote")
+      .send({ loan_id: "loan-1", voter_address: "LENDING_POOL", vote: "yes" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toMatch(/reserved system|system-controlled/i);
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  test("rejects client supplied lending vote weight before proxying", async () => {
+    const response = await request(app)
+      .post("/api/lending/vote")
+      .send({ loan_id: "loan-1", voter_address: validVoter, vote: "yes", voter_balance: 1000000 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toMatch(/derived by the server/i);
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  test("rejects mismatched lending vote balance source before proxying", async () => {
+    const response = await request(app)
+      .post("/api/lending/vote")
+      .send({
+        loan_id: "loan-1",
+        voter_address: validVoter,
+        voter_wallet_address: otherValidVoter,
+        vote: "yes",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toMatch(/must match voter address/i);
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  test("forwards validated lending votes", async () => {
+    axios.post.mockResolvedValue({
+      status: 200,
+      data: { success: true, loan: { loan_id: "loan-1", votes: { [validVoter]: "yes" } } },
+    });
+    const body = {
+      loan_id: "loan-1",
+      voter_address: validVoter,
+      voter_wallet_address: validVoter,
+      vote: "yes",
+    };
+
+    const response = await request(app).post("/api/lending/vote").send(body);
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(axios.post).toHaveBeenCalledWith("http://localhost:5001/lending/vote", body);
   });
 });

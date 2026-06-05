@@ -341,6 +341,59 @@ class SecurityEndpointTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("greater than zero", response.get_json()["error"])
 
+    def test_direct_lending_vote_rejects_reserved_voter(self):
+        response = self.client.post(
+            "/lending/vote",
+            json={"loan_id": "loan_1", "voter_address": "LENDING_POOL", "vote": "yes"},
+        )
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("reserved system", body["error"])
+
+    def test_direct_lending_vote_rejects_client_supplied_vote_weight(self):
+        voter = Wallet().address
+
+        with patch("app.node.blockchain.get_balance", return_value=10) as get_balance:
+            response = self.client.post(
+                "/lending/vote",
+                json={
+                    "loan_id": "loan_1",
+                    "voter_address": voter,
+                    "voter_wallet_address": voter,
+                    "voter_balance": 1000000,
+                    "vote": "yes",
+                },
+            )
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("derived by the server", body["error"])
+        get_balance.assert_not_called()
+
+    def test_direct_lending_vote_rejects_mismatched_balance_source(self):
+        voter = Wallet().address
+        other_wallet = Wallet().address
+
+        with patch("app.node.blockchain.get_balance", return_value=10) as get_balance:
+            response = self.client.post(
+                "/lending/vote",
+                json={
+                    "loan_id": "loan_1",
+                    "voter_address": voter,
+                    "voter_wallet_address": other_wallet,
+                    "vote": "yes",
+                },
+            )
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("must match voter address", body["error"])
+        get_balance.assert_not_called()
+
     def test_treasury_proposal_rejects_invalid_category(self):
         response = self.client.post(
             "/treasury/propose",
