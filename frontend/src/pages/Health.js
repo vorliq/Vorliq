@@ -5,16 +5,30 @@ import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
-function getPublicNodeDisplayUrl(nodeUrl) {
-  if (
-    typeof window !== "undefined" &&
-    window.location.hostname !== "localhost" &&
-    /\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(nodeUrl)
-  ) {
-    return window.location.origin;
-  }
+function isNumericHost(hostname) {
+  const parts = String(hostname || "").split(".");
+  return parts.length === 4 && parts.every((part) => {
+    if (!/^\d{1,3}$/.test(part)) return false;
+    const value = Number(part);
+    return value >= 0 && value <= 255;
+  });
+}
 
-  return nodeUrl;
+function getPublicNodeDisplayUrl(nodeUrl, fallback = "Node endpoint hidden") {
+  if (!nodeUrl) return "Unavailable";
+  const text = String(nodeUrl);
+
+  try {
+    const parsed = new URL(text);
+    const hostname = parsed.hostname.toLowerCase();
+    if (hostname === "localhost" || hostname === "::1" || isNumericHost(hostname)) {
+      return fallback;
+    }
+    return text;
+  } catch {
+    if (/\d{1,3}(\.\d{1,3}){3}/.test(text)) return fallback;
+    return text;
+  }
 }
 
 function Health() {
@@ -123,7 +137,7 @@ function Health() {
         const nodes = registeredNodes.length > 0 ? registeredNodes : fallbackNodes;
         const backendNodeIsOnline = Boolean(diagnosticsResponse.data?.success);
         const nodeChecks = nodes.map((node) => {
-          const displayUrl = getPublicNodeDisplayUrl(node.node_url);
+          const displayUrl = getPublicNodeDisplayUrl(node.node_url, "Public node endpoint hidden");
 
           return {
             ...node,
@@ -184,7 +198,7 @@ function Health() {
     }
 
     return [
-      ["Node URL", diagnostics.node_url],
+      ["Node URL", getPublicNodeDisplayUrl(diagnostics.node_url, "Local node endpoint")],
       ["Current Block Height", diagnostics.block_height],
       ["Chain Valid", diagnostics.chain_valid ? "Valid" : "Invalid"],
       ["Pending Transactions", diagnostics.pending_transactions],
@@ -211,7 +225,7 @@ function Health() {
         <span className="eyebrow">Node Operations</span>
         <h1>Health</h1>
         <p className="subtitle">
-          Monitor local node diagnostics, public registry nodes, and live network response times.
+          Monitor readiness, deployment, bootstrap, snapshots, audit, storage, and peer propagation from public-safe status data.
         </p>
       </section>
 
@@ -223,7 +237,8 @@ function Health() {
           <span className="eyebrow">Read-only CLI</span>
         </div>
         <p className="help-text">
-          Run <code>node tools/node_doctor.js --base-url http://127.0.0.1:5000 --trusted-node https://vorliq.org</code> after install or update.
+          Run <code>node tools/node_doctor.js --base-url http://localhost:5000 --trusted-node https://vorliq.org</code> after install or update.
+          Public pages summarize safe status only and do not need private keys, wallet passwords, raw logs, environment values, or operator credentials.
         </p>
       </section>
 
@@ -318,6 +333,60 @@ function Health() {
         <p className="help-text">
           <a href="/readiness">Open full readiness report</a>
         </p>
+      </section>
+
+      <section className="card card-pad health-section">
+        <div className="section-title">
+          <h2>Production Hardening Map</h2>
+          <span className="eyebrow">Read-only operator view</span>
+        </div>
+        {loading ? (
+          <Spinner label="Loading production hardening map..." />
+        ) : (
+          <>
+            <div className="stats-grid compact-stats">
+              <div className="stat-card">
+                <span>Deployed commit</span>
+                <strong className="hash-text">{deployment?.commit_hash || versionMetadata?.deployment_commit || "Unavailable"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Readiness gate</span>
+                <strong>{readiness?.overall_status || "Unavailable"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Bootstrap chain</span>
+                <strong>{bootstrapStatus?.success ? (bootstrapStatus.chain_valid ? "Valid" : "Review") : "Unavailable"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Snapshot status</span>
+                <strong>{snapshotVerification?.success ? (snapshotVerification.verified ? "Verified" : "Review") : "Unavailable"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Storage health</span>
+                <strong>{storageHealth?.overall_status || "Unavailable"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Peer propagation</span>
+                <strong>{peerPropagation?.success ? (peerPropagation.receive_enabled ? "Receiving" : "Review") : "Unavailable"}</strong>
+              </div>
+            </div>
+            <p className="help-text">
+              Warnings are review signals, not automatic failures. Treat failed storage, signature, audit,
+              chain-validity, security, or critical node-monitor checks as serious until an operator reviews them.
+              Known inactive historical nodes can create non-critical warnings while the live trusted node remains healthy.
+            </p>
+            <div className="button-row">
+              <a className="button secondary small-button" href="/readiness">Readiness</a>
+              <a className="button secondary small-button" href="/network">Network</a>
+              <a className="button secondary small-button" href="/peers/propagation">Peer Propagation</a>
+              <a className="button secondary small-button" href="/audit">Audit</a>
+              <a className="button secondary small-button" href="/docs/deploy.html">Deploy Docs</a>
+              <a className="button secondary small-button" href="/docs/recovery.html">Recovery Docs</a>
+              <a className="button secondary small-button" href="/docs/node-monitoring.html">Node Monitoring Docs</a>
+              <a className="button secondary small-button" href="/docs/signed-snapshots.html">Signed Snapshots</a>
+            </div>
+          </>
+        )}
       </section>
 
       <section className="card card-pad health-section">
@@ -835,7 +904,7 @@ function Health() {
           <div className="empty-state">All clear.</div>
         )}
         <p className="help-text incident-admin-hint">
-          Incident creation and updates are available through the protected API using ADMIN_TOKEN.
+          Incident creation and updates are available only through protected operator channels.
         </p>
       </section>
 

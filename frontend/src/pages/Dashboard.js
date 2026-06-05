@@ -24,7 +24,8 @@ const quickLinks = [
   { to: "/forum", label: "Forum", detail: "Post messages and reply to members" },
   { to: "/profiles", label: "Profiles", detail: "View public wallet-linked profiles" },
   { to: "/registry", label: "Registry", detail: "Find and connect to public nodes" },
-  { to: "/health", label: "Health", detail: "Check node status and deployment" },
+  { to: "/health", label: "Health", detail: "Check readiness, node status, and deployment" },
+  { to: "/readiness", label: "Readiness", detail: "Review production gate checks and warnings" },
 ];
 
 const getStartedSteps = [

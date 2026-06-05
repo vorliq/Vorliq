@@ -66,6 +66,10 @@ test("PeerPropagation page renders status metrics and events", async () => {
   expect(screen.getByText(/accepted tx/i)).toBeInTheDocument();
   expect(screen.getByText(/recent peer events/i)).toBeInTheDocument();
   expect(screen.getByText(/ahead_candidate/i)).toBeInTheDocument();
+  expect(screen.getByText(/event peer 1 endpoint hidden/i)).toBeInTheDocument();
+  expect(screen.queryByText(/peer\.example\.org/i)).not.toBeInTheDocument();
   expect(screen.getByText(/what gets accepted/i)).toBeInTheDocument();
   expect(screen.getByText(/what gets quarantined/i)).toBeInTheDocument();
+  expect(screen.getByText(/public views hide peer endpoints/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /node monitoring docs/i })).toHaveAttribute("href", "/docs/node-monitoring.html");
 });

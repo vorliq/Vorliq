@@ -26,6 +26,10 @@ function statusClass(status) {
   return "unknown";
 }
 
+function safePeerLabel(index, prefix = "Peer") {
+  return `${prefix} ${index + 1} endpoint hidden`;
+}
+
 function PeerPropagation() {
   const [status, setStatus] = useState(null);
   const [events, setEvents] = useState([]);
@@ -111,9 +115,9 @@ function PeerPropagation() {
             </div>
             {status?.eligible_peers?.length ? (
               <div className="peer-list">
-                {status.eligible_peers.map((peer) => (
+                {status.eligible_peers.map((peer, index) => (
                   <div className="peer-item" key={peer}>
-                    <span className="peer-url">{peer}</span>
+                    <span className="peer-url">{safePeerLabel(index)}</span>
                     <span className="status-badge confirmed">synced</span>
                   </div>
                 ))}
@@ -132,12 +136,12 @@ function PeerPropagation() {
               <div className="empty-state">No peer propagation events have been recorded yet.</div>
             ) : (
               <div className="history-list">
-                {events.map((event) => (
+                {events.map((event, index) => (
                   <div className="history-item" key={event.event_id}>
                     <span>{displayTime(event.timestamp)}</span>
                     <span>{event.direction}</span>
                     <span>{event.type}</span>
-                    <span className="meta-value">{shortValue(event.peer_url || "unknown", 28)}</span>
+                    <span className="meta-value">{safePeerLabel(index, "Event peer")}</span>
                     <span className={`status-badge ${statusClass(event.status)}`}>{event.status}</span>
                     <span>{event.reason || "none"}</span>
                     <span>{shortValue(event.tx_id)}</span>
@@ -163,7 +167,19 @@ function PeerPropagation() {
 
           <section className="card card-pad stack">
             <h2>Operator Notes</h2>
-            <p>Broadcast can be disabled while receive validation remains active. Peer data never replaces the local chain automatically, and peer APIs should never receive private keys or admin tokens.</p>
+            <p>
+              Broadcast can be disabled while receive validation remains active. Peer data never replaces
+              the local chain automatically, and public views hide peer endpoints while preserving status counts.
+            </p>
+            <p>
+              Peer APIs should never receive private keys, wallet passwords, raw logs, environment values, or operator credentials.
+            </p>
+            <div className="button-row">
+              <a className="button secondary small-button" href="/network">Network</a>
+              <a className="button secondary small-button" href="/health">Health</a>
+              <a className="button secondary small-button" href="/docs/peer-propagation.html">Propagation Docs</a>
+              <a className="button secondary small-button" href="/docs/node-monitoring.html">Node Monitoring Docs</a>
+            </div>
           </section>
         </>
       )}

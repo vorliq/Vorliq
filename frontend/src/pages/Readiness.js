@@ -23,6 +23,7 @@ function groupByCategory(checks = []) {
 function Readiness() {
   const [readiness, setReadiness] = useState(null);
   const [nodeMonitor, setNodeMonitor] = useState(null);
+  const [deployment, setDeployment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -33,13 +34,15 @@ function Readiness() {
       setLoading(true);
       setErrorMessage("");
       try {
-        const [response, monitorResponse] = await Promise.all([
+        const [response, monitorResponse, deploymentResponse] = await Promise.all([
           api.get("/readiness"),
           api.get("/nodes/monitor").catch(() => ({ data: null })),
+          api.get("/deployment").catch(() => ({ data: null })),
         ]);
         if (mounted) {
           setReadiness(response.data);
           setNodeMonitor(monitorResponse.data);
+          setDeployment(deploymentResponse.data);
         }
       } catch (error) {
         if (mounted) setErrorMessage(apiErrorMessage(error, "Production readiness is unavailable."));
@@ -103,6 +106,10 @@ function Readiness() {
               <div className="stat-card">
                 <span>Index health</span>
                 <strong>{readiness.index_health || "unknown"}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Deployed commit</span>
+                <strong className="hash-text">{deployment?.commit_hash || readiness.deployment_commit || "unknown"}</strong>
               </div>
               <div className="stat-card">
                 <span>Index rebuild needed</span>
@@ -211,6 +218,49 @@ function Readiness() {
                 <span>Active nodes</span>
                 <strong>{nodeMonitor?.active_node_count ?? "unknown"}</strong>
               </div>
+            </div>
+          </section>
+
+          <section className="card card-pad">
+            <div className="section-title">
+              <h2>How To Read This</h2>
+              <span className="eyebrow">Public-safe status</span>
+            </div>
+            <div className="release-list">
+              <article className="release-item">
+                <span className="status-badge pass">pass</span>
+                <h3>Passing</h3>
+                <p>The check is currently satisfied by the public readiness API.</p>
+              </article>
+              <article className="release-item">
+                <span className="status-badge warning">warning</span>
+                <h3>Warning</h3>
+                <p>Review the check before relying on it. Known inactive historical nodes can be non-critical warnings.</p>
+              </article>
+              <article className="release-item">
+                <span className="status-badge fail">fail</span>
+                <h3>Failing</h3>
+                <p>Stop and investigate before treating production as ready.</p>
+              </article>
+              <article className="release-item">
+                <span className="status-badge warning">unknown</span>
+                <h3>Unavailable</h3>
+                <p>Missing data is not treated as healthy. Use operator docs and protected checks before acting.</p>
+              </article>
+            </div>
+            <p className="help-text">
+              Storage, signature, audit, chain-validity, security, and critical node-monitor warnings are serious
+              until reviewed. This public report does not expose private keys, wallet passwords, raw logs,
+              environment values, server paths, IP addresses, user-agent strings, or operator credentials.
+            </p>
+            <div className="button-row">
+              <a className="button secondary small-button" href="/health">Health</a>
+              <a className="button secondary small-button" href="/network">Network</a>
+              <a className="button secondary small-button" href="/peers/propagation">Peer Propagation</a>
+              <a className="button secondary small-button" href="/audit">Audit</a>
+              <a className="button secondary small-button" href="/docs/readiness.html">Readiness Docs</a>
+              <a className="button secondary small-button" href="/docs/deploy.html">Deploy Docs</a>
+              <a className="button secondary small-button" href="/docs/recovery.html">Recovery Docs</a>
             </div>
           </section>
 

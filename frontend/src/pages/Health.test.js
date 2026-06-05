@@ -50,12 +50,17 @@ test("Health shows snapshot summary", async () => {
 
   expect(await screen.findByRole("heading", { name: /node doctor/i })).toBeInTheDocument();
   expect(screen.getByText(/node tools\/node_doctor\.js/i)).toBeInTheDocument();
+  expect(screen.getByText(/localhost:5000/i)).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: /snapshot verification/i })).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: /bootstrap status/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /production hardening map/i })).toBeInTheDocument();
+  expect(screen.getByText(/known inactive historical nodes/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /node monitoring docs/i })).toHaveAttribute("href", "/docs/node-monitoring.html");
   expect(await screen.findByText(/0000latest/i)).toBeInTheDocument();
   expect(screen.getAllByText(/available/i).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/snapshot archive/i).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/valid/i).length).toBeGreaterThan(0);
   expect(screen.getByRole("link", { name: /open snapshot verification/i })).toHaveAttribute("href", "/snapshot");
   expect(screen.getByRole("link", { name: /open snapshot archive/i })).toHaveAttribute("href", "/snapshot-archive");
+  expect(screen.getByText(/protected operator channels/i)).toBeInTheDocument();
 });

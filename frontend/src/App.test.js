@@ -1532,6 +1532,9 @@ test("Dashboard route still renders the existing real dashboard", async () => {
   expect(await screen.findByRole("heading", { name: /get started with vorliq/i })).toBeInTheDocument();
   expect(await screen.findByText(/block production/i)).toBeInTheDocument();
   expect(screen.getAllByRole("link", { name: /^profiles$/i }).some((link) => link.getAttribute("href") === "/profiles")).toBe(true);
+  expect(screen.getByRole("link", { name: /health check readiness/i })).toHaveAttribute("href", "/health");
+  expect(screen.getByRole("link", { name: /network view public node/i })).toHaveAttribute("href", "/network");
+  expect(screen.getByRole("link", { name: /readiness review production gate/i })).toHaveAttribute("href", "/readiness");
 });
 
 test("Profiles route aliases the public profile page", async () => {

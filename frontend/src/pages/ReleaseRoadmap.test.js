@@ -240,6 +240,10 @@ test("Readiness page renders score, status, and checks", async () => {
   expect(await screen.findByText("86")).toBeInTheDocument();
   expect(await screen.findByText("Backend health")).toBeInTheDocument();
   expect(await screen.findByText(/technical readiness signal only/i)).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /how to read this/i })).toBeInTheDocument();
+  expect(await screen.findByText(/known inactive historical nodes/i)).toBeInTheDocument();
+  expect(await screen.findByText(/abc123def456/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /deploy docs/i })).toHaveAttribute("href", "/docs/deploy.html");
 });
 
 test("Health page renders readiness summary", async () => {
@@ -250,5 +254,6 @@ test("Health page renders readiness summary", async () => {
   );
 
   expect(await screen.findByRole("heading", { level: 2, name: /production readiness/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /production hardening map/i })).toBeInTheDocument();
   expect((await screen.findAllByText("Warnings")).length).toBeGreaterThan(0);
 });
