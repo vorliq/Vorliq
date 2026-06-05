@@ -183,6 +183,8 @@ app.use(
     "/api/forum/feature",
     "/api/reports",
     "/api/price/signal",
+    "/api/governance/vote",
+    "/api/governance/cancel",
     "/api/lending/request",
     "/api/lending/vote",
     "/api/lending/repay",

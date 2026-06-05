@@ -2,6 +2,7 @@ import unittest
 import os
 import tempfile
 import hashlib
+from unittest.mock import patch
 
 _TEST_DATA_DIR = tempfile.TemporaryDirectory()
 os.environ["VORLIQ_DATA_DIR"] = _TEST_DATA_DIR.name
@@ -273,6 +274,59 @@ class SecurityEndpointTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertFalse(body["success"])
         self.assertEqual(body["message"], "Unauthorized")
+
+    def test_direct_governance_vote_rejects_reserved_voter(self):
+        response = self.client.post(
+            "/governance/vote",
+            json={"proposal_id": "prop_1", "voter_address": "SYSTEM", "vote": "yes"},
+        )
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("reserved system", body["error"])
+
+    def test_direct_governance_vote_rejects_client_supplied_vote_weight(self):
+        voter = Wallet().address
+
+        with patch("app.node.blockchain.get_balance", return_value=10) as get_balance:
+            response = self.client.post(
+                "/governance/vote",
+                json={
+                    "proposal_id": "prop_1",
+                    "voter_address": voter,
+                    "voter_wallet_address": voter,
+                    "voter_balance": 1000000,
+                    "vote": "yes",
+                },
+            )
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("derived by the server", body["error"])
+        get_balance.assert_not_called()
+
+    def test_direct_governance_vote_rejects_mismatched_balance_source(self):
+        voter = Wallet().address
+        other_wallet = Wallet().address
+
+        with patch("app.node.blockchain.get_balance", return_value=10) as get_balance:
+            response = self.client.post(
+                "/governance/vote",
+                json={
+                    "proposal_id": "prop_1",
+                    "voter_address": voter,
+                    "voter_wallet_address": other_wallet,
+                    "vote": "yes",
+                },
+            )
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("must match voter address", body["error"])
+        get_balance.assert_not_called()
 
     def test_lending_request_rejects_invalid_amount(self):
         response = self.client.post(

@@ -2535,15 +2535,19 @@ def vote_on_governance_proposal():
     try:
         data = request.get_json(force=True)
         proposal_id = data.get("proposal_id") or data.get("proposalId")
-        voter_address = data.get("voter_address") or data.get("voterAddress")
+        voter_address = _require_public_wallet_address(
+            data.get("voter_address") or data.get("voterAddress"),
+            "voter address",
+        )
         voter_wallet_address = (
             data.get("voter_wallet_address") or data.get("voterWalletAddress") or voter_address
         )
-        voter_balance = (
-            float(data["voter_balance"])
-            if data.get("voter_balance") is not None
-            else node.blockchain.get_balance(voter_wallet_address)
-        )
+        voter_wallet_address = _require_public_wallet_address(voter_wallet_address, "voter wallet address")
+        if voter_wallet_address != voter_address:
+            raise ValueError("voter wallet address must match voter address")
+        if data.get("voter_balance") is not None or data.get("voterBalance") is not None:
+            raise ValueError("voter balance is derived by the server")
+        voter_balance = node.blockchain.get_balance(voter_address)
         proposal = governance.vote_on_proposal(
             proposal_id=proposal_id,
             voter_address=voter_address,
