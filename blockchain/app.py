@@ -94,7 +94,7 @@ lending_pool = storage.load_lending_pool()
 lending_pool.blockchain = node.blockchain
 vorliq_logger.info("Flask startup restored %s lending records", len(lending_pool.loan_requests))
 exchange = storage.load_exchange()
-vorliq_logger.info("Flask startup restored %s exchange offers", len(exchange.offers))
+vorliq_logger.info("Flask startup restored %s community coordination requests", len(exchange.offers))
 forum = storage.load_forum()
 vorliq_logger.info("Flask startup restored %s forum posts", len(forum.posts))
 governance = storage.load_governance()
@@ -2398,65 +2398,22 @@ def admin_moderate_forum_content():
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
+def _retired_forum_tip_response():
+    return jsonify({
+        "success": False,
+        "message": "Forum tipping by private key has been retired. Use saved-wallet local signing flows only.",
+        "error": {"code": "FORUM_TIPPING_RETIRED"},
+    }), 410
+
+
 @app.post("/forum/tip/post")
 def tip_forum_post():
-    try:
-        data = request.get_json(force=True)
-        sender_address = data.get("sender_address") or data.get("senderAddress")
-        sender_private_key = data.get("sender_private_key") or data.get("senderPrivateKey")
-        receiver_address = data.get("receiver_address") or data.get("receiverAddress")
-        amount = float(data["amount"])
-        wallet = Wallet.from_private_key_pem(sender_private_key)
-        transaction = Transaction(sender_address, receiver_address, amount)
-        transaction.sign_transaction(wallet)
-        tip = forum.tip_post(
-            post_id=data.get("post_id") or data.get("postId"),
-            sender_address=sender_address,
-            receiver_address=receiver_address,
-            amount=amount,
-            blockchain=node.blockchain,
-            transaction=transaction,
-        )
-        achievements.check_and_award(sender_address, "first_tip", node.blockchain)
-        storage.save_forum(forum)
-        storage.save_pending(node.blockchain.pending_transactions)
-        _rebuild_indexes(save=True)
-        storage.save_achievements(achievements)
-        return jsonify({"success": True, "tip": tip}), 201
-    except Exception as exc:
-        vorliq_logger.error("Forum post tip endpoint failed: %s", exc)
-        return jsonify({"success": False, "error": str(exc)}), 400
+    return _retired_forum_tip_response()
 
 
 @app.post("/forum/tip/reply")
 def tip_forum_reply():
-    try:
-        data = request.get_json(force=True)
-        sender_address = data.get("sender_address") or data.get("senderAddress")
-        sender_private_key = data.get("sender_private_key") or data.get("senderPrivateKey")
-        receiver_address = data.get("receiver_address") or data.get("receiverAddress")
-        amount = float(data["amount"])
-        wallet = Wallet.from_private_key_pem(sender_private_key)
-        transaction = Transaction(sender_address, receiver_address, amount)
-        transaction.sign_transaction(wallet)
-        tip = forum.tip_reply(
-            post_id=data.get("post_id") or data.get("postId"),
-            reply_id=data.get("reply_id") or data.get("replyId"),
-            sender_address=sender_address,
-            receiver_address=receiver_address,
-            amount=amount,
-            blockchain=node.blockchain,
-            transaction=transaction,
-        )
-        achievements.check_and_award(sender_address, "first_tip", node.blockchain)
-        storage.save_forum(forum)
-        storage.save_pending(node.blockchain.pending_transactions)
-        _rebuild_indexes(save=True)
-        storage.save_achievements(achievements)
-        return jsonify({"success": True, "tip": tip}), 201
-    except Exception as exc:
-        vorliq_logger.error("Forum reply tip endpoint failed: %s", exc)
-        return jsonify({"success": False, "error": str(exc)}), 400
+    return _retired_forum_tip_response()
 
 
 @app.post("/governance/propose")

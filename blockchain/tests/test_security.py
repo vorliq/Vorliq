@@ -159,6 +159,53 @@ class SecurityEndpointTests(unittest.TestCase):
         self.assertEqual(submit_response.status_code, 400)
         self.assertIn("signature", submit_response.get_json()["message"])
 
+    def test_direct_forum_tip_post_endpoint_is_retired(self):
+        marker = "dummy-private-key-marker-never-reflect"
+
+        response = self.client.post(
+            "/forum/tip/post",
+            json={
+                "post_id": "post_1",
+                "sender_address": "VLQ_SENDER",
+                "receiver_address": "VLQ_RECEIVER",
+                "amount": 1,
+                "sender_private_key": marker,
+            },
+        )
+
+        body = response.get_json()
+        serialized = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 410)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["error"]["code"], "FORUM_TIPPING_RETIRED")
+        self.assertIn("saved-wallet local signing flows", body["message"])
+        self.assertNotIn(marker, serialized)
+
+    def test_direct_forum_tip_reply_endpoint_is_retired(self):
+        marker = "dummy-private-key-marker-never-reflect"
+
+        response = self.client.post(
+            "/forum/tip/reply",
+            json={
+                "post_id": "post_1",
+                "reply_id": "reply_1",
+                "sender_address": "VLQ_SENDER",
+                "receiver_address": "VLQ_RECEIVER",
+                "amount": 1,
+                "senderPrivateKey": marker,
+            },
+        )
+
+        body = response.get_json()
+        serialized = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 410)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["error"]["code"], "FORUM_TIPPING_RETIRED")
+        self.assertIn("saved-wallet local signing flows", body["message"])
+        self.assertNotIn(marker, serialized)
+
     def test_lending_request_rejects_invalid_amount(self):
         response = self.client.post(
             "/lending/request",
