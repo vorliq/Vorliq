@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const { handleRouteError } = require("./routeError");
 const { paginationParams } = require("../pagination");
 const { logError } = require("../logger");
+const { validateAddress } = require("../address");
 
 const router = express.Router();
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
@@ -25,6 +26,12 @@ function cleanAddress(value) {
     const error = new Error("system-controlled addresses cannot claim starter VLQ");
     error.status = 400;
     error.abuseCode = "blocked_system_address";
+    throw error;
+  }
+  const result = validateAddress(address, { label: "wallet address", strictLength: true });
+  if (!result.valid) {
+    const error = new Error(result.errors[0]);
+    error.status = 400;
     throw error;
   }
   return address;

@@ -4,6 +4,11 @@ from blockchain import Blockchain
 from faucet import Faucet
 from transaction import SYSTEM_ADDRESS, TREASURY_ADDRESS, Transaction
 
+VALID_WALLET = "3MNQE1X7T4Bz9kLmNpQrStUvWx"
+OTHER_VALID_WALLET = "7YWHMfk9JZe9LMQaPq2X3B4C5D"
+THIRD_VALID_WALLET = "9ABcDefGhJKLMNPQrSTUvwxYZ12345"
+FOURTH_VALID_WALLET = "4GmP9nQ8rStUvWxYzABcDeFghJKL"
+
 
 def make_chain():
     blockchain = Blockchain()
@@ -27,7 +32,7 @@ class FaucetTests(unittest.TestCase):
         blockchain = make_chain()
         faucet = Faucet()
 
-        claim = faucet.request_claim("VLQ_NEW", blockchain.get_treasury_balance(), blockchain)
+        claim = faucet.request_claim(VALID_WALLET, blockchain.get_treasury_balance(), blockchain)
 
         self.assertEqual(claim["status"], "treasury_empty")
         self.assertEqual(len(blockchain.pending_transactions), 0)
@@ -37,12 +42,12 @@ class FaucetTests(unittest.TestCase):
         fund_treasury(blockchain)
         faucet = Faucet()
 
-        claim = faucet.request_claim("VLQ_NEW", blockchain.get_treasury_balance(), blockchain, "abc123")
+        claim = faucet.request_claim(VALID_WALLET, blockchain.get_treasury_balance(), blockchain, "abc123")
 
         self.assertEqual(claim["status"], "pending")
         self.assertTrue(claim["tx_id"])
         self.assertEqual(blockchain.pending_transactions[-1].sender_address, TREASURY_ADDRESS)
-        self.assertEqual(blockchain.pending_transactions[-1].receiver_address, "VLQ_NEW")
+        self.assertEqual(blockchain.pending_transactions[-1].receiver_address, VALID_WALLET)
         self.assertEqual(blockchain.pending_transactions[-1].transaction_type, "faucet_starter")
         self.assertEqual(blockchain.pending_transactions[-1].metadata["claim_id"], claim["claim_id"])
 
@@ -50,11 +55,11 @@ class FaucetTests(unittest.TestCase):
         blockchain = make_chain()
         fund_treasury(blockchain)
         faucet = Faucet()
-        claim = faucet.request_claim("VLQ_NEW", blockchain.get_treasury_balance(), blockchain)
+        claim = faucet.request_claim(VALID_WALLET, blockchain.get_treasury_balance(), blockchain)
 
         mine_now(blockchain, "miner-b")
         changed = faucet.sync_claim_statuses(blockchain)
-        claims = faucet.get_claims_for_address("VLQ_NEW")
+        claims = faucet.get_claims_for_address(VALID_WALLET)
 
         self.assertTrue(changed)
         self.assertEqual(claims[0]["claim_id"], claim["claim_id"])
@@ -66,9 +71,9 @@ class FaucetTests(unittest.TestCase):
         blockchain = make_chain()
         fund_treasury(blockchain)
         faucet = Faucet()
-        faucet.request_claim("VLQ_NEW", blockchain.get_treasury_balance(), blockchain)
+        faucet.request_claim(VALID_WALLET, blockchain.get_treasury_balance(), blockchain)
 
-        repeat = faucet.request_claim("VLQ_NEW", blockchain.get_treasury_balance(), blockchain)
+        repeat = faucet.request_claim(VALID_WALLET, blockchain.get_treasury_balance(), blockchain)
 
         self.assertEqual(repeat["status"], "rate_limited")
         self.assertIn("24 hours", repeat["reason"])
@@ -79,10 +84,15 @@ class FaucetTests(unittest.TestCase):
         faucet = Faucet()
 
         for index in range(3):
-            claim = faucet.request_claim(f"VLQ_NEW_{index}", blockchain.get_treasury_balance(), blockchain, "samehash")
+            claim = faucet.request_claim(
+                [VALID_WALLET, OTHER_VALID_WALLET, THIRD_VALID_WALLET][index],
+                blockchain.get_treasury_balance(),
+                blockchain,
+                "samehash",
+            )
             self.assertEqual(claim["status"], "pending")
 
-        blocked = faucet.request_claim("VLQ_NEW_4", blockchain.get_treasury_balance(), blockchain, "samehash")
+        blocked = faucet.request_claim(FOURTH_VALID_WALLET, blockchain.get_treasury_balance(), blockchain, "samehash")
 
         self.assertEqual(blocked["status"], "rate_limited")
 
@@ -94,11 +104,21 @@ class FaucetTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             faucet.request_claim(TREASURY_ADDRESS, blockchain.get_treasury_balance(), blockchain)
 
+    def test_malformed_wallet_address_is_rejected_before_pending_transaction(self):
+        blockchain = make_chain()
+        fund_treasury(blockchain)
+        faucet = Faucet()
+
+        with self.assertRaises(ValueError):
+            faucet.request_claim("not_an_address!", blockchain.get_treasury_balance(), blockchain)
+
+        self.assertEqual(len(blockchain.pending_transactions), 2)
+
     def test_summary_returns_safe_data(self):
         blockchain = make_chain()
         fund_treasury(blockchain)
         faucet = Faucet()
-        faucet.request_claim("VLQ_NEW", blockchain.get_treasury_balance(), blockchain, "private-hash")
+        faucet.request_claim(VALID_WALLET, blockchain.get_treasury_balance(), blockchain, "private-hash")
 
         summary = faucet.get_faucet_summary(blockchain)
         recent = faucet.get_recent_claims()["claims"][0]

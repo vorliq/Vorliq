@@ -7,6 +7,8 @@ const app = require("../index");
 const { clearCache } = require("../cache");
 const { requestFingerprint } = require("../routes/faucet");
 
+const validWallet = "3MNQE1X7T4Bz9kLmNpQrStUvWx";
+
 beforeEach(() => {
   jest.clearAllMocks();
   clearCache();
@@ -42,6 +44,14 @@ describe("faucet routes", () => {
     expect(axios.post).not.toHaveBeenCalled();
   });
 
+  test("claim validation rejects malformed wallet addresses before proxying", async () => {
+    const response = await request(app).post("/api/faucet/claim").send({ wallet_address: "not_an_address!" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toMatch(/base58|wallet address/i);
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
   test("claim forwards hashed fingerprint without raw request details", async () => {
     axios.post.mockResolvedValue({
       status: 201,
@@ -51,11 +61,11 @@ describe("faucet routes", () => {
     const response = await request(app)
       .post("/api/faucet/claim")
       .set("User-Agent", "jest-faucet-agent")
-      .send({ wallet_address: "VLQ_USER" });
+      .send({ wallet_address: validWallet });
 
     expect(response.status).toBe(201);
     expect(axios.post).toHaveBeenCalledWith("http://localhost:5001/faucet/claim", {
-      wallet_address: "VLQ_USER",
+      wallet_address: validWallet,
       fingerprint_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
     });
     const body = JSON.stringify(response.body);
@@ -69,11 +79,11 @@ describe("faucet routes", () => {
       data: { success: true, claims: [] },
     });
 
-    const response = await request(app).get("/api/faucet/claims?address=VLQ_USER");
+    const response = await request(app).get(`/api/faucet/claims?address=${validWallet}`);
 
     expect(response.status).toBe(200);
     expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/faucet/claims", {
-      params: { address: "VLQ_USER" },
+      params: { address: validWallet },
     });
   });
 

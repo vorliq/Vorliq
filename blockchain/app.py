@@ -1153,7 +1153,10 @@ def get_faucet_summary():
 def claim_faucet():
     try:
         data = _json_body()
-        wallet_address = _require_text(data.get("wallet_address") or data.get("walletAddress"), "wallet address", 160)
+        wallet_address = _require_public_wallet_address(
+            data.get("wallet_address") or data.get("walletAddress"),
+            "wallet address",
+        )
         fingerprint_hash = data.get("fingerprint_hash") or data.get("fingerprintHash")
         claim = faucet.request_claim(
             wallet_address=wallet_address,
@@ -1182,7 +1185,7 @@ def claim_faucet():
 def get_faucet_claims():
     try:
         _sync_faucet(save=True)
-        address = _require_text(request.args.get("address"), "wallet address", 160)
+        address = _require_public_wallet_address(request.args.get("address"), "wallet address")
         return jsonify({"success": True, "claims": faucet.get_claims_for_address(address)})
     except Exception as exc:
         vorliq_logger.error("Faucet claims endpoint failed: %s", exc)

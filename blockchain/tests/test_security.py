@@ -114,6 +114,14 @@ class SecurityEndpointTests(unittest.TestCase):
         self.assertFalse(body["success"])
         self.assertIn("reserved system", body["error"])
 
+    def test_direct_faucet_claim_rejects_malformed_wallet(self):
+        response = self.client.post("/faucet/claim", json={"wallet_address": "not_an_address!"})
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(body["success"])
+        self.assertIn("base58", body["message"])
+
     def test_internal_system_transactions_still_allowed(self):
         blockchain = Blockchain()
 

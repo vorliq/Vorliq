@@ -6,6 +6,7 @@ from typing import Any
 
 from logger import vorliq_logger
 from transaction import LENDING_POOL_ADDRESS, SYSTEM_ADDRESS, TREASURY_ADDRESS, Transaction
+from wallet import validate_address
 
 
 class Faucet:
@@ -224,6 +225,9 @@ class Faucet:
             raise ValueError("wallet address must be 160 characters or fewer")
         if wallet_address in self.SYSTEM_RECEIVERS:
             raise ValueError("system-controlled addresses cannot claim starter VLQ")
+        valid, errors, _warnings = validate_address(wallet_address, label="wallet address", strict_length=True)
+        if not valid:
+            raise ValueError(errors[0])
         return wallet_address
 
     def _optional_hash(self, value: object) -> str | None:
