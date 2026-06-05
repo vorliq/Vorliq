@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import App from "./App";
@@ -1726,11 +1726,38 @@ test("Forum explains public coordination and reports do not request secrets", as
               author_address: "VLQ_MEMBER_ADDRESS",
               vote_count: 2,
               feature_vote_count: 1,
-              replies: [],
-              tips: [],
+              replies: [{ reply_id: "reply-1", author_address: "VLQ_REPLY_ADDRESS", body: "List reply", vote_count: 0, timestamp: 1715791100, tips: [] }],
+              tips: [{ amount: 1 }],
               timestamp: 1715791000,
             },
           ],
+        },
+      });
+    }
+    if (path === "/forum/post") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          post: {
+            post_id: "post-1",
+            title: "Node coordination update",
+            body: "Detail body from API.",
+            category: "general",
+            author_address: "VLQ_MEMBER_ADDRESS",
+            vote_count: 2,
+            feature_vote_count: 1,
+            replies: [
+              {
+                reply_id: "reply-1",
+                author_address: "VLQ_REPLY_ADDRESS",
+                body: "Detail reply from API.",
+                vote_count: 0,
+                timestamp: 1715791100,
+                tips: [{ amount: 1 }],
+              },
+            ],
+            timestamp: 1715791000,
+          },
         },
       });
     }
@@ -1743,9 +1770,20 @@ test("Forum explains public coordination and reports do not request secrets", as
   expect(screen.getByText(/public coordination space for vorliq members/i)).toBeInTheDocument();
   expect(screen.getByText(/moderator and admin actions are protected/i)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /tip/i })).not.toBeInTheDocument();
+  expect(screen.queryByText(/\btips\b/i)).not.toBeInTheDocument();
   expect(screen.queryByLabelText(/private key|wallet password|backup password|seed phrase|admin token/i)).not.toBeInTheDocument();
 
-  await userEvent.click(await screen.findByRole("button", { name: /^report$/i }));
+  const forumPostButton = await screen.findByRole("button", { name: /node coordination update/i });
+  await act(async () => {
+    await userEvent.click(forumPostButton);
+  });
+
+  expect(api.get).toHaveBeenCalledWith("/forum/post", { params: { post_id: "post-1" } });
+  expect(await screen.findByText(/detail body from api/i)).toBeInTheDocument();
+  expect(screen.getByText(/detail reply from api/i)).toBeInTheDocument();
+  expect(screen.queryByText(/\btips\b/i)).not.toBeInTheDocument();
+
+  await userEvent.click((await screen.findAllByRole("button", { name: /^report$/i }))[0]);
 
   expect(screen.getByRole("form", { name: /report content/i })).toBeInTheDocument();
   expect(screen.getByText(/describe the public issue only/i)).toBeInTheDocument();

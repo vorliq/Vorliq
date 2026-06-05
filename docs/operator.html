@@ -55,6 +55,17 @@
         <p>The dashboard is protected by the server-side <code>ADMIN_TOKEN</code>. Never commit this token, paste it into public chat, include it in screenshots, or store it in the frontend bundle. The web app stores the token only in <code>sessionStorage</code> for the current browser session.</p>
       </section>
 
+      <section class="glass warning">
+        <h2>Secret Exposure Response</h2>
+        <p>If any real environment value was ever committed, treat it as exposed even after the file is removed from the current tree. Do not paste the old value into issues, chat, tickets, screenshots, logs, or recovery notes.</p>
+        <ul>
+          <li>Rotate affected categories in the hosting or provider dashboard, including admin tokens, JWT or session secrets, snapshot signing private keys, deployment tokens, webhook secrets, database or storage credentials, and any private infrastructure values that were present.</li>
+          <li>Update GitHub Actions secrets and server environment values outside Git, then redeploy the backend from the clean tree.</li>
+          <li>Verify <code>/api/readiness</code>, <code>/api/deployment</code>, snapshot verification, and the operator dashboard after rotation.</li>
+          <li>Keep <code>backend/.env</code> untracked and ignored. Commit only placeholder examples such as <code>backend/.env.example</code>.</li>
+        </ul>
+      </section>
+
       <section class="glass">
         <h2>Set ADMIN_TOKEN On Production</h2>
         <p>The backend service should load the token from a root-owned private environment file. Generate the value in a private operator shell, never in public docs or shared support channels.</p>

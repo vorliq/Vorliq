@@ -414,7 +414,7 @@ function Forum() {
                     {post.moderation_status === "locked" && <span className="badge">Locked</span>}
                     <span>By <AddressIdentity address={post.author_address} compact /></span>
                     <span>
-                      {post.vote_count} votes - {post.feature_vote_count || 0} feature votes - {post.replies?.length || 0} replies - {post.tips?.length || 0} tips
+                      {post.vote_count} votes - {post.feature_vote_count || 0} feature votes - {post.replies?.length || 0} replies
                     </span>
                     {post.image_data && <img className="forum-thumb" src={post.image_data} alt="Forum attachment" />}
                     <small>{formatTime(post.timestamp)}</small>
@@ -571,8 +571,7 @@ function Forum() {
                       <p>{reply.body}</p>
                       {reply.image_data && <img className="forum-image" src={reply.image_data} alt="Reply attachment" />}
                       <span>
-                        <AddressIdentity address={reply.author_address} compact /> - {reply.vote_count} votes - {reply.tips?.length || 0} tips -{" "}
-                        {formatTime(reply.timestamp)}
+                        <AddressIdentity address={reply.author_address} compact /> - {reply.vote_count} votes - {formatTime(reply.timestamp)}
                       </span>
                       <ReportButton targetType="forum_reply" targetId={reply.reply_id} />
                     </article>

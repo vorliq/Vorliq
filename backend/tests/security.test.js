@@ -48,6 +48,26 @@ describe("security validation", () => {
     expect(axios.post).not.toHaveBeenCalled();
   });
 
+  test("allows forum detail reads without create-post body validation", async () => {
+    axios.get.mockResolvedValueOnce({
+      status: 200,
+      data: { success: true, post: { post_id: "post-1", title: "Community update", replies: [] } },
+    });
+
+    const response = await request(app)
+      .get("/api/forum/post")
+      .query({ post_id: "post-1" })
+      .set(forwarded("203.0.113.14"));
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.post.title).toBe("Community update");
+    expect(axios.get).toHaveBeenCalledWith(expect.stringContaining("/forum/post"), {
+      params: { post_id: "post-1" },
+    });
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
   test("retires forum post tipping without forwarding unsafe signing fields", async () => {
     const dummyMarker = "REDACTED_DUMMY_SIGNING_MATERIAL";
 

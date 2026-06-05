@@ -145,7 +145,7 @@ function validateBody(req, res, next) {
     validateAddress(req, res, body, ["miner_address", "minerAddress"], "miner address");
   }
 
-  if (path === "/api/forum/post") {
+  if (req.method === "POST" && path === "/api/forum/post") {
     validateAddress(req, res, body, ["author_address", "authorAddress"], "author address");
     if (res.headersSent) return;
     requireText(req, res, body, ["title"], "title", 140);
