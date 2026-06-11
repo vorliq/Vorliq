@@ -3,6 +3,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from blockchain import Blockchain
 from lending import LendingPool
@@ -147,6 +148,26 @@ class StorageTests(unittest.TestCase):
 
             self.assertTrue(storage.chain_write_protected)
             self.assertEqual((Path(temp_dir) / "chain.json").read_text(encoding="utf-8"), saved_payload)
+
+    def test_save_chain_refuses_invalid_serialized_payload(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+            blockchain = Blockchain()
+            blockchain.mine_pending_transactions("miner")
+
+            original_to_dict = blockchain.chain[1].to_dict
+
+            def invalid_payload():
+                payload = original_to_dict()
+                payload["hash"] = "invalid"
+                return payload
+
+            with patch.object(blockchain.chain[1], "to_dict", side_effect=invalid_payload):
+                with self.assertRaises(StorageCorruptionError):
+                    storage.save_chain(blockchain)
+
+            self.assertTrue(storage.chain_write_protected)
+            self.assertFalse((Path(temp_dir) / "chain.json").exists())
 
     def test_file_locking_prevents_concurrent_write_corruption(self):
         with tempfile.TemporaryDirectory() as temp_dir:

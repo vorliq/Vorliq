@@ -51,6 +51,19 @@ if [[ ! -d "${APP_DIR}" ]]; then
   exit 1
 fi
 
+if [[ -f "${APP_DIR}/blockchain/data/chain.json" ]]; then
+  if [[ ! -f "${APP_DIR}/tools/diagnose_chain_startup.py" ]]; then
+    log "ERROR chain validation tool is unavailable"
+    send_failure_alert "Backup refused because chain validation tooling is unavailable."
+    exit 1
+  fi
+  if ! VORLIQ_DATA_DIR="${APP_DIR}/blockchain/data" python3 "${APP_DIR}/tools/diagnose_chain_startup.py" >/dev/null; then
+    log "ERROR active chain failed full validation; backup refused"
+    send_failure_alert "Backup refused because the active chain failed full validation."
+    exit 1
+  fi
+fi
+
 PAYLOAD_DIR="${TMP_DIR}/vorliq-backup"
 mkdir -p "${PAYLOAD_DIR}/blockchain" "${PAYLOAD_DIR}/backend/data"
 

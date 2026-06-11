@@ -29,8 +29,9 @@ class PeerPropagationTests(unittest.TestCase):
 
     def fund_wallet(self, wallet, amount=100):
         node.blockchain.add_pending_transaction(Transaction(SYSTEM_ADDRESS, wallet.address, amount))
-        node.blockchain.get_latest_block().timestamp -= node.blockchain.BLOCK_TIME_MINIMUM + 1
-        node.blockchain.mine_pending_transactions("miner_one")
+        next_timestamp = node.blockchain.get_latest_block().timestamp + node.blockchain.BLOCK_TIME_MINIMUM + 1
+        with patch("blockchain.time.time", return_value=next_timestamp), patch("block.time.time", return_value=next_timestamp):
+            node.blockchain.mine_pending_transactions("miner_one")
         node.blockchain.pending_transactions = []
 
     def signed_transaction_payload(self, amount=5):
@@ -144,6 +145,27 @@ class PeerPropagationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["reason"], "invalid_hash")
 
+    def test_peer_block_cannot_extend_invalid_local_chain(self):
+        node.blockchain.mine_pending_transactions("miner_one")
+        node.blockchain.chain[1].nonce += 1
+        latest = node.blockchain.get_latest_block()
+        original_height = node.blockchain.get_block_height()
+        block = Block(
+            index=latest.index + 1,
+            transactions=[],
+            previous_hash=latest.hash,
+            timestamp=latest.timestamp + node.blockchain.BLOCK_TIME_MINIMUM + 1,
+            miner_address=Wallet().address,
+            difficulty=node.blockchain.difficulty,
+        )
+        block.proof_of_work(node.blockchain.difficulty)
+
+        response = self.client.post("/peer/block", json={"block": block.to_dict()})
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.get_json()["reason"], "local_chain_invalid")
+        self.assertEqual(node.blockchain.get_block_height(), original_height)
+
     def test_legacy_receive_block_route_is_retired_without_mutation(self):
         marker = "dummy-private-key-marker-never-reflect"
         initial_height = node.blockchain.get_block_height()
@@ -181,6 +203,22 @@ class PeerPropagationTests(unittest.TestCase):
             json={"block": {"index": 1}},
             timeout=5,
         )
+
+    def test_legacy_network_rejects_chain_with_invalid_timing(self):
+        network = Network()
+        candidate = Blockchain()
+        latest = candidate.get_latest_block()
+        block = Block(
+            index=latest.index + 1,
+            transactions=[],
+            previous_hash=latest.hash,
+            timestamp=latest.timestamp + candidate.BLOCK_TIME_MINIMUM - 1,
+            miner_address=Wallet().address,
+            difficulty=candidate.difficulty,
+        )
+        block.proof_of_work(candidate.difficulty)
+
+        self.assertFalse(network._is_valid_chain([latest, block], candidate))
 
     def test_peer_event_log_is_capped_and_safe(self):
         event_log = PeerEventLog(storage.data_dir / "peer_events_cap_test.json", retention_limit=3)

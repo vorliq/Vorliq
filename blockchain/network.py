@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from typing import Any
 from urllib.parse import urlparse
 
@@ -170,23 +171,14 @@ class Network:
     def _is_valid_chain(self, chain: list[Block], blockchain_rules: Blockchain) -> bool:
         if not chain:
             return False
+        if chain[0].previous_hash != "0":
+            return False
 
-        for index, block in enumerate(chain):
-            if block.hash != block.calculate_hash():
-                return False
-
-            if not block.hash.startswith("0" * blockchain_rules.difficulty):
-                return False
-
-            if index == 0:
-                if block.previous_hash != "0":
-                    return False
-            else:
-                previous_block = chain[index - 1]
-                if block.previous_hash != previous_block.hash:
-                    return False
-
-        return blockchain_rules._chain_transactions_are_valid(chain)
+        candidate = copy.copy(blockchain_rules)
+        candidate.chain = chain
+        candidate.pending_transactions = []
+        candidate._indexes = None
+        return candidate.is_chain_valid()
 
     def _filter_pending_after_chain_update(self, blockchain: Blockchain) -> list[Any]:
         retained_transactions = []

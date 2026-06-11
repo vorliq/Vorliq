@@ -153,6 +153,8 @@ class Blockchain:
         miner_address = str(miner_address).replace("\x00", "").strip()
         if miner_address in SYSTEM_ADDRESSES or miner_address == self.TREASURY_ADDRESS:
             raise ValueError("reserved system addresses cannot receive public mining rewards")
+        if not self.is_chain_valid():
+            raise ValueError("current chain is invalid; mining is disabled until validated recovery completes")
 
         latest_block = self.get_latest_block()
         elapsed_seconds = time.time() - latest_block.timestamp

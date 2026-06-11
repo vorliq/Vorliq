@@ -1,15 +1,15 @@
 import unittest
-import time
+from unittest.mock import patch
 
 from blockchain import Blockchain
 
 
 class BlockchainTests(unittest.TestCase):
-    def make_latest_block_ready(self, blockchain, seconds=31):
+    def mine_after_cooldown(self, blockchain, miner_address, seconds=31):
         latest_block = blockchain.get_latest_block()
-        latest_block.timestamp = time.time() - seconds
-        latest_block.nonce = 0
-        latest_block.proof_of_work(latest_block.difficulty)
+        next_timestamp = latest_block.timestamp + seconds
+        with patch("blockchain.time.time", return_value=next_timestamp), patch("block.time.time", return_value=next_timestamp):
+            return blockchain.mine_pending_transactions(miner_address)
 
     def test_genesis_block_is_created_automatically(self):
         blockchain = Blockchain()
@@ -37,6 +37,20 @@ class BlockchainTests(unittest.TestCase):
         blockchain.chain[1].nonce += 1
 
         self.assertFalse(blockchain.is_chain_valid())
+
+    def test_invalid_chain_cannot_be_extended_by_mining(self):
+        blockchain = Blockchain()
+        blockchain.mine_pending_transactions("miner_one")
+        blockchain.chain[1].nonce += 1
+        original_height = blockchain.get_block_height()
+        original_pending = list(blockchain.pending_transactions)
+
+        with self.assertRaises(ValueError) as context:
+            blockchain.mine_pending_transactions("miner_two")
+
+        self.assertIn("current chain is invalid", str(context.exception))
+        self.assertEqual(blockchain.get_block_height(), original_height)
+        self.assertEqual(blockchain.pending_transactions, original_pending)
 
     def test_mining_reward_is_added_as_pending_transaction_after_mining(self):
         blockchain = Blockchain()
@@ -81,18 +95,16 @@ class BlockchainTests(unittest.TestCase):
     def test_same_address_cannot_mine_two_consecutive_blocks(self):
         blockchain = Blockchain()
         blockchain.mine_pending_transactions("miner_one")
-        self.make_latest_block_ready(blockchain)
 
         with self.assertRaises(ValueError) as context:
-            blockchain.mine_pending_transactions("miner_one")
+            self.mine_after_cooldown(blockchain, "miner_one")
 
         self.assertIn("the same address cannot mine two consecutive blocks", str(context.exception))
 
     def test_mining_with_time_gap_and_different_addresses_succeeds(self):
         blockchain = Blockchain()
         blockchain.mine_pending_transactions("miner_one")
-        self.make_latest_block_ready(blockchain)
-        mined_block = blockchain.mine_pending_transactions("miner_two")
+        mined_block = self.mine_after_cooldown(blockchain, "miner_two")
 
         self.assertEqual(len(blockchain.chain), 3)
         self.assertEqual(mined_block.miner_address, "miner_two")
@@ -103,8 +115,7 @@ class BlockchainTests(unittest.TestCase):
         blockchain.proof_target = "0" * blockchain.difficulty
 
         for index in range(10):
-            self.make_latest_block_ready(blockchain)
-            blockchain.mine_pending_transactions(f"miner_{index % 2}")
+            self.mine_after_cooldown(blockchain, f"miner_{index % 2}")
 
         self.assertEqual(blockchain.get_block_height(), 10)
         self.assertEqual(blockchain.difficulty, 3)
@@ -122,8 +133,7 @@ class BlockchainTests(unittest.TestCase):
     def test_blocks_page_returns_newest_first_with_has_more(self):
         blockchain = Blockchain()
         blockchain.mine_pending_transactions("miner_one")
-        self.make_latest_block_ready(blockchain)
-        blockchain.mine_pending_transactions("miner_two")
+        self.mine_after_cooldown(blockchain, "miner_two")
 
         blocks, total, has_more = blockchain.get_blocks_page(limit=1, offset=0)
 
@@ -134,8 +144,7 @@ class BlockchainTests(unittest.TestCase):
     def test_address_transactions_are_paginated_and_include_block_metadata(self):
         blockchain = Blockchain()
         blockchain.mine_pending_transactions("miner_one")
-        self.make_latest_block_ready(blockchain)
-        blockchain.mine_pending_transactions("miner_two")
+        self.mine_after_cooldown(blockchain, "miner_two")
 
         transactions, total, has_more = blockchain.get_address_transactions("miner_one", limit=1, offset=0)
 

@@ -3,6 +3,8 @@ set -euo pipefail
 
 BACKUP_ARCHIVE="${1:-}"
 TMP_DIR="$(mktemp -d)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 
 cleanup() {
   rm -rf "${TMP_DIR}"
@@ -134,5 +136,16 @@ if errors:
         print(f"ERROR: {error}")
     sys.exit(1)
 
-print("VERIFY SUCCESS: backup archive is readable and critical JSON files are valid.")
+print("JSON verification passed: backup archive is readable and critical JSON files are valid.")
 PY
+
+if [[ -f "${DATA_DIR}/chain.json" ]]; then
+  if [[ ! -f "${REPO_ROOT}/tools/diagnose_chain_startup.py" ]]; then
+    fail "full chain validation tooling is unavailable"
+  fi
+  if ! VORLIQ_DATA_DIR="${DATA_DIR}" python3 "${REPO_ROOT}/tools/diagnose_chain_startup.py" >/dev/null; then
+    fail "archive chain failed full semantic validation"
+  fi
+fi
+
+echo "VERIFY SUCCESS: archive chain passed full semantic validation."

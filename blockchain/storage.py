@@ -87,6 +87,12 @@ class Storage:
             "halving_interval": blockchain.halving_interval,
             "chain": [block.to_dict() for block in blockchain.chain],
         }
+        serialized_blockchain = self._blockchain_from_chain_data(chain_data)
+        if serialized_blockchain is None or not serialized_blockchain.is_chain_valid():
+            self.chain_write_protected = True
+            self.chain_storage_error = "refusing to save serialized blockchain payload that failed full chain validation"
+            vorliq_logger.critical(self.chain_storage_error)
+            raise StorageCorruptionError(self.chain_storage_error)
         self._write_json(self.chain_file, chain_data)
         vorliq_logger.info("Saved blockchain to disk with %s blocks", len(blockchain.chain))
 

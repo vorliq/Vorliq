@@ -346,6 +346,12 @@ class PeerPropagation:
     def classify_peer_block(self, data: dict[str, Any], blockchain: Blockchain) -> tuple[Block | None, dict[str, Any], int]:
         if not self.receive_enabled:
             return None, {"success": False, "message": "Peer block receive is disabled.", "reason": "receive_disabled"}, 403
+        if not blockchain.is_chain_valid():
+            return None, {
+                "success": False,
+                "message": "Peer blocks are disabled until validated chain recovery completes.",
+                "reason": "local_chain_invalid",
+            }, 409
         try:
             block_data = self._extract_payload(data, "block", MAX_PEER_BLOCK_BYTES)
             self._reject_forbidden_payload(block_data)

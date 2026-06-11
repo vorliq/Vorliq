@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from blockchain import Blockchain
 from transaction import SYSTEM_ADDRESS, TREASURY_ADDRESS, Transaction
@@ -13,8 +14,9 @@ def make_chain():
 
 
 def mine_now(blockchain, miner="miner"):
-    blockchain.chain[-1].timestamp -= blockchain.BLOCK_TIME_MINIMUM + 1
-    return blockchain.mine_pending_transactions(miner)
+    next_timestamp = blockchain.get_latest_block().timestamp + blockchain.BLOCK_TIME_MINIMUM + 1
+    with patch("blockchain.time.time", return_value=next_timestamp), patch("block.time.time", return_value=next_timestamp):
+        return blockchain.mine_pending_transactions(miner)
 
 
 def fund_address(blockchain, address, amount=1000, miner="miner-a"):

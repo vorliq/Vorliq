@@ -140,6 +140,7 @@ jobs:
               'WantedBy=timers.target' \
               > /etc/systemd/system/vorliq-heartbeat.timer
             systemctl daemon-reload
+            systemctl stop vorliq-miner.service >/dev/null 2>&1 || true
             if [ ! -f /etc/systemd/system/vorliq-miner.service ]; then
               printf '%s\n' \
                 '[Unit]' \
@@ -246,13 +247,13 @@ jobs:
             echo "${HEALTH_RESPONSE}" | grep -q '"success":true'
             for attempt in 1 2 3 4 5 6 7 8 9 10; do
               BLOCKCHAIN_RESPONSE="$(curl -s http://localhost:5001/diagnostics || true)"
-              if echo "${BLOCKCHAIN_RESPONSE}" | grep -q '"chain_valid"'; then
+              if echo "${BLOCKCHAIN_RESPONSE}" | grep -q '"chain_valid":true'; then
                 break
               fi
               sleep 3
             done
             echo "${BLOCKCHAIN_RESPONSE}"
-            if ! echo "${BLOCKCHAIN_RESPONSE}" | grep -q '"chain_valid"'; then
+            if ! echo "${BLOCKCHAIN_RESPONSE}" | grep -q '"chain_valid":true'; then
               sudo -u vorliq -H bash -lc 'cd /home/vorliq/app && python3 tools/diagnose_chain_startup.py'
               exit 1
             fi
@@ -260,9 +261,7 @@ jobs:
             systemctl restart vorliq-heartbeat
             systemctl is-active --quiet vorliq-heartbeat
             systemctl enable --now vorliq-heartbeat.timer
-            if systemctl is-enabled --quiet vorliq-miner.service; then
-              systemctl restart vorliq-miner.service
-            fi
+            systemctl stop vorliq-miner.service >/dev/null 2>&1 || true
             sudo -u vorliq -H env \
               NODE_ENV=production \
               HEARTBEAT_API_URL=http://127.0.0.1:5000 \

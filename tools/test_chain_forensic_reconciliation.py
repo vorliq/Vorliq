@@ -6,6 +6,7 @@ import sys
 import tarfile
 import time
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,9 +52,9 @@ def write_archive(
 def broken_link_chain() -> Blockchain:
     blockchain = Blockchain()
     blockchain.mine_pending_transactions("miner-one")
-    blockchain.chain[-1].timestamp -= blockchain.BLOCK_TIME_MINIMUM + 1
-    blockchain.chain[-1].proof_of_work(blockchain.difficulty)
-    blockchain.mine_pending_transactions("miner-two")
+    next_timestamp = blockchain.get_latest_block().timestamp + blockchain.BLOCK_TIME_MINIMUM + 1
+    with patch("blockchain.time.time", return_value=next_timestamp), patch("block.time.time", return_value=next_timestamp):
+        blockchain.mine_pending_transactions("miner-two")
     original_second = blockchain.chain[2]
     replacement_first = Block(
         index=1,

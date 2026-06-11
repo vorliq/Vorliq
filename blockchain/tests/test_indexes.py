@@ -1,8 +1,8 @@
 import json
 import tempfile
-import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from block import Block
 from blockchain import Blockchain
@@ -11,19 +11,18 @@ from storage import Storage
 
 
 class BlockchainIndexTests(unittest.TestCase):
-    def make_latest_block_ready(self, blockchain, seconds=31):
+    def mine_after_cooldown(self, blockchain, miner_address, seconds=31):
         latest_block = blockchain.get_latest_block()
-        latest_block.timestamp = time.time() - seconds
-        latest_block.nonce = 0
-        latest_block.proof_of_work(latest_block.difficulty)
+        next_timestamp = latest_block.timestamp + seconds
+        with patch("blockchain.time.time", return_value=next_timestamp), patch("block.time.time", return_value=next_timestamp):
+            return blockchain.mine_pending_transactions(miner_address)
 
     def make_confirmed_rewards(self):
         blockchain = Blockchain()
         blockchain.difficulty = 2
         blockchain.proof_target = "0" * blockchain.difficulty
         blockchain.mine_pending_transactions("miner_one")
-        self.make_latest_block_ready(blockchain)
-        blockchain.mine_pending_transactions("miner_two")
+        self.mine_after_cooldown(blockchain, "miner_two")
         return blockchain
 
     def test_index_build_from_chain(self):
@@ -94,8 +93,7 @@ class BlockchainIndexTests(unittest.TestCase):
             blockchain = self.make_confirmed_rewards()
             storage = Storage(temp_dir)
             storage.save_indexes(BlockchainIndexes.build(blockchain))
-            self.make_latest_block_ready(blockchain)
-            blockchain.mine_pending_transactions("miner_three")
+            self.mine_after_cooldown(blockchain, "miner_three")
 
             self.assertIsNone(storage.load_indexes(blockchain))
 
@@ -109,8 +107,7 @@ class BlockchainIndexTests(unittest.TestCase):
     def test_index_health_reports_mismatch(self):
         blockchain = self.make_confirmed_rewards()
         indexes = BlockchainIndexes.build(blockchain)
-        self.make_latest_block_ready(blockchain)
-        blockchain.mine_pending_transactions("miner_three")
+        self.mine_after_cooldown(blockchain, "miner_three")
 
         health = indexes.health(blockchain)
 

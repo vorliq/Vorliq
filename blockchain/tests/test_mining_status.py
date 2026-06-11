@@ -1,6 +1,6 @@
 import json
-import time
 import unittest
+from unittest.mock import patch
 
 from blockchain import Blockchain
 from transaction import Transaction
@@ -13,11 +13,11 @@ def make_chain():
     return blockchain
 
 
-def make_ready(blockchain, seconds=None):
+def mine_after_cooldown(blockchain, miner, seconds=None):
     latest = blockchain.get_latest_block()
-    latest.timestamp = time.time() - (seconds or blockchain.BLOCK_TIME_MINIMUM + 1)
-    latest.nonce = 0
-    latest.proof_of_work(latest.difficulty)
+    next_timestamp = latest.timestamp + (seconds or blockchain.BLOCK_TIME_MINIMUM + 1)
+    with patch("blockchain.time.time", return_value=next_timestamp), patch("block.time.time", return_value=next_timestamp):
+        return blockchain.mine_pending_transactions(miner)
 
 
 class MiningStatusTests(unittest.TestCase):
@@ -34,8 +34,7 @@ class MiningStatusTests(unittest.TestCase):
     def test_mining_history_derives_seconds_since_previous_block(self):
         blockchain = make_chain()
         blockchain.mine_pending_transactions("VLQ_MINER_A")
-        make_ready(blockchain, 45)
-        blockchain.mine_pending_transactions("VLQ_MINER_B")
+        mine_after_cooldown(blockchain, "VLQ_MINER_B", 45)
 
         history = blockchain.get_mining_history(limit=10, offset=0)
 
