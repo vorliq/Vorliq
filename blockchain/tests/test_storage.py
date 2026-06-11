@@ -6,7 +6,7 @@ from pathlib import Path
 
 from blockchain import Blockchain
 from lending import LendingPool
-from storage import Storage
+from storage import Storage, StorageCorruptionError
 from transaction import SYSTEM_ADDRESS, Transaction
 
 
@@ -131,6 +131,22 @@ class StorageTests(unittest.TestCase):
                 storage.load_chain()
 
             self.assertTrue(storage.chain_write_protected)
+
+    def test_save_chain_refuses_invalid_in_memory_chain_without_replacing_valid_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+            blockchain = Blockchain()
+            blockchain.mine_pending_transactions("miner")
+            storage.save_chain(blockchain)
+            saved_payload = (Path(temp_dir) / "chain.json").read_text(encoding="utf-8")
+
+            blockchain.chain[1].previous_hash = "invalid"
+
+            with self.assertRaises(StorageCorruptionError):
+                storage.save_chain(blockchain)
+
+            self.assertTrue(storage.chain_write_protected)
+            self.assertEqual((Path(temp_dir) / "chain.json").read_text(encoding="utf-8"), saved_payload)
 
     def test_file_locking_prevents_concurrent_write_corruption(self):
         with tempfile.TemporaryDirectory() as temp_dir:

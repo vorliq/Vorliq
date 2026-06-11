@@ -72,6 +72,11 @@ class Storage:
             raise StorageCorruptionError(
                 "chain.json is corrupt and no valid backup was available; refusing to overwrite chain state"
             )
+        if not blockchain.is_chain_valid():
+            self.chain_write_protected = True
+            self.chain_storage_error = "refusing to save a blockchain that failed full chain validation"
+            vorliq_logger.critical(self.chain_storage_error)
+            raise StorageCorruptionError(self.chain_storage_error)
         chain_data = {
             "coin": "VLQ",
             "difficulty": blockchain.difficulty,
