@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { toast } from "react-toastify";
 import App from "./App";
 import IncidentBanner from "./components/IncidentBanner";
 import { AuthProvider } from "./context/AuthContext";
@@ -8,6 +9,7 @@ import { AuthContext } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import api from "./helpers/api";
+import { authorityErrorMessage, postSignedAuthority } from "./helpers/signedAuthority";
 import Account from "./pages/Account";
 import AddressIdentity from "./components/AddressIdentity";
 import Login from "./pages/Login";
@@ -42,6 +44,11 @@ jest.setTimeout(15000);
 jest.mock("./helpers/api", () => ({
   get: jest.fn(),
   post: jest.fn(),
+}));
+
+jest.mock("./helpers/signedAuthority", () => ({
+  authorityErrorMessage: jest.fn((_error, fallback) => fallback),
+  postSignedAuthority: jest.fn(),
 }));
 
 jest.mock("./components/QRPayment", () => function MockQRPayment() {
@@ -1141,6 +1148,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   api.get.mockImplementation(defaultApiGet);
   api.post.mockResolvedValue({ data: { success: true } });
+  postSignedAuthority.mockResolvedValue({ data: { success: true } });
+  authorityErrorMessage.mockImplementation((_error, fallback) => fallback);
 });
 
 afterEach(() => {
@@ -1840,7 +1849,42 @@ test("Lending page renders lifecycle tabs and active vote cards", async () => {
   expect(screen.getByRole("button", { name: /vote yes/i })).toBeDisabled();
 });
 
-test("Lending page routes active repayments through the Send review flow", async () => {
+test("Lending request and vote actions use local signed authority submission", async () => {
+  postSignedAuthority
+    .mockResolvedValueOnce({ data: { success: true, loan_id: "loan-signed-1" } })
+    .mockResolvedValueOnce({ data: { success: true, issuance_tx_id: null } });
+
+  renderWithAuth(<Lending />, { wallet: { address: "VLQ_ME", public_key: "PUBLIC_ONLY" }, isLoggedIn: true }, "/lending");
+
+  expect(await screen.findByLabelText(/requester wallet address/i)).toHaveValue("VLQ_ME");
+  expect(screen.getByLabelText(/requester wallet address/i)).toHaveAttribute("readonly");
+  fireEvent.change(screen.getByLabelText(/vlq amount/i), { target: { value: "25" } });
+  fireEvent.change(screen.getByLabelText(/^reason$/i), { target: { value: "Build shared community tools" } });
+  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "local-password" } });
+  await userEvent.click(screen.getByRole("button", { name: /submit loan request/i }));
+
+  await waitFor(() => {
+    expect(postSignedAuthority).toHaveBeenCalledWith({
+      action: "lending.request",
+      walletPassword: "local-password",
+      body: { amount: 25, reason: "Build shared community tools" },
+    });
+  });
+
+  await userEvent.click(await screen.findByRole("button", { name: /vote yes/i }));
+  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "vote-password" } });
+  await userEvent.click(screen.getByRole("button", { name: /sign and submit yes vote/i }));
+
+  await waitFor(() => {
+    expect(postSignedAuthority).toHaveBeenCalledWith({
+      action: "lending.vote",
+      walletPassword: "vote-password",
+      body: { loan_id: "loan-test-1", vote: "yes" },
+    });
+  });
+});
+
+test("Lending page signs active repayments through the guarded lending route", async () => {
   api.get.mockImplementation((path) => {
     if (path === "/lending/summary") {
       return Promise.resolve({
@@ -1896,8 +1940,16 @@ test("Lending page routes active repayments through the Send review flow", async
   expect(await screen.findByText(/repair shared tools/i)).toBeInTheDocument();
   expect(screen.getByText(/issuance confirmed; repayment is outstanding/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /issuance tx/i })).toHaveAttribute("href", "/tx/issue-tx-1");
-  expect(screen.getByRole("link", { name: /review repayment in send/i })).toHaveAttribute("href", "/send");
-  expect(screen.queryByRole("button", { name: /^repay$/i })).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "local-password" } });
+  await userEvent.click(screen.getByRole("button", { name: /sign and submit repayment/i }));
+
+  await waitFor(() => {
+    expect(postSignedAuthority).toHaveBeenCalledWith({
+      action: "lending.repay",
+      walletPassword: "local-password",
+      body: { loan_id: "loan-active-send-review-1" },
+    });
+  });
   expect(api.post).not.toHaveBeenCalledWith("/lending/repay", expect.anything());
 });
 
@@ -2133,6 +2185,104 @@ test("Governance propose form shows validation guidance", async () => {
   expect(await screen.findByText(/general proposals are advisory/i)).toBeInTheDocument();
 });
 
+test("Governance propose and vote actions use local signed authority submission", async () => {
+  postSignedAuthority
+    .mockResolvedValueOnce({ data: { success: true } })
+    .mockResolvedValueOnce({ data: { success: true, proposal_id: "proposal-signed-1" } });
+
+  renderWithAuth(<Governance />, { wallet: { address: "VLQ_ME", public_key: "PUBLIC_ONLY" }, isLoggedIn: true }, "/governance");
+
+  await userEvent.click(await screen.findByRole("button", { name: /vote yes/i }));
+  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "vote-password" } });
+  await userEvent.click(screen.getByRole("button", { name: /submit yes/i }));
+
+  await waitFor(() => {
+    expect(postSignedAuthority).toHaveBeenCalledWith({
+      action: "governance.vote",
+      walletPassword: "vote-password",
+      body: { proposal_id: "proposal-active-1", vote: "yes" },
+    });
+  });
+
+  await userEvent.click(screen.getByRole("button", { name: /propose change/i }));
+  expect(screen.getByLabelText(/proposer wallet address/i)).toHaveValue("VLQ_ME");
+  expect(screen.getByLabelText(/proposer wallet address/i)).toHaveAttribute("readonly");
+  fireEvent.change(screen.getByLabelText(/^title$/i), { target: { value: "Signed governance proposal" } });
+  fireEvent.change(screen.getByLabelText(/proposed value/i), { target: { value: "40" } });
+  fireEvent.change(screen.getByLabelText(/^description$/i), {
+    target: { value: "A sufficiently detailed signed governance proposal for focused local testing." },
+  });
+  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "proposal-password" } });
+  await userEvent.click(screen.getByRole("button", { name: /submit proposal/i }));
+
+  await waitFor(() => {
+    expect(postSignedAuthority).toHaveBeenCalledWith({
+      action: "governance.propose",
+      walletPassword: "proposal-password",
+      body: {
+        title: "Signed governance proposal",
+        description: "A sufficiently detailed signed governance proposal for focused local testing.",
+        category: "mining_reward",
+        parameter: "40",
+      },
+    });
+  });
+});
+
+test("Governance does not show success when signed authorization is rejected", async () => {
+  postSignedAuthority.mockRejectedValueOnce(new Error("internal signing detail"));
+  authorityErrorMessage.mockReturnValueOnce("Signed wallet authorization was rejected.");
+
+  renderWithAuth(<Governance />, { wallet: { address: "VLQ_ME", public_key: "PUBLIC_ONLY" }, isLoggedIn: true }, "/governance");
+  await userEvent.click(await screen.findByRole("button", { name: /vote yes/i }));
+  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "wrong-password" } });
+  await userEvent.click(screen.getByRole("button", { name: /submit yes/i }));
+
+  expect(await screen.findByText("Signed wallet authorization was rejected.")).toBeInTheDocument();
+  expect(toast.success).not.toHaveBeenCalled();
+});
+
+test("Governance cancellation is shown only for the unlocked proposal owner and is signed locally", async () => {
+  api.get.mockImplementation((path, options) => {
+    if (path === "/governance/my") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          created: [],
+          voted: [],
+          proposals: [{
+            proposal_id: "proposal-owned-1",
+            proposer_address: "VLQ_ME",
+            title: "Owned proposal",
+            description: "An active owned proposal with no votes.",
+            category: "general",
+            parameter: "advisory",
+            status: "active",
+            votes: {},
+            yes_vote_weight: 0,
+            no_vote_weight: 0,
+            quorum: 10,
+          }],
+        },
+      });
+    }
+    return defaultApiGet(path, options);
+  });
+
+  renderWithAuth(<Governance />, { wallet: { address: "VLQ_ME", public_key: "PUBLIC_ONLY" }, isLoggedIn: true }, "/governance");
+  await userEvent.click(await screen.findByRole("button", { name: /my governance/i }));
+  fireEvent.change(await screen.findByLabelText(/wallet password/i), { target: { value: "cancel-password" } });
+  await userEvent.click(screen.getByRole("button", { name: /cancel proposal/i }));
+
+  await waitFor(() => {
+    expect(postSignedAuthority).toHaveBeenCalledWith({
+      action: "governance.cancel",
+      walletPassword: "cancel-password",
+      body: { proposal_id: "proposal-owned-1" },
+    });
+  });
+});
+
 test("Governance My Governance state renders", async () => {
   api.get.mockImplementation((path) => {
     if (path === "/governance/my") {
@@ -2272,6 +2422,96 @@ test("Treasury proposal form shows treasury balance max and risk notice", async 
   expect(screen.getByPlaceholderText(/maximum 250 vlq/i)).toBeInTheDocument();
   expect(screen.getByText(/public payout execution controls are not exposed/i)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /execute payout/i })).not.toBeInTheDocument();
+});
+
+test("Treasury propose and vote actions use local signed authority submission", async () => {
+  postSignedAuthority
+    .mockResolvedValueOnce({ data: { success: true } })
+    .mockResolvedValueOnce({ data: { success: true, proposal_id: "treasury-signed-1" } });
+
+  renderWithAuth(<Treasury />, { wallet: { address: "VLQ_ME", public_key: "PUBLIC_ONLY" }, isLoggedIn: true }, "/treasury");
+
+  await userEvent.click(await screen.findByRole("button", { name: /active proposals/i }));
+  await userEvent.click(await screen.findByRole("button", { name: /vote yes/i }));
+  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "vote-password" } });
+  await userEvent.click(screen.getByRole("button", { name: /cast vote/i }));
+
+  await waitFor(() => {
+    expect(postSignedAuthority).toHaveBeenCalledWith({
+      action: "treasury.vote",
+      walletPassword: "vote-password",
+      body: { proposal_id: "treasury-active-1", vote: "yes" },
+    });
+  });
+
+  await userEvent.click(screen.getByRole("button", { name: /submit proposal/i }));
+  expect(screen.getByLabelText(/proposer wallet address/i)).toHaveValue("VLQ_ME");
+  expect(screen.getByLabelText(/proposer wallet address/i)).toHaveAttribute("readonly");
+  fireEvent.change(screen.getByLabelText(/^title$/i), { target: { value: "Signed treasury proposal" } });
+  fireEvent.change(screen.getByLabelText(/^description$/i), {
+    target: { value: "A detailed treasury proposal for focused signed action testing." },
+  });
+  fireEvent.change(screen.getByLabelText(/requested amount/i), { target: { value: "20" } });
+  fireEvent.change(screen.getByLabelText(/recipient address/i), { target: { value: "VLQ_RECIPIENT" } });
+  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "proposal-password" } });
+  await userEvent.click(screen.getByRole("button", { name: /submit treasury proposal/i }));
+
+  await waitFor(() => {
+    expect(postSignedAuthority).toHaveBeenCalledWith({
+      action: "treasury.propose",
+      walletPassword: "proposal-password",
+      body: {
+        title: "Signed treasury proposal",
+        category: "development",
+        description: "A detailed treasury proposal for focused signed action testing.",
+        requested_amount: 20,
+        recipient_address: "VLQ_RECIPIENT",
+      },
+    });
+  });
+});
+
+test("Treasury cancellation is shown only for the unlocked proposal owner and is signed locally", async () => {
+  api.get.mockImplementation((path, options) => {
+    if (path === "/treasury/my") {
+      return Promise.resolve({
+        data: {
+          success: true,
+          created: [],
+          voted: [],
+          received: [],
+          proposals: [{
+            proposal_id: "treasury-owned-1",
+            proposer_address: "VLQ_ME",
+            recipient_address: "VLQ_RECIPIENT",
+            title: "Owned treasury proposal",
+            description: "An active owned treasury proposal with no votes.",
+            category: "community",
+            requested_amount: 10,
+            status: "active",
+            votes: {},
+            yes_vote_weight: 0,
+            no_vote_weight: 0,
+            quorum: 10,
+          }],
+        },
+      });
+    }
+    return defaultApiGet(path, options);
+  });
+
+  renderWithAuth(<Treasury />, { wallet: { address: "VLQ_ME", public_key: "PUBLIC_ONLY" }, isLoggedIn: true }, "/treasury");
+  await userEvent.click(await screen.findByRole("button", { name: /my treasury/i }));
+  fireEvent.change(await screen.findByLabelText(/wallet password/i), { target: { value: "cancel-password" } });
+  await userEvent.click(screen.getByRole("button", { name: /cancel proposal/i }));
+
+  await waitFor(() => {
+    expect(postSignedAuthority).toHaveBeenCalledWith({
+      action: "treasury.cancel",
+      walletPassword: "cancel-password",
+      body: { proposal_id: "treasury-owned-1" },
+    });
+  });
 });
 
 test("Treasury history links paid proposals to explorer records", async () => {

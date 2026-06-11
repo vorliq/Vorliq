@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
-import AuthorityWriteNotice, { AUTHORITY_WRITES_DISABLED } from "../components/AuthorityWriteNotice";
+import AuthorityPasswordField from "../components/AuthorityPasswordField";
+import AuthorityWriteNotice from "../components/AuthorityWriteNotice";
 import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
@@ -11,6 +12,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
+import { authorityErrorMessage, postSignedAuthority } from "../helpers/signedAuthority";
 
 const initialRequest = {
   requesterAddress: "",
@@ -82,6 +84,9 @@ function Lending() {
   const previousLoanStatusesRef = useRef(null);
   const [activeTab, setActiveTab] = useState("request");
   const [requestForm, setRequestForm] = useState(initialRequest);
+  const [requestPassword, setRequestPassword] = useState("");
+  const [voteInputs, setVoteInputs] = useState({});
+  const [repaymentPasswords, setRepaymentPasswords] = useState({});
   const [myAddress, setMyAddress] = useState(wallet?.address || "");
   const [loans, setLoans] = useState([]);
   const [myLoans, setMyLoans] = useState({ borrowed: [], voted: [], loans: [] });
@@ -142,8 +147,14 @@ function Lending() {
   }, []);
 
   useEffect(() => {
-    if (wallet?.address && !myAddress) {
-      setMyAddress(wallet.address);
+    if (wallet?.address) {
+      if (!myAddress) {
+        setMyAddress(wallet.address);
+      }
+      setRequestForm((current) => ({
+        ...current,
+        requesterAddress: current.requesterAddress || wallet.address,
+      }));
     }
   }, [myAddress, wallet?.address]);
 
@@ -194,60 +205,118 @@ function Lending() {
   async function submitLoanRequest(event) {
     event.preventDefault();
 
-    if (!requestForm.requesterAddress.trim() || !requestForm.amount || !requestForm.reason.trim()) {
+    if (!requestForm.amount || !requestForm.reason.trim()) {
       toast.error("Fill in every loan request field.");
+      return;
+    }
+    if (!isLoggedIn) {
+      toast.error("Unlock your Vorliq wallet to sign this action locally.");
+      return;
+    }
+    if (!requestPassword) {
+      toast.error("Enter your wallet password to sign this action locally.");
       return;
     }
 
     setSubmittingRequest(true);
     try {
-      const response = await api.post("/lending/request", {
-        requester_address: requestForm.requesterAddress.trim(),
-        amount: Number(requestForm.amount),
-        reason: requestForm.reason.trim(),
+      const response = await postSignedAuthority({
+        action: "lending.request",
+        walletPassword: requestPassword,
+        body: {
+          amount: Number(requestForm.amount),
+          reason: requestForm.reason.trim(),
+        },
       });
       toast.success(`Loan request submitted: ${response.data.loan_id}`);
       setErrorMessage("");
-      setRequestForm(initialRequest);
+      setRequestForm({ ...initialRequest, requesterAddress: wallet.address });
+      setRequestPassword("");
       setActiveTab("votes");
       await loadLoans({ quiet: true });
-      await loadMyLoans(myAddress || requestForm.requesterAddress, { quiet: true });
+      await loadMyLoans(wallet.address, { quiet: true });
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to submit loan request.");
+      const message = authorityErrorMessage(error, "Unable to submit loan request.");
       setErrorMessage(message);
       toast.error(message);
     } finally {
       setSubmittingRequest(false);
+      setRequestPassword("");
     }
   }
 
-  async function castVote(loan, vote) {
-    const voterAddress = myAddress.trim() || wallet?.address || "";
-    if (!voterAddress) {
-      toast.error("Enter your wallet address in My Loans before voting.");
-      setActiveTab("mine");
+  function showVote(loanId, vote) {
+    setVoteInputs((current) => ({ ...current, [loanId]: { vote, password: "" } }));
+  }
+
+  async function castVote(loan) {
+    const voteInput = voteInputs[loan.loan_id];
+    if (!isLoggedIn) {
+      toast.error("Unlock your Vorliq wallet to sign this action locally.");
+      return;
+    }
+    if (!voteInput?.password) {
+      toast.error("Enter your wallet password to sign this action locally.");
       return;
     }
 
-    setLoanActionId(`${loan.loan_id}:vote:${vote}`);
+    setLoanActionId(`${loan.loan_id}:vote:${voteInput.vote}`);
     try {
-      const response = await api.post("/lending/vote", {
-        loan_id: loan.loan_id,
-        voter_address: voterAddress,
-        voter_wallet_address: voterAddress,
-        vote,
+      const response = await postSignedAuthority({
+        action: "lending.vote",
+        walletPassword: voteInput.password,
+        body: {
+          loan_id: loan.loan_id,
+          vote: voteInput.vote,
+        },
       });
       const issuanceTx = response.data.issuance_tx_id;
       toast.success(issuanceTx ? "Vote cast. Loan issuance is pending mining." : "Vote cast.");
       setErrorMessage("");
+      setVoteInputs((current) => ({ ...current, [loan.loan_id]: undefined }));
       await loadLoans({ quiet: true });
-      await loadMyLoans(voterAddress, { quiet: true });
+      await loadMyLoans(wallet.address, { quiet: true });
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to cast vote.");
+      const message = authorityErrorMessage(error, "Unable to cast vote.");
+      setErrorMessage(message);
+      toast.error(message);
+      setVoteInputs((current) => ({
+        ...current,
+        [loan.loan_id]: { ...current[loan.loan_id], password: "" },
+      }));
+    } finally {
+      setLoanActionId("");
+    }
+  }
+
+  async function repayLoan(loan) {
+    if (!isLoggedIn) {
+      toast.error("Unlock your Vorliq wallet to sign this action locally.");
+      return;
+    }
+    if (!repaymentPasswords[loan.loan_id]) {
+      toast.error("Enter your wallet password to sign this action locally.");
+      return;
+    }
+
+    setLoanActionId(`${loan.loan_id}:repay`);
+    try {
+      const response = await postSignedAuthority({
+        action: "lending.repay",
+        walletPassword: repaymentPasswords[loan.loan_id],
+        body: { loan_id: loan.loan_id },
+      });
+      toast.success(response.data?.message || "Repayment submitted and waiting for mining confirmation.");
+      setErrorMessage("");
+      await loadLoans({ quiet: true });
+      await loadMyLoans(wallet.address, { quiet: true });
+    } catch (error) {
+      const message = authorityErrorMessage(error, "Unable to repay loan.");
       setErrorMessage(message);
       toast.error(message);
     } finally {
       setLoanActionId("");
+      setRepaymentPasswords((current) => ({ ...current, [loan.loan_id]: "" }));
     }
   }
 
@@ -290,8 +359,8 @@ function Lending() {
           <span className="eyebrow">Wallet actions</span>
           <h2>Wallet requirements</h2>
           <p className="help-text">
-            Loan request and vote writes remain disabled until signed wallet authorization is verified.
-            Repayment is a VLQ movement, so use the Send page to review and sign locally with a saved wallet.
+            Loan requests, votes, and repayments require local signed wallet authorization. Repayment
+            submits VLQ movement to the pending pool and still requires mining confirmation.
           </p>
           <div className="button-row">
             <Link className="button small-button" to={isLoggedIn ? "/send" : "/login"}>
@@ -371,10 +440,11 @@ function Lending() {
                 id="loan-requester"
                 className="input"
                 value={requestForm.requesterAddress}
-                onChange={(event) => updateRequest("requesterAddress", event.target.value)}
                 type="text"
                 autoComplete="off"
+                readOnly
               />
+              <p className="help-text">The requester address comes from your unlocked saved wallet.</p>
             </div>
             <div className="field">
               <label htmlFor="loan-amount">VLQ Amount</label>
@@ -398,7 +468,13 @@ function Lending() {
                 onChange={(event) => updateRequest("reason", event.target.value)}
               />
             </div>
-            <button className="button" type="submit" disabled={AUTHORITY_WRITES_DISABLED || submittingRequest}>
+            <AuthorityPasswordField
+              id="lending-request-password"
+              isLoggedIn={isLoggedIn}
+              value={requestPassword}
+              onChange={setRequestPassword}
+            />
+            <button className="button" type="submit" disabled={!isLoggedIn || submittingRequest}>
               {submittingRequest ? "Submitting..." : "Submit Loan Request"}
             </button>
           </form>
@@ -412,23 +488,43 @@ function Lending() {
           loans={buckets.activeVotes}
           loading={loadingLoans}
           renderActions={(loan) => (
-            <div className="button-row">
-              <button
-                className="button small-button"
-                type="button"
-                disabled={AUTHORITY_WRITES_DISABLED || loanActionId === `${loan.loan_id}:vote:yes`}
-                onClick={() => castVote(loan, "yes")}
-              >
-                Vote Yes
-              </button>
-              <button
-                className="button secondary small-button"
-                type="button"
-                disabled={AUTHORITY_WRITES_DISABLED || loanActionId === `${loan.loan_id}:vote:no`}
-                onClick={() => castVote(loan, "no")}
-              >
-                Vote No
-              </button>
+            <div className="stack">
+              <div className="button-row">
+                <button
+                  className="button small-button"
+                  type="button"
+                  disabled={!isLoggedIn || Boolean(loanActionId)}
+                  onClick={() => showVote(loan.loan_id, "yes")}
+                >
+                  Vote Yes
+                </button>
+                <button
+                  className="button secondary small-button"
+                  type="button"
+                  disabled={!isLoggedIn || Boolean(loanActionId)}
+                  onClick={() => showVote(loan.loan_id, "no")}
+                >
+                  Vote No
+                </button>
+              </div>
+              {voteInputs[loan.loan_id] && (
+                <>
+                  <AuthorityPasswordField
+                    id={`lending-vote-password-${loan.loan_id}`}
+                    isLoggedIn={isLoggedIn}
+                    value={voteInputs[loan.loan_id].password || ""}
+                    onChange={(value) =>
+                      setVoteInputs((current) => ({
+                        ...current,
+                        [loan.loan_id]: { ...current[loan.loan_id], password: value },
+                      }))
+                    }
+                  />
+                  <button className="button small-button" type="button" disabled={Boolean(loanActionId)} onClick={() => castVote(loan)}>
+                    Sign and Submit {voteInputs[loan.loan_id].vote} Vote
+                  </button>
+                </>
+              )}
             </div>
           )}
         />
@@ -441,8 +537,17 @@ function Lending() {
           loans={buckets.activeLoans}
           loading={loadingLoans}
           renderActions={(loan) => (
-            canRepay(loan, myAddress || wallet?.address) ? (
-              <RepaymentAction loan={loan} />
+            canRepay(loan, wallet?.address) ? (
+              <RepaymentAction
+                loan={loan}
+                isLoggedIn={isLoggedIn}
+                password={repaymentPasswords[loan.loan_id] || ""}
+                onPasswordChange={(value) =>
+                  setRepaymentPasswords((current) => ({ ...current, [loan.loan_id]: value }))
+                }
+                submitting={loanActionId === `${loan.loan_id}:repay`}
+                onRepay={() => repayLoan(loan)}
+              />
             ) : null
           )}
         />
@@ -484,8 +589,17 @@ function Lending() {
                   <LoanCard
                     loan={loan}
                     key={loan.loan_id}
-                    actions={canRepay(loan, myAddress) ? (
-                      <RepaymentAction loan={loan} />
+                    actions={canRepay(loan, wallet?.address) ? (
+                      <RepaymentAction
+                        loan={loan}
+                        isLoggedIn={isLoggedIn}
+                        password={repaymentPasswords[loan.loan_id] || ""}
+                        onPasswordChange={(value) =>
+                          setRepaymentPasswords((current) => ({ ...current, [loan.loan_id]: value }))
+                        }
+                        submitting={loanActionId === `${loan.loan_id}:repay`}
+                        onRepay={() => repayLoan(loan)}
+                      />
                     ) : null}
                   />
                 ))}
@@ -612,18 +726,23 @@ function LoanCard({ actions, loan }) {
   );
 }
 
-function RepaymentAction({ loan }) {
+function RepaymentAction({ isLoggedIn, loan, onPasswordChange, onRepay, password, submitting }) {
   return (
     <div className="wallet-safety-box lending-action-box">
-      <strong>Repayment uses local send review</strong>
+      <strong>Sign repayment locally</strong>
       <p>
-        Repay {formatNumber(loan.repayment_amount)} VLQ only after reviewing the borrower, amount,
-        and any lending pool instructions exposed by the current network state. The Send page signs
-        locally with your saved wallet.
+        Repay {formatNumber(loan.repayment_amount)} VLQ after reviewing the borrower and amount.
+        A successful submission remains pending until mined.
       </p>
-      <Link className="button small-button" to="/send">
-        Review Repayment In Send
-      </Link>
+      <AuthorityPasswordField
+        id={`lending-repay-password-${loan.loan_id}`}
+        isLoggedIn={isLoggedIn}
+        value={password}
+        onChange={onPasswordChange}
+      />
+      <button className="button small-button" type="button" disabled={!isLoggedIn || submitting} onClick={onRepay}>
+        {submitting ? "Submitting Repayment..." : "Sign and Submit Repayment"}
+      </button>
     </div>
   );
 }

@@ -3,13 +3,15 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
-import AuthorityWriteNotice, { AUTHORITY_WRITES_DISABLED } from "../components/AuthorityWriteNotice";
+import AuthorityPasswordField from "../components/AuthorityPasswordField";
+import AuthorityWriteNotice from "../components/AuthorityWriteNotice";
 import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
+import { authorityErrorMessage, postSignedAuthority } from "../helpers/signedAuthority";
 
 const categories = [
   ["mining_reward", "Mining Reward"],
@@ -94,7 +96,7 @@ function formatValue(value) {
 }
 
 function Governance() {
-  const { wallet } = useAuth();
+  const { isLoggedIn, wallet } = useAuth();
   const [activeTab, setActiveTab] = useState("active");
   const [activeProposals, setActiveProposals] = useState([]);
   const [allProposals, setAllProposals] = useState([]);
@@ -104,7 +106,9 @@ function Governance() {
   const [myAddress, setMyAddress] = useState(wallet?.address || "");
   const [myGovernance, setMyGovernance] = useState({ created: [], voted: [], proposals: [] });
   const [form, setForm] = useState({ ...initialForm, proposerAddress: wallet?.address || "" });
+  const [proposalPassword, setProposalPassword] = useState("");
   const [voteInputs, setVoteInputs] = useState({});
+  const [cancelPasswords, setCancelPasswords] = useState({});
   const [expanded, setExpanded] = useState({});
   const [loading, setLoading] = useState(true);
   const [myLoading, setMyLoading] = useState(false);
@@ -185,7 +189,6 @@ function Governance() {
     event.preventDefault();
 
     if (
-      !form.proposerAddress.trim() ||
       !form.title.trim() ||
       !String(form.parameter).trim() ||
       form.description.trim().length < 50
@@ -193,26 +196,39 @@ function Governance() {
       toast.error("Fill in every field. The description must be at least 50 characters.");
       return;
     }
+    if (!isLoggedIn) {
+      toast.error("Unlock your Vorliq wallet to sign this action locally.");
+      return;
+    }
+    if (!proposalPassword) {
+      toast.error("Enter your wallet password to sign this action locally.");
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const response = await api.post("/governance/propose", {
-        proposer_address: form.proposerAddress.trim(),
-        title: form.title.trim(),
-        description: form.description.trim(),
-        category: form.category,
-        parameter: form.parameter,
+      const response = await postSignedAuthority({
+        action: "governance.propose",
+        walletPassword: proposalPassword,
+        body: {
+          title: form.title.trim(),
+          description: form.description.trim(),
+          category: form.category,
+          parameter: form.parameter,
+        },
       });
       toast.success(`Proposal created: ${response.data.proposal_id}`);
       setForm({ ...initialForm, proposerAddress: wallet?.address || "" });
+      setProposalPassword("");
       await loadGovernance();
       setActiveTab("active");
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to create proposal.");
+      const message = authorityErrorMessage(error, "Unable to create proposal.");
       setErrorMessage(message);
       toast.error(message);
     } finally {
       setSubmitting(false);
+      setProposalPassword("");
     }
   }
 
@@ -221,24 +237,30 @@ function Governance() {
       ...current,
       [proposalId]: {
         vote,
-        address: current[proposalId]?.address || wallet?.address || "",
+        password: "",
       },
     }));
   }
 
   async function submitVote(proposalId) {
     const voteInput = voteInputs[proposalId];
-    if (!voteInput?.address.trim()) {
-      toast.error("Enter the voter wallet address.");
+    if (!isLoggedIn) {
+      toast.error("Unlock your Vorliq wallet to sign this action locally.");
+      return;
+    }
+    if (!voteInput?.password) {
+      toast.error("Enter your wallet password to sign this action locally.");
       return;
     }
 
     try {
-      await api.post("/governance/vote", {
-        proposal_id: proposalId,
-        voter_address: voteInput.address.trim(),
-        voter_wallet_address: voteInput.address.trim(),
-        vote: voteInput.vote,
+      await postSignedAuthority({
+        action: "governance.vote",
+        walletPassword: voteInput.password,
+        body: {
+          proposal_id: proposalId,
+          vote: voteInput.vote,
+        },
       });
       toast.success("Vote cast successfully.");
       setVoteInputs((current) => ({ ...current, [proposalId]: undefined }));
@@ -247,28 +269,42 @@ function Governance() {
         await loadMyGovernance();
       }
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to cast vote.");
+      const message = authorityErrorMessage(error, "Unable to cast vote.");
       setErrorMessage(message);
       toast.error(message);
+      setVoteInputs((current) => ({
+        ...current,
+        [proposalId]: { ...current[proposalId], password: "" },
+      }));
     }
   }
 
-  async function cancelProposal(proposalId, proposerAddress) {
+  async function cancelProposal(proposalId) {
+    if (!isLoggedIn) {
+      toast.error("Unlock your Vorliq wallet to sign this action locally.");
+      return;
+    }
+    if (!cancelPasswords[proposalId]) {
+      toast.error("Enter your wallet password to sign this action locally.");
+      return;
+    }
     setCancellingId(proposalId);
     try {
-      await api.post("/governance/cancel", {
-        proposal_id: proposalId,
-        proposer_address: proposerAddress,
+      await postSignedAuthority({
+        action: "governance.cancel",
+        walletPassword: cancelPasswords[proposalId],
+        body: { proposal_id: proposalId },
       });
       toast.success("Proposal cancelled.");
       await loadGovernance();
-      await loadMyGovernance(proposerAddress);
+      await loadMyGovernance(wallet.address);
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to cancel proposal.");
+      const message = authorityErrorMessage(error, "Unable to cancel proposal.");
       setErrorMessage(message);
       toast.error(message);
     } finally {
       setCancellingId("");
+      setCancelPasswords((current) => ({ ...current, [proposalId]: "" }));
     }
   }
 
@@ -330,8 +366,8 @@ function Governance() {
           <p>
             Proposals and votes use a public wallet address and existing wallet context. This page does not
             ask for raw private keys or backup passwords. Public users can load their own governance
-            records. Proposal, vote, and cancellation writes remain disabled until signed
-            wallet authorization is verified; admin-only execution controls are not shown here.
+            records. Proposal, vote, and cancellation writes require local signed wallet
+            authorization; admin-only execution controls are not shown here.
           </p>
         </div>
         <div className="button-row" aria-label="Related governance areas">
@@ -395,10 +431,11 @@ function Governance() {
                 onToggle={() => setExpanded((current) => ({ ...current, [proposal.proposal_id]: !current[proposal.proposal_id] }))}
                 voteInput={voteInputs[proposal.proposal_id]}
                 onShowVote={showVoteInput}
-                onVoteAddressChange={(value) =>
+                isLoggedIn={isLoggedIn}
+                onVotePasswordChange={(value) =>
                   setVoteInputs((current) => ({
                     ...current,
-                    [proposal.proposal_id]: { ...current[proposal.proposal_id], address: value },
+                    [proposal.proposal_id]: { ...current[proposal.proposal_id], password: value },
                   }))
                 }
                 onSubmitVote={submitVote}
@@ -427,7 +464,8 @@ function Governance() {
           <form className="form" onSubmit={submitProposal}>
             <div className="field">
               <label htmlFor="governance-proposer">Proposer Wallet Address</label>
-              <input id="governance-proposer" className="input" value={form.proposerAddress} onChange={(event) => updateForm("proposerAddress", event.target.value)} />
+              <input id="governance-proposer" className="input" value={form.proposerAddress} readOnly />
+              <p className="help-text">The signer address comes from your unlocked saved wallet.</p>
             </div>
             <div className="field">
               <label htmlFor="governance-title">Title</label>
@@ -449,7 +487,13 @@ function Governance() {
               <label htmlFor="governance-description">Description</label>
               <textarea id="governance-description" className="textarea" minLength={50} value={form.description} onChange={(event) => updateForm("description", event.target.value)} />
             </div>
-            <button className="button" type="submit" disabled={AUTHORITY_WRITES_DISABLED || submitting}>
+            <AuthorityPasswordField
+              id="governance-proposal-password"
+              isLoggedIn={isLoggedIn}
+              value={proposalPassword}
+              onChange={setProposalPassword}
+            />
+            <button className="button" type="submit" disabled={!isLoggedIn || submitting}>
               {submitting ? "Submitting..." : "Submit Proposal"}
             </button>
           </form>
@@ -480,11 +524,16 @@ function Governance() {
                 compact
                 canCancel={
                   proposal.status === "active" &&
-                  proposal.proposer_address === myAddress &&
+                  proposal.proposer_address === wallet?.address &&
                   Object.keys(proposal.votes || {}).length === 0
                 }
                 cancelling={cancellingId === proposal.proposal_id}
-                onCancel={() => cancelProposal(proposal.proposal_id, proposal.proposer_address)}
+                isLoggedIn={isLoggedIn}
+                cancelPassword={cancelPasswords[proposal.proposal_id] || ""}
+                onCancelPasswordChange={(value) =>
+                  setCancelPasswords((current) => ({ ...current, [proposal.proposal_id]: value }))
+                }
+                onCancel={() => cancelProposal(proposal.proposal_id)}
               />
             ))}
           </div>
@@ -533,11 +582,14 @@ function ProposalCard({
   onToggle,
   voteInput,
   onShowVote,
-  onVoteAddressChange,
+  isLoggedIn = false,
+  onVotePasswordChange,
   onSubmitVote,
   compact = false,
   canCancel = false,
   cancelling = false,
+  cancelPassword = "",
+  onCancelPasswordChange,
   onCancel,
 }) {
   const votes = proposal.votes || {};
@@ -634,17 +686,22 @@ function ProposalCard({
       {!compact && proposal.status === "active" && (
         <>
           <div className="button-row">
-            <button className="button" type="button" disabled={AUTHORITY_WRITES_DISABLED} onClick={() => onShowVote(proposal.proposal_id, "yes")}>
+            <button className="button" type="button" disabled={!isLoggedIn} onClick={() => onShowVote(proposal.proposal_id, "yes")}>
               Vote Yes
             </button>
-            <button className="button secondary" type="button" disabled={AUTHORITY_WRITES_DISABLED} onClick={() => onShowVote(proposal.proposal_id, "no")}>
+            <button className="button secondary" type="button" disabled={!isLoggedIn} onClick={() => onShowVote(proposal.proposal_id, "no")}>
               Vote No
             </button>
           </div>
           {voteInput && (
-            <div className="inline-form">
-              <input className="input" aria-label="Voter wallet address" value={voteInput.address || ""} onChange={(event) => onVoteAddressChange(event.target.value)} placeholder="Voter wallet address" />
-              <button className="button" type="button" disabled={AUTHORITY_WRITES_DISABLED} onClick={() => onSubmitVote(proposal.proposal_id)}>
+            <div className="stack">
+              <AuthorityPasswordField
+                id={`governance-vote-password-${proposal.proposal_id}`}
+                isLoggedIn={isLoggedIn}
+                value={voteInput.password || ""}
+                onChange={onVotePasswordChange}
+              />
+              <button className="button" type="button" disabled={!isLoggedIn} onClick={() => onSubmitVote(proposal.proposal_id)}>
                 Submit {voteInput.vote}
               </button>
             </div>
@@ -652,9 +709,17 @@ function ProposalCard({
         </>
       )}
       {canCancel && (
-        <button className="button secondary" type="button" disabled={AUTHORITY_WRITES_DISABLED || cancelling} onClick={onCancel}>
-          {cancelling ? "Cancelling..." : "Cancel Proposal"}
-        </button>
+        <div className="stack">
+          <AuthorityPasswordField
+            id={`governance-cancel-password-${proposal.proposal_id}`}
+            isLoggedIn={isLoggedIn}
+            value={cancelPassword}
+            onChange={onCancelPasswordChange}
+          />
+          <button className="button secondary" type="button" disabled={!isLoggedIn || cancelling} onClick={onCancel}>
+            {cancelling ? "Cancelling..." : "Cancel Proposal"}
+          </button>
+        </div>
       )}
       {Object.keys(votes).length > 0 && compact && (
         <p className="muted-text">{Object.keys(votes).length} vote record(s)</p>

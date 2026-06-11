@@ -3,13 +3,15 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
-import AuthorityWriteNotice, { AUTHORITY_WRITES_DISABLED } from "../components/AuthorityWriteNotice";
+import AuthorityPasswordField from "../components/AuthorityPasswordField";
+import AuthorityWriteNotice from "../components/AuthorityWriteNotice";
 import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
+import { authorityErrorMessage, postSignedAuthority } from "../helpers/signedAuthority";
 
 const categories = ["development", "marketing", "community", "infrastructure", "security", "education", "other"];
 const tabs = [
@@ -73,7 +75,7 @@ function treasuryBalanceNumber(summary, balance) {
 }
 
 function Treasury() {
-  const { wallet } = useAuth();
+  const { isLoggedIn, wallet } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
   const [balance, setBalance] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -83,7 +85,9 @@ function Treasury() {
   const [myAddress, setMyAddress] = useState(wallet?.address || "");
   const [myTreasury, setMyTreasury] = useState({ created: [], voted: [], received: [], proposals: [] });
   const [form, setForm] = useState({ ...initialForm, proposerAddress: wallet?.address || "" });
+  const [proposalPassword, setProposalPassword] = useState("");
   const [voteInputs, setVoteInputs] = useState({});
+  const [cancelPasswords, setCancelPasswords] = useState({});
   const [expanded, setExpanded] = useState({});
   const [loading, setLoading] = useState(true);
   const [myLoading, setMyLoading] = useState(false);
@@ -171,7 +175,6 @@ function Treasury() {
   async function submitProposal(event) {
     event.preventDefault();
     if (
-      !form.proposerAddress.trim() ||
       !form.title.trim() ||
       form.description.trim().length < 30 ||
       !form.requestedAmount ||
@@ -180,49 +183,69 @@ function Treasury() {
       toast.error("Fill in every treasury proposal field. Description must be at least 30 characters.");
       return;
     }
+    if (!isLoggedIn) {
+      toast.error("Unlock your Vorliq wallet to sign this action locally.");
+      return;
+    }
+    if (!proposalPassword) {
+      toast.error("Enter your wallet password to sign this action locally.");
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const response = await api.post("/treasury/propose", {
-        proposer_address: form.proposerAddress.trim(),
-        title: form.title.trim(),
-        category: form.category,
-        description: form.description.trim(),
-        requested_amount: Number(form.requestedAmount),
-        recipient_address: form.recipientAddress.trim(),
+      const response = await postSignedAuthority({
+        action: "treasury.propose",
+        walletPassword: proposalPassword,
+        body: {
+          title: form.title.trim(),
+          category: form.category,
+          description: form.description.trim(),
+          requested_amount: Number(form.requestedAmount),
+          recipient_address: form.recipientAddress.trim(),
+        },
       });
       toast.success(`Treasury proposal created: ${response.data.proposal_id}`);
       setForm({ ...initialForm, proposerAddress: wallet?.address || "" });
+      setProposalPassword("");
       await loadTreasury();
       setActiveTab("active");
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to submit treasury proposal.");
+      const message = authorityErrorMessage(error, "Unable to submit treasury proposal.");
       setErrorMessage(message);
       toast.error(message);
     } finally {
       setSubmitting(false);
+      setProposalPassword("");
     }
   }
 
   function showVote(proposalId, vote) {
     setVoteInputs((current) => ({
       ...current,
-      [proposalId]: { vote, address: current[proposalId]?.address || wallet?.address || "" },
+      [proposalId]: { vote, password: "" },
     }));
   }
 
   async function submitVote(proposalId) {
     const voteInput = voteInputs[proposalId];
-    if (!voteInput?.address.trim()) {
-      toast.error("Enter your wallet address to vote.");
+    if (!isLoggedIn) {
+      toast.error("Unlock your Vorliq wallet to sign this action locally.");
+      return;
+    }
+    if (!voteInput?.password) {
+      toast.error("Enter your wallet password to sign this action locally.");
       return;
     }
 
     try {
-      await api.post("/treasury/vote", {
-        proposal_id: proposalId,
-        voter_address: voteInput.address.trim(),
-        vote: voteInput.vote,
+      await postSignedAuthority({
+        action: "treasury.vote",
+        walletPassword: voteInput.password,
+        body: {
+          proposal_id: proposalId,
+          vote: voteInput.vote,
+        },
       });
       toast.success("Treasury vote cast.");
       setVoteInputs((current) => ({ ...current, [proposalId]: undefined }));
@@ -231,28 +254,42 @@ function Treasury() {
         await loadMyTreasury();
       }
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to cast treasury vote.");
+      const message = authorityErrorMessage(error, "Unable to cast treasury vote.");
       setErrorMessage(message);
       toast.error(message);
+      setVoteInputs((current) => ({
+        ...current,
+        [proposalId]: { ...current[proposalId], password: "" },
+      }));
     }
   }
 
-  async function cancelProposal(proposalId, proposerAddress) {
+  async function cancelProposal(proposalId) {
+    if (!isLoggedIn) {
+      toast.error("Unlock your Vorliq wallet to sign this action locally.");
+      return;
+    }
+    if (!cancelPasswords[proposalId]) {
+      toast.error("Enter your wallet password to sign this action locally.");
+      return;
+    }
     setCancellingId(proposalId);
     try {
-      await api.post("/treasury/cancel", {
-        proposal_id: proposalId,
-        proposer_address: proposerAddress,
+      await postSignedAuthority({
+        action: "treasury.cancel",
+        walletPassword: cancelPasswords[proposalId],
+        body: { proposal_id: proposalId },
       });
       toast.success("Treasury proposal cancelled.");
       await loadTreasury();
-      await loadMyTreasury(proposerAddress);
+      await loadMyTreasury(wallet.address);
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to cancel proposal.");
+      const message = authorityErrorMessage(error, "Unable to cancel proposal.");
       setErrorMessage(message);
       toast.error(message);
     } finally {
       setCancellingId("");
+      setCancelPasswords((current) => ({ ...current, [proposalId]: "" }));
     }
   }
 
@@ -307,12 +344,13 @@ function Treasury() {
                 onToggle={() => setExpanded((current) => ({ ...current, [proposal.proposal_id]: !current[proposal.proposal_id] }))}
                 voteInput={voteInputs[proposal.proposal_id]}
                 onShowVote={showVote}
-                onVoteAddressChange={(value) =>
+                isLoggedIn={isLoggedIn}
+                onVotePasswordChange={(value) =>
                   setVoteInputs((current) => ({
                     ...current,
                     [proposal.proposal_id]: {
                       ...current[proposal.proposal_id],
-                      address: value,
+                      password: value,
                     },
                   }))
                 }
@@ -336,12 +374,13 @@ function Treasury() {
             <p>Maximum request right now: {treasuryMaxDisplay}. Approval does not mean instant payout; a payout transaction must be mined before a proposal is paid.</p>
           </div>
           <p className="help-text">
-            Proposal and vote writes remain disabled until signed wallet authorization is verified. Public payout execution controls are not exposed here; payout movement should be reviewed through confirmed explorer records.
+            Proposal and vote writes require local signed wallet authorization. Public payout execution controls are not exposed here; payout movement should be reviewed through confirmed explorer records.
           </p>
           <form className="form" onSubmit={submitProposal}>
             <div className="field">
               <label htmlFor="treasury-proposer">Proposer Wallet Address</label>
-              <input id="treasury-proposer" className="input" value={form.proposerAddress} onChange={(event) => updateForm("proposerAddress", event.target.value)} />
+              <input id="treasury-proposer" className="input" value={form.proposerAddress} readOnly />
+              <p className="help-text">The signer address comes from your unlocked saved wallet.</p>
             </div>
             <div className="field">
               <label htmlFor="treasury-title">Title</label>
@@ -367,7 +406,13 @@ function Treasury() {
               <label htmlFor="treasury-recipient">Recipient Address</label>
               <input id="treasury-recipient" className="input" value={form.recipientAddress} onChange={(event) => updateForm("recipientAddress", event.target.value)} />
             </div>
-            <button className="button" type="submit" disabled={AUTHORITY_WRITES_DISABLED || submitting}>
+            <AuthorityPasswordField
+              id="treasury-proposal-password"
+              isLoggedIn={isLoggedIn}
+              value={proposalPassword}
+              onChange={setProposalPassword}
+            />
+            <button className="button" type="submit" disabled={!isLoggedIn || submitting}>
               {submitting ? "Submitting..." : "Submit Treasury Proposal"}
             </button>
           </form>
@@ -398,11 +443,16 @@ function Treasury() {
                 compact
                 canCancel={
                   proposal.status === "active" &&
-                  proposal.proposer_address === myAddress &&
+                  proposal.proposer_address === wallet?.address &&
                   Object.keys(proposal.votes || {}).length === 0
                 }
                 cancelling={cancellingId === proposal.proposal_id}
-                onCancel={() => cancelProposal(proposal.proposal_id, proposal.proposer_address)}
+                isLoggedIn={isLoggedIn}
+                cancelPassword={cancelPasswords[proposal.proposal_id] || ""}
+                onCancelPasswordChange={(value) =>
+                  setCancelPasswords((current) => ({ ...current, [proposal.proposal_id]: value }))
+                }
+                onCancel={() => cancelProposal(proposal.proposal_id)}
               />
             ))}
           </div>
@@ -470,7 +520,7 @@ function Overview({ balance, summary, ledger }) {
             Treasury VLQ can support starter faucet claims, lending workflows, security, infrastructure, education, and other community operations when proposals pass.
           </p>
           <p className="help-text">
-            Public users can read proposals and inspect ledger records. Vote writes remain disabled until signed wallet authorization is verified. Admin-only payout controls are not shown on this page.
+            Public users can read proposals and inspect ledger records. Vote writes require local signed wallet authorization. Admin-only payout controls are not shown on this page.
           </p>
           <div className="button-row">
             <Link className="button small-button" to="/faucet">Faucet</Link>
@@ -531,11 +581,14 @@ function TreasuryProposalCard({
   onToggle,
   voteInput,
   onShowVote,
-  onVoteAddressChange,
+  isLoggedIn = false,
+  onVotePasswordChange,
   onSubmitVote,
   compact = false,
   canCancel = false,
   cancelling = false,
+  cancelPassword = "",
+  onCancelPasswordChange,
   onCancel,
 }) {
   const yes = Number(proposal.yes_vote_weight || 0);
@@ -608,21 +661,34 @@ function TreasuryProposalCard({
       {!compact && proposal.status === "active" && (
         <>
           <div className="actions">
-            <button className="button" type="button" disabled={AUTHORITY_WRITES_DISABLED} onClick={() => onShowVote(proposal.proposal_id, "yes")}>Vote Yes</button>
-            <button className="button secondary" type="button" disabled={AUTHORITY_WRITES_DISABLED} onClick={() => onShowVote(proposal.proposal_id, "no")}>Vote No</button>
+            <button className="button" type="button" disabled={!isLoggedIn} onClick={() => onShowVote(proposal.proposal_id, "yes")}>Vote Yes</button>
+            <button className="button secondary" type="button" disabled={!isLoggedIn} onClick={() => onShowVote(proposal.proposal_id, "no")}>Vote No</button>
           </div>
           {voteInput && (
-            <div className="inline-form">
-              <input className="input" aria-label="Your wallet address for treasury vote" placeholder="Your public wallet address" value={voteInput.address} onChange={(event) => onVoteAddressChange(event.target.value)} />
-              <button className="button" type="button" disabled={AUTHORITY_WRITES_DISABLED} onClick={() => onSubmitVote(proposal.proposal_id)}>Cast Vote</button>
+            <div className="stack">
+              <AuthorityPasswordField
+                id={`treasury-vote-password-${proposal.proposal_id}`}
+                isLoggedIn={isLoggedIn}
+                value={voteInput.password || ""}
+                onChange={onVotePasswordChange}
+              />
+              <button className="button" type="button" disabled={!isLoggedIn} onClick={() => onSubmitVote(proposal.proposal_id)}>Cast Vote</button>
             </div>
           )}
         </>
       )}
       {canCancel && (
-        <button className="button secondary" type="button" disabled={AUTHORITY_WRITES_DISABLED || cancelling} onClick={onCancel}>
-          {cancelling ? "Cancelling..." : "Cancel Proposal"}
-        </button>
+        <div className="stack">
+          <AuthorityPasswordField
+            id={`treasury-cancel-password-${proposal.proposal_id}`}
+            isLoggedIn={isLoggedIn}
+            value={cancelPassword}
+            onChange={onCancelPasswordChange}
+          />
+          <button className="button secondary" type="button" disabled={!isLoggedIn || cancelling} onClick={onCancel}>
+            {cancelling ? "Cancelling..." : "Cancel Proposal"}
+          </button>
+        </div>
       )}
     </article>
   );
