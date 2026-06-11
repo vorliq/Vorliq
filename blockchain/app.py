@@ -61,8 +61,47 @@ MAX_TEXT_LENGTHS = {
     "display_name": 80,
     "currency": 24,
 }
+SIGNED_AUTHORIZATION_MESSAGE = (
+    "This write is unavailable until Vorliq verifies signed wallet authorization. "
+    "Read-only records remain available."
+)
+UNSIGNED_AUTHORITY_WRITE_PATHS = {
+    "/governance/propose",
+    "/governance/vote",
+    "/governance/cancel",
+    "/treasury/propose",
+    "/treasury/vote",
+    "/treasury/cancel",
+    "/lending/request",
+    "/lending/vote",
+    "/lending/repay",
+}
 
 app = Flask(__name__)
+
+
+@app.before_request
+def require_signed_authority_write():
+    if app.config.get("ALLOW_UNSIGNED_AUTHORITY_WRITES_FOR_VALIDATION_TESTS") is True:
+        return None
+    if request.method == "POST" and request.path in UNSIGNED_AUTHORITY_WRITE_PATHS:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": SIGNED_AUTHORIZATION_MESSAGE,
+                    "error": {
+                        "code": "SIGNED_AUTHORIZATION_REQUIRED",
+                        "message": SIGNED_AUTHORIZATION_MESSAGE,
+                        "details": {},
+                    },
+                }
+            ),
+            503,
+        )
+    return None
+
+
 try:
     validate_storage_backend_config()
 except StorageAdapterConfigurationError as exc:

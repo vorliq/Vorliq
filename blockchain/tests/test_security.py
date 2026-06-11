@@ -19,6 +19,7 @@ from wallet import Wallet, validate_address
 class SecurityEndpointTests(unittest.TestCase):
     def setUp(self):
         app.config["TESTING"] = True
+        app.config["ALLOW_UNSIGNED_AUTHORITY_WRITES_FOR_VALIDATION_TESTS"] = True
         self.client = app.test_client()
 
     def test_public_transaction_endpoint_rejects_fake_system_sender(self):
@@ -290,6 +291,32 @@ class SecurityEndpointTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertFalse(body["success"])
         self.assertEqual(body["message"], "Unauthorized")
+
+    def test_unsigned_authority_writes_are_blocked_before_mutation(self):
+        paths = [
+            "/governance/propose",
+            "/governance/vote",
+            "/governance/cancel",
+            "/treasury/propose",
+            "/treasury/vote",
+            "/treasury/cancel",
+            "/lending/request",
+            "/lending/vote",
+            "/lending/repay",
+        ]
+
+        app.config["ALLOW_UNSIGNED_AUTHORITY_WRITES_FOR_VALIDATION_TESTS"] = False
+        try:
+            for path in paths:
+                with self.subTest(path=path):
+                    response = self.client.post(path, json={})
+                    body = response.get_json()
+                    self.assertEqual(response.status_code, 503)
+                    self.assertFalse(body["success"])
+                    self.assertEqual(body["error"]["code"], "SIGNED_AUTHORIZATION_REQUIRED")
+                    self.assertIn("signed wallet authorization", body["message"])
+        finally:
+            app.config["ALLOW_UNSIGNED_AUTHORITY_WRITES_FOR_VALIDATION_TESTS"] = True
 
     def test_direct_governance_vote_rejects_reserved_voter(self):
         response = self.client.post(

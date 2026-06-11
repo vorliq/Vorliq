@@ -43,6 +43,7 @@ const { sendWeeklyReport } = require("./reports");
 const { corsMiddleware, helmetMiddleware, isAllowedOrigin, securityStatus } = require("./middleware/security");
 const { apiV1Alias, requestMetadata } = require("./middleware/requestMetadata");
 const { validateBody } = require("./middleware/validation");
+const { requireSignedAuthorityWrite } = require("./middleware/signedAuthorization");
 const {
   apiSlowDown,
   chatLimiter,
@@ -203,6 +204,7 @@ app.use("/api/faucet/claim", faucetLimiter);
 app.use(["/api/registry/register", "/api/registry/heartbeat", "/api/peers/add", "/api/peers/announce"], registryLimiter);
 app.use(["/api/reports", "/api/reports/weekly"], reportLimiter);
 app.use(validateBody);
+app.use(requireSignedAuthorityWrite);
 
 app.get("/api/health", (req, res) => {
   res.json({

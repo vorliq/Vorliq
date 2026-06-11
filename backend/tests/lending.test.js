@@ -79,27 +79,14 @@ describe("lending routes", () => {
     });
   });
 
-  test("repay route returns tx id safely", async () => {
-    axios.post.mockResolvedValue({
-      status: 200,
-      data: {
-        success: true,
-        repayment_tx_id: "tx-123",
-        repayment_amount: 55,
-        loan: { loan_id: "loan-1", status: "repayment_pending" },
-      },
-    });
-
+  test("blocks unsigned repayment requests", async () => {
     const response = await request(app)
       .post("/api/lending/repay")
       .send({ loan_id: "loan-1", repayer_address: "VLQ_BORROWER" });
 
-    expect(response.status).toBe(200);
-    expect(response.body.repayment_tx_id).toBe("tx-123");
-    expect(axios.post).toHaveBeenCalledWith("http://localhost:5001/lending/repay", {
-      loan_id: "loan-1",
-      repayer_address: "VLQ_BORROWER",
-    });
+    expect(response.status).toBe(503);
+    expect(response.body.error.code).toBe("SIGNED_AUTHORIZATION_REQUIRED");
+    expect(axios.post).not.toHaveBeenCalled();
   });
 
   test("rejects reserved lending vote identity before proxying", async () => {
@@ -137,11 +124,7 @@ describe("lending routes", () => {
     expect(axios.post).not.toHaveBeenCalled();
   });
 
-  test("forwards validated lending votes", async () => {
-    axios.post.mockResolvedValue({
-      status: 200,
-      data: { success: true, loan: { loan_id: "loan-1", votes: { [validVoter]: "yes" } } },
-    });
+  test("blocks validated but unsigned lending votes", async () => {
     const body = {
       loan_id: "loan-1",
       voter_address: validVoter,
@@ -151,8 +134,8 @@ describe("lending routes", () => {
 
     const response = await request(app).post("/api/lending/vote").send(body);
 
-    expect(response.status).toBe(200);
-    expect(response.body.success).toBe(true);
-    expect(axios.post).toHaveBeenCalledWith("http://localhost:5001/lending/vote", body);
+    expect(response.status).toBe(503);
+    expect(response.body.error.code).toBe("SIGNED_AUTHORIZATION_REQUIRED");
+    expect(axios.post).not.toHaveBeenCalled();
   });
 });

@@ -102,11 +102,7 @@ describe("governance lifecycle routes", () => {
     expect(axios.post).not.toHaveBeenCalled();
   });
 
-  test("forwards validated governance votes", async () => {
-    axios.post.mockResolvedValue({
-      status: 200,
-      data: { success: true, proposal: { proposal_id: "prop-1", votes: { [validVoter]: { vote: "yes" } } } },
-    });
+  test("blocks validated but unsigned governance votes", async () => {
     const body = {
       proposal_id: "prop-1",
       voter_address: validVoter,
@@ -116,9 +112,9 @@ describe("governance lifecycle routes", () => {
 
     const response = await request(app).post("/api/governance/vote").send(body);
 
-    expect(response.status).toBe(200);
-    expect(response.body.success).toBe(true);
-    expect(axios.post).toHaveBeenCalledWith("http://localhost:5001/governance/vote", body);
+    expect(response.status).toBe(503);
+    expect(response.body.error.code).toBe("SIGNED_AUTHORIZATION_REQUIRED");
+    expect(axios.post).not.toHaveBeenCalled();
   });
 
   test("forwards rule changes route", async () => {
