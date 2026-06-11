@@ -34,10 +34,11 @@ Type=simple
 User=vorliq
 Group=vorliq
 WorkingDirectory=/home/vorliq/app/blockchain
-Environment=VORLIQ_HOST=0.0.0.0
+Environment=VORLIQ_HOST=127.0.0.1
 Environment=VORLIQ_PORT=5001
 Environment=VORLIQ_DATA_DIR=/home/vorliq/app/blockchain/data
 Environment=NODE_ENV=production
+Environment=VORLIQ_MINING_ENABLED=false
 ExecStart=/home/vorliq/app/blockchain/.venv/bin/python app.py
 Restart=on-failure
 RestartSec=5
@@ -62,6 +63,7 @@ EnvironmentFile=-/etc/vorliq/backend.env
 EnvironmentFile=-/etc/vorliq/snapshot-signing.env
 Environment=NODE_ENV=production
 Environment=PORT=5000
+Environment=HOST=127.0.0.1
 Environment=FLASK_URL=http://127.0.0.1:5001
 ExecStart=/usr/bin/node index.js
 Restart=on-failure

@@ -108,12 +108,33 @@ class SecurityEndpointTests(unittest.TestCase):
         self.assertIn("base58", response.get_json()["error"])
 
     def test_public_mine_endpoint_rejects_reserved_miner(self):
-        response = self.client.post("/mine", json={"miner_address": "SYSTEM"})
+        previous_flag = os.environ.get("VORLIQ_MINING_ENABLED")
+        os.environ["VORLIQ_MINING_ENABLED"] = "true"
+        try:
+            response = self.client.post("/mine", json={"miner_address": "SYSTEM"})
+        finally:
+            if previous_flag is None:
+                os.environ.pop("VORLIQ_MINING_ENABLED", None)
+            else:
+                os.environ["VORLIQ_MINING_ENABLED"] = previous_flag
 
         body = response.get_json()
         self.assertEqual(response.status_code, 400)
         self.assertFalse(body["success"])
         self.assertIn("reserved system", body["error"])
+
+    def test_public_mine_endpoint_fails_closed_without_explicit_flag(self):
+        previous_flag = os.environ.pop("VORLIQ_MINING_ENABLED", None)
+        try:
+            response = self.client.post("/mine", json={"miner_address": "SYSTEM"})
+        finally:
+            if previous_flag is not None:
+                os.environ["VORLIQ_MINING_ENABLED"] = previous_flag
+
+        body = response.get_json()
+        self.assertEqual(response.status_code, 503)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["code"], "MINING_DISABLED")
 
     def test_direct_faucet_claim_rejects_malformed_wallet(self):
         response = self.client.post("/faucet/claim", json={"wallet_address": "not_an_address!"})

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import threading
 import time
 from typing import Any
 
@@ -32,6 +33,9 @@ class Blockchain:
         self.chain: list[Block] = [self.create_genesis_block()]
         self.pending_transactions: list[Transaction] = []
         self._indexes = None
+        # Serializes tip validation and append so concurrent miners cannot
+        # both extend the same tip (two blocks claiming the same index).
+        self._append_lock = threading.Lock()
 
     def create_genesis_block(self) -> Block:
         genesis_block = Block(
@@ -48,38 +52,43 @@ class Blockchain:
         return self.chain[-1]
 
     def add_block(self, block: Block) -> bool:
-        latest_block = self.get_latest_block()
+        # The tip read, every validation against that tip, and the append must
+        # happen under one held lock. Without it, two concurrent miners can both
+        # validate against the same tip and both append, forking the chain in
+        # place with two blocks at the same index.
+        with self._append_lock:
+            latest_block = self.get_latest_block()
 
-        if block.index != latest_block.index + 1:
-            vorliq_logger.warning("Rejected block with invalid index %s", block.index)
-            return False
+            if block.index != latest_block.index + 1:
+                vorliq_logger.warning("Rejected block with invalid index %s", block.index)
+                return False
 
-        if block.previous_hash != latest_block.hash:
-            vorliq_logger.warning("Rejected block %s because previous hash did not match", block.index)
-            return False
+            if block.previous_hash != latest_block.hash:
+                vorliq_logger.warning("Rejected block %s because previous hash did not match", block.index)
+                return False
 
-        if block.timestamp - latest_block.timestamp < self.BLOCK_TIME_MINIMUM:
-            vorliq_logger.warning("Rejected block %s because it was mined too soon after block %s", block.index, latest_block.index)
-            return False
+            if block.timestamp - latest_block.timestamp < self.BLOCK_TIME_MINIMUM:
+                vorliq_logger.warning("Rejected block %s because it was mined too soon after block %s", block.index, latest_block.index)
+                return False
 
-        previous_miner = getattr(latest_block, "miner_address", None)
-        current_miner = getattr(block, "miner_address", None)
-        if previous_miner and current_miner and previous_miner == current_miner:
-            vorliq_logger.warning("Rejected block %s because miner %s mined consecutive blocks", block.index, current_miner)
-            return False
+            previous_miner = getattr(latest_block, "miner_address", None)
+            current_miner = getattr(block, "miner_address", None)
+            if previous_miner and current_miner and previous_miner == current_miner:
+                vorliq_logger.warning("Rejected block %s because miner %s mined consecutive blocks", block.index, current_miner)
+                return False
 
-        if not block.has_valid_proof(getattr(block, "difficulty", self.difficulty)):
-            vorliq_logger.warning("Rejected block %s because proof of work was invalid", block.index)
-            return False
+            if not block.has_valid_proof(getattr(block, "difficulty", self.difficulty)):
+                vorliq_logger.warning("Rejected block %s because proof of work was invalid", block.index)
+                return False
 
-        if not self._transactions_are_valid_for_next_block(block.transactions):
-            vorliq_logger.warning("Rejected block %s because a transaction was invalid", block.index)
-            return False
+            if not self._transactions_are_valid_for_next_block(block.transactions):
+                vorliq_logger.warning("Rejected block %s because a transaction was invalid", block.index)
+                return False
 
-        self.chain.append(block)
-        self._indexes = None
-        self.adjust_difficulty()
-        return True
+            self.chain.append(block)
+            self._indexes = None
+            self.adjust_difficulty()
+            return True
 
     def is_chain_valid(self) -> bool:
         if not self.chain:

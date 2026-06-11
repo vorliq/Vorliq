@@ -72,6 +72,7 @@ const io = new Server(server, {
   path: "/api/socket.io",
 });
 const port = process.env.PORT || 5000;
+const host = process.env.HOST || "127.0.0.1";
 const socketAddresses = new Map();
 const socketMessageTimes = new Map();
 const chatHistory = [];
@@ -300,9 +301,9 @@ if (require.main === module) {
   );
   logInfo("Weekly community report scheduled for Monday 09:00 Europe/London");
 
-  server.listen(port, () => {
-    console.log(`Vorliq backend API running on port ${port}`);
-    logInfo(`Vorliq backend API running on port ${port}`);
+  server.listen(port, host, () => {
+    console.log(`Vorliq backend API running on ${host}:${port}`);
+    logInfo(`Vorliq backend API running on ${host}:${port}`);
   });
 }
 

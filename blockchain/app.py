@@ -15,6 +15,7 @@ from forum import Forum
 from governance import Governance
 from lending import LendingPool
 from logger import vorliq_logger
+from mining_flag import mining_enabled
 from network import Network
 from node import Node
 from peer_propagation import PeerEventLog, PeerPropagation
@@ -686,6 +687,18 @@ def create_transaction():
 
 @app.post("/mine")
 def mine_block():
+    if not mining_enabled():
+        vorliq_logger.warning("Mine endpoint refused a request because mining is disabled on this node")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "code": "MINING_DISABLED",
+                    "message": "Mining is disabled on this node.",
+                }
+            ),
+            503,
+        )
     try:
         data = _json_body()
         miner_address = _require_public_wallet_address(
@@ -736,6 +749,10 @@ def mine_block():
 def get_mining_status():
     try:
         status = node.blockchain.get_mining_status()
+        if not mining_enabled():
+            status["enabled"] = False
+            status["can_mine_now"] = False
+            status["reason_if_not"] = "Mining is disabled on this node."
         return jsonify({"success": True, **status, "status": status})
     except Exception as exc:
         vorliq_logger.error("Mining status endpoint failed: %s", exc)

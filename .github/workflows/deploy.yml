@@ -56,6 +56,18 @@ jobs:
               sed -i '/Environment=VORLIQ_DATA_DIR=/a Environment=NODE_ENV=production' /etc/systemd/system/vorliq-blockchain.service
               systemctl daemon-reload
             fi
+            if grep -q '^Environment=VORLIQ_HOST=0.0.0.0' /etc/systemd/system/vorliq-blockchain.service; then
+              sed -i 's#^Environment=VORLIQ_HOST=0.0.0.0#Environment=VORLIQ_HOST=127.0.0.1#' /etc/systemd/system/vorliq-blockchain.service
+              systemctl daemon-reload
+            fi
+            if ! grep -q '^Environment=VORLIQ_MINING_ENABLED=' /etc/systemd/system/vorliq-blockchain.service; then
+              sed -i '/^Environment=VORLIQ_DATA_DIR=/a Environment=VORLIQ_MINING_ENABLED=false' /etc/systemd/system/vorliq-blockchain.service
+              systemctl daemon-reload
+            fi
+            if ! grep -q '^Environment=HOST=127.0.0.1' /etc/systemd/system/vorliq-backend.service; then
+              sed -i '/^Environment=PORT=5000/a Environment=HOST=127.0.0.1' /etc/systemd/system/vorliq-backend.service
+              systemctl daemon-reload
+            fi
             mkdir -p /etc/vorliq
             if [ ! -f /etc/vorliq/backend.env ] || ! grep -q '^ADMIN_TOKEN=' /etc/vorliq/backend.env; then
               BACKEND_ENV_TMP="$(mktemp)"
