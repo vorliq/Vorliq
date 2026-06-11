@@ -3609,3 +3609,16 @@ html[data-theme="light"] {
 body {
   background: #0A0E1A;
 }
+
+/* Home page: recent-transaction cards rendered as links. Scoped to Home only. */
+.home-transaction-link {
+  display: grid;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.home-transaction-link:hover,
+.home-transaction-link:focus-visible {
+  border-color: var(--brand-cyan);
+}

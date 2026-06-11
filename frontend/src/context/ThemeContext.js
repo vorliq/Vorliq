@@ -1,33 +1,22 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo } from "react";
 
 const ThemeContext = createContext(null);
 const STORAGE_KEY = "vorliq_theme";
 
-function getInitialTheme() {
-  const theme = "dark";
-  document.documentElement.setAttribute("data-theme", theme);
-  return theme;
-}
+// Vorliq ships dark mode as its single intended theme. There is no theme
+// choice to offer, so no toggle API is exposed.
+const THEME = "dark";
+
+// Apply before first paint so themed CSS variables are active immediately.
+document.documentElement.setAttribute("data-theme", THEME);
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(getInitialTheme);
-
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem(STORAGE_KEY, theme);
-  }, [theme]);
+    document.documentElement.setAttribute("data-theme", THEME);
+    window.localStorage.setItem(STORAGE_KEY, THEME);
+  }, []);
 
-  function toggleTheme() {
-    setTheme("dark");
-  }
-
-  const value = useMemo(
-    () => ({
-      theme,
-      toggleTheme,
-    }),
-    [theme]
-  );
+  const value = useMemo(() => ({ theme: THEME }), []);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
