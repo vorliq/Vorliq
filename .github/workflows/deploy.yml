@@ -252,7 +252,10 @@ jobs:
               sleep 3
             done
             echo "${BLOCKCHAIN_RESPONSE}"
-            echo "${BLOCKCHAIN_RESPONSE}" | grep -q '"chain_valid"'
+            if ! echo "${BLOCKCHAIN_RESPONSE}" | grep -q '"chain_valid"'; then
+              sudo -u vorliq -H bash -lc 'cd /home/vorliq/app && python3 tools/diagnose_chain_startup.py'
+              exit 1
+            fi
             systemctl enable vorliq-heartbeat
             systemctl restart vorliq-heartbeat
             systemctl is-active --quiet vorliq-heartbeat
