@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
+import AuthorityWriteNotice, { AUTHORITY_WRITES_DISABLED } from "../components/AuthorityWriteNotice";
 import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
@@ -29,7 +30,7 @@ const lifecycleSteps = [
   {
     status: "pending_vote",
     title: "Pending vote",
-    body: "Members can vote. No lending pool VLQ has moved yet.",
+    body: "This request is awaiting votes. No lending pool VLQ has moved yet.",
   },
   {
     status: "approved_pending_issue",
@@ -256,7 +257,7 @@ function Lending() {
         <span className="eyebrow">Community Lending</span>
         <h1>Lending</h1>
         <p className="subtitle">
-          Request VLQ from the community lending pool, vote with wallet balance, and track each loan from pending vote through confirmed repayment.
+          Review community lending requests, VLQ-weighted vote records, and each loan from pending vote through confirmed repayment.
         </p>
         <p className="help-text">
           <Link to="/vlq">Review how VLQ lending movement becomes confirmed.</Link>{" "}
@@ -265,6 +266,7 @@ function Lending() {
       </section>
 
       <ErrorMessage message={errorMessage} />
+      <AuthorityWriteNotice />
       <RiskNotice />
 
       <section className="grid lending-guide-grid">
@@ -288,7 +290,8 @@ function Lending() {
           <span className="eyebrow">Wallet actions</span>
           <h2>Wallet requirements</h2>
           <p className="help-text">
-            Loan requests and votes use your public wallet address. Repayment is a VLQ movement, so use the Send page to review and sign locally with a saved wallet.
+            Loan request and vote writes remain disabled until signed wallet authorization is verified.
+            Repayment is a VLQ movement, so use the Send page to review and sign locally with a saved wallet.
           </p>
           <div className="button-row">
             <Link className="button small-button" to={isLoggedIn ? "/send" : "/login"}>
@@ -395,7 +398,7 @@ function Lending() {
                 onChange={(event) => updateRequest("reason", event.target.value)}
               />
             </div>
-            <button className="button" type="submit" disabled={submittingRequest}>
+            <button className="button" type="submit" disabled={AUTHORITY_WRITES_DISABLED || submittingRequest}>
               {submittingRequest ? "Submitting..." : "Submit Loan Request"}
             </button>
           </form>
@@ -413,7 +416,7 @@ function Lending() {
               <button
                 className="button small-button"
                 type="button"
-                disabled={loanActionId === `${loan.loan_id}:vote:yes`}
+                disabled={AUTHORITY_WRITES_DISABLED || loanActionId === `${loan.loan_id}:vote:yes`}
                 onClick={() => castVote(loan, "yes")}
               >
                 Vote Yes
@@ -421,7 +424,7 @@ function Lending() {
               <button
                 className="button secondary small-button"
                 type="button"
-                disabled={loanActionId === `${loan.loan_id}:vote:no`}
+                disabled={AUTHORITY_WRITES_DISABLED || loanActionId === `${loan.loan_id}:vote:no`}
                 onClick={() => castVote(loan, "no")}
               >
                 Vote No

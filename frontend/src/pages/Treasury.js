@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
+import AuthorityWriteNotice, { AUTHORITY_WRITES_DISABLED } from "../components/AuthorityWriteNotice";
 import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
@@ -32,7 +33,7 @@ const lifecycleSteps = [
   {
     status: "active",
     title: "Pending vote",
-    body: "Members can vote with public wallet addresses. No treasury VLQ has moved yet.",
+    body: "This record is awaiting votes. No treasury VLQ has moved yet.",
   },
   {
     status: "passed_pending_payout",
@@ -276,6 +277,7 @@ function Treasury() {
       </section>
 
       <ErrorMessage message={errorMessage} />
+      <AuthorityWriteNotice />
       <RiskNotice />
 
       <div className="tab-list">
@@ -334,7 +336,7 @@ function Treasury() {
             <p>Maximum request right now: {treasuryMaxDisplay}. Approval does not mean instant payout; a payout transaction must be mined before a proposal is paid.</p>
           </div>
           <p className="help-text">
-            Proposal and vote forms use public wallet addresses only. Public payout execution controls are not exposed here; payout movement should be reviewed through confirmed explorer records.
+            Proposal and vote writes remain disabled until signed wallet authorization is verified. Public payout execution controls are not exposed here; payout movement should be reviewed through confirmed explorer records.
           </p>
           <form className="form" onSubmit={submitProposal}>
             <div className="field">
@@ -365,7 +367,7 @@ function Treasury() {
               <label htmlFor="treasury-recipient">Recipient Address</label>
               <input id="treasury-recipient" className="input" value={form.recipientAddress} onChange={(event) => updateForm("recipientAddress", event.target.value)} />
             </div>
-            <button className="button" type="submit" disabled={submitting}>
+            <button className="button" type="submit" disabled={AUTHORITY_WRITES_DISABLED || submitting}>
               {submitting ? "Submitting..." : "Submit Treasury Proposal"}
             </button>
           </form>
@@ -468,7 +470,7 @@ function Overview({ balance, summary, ledger }) {
             Treasury VLQ can support starter faucet claims, lending workflows, security, infrastructure, education, and other community operations when proposals pass.
           </p>
           <p className="help-text">
-            Public users can read proposals, vote with wallet addresses, and inspect ledger records. Admin-only payout controls are not shown on this page.
+            Public users can read proposals and inspect ledger records. Vote writes remain disabled until signed wallet authorization is verified. Admin-only payout controls are not shown on this page.
           </p>
           <div className="button-row">
             <Link className="button small-button" to="/faucet">Faucet</Link>
@@ -606,19 +608,19 @@ function TreasuryProposalCard({
       {!compact && proposal.status === "active" && (
         <>
           <div className="actions">
-            <button className="button" type="button" onClick={() => onShowVote(proposal.proposal_id, "yes")}>Vote Yes</button>
-            <button className="button secondary" type="button" onClick={() => onShowVote(proposal.proposal_id, "no")}>Vote No</button>
+            <button className="button" type="button" disabled={AUTHORITY_WRITES_DISABLED} onClick={() => onShowVote(proposal.proposal_id, "yes")}>Vote Yes</button>
+            <button className="button secondary" type="button" disabled={AUTHORITY_WRITES_DISABLED} onClick={() => onShowVote(proposal.proposal_id, "no")}>Vote No</button>
           </div>
           {voteInput && (
             <div className="inline-form">
               <input className="input" aria-label="Your wallet address for treasury vote" placeholder="Your public wallet address" value={voteInput.address} onChange={(event) => onVoteAddressChange(event.target.value)} />
-              <button className="button" type="button" onClick={() => onSubmitVote(proposal.proposal_id)}>Cast Vote</button>
+              <button className="button" type="button" disabled={AUTHORITY_WRITES_DISABLED} onClick={() => onSubmitVote(proposal.proposal_id)}>Cast Vote</button>
             </div>
           )}
         </>
       )}
       {canCancel && (
-        <button className="button secondary" type="button" disabled={cancelling} onClick={onCancel}>
+        <button className="button secondary" type="button" disabled={AUTHORITY_WRITES_DISABLED || cancelling} onClick={onCancel}>
           {cancelling ? "Cancelling..." : "Cancel Proposal"}
         </button>
       )}

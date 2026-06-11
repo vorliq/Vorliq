@@ -1823,6 +1823,8 @@ test("Leaderboard includes a Top Reputation tab", async () => {
 test("Lending page renders lifecycle tabs and active vote cards", async () => {
   renderWithProviders(<Lending />, "/lending");
 
+  expect(await screen.findByLabelText(/authority write status/i)).toHaveTextContent(/signed wallet authorization/i);
+  expect(screen.getByRole("button", { name: /submit loan request/i })).toBeDisabled();
   expect(await screen.findByRole("button", { name: /active votes/i })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /active loans/i })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /my loans/i })).toBeInTheDocument();
@@ -1835,7 +1837,7 @@ test("Lending page renders lifecycle tabs and active vote cards", async () => {
 
   expect(await screen.findByText(/build a community tool/i)).toBeInTheDocument();
   expect(screen.getAllByText(/pending vote/i).length).toBeGreaterThan(0);
-  expect(screen.getByRole("button", { name: /vote yes/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /vote yes/i })).toBeDisabled();
 });
 
 test("Lending page routes active repayments through the Send review flow", async () => {
@@ -2094,6 +2096,7 @@ test("Exchange My Requests state renders record tx form for active coordination"
 test("Governance lifecycle tabs render active proposal cards", async () => {
   renderWithProviders(<Governance />, "/governance");
 
+  expect(await screen.findByLabelText(/authority write status/i)).toHaveTextContent(/signed wallet authorization/i);
   expect(await screen.findByRole("button", { name: /active proposals/i })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /propose change/i })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /my governance/i })).toBeInTheDocument();
@@ -2104,6 +2107,7 @@ test("Governance lifecycle tabs render active proposal cards", async () => {
   expect(screen.getByText(/community request limit/i)).toBeInTheDocument();
   expect(await screen.findByText(/adjust mining reward/i)).toBeInTheDocument();
   expect(screen.getAllByText(/active/i).length).toBeGreaterThan(0);
+  expect(screen.getByRole("button", { name: /vote yes/i })).toBeDisabled();
 });
 
 test("Governance rule changes timeline renders", async () => {
@@ -2121,6 +2125,7 @@ test("Governance propose form shows validation guidance", async () => {
 
   await userEvent.click(await screen.findByRole("button", { name: /propose change/i }));
 
+  expect(screen.getByRole("button", { name: /submit proposal/i })).toBeDisabled();
   expect(await screen.findByText(/mining reward must be greater than 0/i)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText(/category/i), { target: { value: "exchange_limit" } });
   expect(await screen.findByText(/community request limit must be between 1 and 1000/i)).toBeInTheDocument();
@@ -2200,6 +2205,7 @@ test("Governance My Governance state renders", async () => {
 test("Treasury tabs render overview and active proposal card", async () => {
   renderWithProviders(<Treasury />, "/treasury");
 
+  expect(await screen.findByLabelText(/authority write status/i)).toHaveTextContent(/signed wallet authorization/i);
   expect(await screen.findByRole("button", { name: /overview/i })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /active proposals/i })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /submit proposal/i })).toBeInTheDocument();
@@ -2211,6 +2217,7 @@ test("Treasury tabs render overview and active proposal card", async () => {
 
   expect(await screen.findByText(/fund security review/i)).toBeInTheDocument();
   expect(screen.getAllByText(/pending vote/i).length).toBeGreaterThan(0);
+  expect(screen.getByRole("button", { name: /vote yes/i })).toBeDisabled();
 });
 
 test("Treasury overview summary renders", async () => {
@@ -2260,6 +2267,7 @@ test("Treasury proposal form shows treasury balance max and risk notice", async 
   expect(await screen.findByLabelText(/risk notice/i)).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: /submit proposal/i }));
 
+  expect(screen.getByRole("button", { name: /submit treasury proposal/i })).toBeDisabled();
   expect(await screen.findByText(/maximum request right now/i)).toBeInTheDocument();
   expect(screen.getByPlaceholderText(/maximum 250 vlq/i)).toBeInTheDocument();
   expect(screen.getByText(/public payout execution controls are not exposed/i)).toBeInTheDocument();

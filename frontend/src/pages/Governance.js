@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
+import AuthorityWriteNotice, { AUTHORITY_WRITES_DISABLED } from "../components/AuthorityWriteNotice";
 import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
@@ -286,12 +287,13 @@ function Governance() {
         <span className="eyebrow">Community Governance</span>
         <h1>Governance</h1>
         <p className="subtitle">
-          VLQ holders can propose supported network rule changes, vote with VLQ weight, and see exactly
-          which software settings were executed.
+          Review supported network rule proposals, VLQ-weighted vote records, and exactly which software
+          settings were executed.
         </p>
       </section>
 
       <ErrorMessage message={errorMessage} />
+      <AuthorityWriteNotice />
       <RiskNotice />
 
       {summary && (
@@ -327,9 +329,9 @@ function Governance() {
           <strong>Wallet and operator context</strong>
           <p>
             Proposals and votes use a public wallet address and existing wallet context. This page does not
-            ask for raw private keys or backup passwords. Public users can propose, vote, load their own
-            governance records, or cancel their own active no-vote proposal; admin-only execution controls
-            are not shown here.
+            ask for raw private keys or backup passwords. Public users can load their own governance
+            records. Proposal, vote, and cancellation writes remain disabled until signed
+            wallet authorization is verified; admin-only execution controls are not shown here.
           </p>
         </div>
         <div className="button-row" aria-label="Related governance areas">
@@ -447,7 +449,7 @@ function Governance() {
               <label htmlFor="governance-description">Description</label>
               <textarea id="governance-description" className="textarea" minLength={50} value={form.description} onChange={(event) => updateForm("description", event.target.value)} />
             </div>
-            <button className="button" type="submit" disabled={submitting}>
+            <button className="button" type="submit" disabled={AUTHORITY_WRITES_DISABLED || submitting}>
               {submitting ? "Submitting..." : "Submit Proposal"}
             </button>
           </form>
@@ -632,17 +634,17 @@ function ProposalCard({
       {!compact && proposal.status === "active" && (
         <>
           <div className="button-row">
-            <button className="button" type="button" onClick={() => onShowVote(proposal.proposal_id, "yes")}>
+            <button className="button" type="button" disabled={AUTHORITY_WRITES_DISABLED} onClick={() => onShowVote(proposal.proposal_id, "yes")}>
               Vote Yes
             </button>
-            <button className="button secondary" type="button" onClick={() => onShowVote(proposal.proposal_id, "no")}>
+            <button className="button secondary" type="button" disabled={AUTHORITY_WRITES_DISABLED} onClick={() => onShowVote(proposal.proposal_id, "no")}>
               Vote No
             </button>
           </div>
           {voteInput && (
             <div className="inline-form">
               <input className="input" aria-label="Voter wallet address" value={voteInput.address || ""} onChange={(event) => onVoteAddressChange(event.target.value)} placeholder="Voter wallet address" />
-              <button className="button" type="button" onClick={() => onSubmitVote(proposal.proposal_id)}>
+              <button className="button" type="button" disabled={AUTHORITY_WRITES_DISABLED} onClick={() => onSubmitVote(proposal.proposal_id)}>
                 Submit {voteInput.vote}
               </button>
             </div>
@@ -650,7 +652,7 @@ function ProposalCard({
         </>
       )}
       {canCancel && (
-        <button className="button secondary" type="button" disabled={cancelling} onClick={onCancel}>
+        <button className="button secondary" type="button" disabled={AUTHORITY_WRITES_DISABLED || cancelling} onClick={onCancel}>
           {cancelling ? "Cancelling..." : "Cancel Proposal"}
         </button>
       )}
