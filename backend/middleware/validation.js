@@ -313,7 +313,6 @@ function validateBody(req, res, next) {
       if (category === "exchange_limit" && (!Number.isInteger(value) || value <= 0 || value > 1000)) {
         return reject(req, res, "exchange limit must be between 1 and 1000.");
       }
-      body.parameter = value;
     }
   }
 

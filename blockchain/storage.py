@@ -64,6 +64,7 @@ class Storage:
         self.achievements_file = self.data_dir / "achievements.json"
         self.peers_file = self.data_dir / "peers.json"
         self.registry_file = self.data_dir / "registry.json"
+        self.authority_nonces_file = self.data_dir / "authority_nonces.json"
         self.chain_storage_error: str | None = None
         self.chain_write_protected = False
 
@@ -425,6 +426,30 @@ class Storage:
         registry.registered_nodes = registered_nodes
         vorliq_logger.info("Loaded node registry with %s records", len(registered_nodes))
         return registry
+
+    def consume_authority_nonce(self, nonce_key: str, *, expires_at: int, now: int) -> bool:
+        path = self.authority_nonces_file
+        tmp_path = path.with_name(f".{path.name}.{os.getpid()}.{int(time.time() * 1000)}.tmp")
+        with self._file_lock(path):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+            except Exception as exc:
+                raise StorageCorruptionError("authority nonce registry is invalid; refusing authority writes") from exc
+            if not isinstance(data, dict):
+                raise StorageCorruptionError("authority nonce registry must be an object")
+            active = {key: value for key, value in data.items() if isinstance(value, int) and value > now}
+            if nonce_key in active:
+                return False
+            active[nonce_key] = int(expires_at)
+            payload = json.dumps(active, indent=2, sort_keys=True)
+            with tmp_path.open("w", encoding="utf-8") as handle:
+                handle.write(payload)
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(tmp_path, path)
+            self._fsync_directory(path.parent)
+        return True
 
     def _write_json(self, path: Path, data: Any, create_backup: bool = True) -> None:
         payload = json.dumps(data, indent=2, sort_keys=True)

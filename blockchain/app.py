@@ -22,6 +22,7 @@ from price import PriceDiscovery
 from profiles import Profiles
 from registry import NodeRegistry
 from storage import Storage
+from signed_authorization import AUTHORITY_ROUTES, SignedAuthorizationError, verify_signed_authorization
 from storage_adapters.factory import (
     StorageAdapterConfigurationError,
     storage_adapter_runtime_metadata,
@@ -61,22 +62,6 @@ MAX_TEXT_LENGTHS = {
     "display_name": 80,
     "currency": 24,
 }
-SIGNED_AUTHORIZATION_MESSAGE = (
-    "This write is unavailable until Vorliq verifies signed wallet authorization. "
-    "Read-only records remain available."
-)
-UNSIGNED_AUTHORITY_WRITE_PATHS = {
-    "/governance/propose",
-    "/governance/vote",
-    "/governance/cancel",
-    "/treasury/propose",
-    "/treasury/vote",
-    "/treasury/cancel",
-    "/lending/request",
-    "/lending/vote",
-    "/lending/repay",
-}
-
 app = Flask(__name__)
 
 
@@ -84,21 +69,21 @@ app = Flask(__name__)
 def require_signed_authority_write():
     if app.config.get("ALLOW_UNSIGNED_AUTHORITY_WRITES_FOR_VALIDATION_TESTS") is True:
         return None
-    if request.method == "POST" and request.path in UNSIGNED_AUTHORITY_WRITE_PATHS:
-        return (
-            jsonify(
+    if request.method == "POST" and request.path in AUTHORITY_ROUTES:
+        try:
+            request.signed_authorization = verify_signed_authorization(
+                request.get_json(silent=True) or {},
+                request.path,
+                storage=storage,
+            )
+        except SignedAuthorizationError as exc:
+            return jsonify(
                 {
                     "success": False,
-                    "message": SIGNED_AUTHORIZATION_MESSAGE,
-                    "error": {
-                        "code": "SIGNED_AUTHORIZATION_REQUIRED",
-                        "message": SIGNED_AUTHORIZATION_MESSAGE,
-                        "details": {},
-                    },
+                    "message": str(exc),
+                    "error": {"code": exc.code, "message": str(exc), "details": {}},
                 }
-            ),
-            503,
-        )
+            ), exc.status
     return None
 
 

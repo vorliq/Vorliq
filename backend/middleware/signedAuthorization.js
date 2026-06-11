@@ -1,29 +1,255 @@
+const crypto = require("crypto");
+
 const { sendError } = require("../utils/apiResponse");
 
-const UNSIGNED_AUTHORITY_WRITE_PATHS = new Set([
-  "/api/governance/propose",
-  "/api/governance/vote",
-  "/api/governance/cancel",
-  "/api/treasury/propose",
-  "/api/treasury/vote",
-  "/api/treasury/cancel",
-  "/api/lending/request",
-  "/api/lending/vote",
-  "/api/lending/repay",
-]);
-
+const AUTHORIZATION_DOMAIN = "vorliq.authority.v1";
+const AUTHORIZATION_MAX_AGE_SECONDS = 300;
+const AUTHORIZATION_FUTURE_SKEW_SECONDS = 30;
 const SIGNED_AUTHORIZATION_MESSAGE =
-  "This write is unavailable until Vorliq verifies signed wallet authorization. Read-only records remain available.";
+  "This write requires signed wallet authorization. Read-only records remain available.";
+const NONCE_PATTERN = /^[A-Za-z0-9._:-]{16,128}$/;
+const ROLE_LIKE_IDENTITIES = new Set(["admin", "operator", "moderator", "system", "vorliq_treasury", "lending_pool"]);
+const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+const OVERRIDE_FIELDS = new Set([
+  "authority_override",
+  "authorityOverride",
+  "balance",
+  "current_treasury_balance",
+  "currentTreasuryBalance",
+  "source_balance",
+  "sourceBalance",
+  "treasury_balance",
+  "treasuryBalance",
+  "vote_weight",
+  "voteWeight",
+  "voter_balance",
+  "voterBalance",
+  "voting_balance",
+  "votingBalance",
+]);
+const AUTHORITY_ROUTES = new Map([
+  ["/api/governance/propose", { action: "governance.propose", actorFields: ["proposer_address", "proposerAddress"] }],
+  ["/api/governance/vote", { action: "governance.vote", actorFields: ["voter_address", "voterAddress"] }],
+  ["/api/governance/cancel", { action: "governance.cancel", actorFields: ["proposer_address", "proposerAddress"] }],
+  ["/api/treasury/propose", { action: "treasury.propose", actorFields: ["proposer_address", "proposerAddress"] }],
+  ["/api/treasury/vote", { action: "treasury.vote", actorFields: ["voter_address", "voterAddress"] }],
+  ["/api/treasury/cancel", { action: "treasury.cancel", actorFields: ["proposer_address", "proposerAddress"] }],
+  ["/api/lending/request", { action: "lending.request", actorFields: ["requester_address", "requesterAddress"] }],
+  ["/api/lending/vote", { action: "lending.vote", actorFields: ["voter_address", "voterAddress"] }],
+  ["/api/lending/repay", { action: "lending.repay", actorFields: ["repayer_address", "repayerAddress"] }],
+]);
+const usedNonces = new Map();
+const UNSIGNED_AUTHORITY_WRITE_PATHS = new Set(AUTHORITY_ROUTES.keys());
+
+function canonicalJson(value) {
+  if (value === null || typeof value === "boolean" || typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw authorizationError("AUTHORIZATION_MALFORMED", "Signed payload contains an invalid number.");
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+      .join(",")}}`;
+  }
+  throw authorizationError("AUTHORIZATION_MALFORMED", "Signed payload contains an unsupported value.");
+}
+
+function bodyWithoutAuthorization(body) {
+  const payload = {};
+  for (const [key, value] of Object.entries(body || {})) {
+    if (key !== "authorization") payload[key] = value;
+  }
+  return payload;
+}
+
+function bodyHash(payload) {
+  return crypto.createHash("sha256").update(canonicalJson(payload), "utf8").digest("hex");
+}
+
+function authorizationMessage({ action, body_hash, nonce, timestamp, wallet }) {
+  return canonicalJson({
+    action,
+    body_hash,
+    domain: AUTHORIZATION_DOMAIN,
+    nonce,
+    timestamp,
+    wallet,
+  });
+}
+
+function authorizationError(code, message, status = 401) {
+  const error = new Error(message);
+  error.code = code;
+  error.status = status;
+  return error;
+}
+
+function base58Encode(buffer) {
+  let number = BigInt(`0x${buffer.toString("hex") || "0"}`);
+  let encoded = "";
+  while (number > 0n) {
+    const remainder = Number(number % 58n);
+    number /= 58n;
+    encoded = BASE58_ALPHABET[remainder] + encoded;
+  }
+  let leading = 0;
+  while (leading < buffer.length && buffer[leading] === 0) leading += 1;
+  return "1".repeat(leading) + encoded;
+}
+
+function addressFromPublicKey(publicKeyPem) {
+  try {
+    const publicKey = crypto.createPublicKey(publicKeyPem);
+    if (publicKey.asymmetricKeyType !== "ec" || publicKey.asymmetricKeyDetails?.namedCurve !== "secp256k1") {
+      throw authorizationError("AUTHORIZATION_PUBLIC_KEY_INVALID", "Authorization public key must be a Vorliq secp256k1 key.");
+    }
+    const jwk = publicKey.export({ format: "jwk" });
+    const x = Buffer.from(jwk.x, "base64url");
+    const y = Buffer.from(jwk.y, "base64url");
+    const point = Buffer.concat([Buffer.from([4]), x, y]);
+    const sha = crypto.createHash("sha256").update(point).digest();
+    return base58Encode(crypto.createHash("ripemd160").update(sha).digest());
+  } catch (error) {
+    if (error.code === "AUTHORIZATION_PUBLIC_KEY_INVALID") throw error;
+    throw authorizationError("AUTHORIZATION_PUBLIC_KEY_INVALID", "Authorization public key is invalid.");
+  }
+}
+
+function actorFromPayload(payload, actorFields) {
+  const values = actorFields.filter((field) => payload[field] !== undefined).map((field) => String(payload[field]).trim());
+  if (values.length === 0 || values.some((value) => value !== values[0])) {
+    throw authorizationError("AUTHORIZATION_ACTOR_MISMATCH", "Signed authorization wallet must match the route actor.");
+  }
+  return values[0];
+}
+
+function rejectOverrides(payload) {
+  if (Object.keys(payload).some((field) => OVERRIDE_FIELDS.has(field))) {
+    throw authorizationError("AUTHORIZATION_OVERRIDE_REJECTED", "Client-supplied authority or balance overrides are not allowed.", 400);
+  }
+}
+
+function pruneNonces(now) {
+  for (const [key, expiresAt] of usedNonces.entries()) {
+    if (expiresAt <= now) usedNonces.delete(key);
+  }
+}
+
+function verifySignedAuthorization(body, route, nowSeconds = Math.floor(Date.now() / 1000)) {
+  const routeConfig = AUTHORITY_ROUTES.get(route);
+  if (!routeConfig) return null;
+  const authorization = body?.authorization;
+  if (!authorization || typeof authorization !== "object" || Array.isArray(authorization)) {
+    throw authorizationError(
+      "SIGNED_AUTHORIZATION_REQUIRED",
+      SIGNED_AUTHORIZATION_MESSAGE,
+      503
+    );
+  }
+  const required = ["wallet", "public_key", "signature", "message", "timestamp", "nonce", "action", "body_hash", "domain"];
+  if (required.some((field) => authorization[field] === undefined || authorization[field] === null)) {
+    throw authorizationError("AUTHORIZATION_MALFORMED", "Signed authorization envelope is incomplete.");
+  }
+
+  const wallet = String(authorization.wallet).trim();
+  const publicKey = String(authorization.public_key);
+  const signature = String(authorization.signature).trim();
+  const action = String(authorization.action).trim();
+  const nonce = String(authorization.nonce).trim();
+  const claimedBodyHash = String(authorization.body_hash).trim().toLowerCase();
+  const timestamp = Number(authorization.timestamp);
+  const payload = bodyWithoutAuthorization(body);
+
+  if (wallet.length > 96 || publicKey.length > 2000 || signature.length > 512 || String(authorization.message).length > 2000) {
+    throw authorizationError("AUTHORIZATION_MALFORMED", "Signed authorization envelope exceeds safe field limits.");
+  }
+  if (!Number.isInteger(timestamp) || !NONCE_PATTERN.test(nonce) || !/^[a-f0-9]{64}$/.test(claimedBodyHash)) {
+    throw authorizationError("AUTHORIZATION_MALFORMED", "Signed authorization timestamp, nonce, or body hash is malformed.");
+  }
+  if (timestamp < nowSeconds - AUTHORIZATION_MAX_AGE_SECONDS || timestamp > nowSeconds + AUTHORIZATION_FUTURE_SKEW_SECONDS) {
+    throw authorizationError("AUTHORIZATION_EXPIRED", "Signed authorization timestamp is expired or outside the allowed clock window.");
+  }
+  if (action !== routeConfig.action) {
+    throw authorizationError("AUTHORIZATION_ACTION_MISMATCH", "Signed authorization action does not match this route.");
+  }
+  if (authorization.domain !== AUTHORIZATION_DOMAIN) {
+    throw authorizationError("AUTHORIZATION_DOMAIN_MISMATCH", "Signed authorization domain does not match Vorliq authority writes.");
+  }
+  if (ROLE_LIKE_IDENTITIES.has(wallet.toLowerCase())) {
+    throw authorizationError("AUTHORIZATION_WALLET_INVALID", "Reserved or role-like identities cannot authorize public wallet actions.");
+  }
+  if (addressFromPublicKey(publicKey) !== wallet) {
+    throw authorizationError("AUTHORIZATION_WALLET_MISMATCH", "Authorization wallet does not match the supplied public key.");
+  }
+  if (actorFromPayload(payload, routeConfig.actorFields) !== wallet) {
+    throw authorizationError("AUTHORIZATION_ACTOR_MISMATCH", "Signed authorization wallet must match the route actor.");
+  }
+  rejectOverrides(payload);
+
+  const calculatedBodyHash = bodyHash(payload);
+  if (calculatedBodyHash !== claimedBodyHash) {
+    throw authorizationError("AUTHORIZATION_BODY_HASH_MISMATCH", "Signed authorization body hash does not match the request payload.");
+  }
+  const expectedMessage = authorizationMessage({
+    action,
+    body_hash: calculatedBodyHash,
+    nonce,
+    timestamp,
+    wallet,
+  });
+  if (authorization.message !== expectedMessage) {
+    throw authorizationError("AUTHORIZATION_MESSAGE_MISMATCH", "Signed authorization message is not canonical.");
+  }
+  let signatureValid = false;
+  try {
+    signatureValid =
+      /^[a-fA-F0-9]+$/.test(signature) &&
+      crypto.verify("sha256", Buffer.from(expectedMessage, "utf8"), publicKey, Buffer.from(signature, "hex"));
+  } catch (_error) {
+    signatureValid = false;
+  }
+  if (!signatureValid) {
+    throw authorizationError("AUTHORIZATION_SIGNATURE_INVALID", "Signed authorization signature is invalid.");
+  }
+
+  pruneNonces(nowSeconds);
+  const nonceKey = `${wallet}:${nonce}`;
+  if (usedNonces.has(nonceKey)) {
+    throw authorizationError("AUTHORIZATION_REPLAYED", "Signed authorization nonce has already been used.");
+  }
+  usedNonces.set(nonceKey, timestamp + AUTHORIZATION_MAX_AGE_SECONDS + AUTHORIZATION_FUTURE_SKEW_SECONDS);
+  return { action, wallet, nonce, timestamp, body_hash: calculatedBodyHash };
+}
 
 function requireSignedAuthorityWrite(req, res, next) {
-  if (req.method === "POST" && UNSIGNED_AUTHORITY_WRITE_PATHS.has(req.path)) {
-    return sendError(res, 503, "SIGNED_AUTHORIZATION_REQUIRED", SIGNED_AUTHORIZATION_MESSAGE);
+  if (req.method !== "POST" || !AUTHORITY_ROUTES.has(req.path)) return next();
+  try {
+    req.signedAuthorization = verifySignedAuthorization(req.body, req.path);
+    return next();
+  } catch (error) {
+    return sendError(res, error.status || 401, error.code || "AUTHORIZATION_INVALID", error.message);
   }
-  return next();
+}
+
+function resetUsedNoncesForTests() {
+  usedNonces.clear();
 }
 
 module.exports = {
-  requireSignedAuthorityWrite,
+  AUTHORIZATION_DOMAIN,
+  AUTHORIZATION_MAX_AGE_SECONDS,
+  AUTHORITY_ROUTES,
   SIGNED_AUTHORIZATION_MESSAGE,
   UNSIGNED_AUTHORITY_WRITE_PATHS,
+  addressFromPublicKey,
+  authorizationMessage,
+  bodyHash,
+  bodyWithoutAuthorization,
+  canonicalJson,
+  requireSignedAuthorityWrite,
+  resetUsedNoncesForTests,
+  verifySignedAuthorization,
 };
