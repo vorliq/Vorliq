@@ -95,8 +95,19 @@ class Storage:
             self.chain_storage_error = "chain.json is corrupt and no valid backup is available"
             vorliq_logger.critical(self.chain_storage_error)
             return None
-        blocks = [self._block_from_dict(block_data) for block_data in data.get("chain", [])]
 
+        blockchain = self._blockchain_from_chain_data(data)
+        if blockchain is None:
+            return None
+
+        if not blockchain.is_chain_valid():
+            blockchain = self._restore_valid_chain_backup()
+
+        vorliq_logger.info("Loaded blockchain from disk with %s blocks", len(blockchain.chain))
+        return blockchain
+
+    def _blockchain_from_chain_data(self, data: dict[str, Any]) -> Blockchain | None:
+        blocks = [self._block_from_dict(block_data) for block_data in data.get("chain", [])]
         if not blocks:
             return None
 
@@ -109,15 +120,28 @@ class Storage:
         )
         blockchain.mining_reward = saved_reward
         blockchain.initial_mining_reward = saved_reward
-
-        if not blockchain.is_chain_valid():
-            self.chain_write_protected = True
-            self.chain_storage_error = "chain.json loaded but failed chain validation"
-            vorliq_logger.critical(self.chain_storage_error)
-            raise ValueError("saved blockchain data is not valid")
-
-        vorliq_logger.info("Loaded blockchain from disk with %s blocks", len(blockchain.chain))
         return blockchain
+
+    def _restore_valid_chain_backup(self) -> Blockchain:
+        backup_path = self.chain_file.with_suffix(self.chain_file.suffix + ".bak")
+        try:
+            backup_data = json.loads(backup_path.read_text(encoding="utf-8"))
+            backup_blockchain = self._blockchain_from_chain_data(backup_data)
+            if backup_blockchain is None or not backup_blockchain.is_chain_valid():
+                raise ValueError("backup chain failed validation")
+
+            invalid_path = self.chain_file.with_suffix(self.chain_file.suffix + f".invalid.{int(time.time())}")
+            shutil.copy2(self.chain_file, invalid_path)
+            self._write_json(self.chain_file, backup_data, create_backup=False)
+            self.chain_write_protected = False
+            self.chain_storage_error = None
+            vorliq_logger.warning("Restored invalid chain.json from independently validated chain.json.bak")
+            return backup_blockchain
+        except Exception as backup_error:
+            self.chain_write_protected = True
+            self.chain_storage_error = "chain.json loaded but failed chain validation and no valid backup is available"
+            vorliq_logger.critical(self.chain_storage_error)
+            raise ValueError("saved blockchain data is not valid") from backup_error
 
     def save_indexes(self, indexes: Any) -> None:
         payload = indexes.to_payload() if hasattr(indexes, "to_payload") else indexes

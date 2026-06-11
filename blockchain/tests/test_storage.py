@@ -93,6 +93,45 @@ class StorageTests(unittest.TestCase):
             with self.assertRaises(Exception):
                 storage.save_chain(Blockchain())
 
+    def test_semantically_invalid_chain_restores_independently_validated_backup(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+            blockchain = Blockchain()
+            blockchain.mine_pending_transactions("miner")
+            storage.save_chain(blockchain)
+
+            chain_file = Path(temp_dir) / "chain.json"
+            backup_file = Path(temp_dir) / "chain.json.bak"
+            backup_file.write_text(chain_file.read_text(encoding="utf-8"), encoding="utf-8")
+            invalid_data = json.loads(chain_file.read_text(encoding="utf-8"))
+            invalid_data["chain"][1]["hash"] = "invalid"
+            chain_file.write_text(json.dumps(invalid_data), encoding="utf-8")
+
+            restored = storage.load_chain()
+
+            self.assertIsNotNone(restored)
+            self.assertTrue(restored.is_chain_valid())
+            self.assertFalse(storage.chain_write_protected)
+            self.assertTrue(list(Path(temp_dir).glob("chain.json.invalid.*")))
+
+    def test_semantically_invalid_chain_rejects_invalid_backup(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+            blockchain = Blockchain()
+            blockchain.mine_pending_transactions("miner")
+            storage.save_chain(blockchain)
+
+            chain_file = Path(temp_dir) / "chain.json"
+            invalid_data = json.loads(chain_file.read_text(encoding="utf-8"))
+            invalid_data["chain"][1]["hash"] = "invalid"
+            chain_file.write_text(json.dumps(invalid_data), encoding="utf-8")
+            (Path(temp_dir) / "chain.json.bak").write_text(json.dumps(invalid_data), encoding="utf-8")
+
+            with self.assertRaises(ValueError):
+                storage.load_chain()
+
+            self.assertTrue(storage.chain_write_protected)
+
     def test_file_locking_prevents_concurrent_write_corruption(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             storage = Storage(temp_dir)
