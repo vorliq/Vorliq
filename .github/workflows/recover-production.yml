@@ -40,7 +40,10 @@ jobs:
             test -n "${RECOVERY_ARCHIVE}"
             bash /home/vorliq/app/deployment/verify_backup.sh "${RECOVERY_ARCHIVE}" >/dev/null
             bash /home/vorliq/app/deployment/restore_backup.sh "${RECOVERY_ARCHIVE}" --dry-run >/dev/null
+            systemctl stop vorliq-heartbeat.timer || true
+            systemctl stop vorliq-heartbeat.service vorliq-backend.service vorliq-blockchain.service
             bash /home/vorliq/app/deployment/restore_backup.sh "${RECOVERY_ARCHIVE}" >/dev/null
+            systemctl enable --now vorliq-heartbeat.timer
             for attempt in 1 2 3 4 5 6 7 8 9 10; do
               BLOCKCHAIN_RESPONSE="$(curl -s http://localhost:5001/diagnostics || true)"
               if echo "${BLOCKCHAIN_RESPONSE}" | grep -q '"chain_valid":true'; then
