@@ -50,7 +50,7 @@
       <section class="glass">
         <h2>Test Layers</h2>
         <ul>
-          <li><strong>Python tests</strong> verify blockchain blocks, transactions, wallets, storage, storage adapters, profiles, faucet, lending, exchange, governance, treasury, mining status, registry, and security behavior.</li>
+          <li><strong>Python tests</strong> verify blockchain blocks, transactions, wallets, storage, storage adapters, profiles, faucet, lending, community coordination, governance, treasury, mining status, registry, and security behavior.</li>
           <li><strong>Backend Jest tests</strong> verify Node API routes, validation, safe error handling, admin protection, incidents, backups, manifests, heartbeat, faucet, mining, and lifecycle route proxies.</li>
           <li><strong>Frontend tests</strong> verify React rendering, onboarding, navigation, theme behavior, wallet safety, risk notices, and major page states.</li>
           <li><strong>SDK checks</strong> build the JavaScript SDK and run a bounded smoke call against safe public endpoints.</li>
@@ -88,6 +88,14 @@ npm run e2e:ci
 
 node ../tools/check_readiness.js https://vorliq.org --allow-warning</code></pre>
         <p>Set <code>E2E_BASE_URL</code> to test another deployed environment. The default is <code>https://vorliq.org</code>.</p>
+        <p>Linux/macOS developers can run the same core checks from the repository root after making the scripts executable:</p>
+        <pre><code>chmod +x scripts/*.sh
+./scripts/test-blockchain.sh
+./scripts/test-backend.sh
+./scripts/test-frontend.sh
+./scripts/build-frontend.sh
+./scripts/check-readiness.sh</code></pre>
+        <p>The readiness wrapper checks the local backend by default. These wrappers are local-development tools and do not deploy or mutate production services. Windows developers can continue using the underlying commands shown above.</p>
       </section>
 
       <section class="glass">

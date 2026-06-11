@@ -35,12 +35,12 @@
       <div class="hero">
         <img class="logo" src="logo.png" alt="Vorliq logo" />
         <h1>How to Run Vorliq</h1>
-        <p>Set up the complete Version 1.0 platform on Windows.</p>
+        <p>Set up the local Version 1.0 developer stack on Windows, Linux, or macOS.</p>
       </div>
 
       <section>
         <h2>What You Need</h2>
-        <p>To run a Vorliq node on Windows, you need Windows 10 or later, Node.js LTS from nodejs.org, Python 3.12 from python.org with the Add to PATH checkbox selected during installation, and Git from git-scm.com. These tools let your computer run the blockchain API, backend API, React web app, and mobile development tools.</p>
+        <p>You need Node.js LTS, Python 3.12, and Git. On Windows, use Windows 10 or later and select the Python installer option that adds Python to PATH. These tools let your computer run the blockchain API, backend API, and React web app locally.</p>
       </section>
 
       <section>
@@ -52,23 +52,37 @@ cd Vorliq</pre>
 
       <section>
         <h2>Install Dependencies</h2>
-        <p>Install the blockchain dependencies first by creating the Python virtual environment, activating it, and installing the required Python packages.</p>
+        <p>Install the blockchain dependencies first by creating the Python virtual environment and installing the required Python packages.</p>
+        <p><strong>Windows:</strong></p>
         <pre>cd blockchain
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt</pre>
-        <p>Then install the backend, frontend, and mobile JavaScript dependencies from their folders.</p>
+        <p><strong>Linux/macOS:</strong></p>
+        <pre>cd blockchain
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt</pre>
+        <p>Then install the backend and frontend JavaScript dependencies from their folders.</p>
+        <p><strong>Windows:</strong></p>
         <pre>cd ..\backend
 npm install
 cd ..\frontend
-npm install
-cd ..\mobile
 npm install</pre>
+        <p><strong>Linux/macOS:</strong></p>
+        <pre>cd ../backend
+npm install
+cd ../frontend
+npm install
+cd ..
+chmod +x scripts/*.sh stress_test/run_stress_test.sh</pre>
       </section>
 
       <section>
         <h2>Start Vorliq</h2>
-        <p>After dependencies are installed, double click <code>start.bat</code> in the root Vorliq folder. The startup script opens the blockchain API, backend API, React frontend, and heartbeat service. When the services are ready, open <code>http://localhost:3000</code> in your browser.</p>
+        <p>On Windows, double click <code>start.bat</code> in the root Vorliq folder. It opens the blockchain API, backend API, React frontend, and heartbeat helper in separate windows.</p>
+        <p>On Linux or macOS, run <code>./scripts/start-all.sh</code> from the root Vorliq folder. It starts the blockchain API, backend API, and React frontend in one terminal. Press <code>Ctrl+C</code> to stop them. The registry heartbeat helper is disabled by default because it writes local registry heartbeat data; explicitly set <code>VORLIQ_ENABLE_HEARTBEAT=1</code> when that local behavior is needed.</p>
+        <p>When the services are ready, open <code>http://localhost:3000</code> in your browser. These scripts are for local development, not production deployment.</p>
+        <p>The shell scripts improve Linux/macOS developer setup coverage, but they do not claim that every operating-system configuration has been tested.</p>
       </section>
 
       <section>
@@ -80,7 +94,7 @@ npm install</pre>
       <section>
         <h2>Mobile App</h2>
         <p>The Vorliq mobile app is built with React Native and Expo for community testing. Install Expo Go, open a terminal inside the <code>mobile</code> folder, run <code>npx expo start</code>, and scan the QR code with Expo Go. The default mobile node is <code>https://vorliq.org</code>; in Settings you can switch to your own backend using a safe node URL such as <code>https://community-node.example</code>.</p>
-        <p>The mobile app now includes wallet creation, local signing, reviewed sending, mining status, faucet claims, transaction and block detail views, profiles, lending lifecycle views and repayment, exchange lifecycle tracking actions, governance rule-change views, treasury ledger reading, treasury proposal submission and voting, node registry status, and notifications.</p>
+        <p>The mobile app now includes wallet creation, local signing, reviewed sending, mining status, faucet claims, transaction and block detail views, profiles, lending lifecycle views and repayment, community coordination records, governance rule-change views, treasury ledger reading, treasury proposal submission and voting, node registry status, and notifications.</p>
         <p>Some local Expo exports may warn if a private Android <code>google-services.json</code> file is not present. That file is only needed for builds that use a configured push-notification project. Do not commit private mobile service files or secrets.</p>
       </section>
 
@@ -91,6 +105,7 @@ npm install</pre>
 
       <section>
         <h2>Get Help</h2>
+        <p>Never paste private keys, wallet passwords, admin tokens, or seed phrases into support messages, issues, public logs, or screenshots.</p>
         <p>Vorliq is a community project, so the best way to get help is to join the public channels, ask questions, and share what you are building with VLQ.</p>
         <div class="links">
           <a class="button" href="https://discord.gg/qpX5sHD4pC">Discord</a>
