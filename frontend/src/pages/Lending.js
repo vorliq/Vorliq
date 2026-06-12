@@ -418,7 +418,7 @@ function Lending() {
       </nav>
 
       {activeTab === "request" && (
-        <section className="card card-pad stack">
+        <section className="card card-pad stack elev-2">
           <h2>Request a Loan</h2>
           <p className="help-text">
             Approval opens an issuance transaction from the community lending pool. Funds are not confirmed until that transaction is mined into a block. Use your public wallet address, not a private key.
