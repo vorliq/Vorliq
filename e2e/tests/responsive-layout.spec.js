@@ -78,7 +78,9 @@ test.describe("responsive layout and visual guardrails", () => {
     await expect(footer.locator(".social-links")).toHaveCount(1);
     await expect(footer.locator(".social-links a")).toHaveCount(5);
     await expect(footer.locator(".social-links a svg")).toHaveCount(5);
-    await expect(footer).not.toContainText(/reddit/i);
+    await expect(footer.locator(".social-links a.reddit")).toHaveAttribute("href", "https://www.reddit.com/r/VorliqOfficial/");
+    await expect(footer.locator(".social-links a.facebook")).toHaveAttribute("href", "https://www.facebook.com/people/Vorliq/61590708960405/");
+    await expect(footer.locator(".social-links a.github")).toHaveCount(0);
   });
 
   test("top logo is visible and dashboard does not repeat a giant middle logo", async ({ page }) => {

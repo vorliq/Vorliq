@@ -8,7 +8,7 @@ const {
 } = require("./helpers");
 
 const routes = [
-  ["/", /Vorliq Dashboard/i],
+  ["/", /Your Community's Platform/i],
   ["/wallet", /Wallet/i],
   ["/send", /Send VLQ/i],
   ["/mine", /Mine VLQ|Mining Status/i],
