@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
-import SocialLinks from "../components/SocialLinks";
 import { formatVlq, loadPublicChainSnapshot, shortHash } from "../helpers/publicApi";
 
 const trustFacts = [
@@ -219,7 +218,7 @@ function HeroChainPanel({ loading, snapshot }) {
 
 function TrustFacts() {
   return (
-    <section className="grid stats-grid" aria-label="Vorliq product facts">
+    <section className="grid quick-link-grid" aria-label="Vorliq product facts">
       {trustFacts.map((fact) => (
         <div className="card card-pad stat-card compact-stat" key={fact}>
           <span className="stat-value">{fact}</span>
@@ -344,7 +343,7 @@ function LiveSnapshot({ loading, snapshot, unavailable }) {
         <div className="governance-grid">
           {transactions.map((tx, index) => (
             <Link
-              className="lifecycle-step home-transaction-link"
+              className="lifecycle-step record-link"
               to={`/tx/${encodeURIComponent(tx.tx_id)}`}
               key={tx.tx_id || index}
             >
@@ -381,7 +380,6 @@ function Community() {
           </article>
         ))}
       </div>
-      <SocialLinks />
     </section>
   );
 }
