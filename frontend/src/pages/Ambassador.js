@@ -1,6 +1,10 @@
 import { Link } from "react-router-dom";
 
+import useReveal from "../helpers/useReveal";
+
 function Ambassador() {
+  const roleRevealRef = useReveal();
+
   return (
     <div className="page">
       <section className="hero" aria-label="Ambassador program introduction">
@@ -12,7 +16,7 @@ function Ambassador() {
         </p>
       </section>
 
-      <section className="card card-pad stack" aria-label="What ambassadors do">
+      <section className="card card-pad stack reveal-up" aria-label="What ambassadors do" ref={roleRevealRef}>
         <div className="section-title">
           <div>
             <span className="eyebrow">The Role</span>
@@ -34,7 +38,7 @@ function Ambassador() {
       </section>
 
       <div className="two-column">
-        <section className="card card-pad stack" aria-label="Application status">
+        <section className="card card-pad stack elev-2" aria-label="Application status">
           <div className="section-title">
             <div>
               <span className="eyebrow">Applications</span>
