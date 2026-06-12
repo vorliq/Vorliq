@@ -4,7 +4,7 @@ const pillars = [
   {
     title: "Savings",
     body:
-      "Communities can pool VLQ and keep a transparent record of movement. Vorliq does not promise financial returns or present savings as deposits.",
+      "Communities pool VLQ and save together, with every contribution and balance recorded transparently on Vorliq's own chain.",
   },
   {
     title: "Lending",
@@ -19,7 +19,7 @@ const pillars = [
   {
     title: "Community",
     body:
-      "Vorliq is designed for neighbourhoods, families, cooperatives, and local groups that want shared coordination without a corporate owner.",
+      "Vorliq is built for real communities saving toward shared goals — transparent records, open governance, and lending decided together.",
   },
   {
     title: "Governance",

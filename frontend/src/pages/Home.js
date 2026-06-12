@@ -13,8 +13,8 @@ const trustFacts = [
 const steps = [
   {
     number: "01",
-    title: "Create a Community.",
-    body: "Set up a savings group and invite trusted members.",
+    title: "Save Together.",
+    body: "Save together as a community — pool VLQ, track shared balances transparently, and keep every record on Vorliq's own chain.",
   },
   {
     number: "02",
