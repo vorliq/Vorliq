@@ -8,6 +8,7 @@ import Spinner from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
+import useReveal from "../helpers/useReveal";
 
 const quickLinks = [
   { to: "/blockchain", label: "Blockchain", detail: "Inspect blocks and transactions" },
@@ -124,6 +125,7 @@ function Dashboard() {
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletErrors, setWalletErrors] = useState([]);
   const [clearWalletConfirmed, setClearWalletConfirmed] = useState(false);
+  const getStartedRevealRef = useReveal();
 
   useEffect(() => {
     let mounted = true;
@@ -311,7 +313,7 @@ function Dashboard() {
 
       <ErrorMessage message={errorMessage} />
 
-      <section className="glass-section account-dashboard-card" aria-labelledby="wallet-dashboard-title">
+      <section className="glass-section account-dashboard-card elev-2" aria-labelledby="wallet-dashboard-title">
         <div className="section-title">
           <div>
             <span className="section-eyebrow">Wallet Setup</span>
@@ -459,7 +461,7 @@ function Dashboard() {
         )}
       </section>
 
-      <section className="card card-pad glass-section get-started-card" aria-labelledby="get-started-title">
+      <section className="card card-pad glass-section get-started-card reveal-up" aria-labelledby="get-started-title" ref={getStartedRevealRef}>
         <div className="section-title">
           <div>
             <span className="section-eyebrow">First time here?</span>

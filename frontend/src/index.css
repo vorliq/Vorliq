@@ -3757,7 +3757,8 @@ html[data-theme="dark"] {
   transition: border-color var(--dur-2) var(--ease-soft), box-shadow var(--dur-2) var(--ease-soft);
 }
 
-.page .card.elev-2 {
+.page .card.elev-2,
+.page .glass-section.elev-2 {
   background: var(--surface-2);
   border-color: var(--border-mid);
   box-shadow: var(--elev-2);
