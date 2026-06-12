@@ -3619,6 +3619,15 @@ body {
   word-break: keep-all;
 }
 
+/* VLQ stat cells hold words like "Unavailable" and suffixed amounts, not hashes,
+   so they wrap on word boundaries instead of mono-wrap's break-anywhere. Scoped to VLQ. */
+.vlq-stat .stat-value {
+  font-size: 1.05rem;
+  line-height: 1.45;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
 /* Record cards rendered as links (Home recent transactions, Blockchain explorer rows). */
 .record-link {
   display: grid;

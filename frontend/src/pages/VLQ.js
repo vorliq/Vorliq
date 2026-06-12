@@ -218,7 +218,7 @@ function VLQ() {
         <>
           <section className="grid stats-grid" aria-label="VLQ network summary">
             {metrics.map((metric) => (
-              <div className="card card-pad stat-card compact-stat" key={metric.label}>
+              <div className="card card-pad stat-card compact-stat vlq-stat" key={metric.label}>
                 <span className="stat-label">{metric.label}</span>
                 <span className="stat-value mono-wrap">{metric.value}</span>
                 {metric.note && <p className="help-text">{metric.note}</p>}
@@ -415,21 +415,21 @@ function VLQ() {
               </div>
             </div>
             <div className="grid quick-link-grid">
-              <div className="card card-pad stat-card compact-stat">
+              <div className="card card-pad stat-card compact-stat vlq-stat">
                 <span className="stat-label">Balance</span>
                 <span className="stat-value mono-wrap">
                   {displayNumber(data?.treasury, data?.treasury?.current_balance ?? data?.treasury?.balance, " VLQ")}
                 </span>
               </div>
-              <div className="card card-pad stat-card compact-stat">
+              <div className="card card-pad stat-card compact-stat vlq-stat">
                 <span className="stat-label">Total received</span>
                 <span className="stat-value mono-wrap">{displayNumber(data?.treasury, data?.treasury?.total_received, " VLQ")}</span>
               </div>
-              <div className="card card-pad stat-card compact-stat">
+              <div className="card card-pad stat-card compact-stat vlq-stat">
                 <span className="stat-label">Total paid</span>
                 <span className="stat-value mono-wrap">{displayNumber(data?.treasury, data?.treasury?.total_paid, " VLQ")}</span>
               </div>
-              <div className="card card-pad stat-card compact-stat">
+              <div className="card card-pad stat-card compact-stat vlq-stat">
                 <span className="stat-label">Pending payouts</span>
                 <span className="stat-value mono-wrap">{displayNumber(data?.treasury, data?.treasury?.pending_payouts, " VLQ")}</span>
               </div>
