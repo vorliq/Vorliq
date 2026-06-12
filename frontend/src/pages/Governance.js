@@ -12,6 +12,7 @@ import { useAuth } from "../context/AuthContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 import { authorityErrorMessage, postSignedAuthority } from "../helpers/signedAuthority";
+import useReveal from "../helpers/useReveal";
 
 const categories = [
   ["mining_reward", "Mining Reward"],
@@ -115,6 +116,7 @@ function Governance() {
   const [submitting, setSubmitting] = useState(false);
   const [cancellingId, setCancellingId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const lifecycleRevealRef = useReveal();
 
   async function loadGovernance() {
     try {
@@ -341,7 +343,7 @@ function Governance() {
         </section>
       )}
 
-      <section className="card card-pad stack" aria-label="Governance lifecycle clarity">
+      <section className="card card-pad stack reveal-up" aria-label="Governance lifecycle clarity" ref={lifecycleRevealRef}>
         <div className="section-title">
           <div>
             <span className="eyebrow">Lifecycle</span>
@@ -446,7 +448,7 @@ function Governance() {
       )}
 
       {!loading && activeTab === "propose" && (
-        <section className="card card-pad stack">
+        <section className="card card-pad stack elev-2">
           <div className="section-title">
             <div>
               <span className="eyebrow">Governable Settings</span>

@@ -6,7 +6,7 @@ function AuthorityWriteNotice() {
   const { isLoggedIn } = useAuth();
 
   return (
-    <aside className="risk-notice" role="status" aria-label="Authority write status">
+    <aside className="risk-notice authority-write-notice" role="status" aria-label="Authority write status">
       <strong>Signed wallet authorization required</strong>
       {isLoggedIn ? (
         <p>

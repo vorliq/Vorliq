@@ -3837,3 +3837,14 @@ a:focus-visible {
     transform: none !important;
   }
 }
+
+/* Authority write notice: the safety message that gates signed governance,
+   treasury, and lending writes. Raised elevation and a gold status border so
+   it is MORE prominent than the surrounding cards, never less. No motion. */
+.authority-write-notice {
+  background: var(--surface-2);
+  border: 1px solid rgba(245, 166, 35, 0.5);
+  box-shadow: var(--elev-2), 0 0 0 1px rgba(245, 166, 35, 0.14), 0 8px 30px rgba(245, 166, 35, 0.1);
+  position: relative;
+  z-index: 1;
+}
