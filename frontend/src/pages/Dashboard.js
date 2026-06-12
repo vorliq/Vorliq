@@ -4,7 +4,6 @@ import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
-import SocialLinks from "../components/SocialLinks";
 import Spinner from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import api from "../helpers/api";
@@ -628,23 +627,6 @@ function Dashboard() {
         )}
       </section>
 
-      <section className="card card-pad glass-section community-links-card">
-        <div className="section-title">
-          <div>
-            <span className="section-eyebrow">Community</span>
-            <h2>Join the Conversation</h2>
-          </div>
-        </div>
-        <p>
-          Follow official Vorliq channels for project updates, support discussions, network
-          announcements, and community feedback.
-        </p>
-        <SocialLinks className="dashboard-social-links" />
-        <div className="button-row">
-          <Link className="button secondary brand-button-secondary" to="/forum">Open Forum</Link>
-          <Link className="button secondary brand-button-secondary" to="/chat">Open Chat</Link>
-        </div>
-      </section>
     </div>
   );
 }

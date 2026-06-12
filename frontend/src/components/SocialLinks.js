@@ -1,8 +1,8 @@
 const socialLinks = [
   { label: "X", href: "https://x.com/Vorliq", icon: XIcon, brand: "x" },
   { label: "Discord", href: "https://discord.gg/qpX5sHD4pC", icon: DiscordIcon, brand: "discord" },
-  { label: "Reddit", href: "https://www.reddit.com/r/VorliqOfficial/s/WI3zSuX44I", icon: RedditIcon, brand: "reddit" },
-  { label: "Facebook", href: "https://www.facebook.com/share/1CBqtEs7rS/?mibextid=wwXIfr", icon: FacebookIcon, brand: "facebook" },
+  { label: "Reddit", href: "https://www.reddit.com/r/VorliqOfficial/", icon: RedditIcon, brand: "reddit" },
+  { label: "Facebook", href: "https://www.facebook.com/people/Vorliq/61590708960405/", icon: FacebookIcon, brand: "facebook" },
   { label: "Telegram", href: "https://t.me/Vorliq", icon: TelegramIcon, brand: "telegram" },
 ];
 

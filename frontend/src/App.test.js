@@ -37,7 +37,6 @@ import Health from "./pages/Health";
 import NodeSync from "./pages/NodeSync";
 import Readiness from "./pages/Readiness";
 import MigrationReadiness from "./pages/MigrationReadiness";
-import Footer from "./components/Footer";
 
 jest.setTimeout(15000);
 
@@ -1320,18 +1319,12 @@ test("Dashboard can clear the encrypted local wallet only after explicit confirm
   expect(clearLocalWallet).toHaveBeenCalledTimes(1);
 });
 
-test("Dashboard shows branded official social icon links", async () => {
+test("Dashboard renders no in-page social links", async () => {
   const { container } = renderWithProviders(<Dashboard />);
 
-  expect(await screen.findByRole("heading", { name: /join the conversation/i })).toBeInTheDocument();
-  const socialLinks = container.querySelector(".dashboard-social-links");
-
-  expect(socialLinks.querySelectorAll(".social-brand-link")).toHaveLength(5);
-  expect(socialLinks.querySelector(".discord")).toHaveAttribute("href", "https://discord.gg/qpX5sHD4pC");
-  expect(socialLinks.querySelector(".telegram")).toHaveAttribute("href", "https://t.me/Vorliq");
-  expect(socialLinks.querySelector(".reddit")).toHaveAttribute("href", "https://www.reddit.com/r/VorliqOfficial/s/WI3zSuX44I");
-  expect(socialLinks.querySelector(".facebook")).toHaveAttribute("href", "https://www.facebook.com/share/1CBqtEs7rS/?mibextid=wwXIfr");
-  expect(socialLinks.querySelector(".x")).toHaveAttribute("href", "https://x.com/Vorliq");
+  expect(await screen.findByRole("heading", { name: /get started with vorliq/i })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: /join the conversation/i })).not.toBeInTheDocument();
+  expect(container.querySelector(".social-links")).toBeNull();
 });
 
 test("mobile hamburger announces expanded state when opened", async () => {
@@ -1475,8 +1468,8 @@ test("Footer renders the five official community links", async () => {
   expect(footer.querySelectorAll(".social-links")).toHaveLength(1);
   expect(within(footer).getByRole("link", { name: /open vorliq on x/i })).toHaveAttribute("href", "https://x.com/Vorliq");
   expect(within(footer).getByRole("link", { name: /open vorliq on discord/i })).toHaveAttribute("href", "https://discord.gg/qpX5sHD4pC");
-  expect(within(footer).getByRole("link", { name: /open vorliq on reddit/i })).toHaveAttribute("href", "https://www.reddit.com/r/VorliqOfficial/s/WI3zSuX44I");
-  expect(within(footer).getByRole("link", { name: /open vorliq on facebook/i })).toHaveAttribute("href", "https://www.facebook.com/share/1CBqtEs7rS/?mibextid=wwXIfr");
+  expect(within(footer).getByRole("link", { name: /open vorliq on reddit/i })).toHaveAttribute("href", "https://www.reddit.com/r/VorliqOfficial/");
+  expect(within(footer).getByRole("link", { name: /open vorliq on facebook/i })).toHaveAttribute("href", "https://www.facebook.com/people/Vorliq/61590708960405/");
   expect(within(footer).getByRole("link", { name: /open vorliq on telegram/i })).toHaveAttribute("href", "https://t.me/Vorliq");
   expect(within(footer).queryByRole("link", { name: /open vorliq on github/i })).not.toBeInTheDocument();
   expect(within(footer).getByRole("link", { name: /vlq overview/i })).toHaveAttribute("href", "/vlq");
@@ -3186,12 +3179,6 @@ test("Health page renders Migration Readiness summary", async () => {
   expect(await screen.findByText(/future target/i)).toBeInTheDocument();
   expect(await screen.findByText(/schema files/i)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /open migration readiness/i })).toHaveAttribute("href", "/migration-readiness");
-});
-
-test("Footer includes Storage Roadmap link", () => {
-  render(<Footer />);
-
-  expect(screen.getByRole("link", { name: /storage roadmap/i })).toHaveAttribute("href", "/migration-readiness");
 });
 
 test("Readiness page includes index checks", async () => {

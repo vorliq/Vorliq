@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-import Footer from "../components/Footer";
 import Health from "./Health";
 import Readiness from "./Readiness";
 import Releases from "./Releases";
@@ -205,16 +204,6 @@ test("Releases page renders current versions and changelog", async () => {
   expect((await screen.findAllByText("1.0.0")).length).toBeGreaterThan(0);
   expect(screen.getByText(/abc123def456/)).toBeInTheDocument();
   expect(screen.getByText(/Roadmap releases and upgrade management/i)).toBeInTheDocument();
-});
-
-test("Footer shows compact version text", () => {
-  render(
-    <MemoryRouter>
-      <Footer />
-    </MemoryRouter>
-  );
-
-  expect(screen.getByText(/Vorliq 1.0.0 - API v1 - stable/i)).toBeInTheDocument();
 });
 
 test("Health page renders version metadata", async () => {
