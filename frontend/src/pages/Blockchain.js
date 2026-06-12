@@ -183,7 +183,7 @@ function Blockchain() {
 
       <ErrorMessage message={errorMessage} />
 
-      <section className="card card-pad stack" aria-label="Explorer search">
+      <section className="card card-pad stack elev-2" aria-label="Explorer search">
         <form className="form" onSubmit={handleSearch}>
           <div className="field">
             <label htmlFor="chain-search">Search block, transaction, or wallet address</label>
@@ -208,7 +208,7 @@ function Blockchain() {
 
       {!loading && (
         <>
-          <section className="card card-pad stack" aria-label="Chain summary">
+          <section className="card card-pad stack elev-2" aria-label="Chain summary">
             <div className="section-title">
               <div>
                 <span className="eyebrow">Chain Summary</span>
