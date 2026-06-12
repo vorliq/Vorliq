@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { formatVlq, loadPublicChainSnapshot, shortHash } from "../helpers/publicApi";
+import useReveal from "../helpers/useReveal";
 
 const trustFacts = [
   "100% Vorliq Chain",
@@ -191,7 +192,7 @@ function HeroChainPanel({ loading, snapshot }) {
   ];
 
   return (
-    <article className="card card-pad stack" aria-label="Live chain panel">
+    <article className="card card-pad stack elev-2" aria-label="Live chain panel">
       <div className="section-title">
         <div>
           <span className="eyebrow">Vorliq Chain</span>
@@ -229,8 +230,9 @@ function TrustFacts() {
 }
 
 function HowItWorks() {
+  const revealRef = useReveal();
   return (
-    <section className="card card-pad stack" id="how-it-works" aria-label="How Vorliq works">
+    <section className="card card-pad stack reveal-up" id="how-it-works" aria-label="How Vorliq works" ref={revealRef}>
       <div className="section-title">
         <div>
           <span className="eyebrow">How It Works</span>
@@ -363,8 +365,9 @@ function LiveSnapshot({ loading, snapshot, unavailable }) {
 }
 
 function Community() {
+  const revealRef = useReveal();
   return (
-    <section className="card card-pad stack" id="community" aria-label="Community principles">
+    <section className="card card-pad stack reveal-up" id="community" aria-label="Community principles" ref={revealRef}>
       <div className="section-title">
         <div>
           <span className="eyebrow">Community</span>
@@ -385,8 +388,9 @@ function Community() {
 }
 
 function Learn() {
+  const revealRef = useReveal();
   return (
-    <section className="card card-pad stack" id="learn" aria-label="Learning guides">
+    <section className="card card-pad stack reveal-up" id="learn" aria-label="Learning guides" ref={revealRef}>
       <div className="section-title">
         <div>
           <span className="eyebrow">Learn</span>
@@ -409,8 +413,9 @@ function Learn() {
 }
 
 function FinalCta() {
+  const revealRef = useReveal();
   return (
-    <section className="card card-pad stack" aria-label="Get started">
+    <section className="card card-pad stack elev-3 reveal-up" aria-label="Get started" ref={revealRef}>
       <div className="section-title">
         <div>
           <span className="eyebrow">Get Started</span>

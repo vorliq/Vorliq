@@ -216,12 +216,17 @@ export function ProductNav() {
 }
 
 function NavItem({ link, mobile = false, onClick }) {
+  const location = useLocation();
+  const path = link.to.split("#")[0] || "/";
+  const isActive = path !== "/" && location.pathname === path;
+
   return (
     <Link
       className={`rounded-full font-extrabold text-vorliq-muted transition hover:bg-white/[0.05] hover:text-white ${
         mobile ? "px-4 py-3 text-base" : "px-4 py-2 text-sm"
-      }`}
+      } ${isActive ? "nav-item-active" : ""}`}
       to={link.to}
+      aria-current={isActive ? "page" : undefined}
       onClick={onClick}
     >
       {link.label}

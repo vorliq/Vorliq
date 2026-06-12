@@ -3650,3 +3650,190 @@ body {
 .record-link:focus-visible {
   border-color: var(--brand-cyan);
 }
+
+/* ============================================================
+   Vorliq Design Refresh v2 — Phase 1 foundation (additive).
+   Extends the existing token system; nothing removed, so pages
+   not yet migrated keep rendering on the prior values.
+
+   TYPE SCALE      display > h1 > h2 > h3 > body > caption; mono for figures.
+   ELEVATION       surface-0 page, surface-1 card, surface-2 raised,
+                   surface-3 highlight; matching borders and shadows.
+   STATUS COLORS   success teal, warn gold, danger red, info cyan —
+                   tints of the established identity only.
+   SPACING         4/8/12/16/24/32/48 step scale.
+   MOTION          two durations + one easing; reveal-on-scroll for
+                   marketing sections; everything collapses under
+                   prefers-reduced-motion.
+   ============================================================ */
+
+html[data-theme="dark"] {
+  --text-display: clamp(2.6rem, 6.2vw, 4.3rem);
+  --text-h1: clamp(2.1rem, 4.8vw, 3.2rem);
+  --text-h2: clamp(1.35rem, 2.4vw, 1.7rem);
+  --text-h3: 1.12rem;
+  --text-body: 1rem;
+  --text-caption: 0.84rem;
+  --leading-display: 1.06;
+  --leading-tight: 1.2;
+  --leading-body: 1.65;
+  --tracking-display: -0.022em;
+  --tracking-tight: -0.012em;
+  --tracking-eyebrow: 0.16em;
+
+  --surface-0: #070b15;
+  --surface-1: #0d1424;
+  --surface-2: #121b30;
+  --surface-3: #17223c;
+  --border-soft: rgba(30, 45, 64, 0.55);
+  --border-mid: rgba(46, 66, 92, 0.7);
+  --border-accent: rgba(0, 198, 167, 0.4);
+
+  --elev-1: 0 1px 0 rgba(255, 255, 255, 0.02), 0 8px 24px rgba(0, 0, 0, 0.24);
+  --elev-2: 0 1px 0 rgba(255, 255, 255, 0.03), 0 14px 40px rgba(0, 0, 0, 0.32);
+  --elev-3: 0 1px 0 rgba(255, 255, 255, 0.04), 0 22px 64px rgba(0, 0, 0, 0.42);
+  --glow-accent-soft: 0 0 0 1px rgba(0, 198, 167, 0.18), 0 6px 28px rgba(0, 198, 167, 0.14);
+  --glow-accent: 0 0 0 1px rgba(0, 198, 167, 0.3), 0 10px 36px rgba(0, 198, 167, 0.2);
+
+  --status-success: #19d3b5;
+  --status-success-bg: rgba(25, 211, 181, 0.12);
+  --status-warn: #f5a623;
+  --status-warn-bg: rgba(245, 166, 35, 0.12);
+  --status-danger: #ff6b66;
+  --status-danger-bg: rgba(255, 107, 102, 0.12);
+  --status-info: #4cc3ff;
+  --status-info-bg: rgba(76, 195, 255, 0.12);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --dur-1: 130ms;
+  --dur-2: 260ms;
+  --dur-3: 440ms;
+  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* --- refined shared typography (design-system pages) --- */
+.page h1 {
+  font-size: var(--text-h1);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+}
+
+.page .hero h1 {
+  font-size: var(--text-display);
+}
+
+.page h2 {
+  font-size: var(--text-h2);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+
+.page h3 {
+  font-size: var(--text-h3);
+  line-height: var(--leading-tight);
+}
+
+.page .subtitle,
+.page .page-subtitle {
+  line-height: var(--leading-body);
+}
+
+.page .eyebrow {
+  letter-spacing: var(--tracking-eyebrow);
+}
+
+/* --- elevation system --- */
+.page .card {
+  background: var(--surface-1);
+  border-color: var(--border-soft);
+  box-shadow: var(--elev-1);
+  transition: border-color var(--dur-2) var(--ease-soft), box-shadow var(--dur-2) var(--ease-soft);
+}
+
+.page .card.elev-2 {
+  background: var(--surface-2);
+  border-color: var(--border-mid);
+  box-shadow: var(--elev-2);
+}
+
+.page .card.elev-3 {
+  background: var(--surface-3);
+  border-color: var(--border-accent);
+  box-shadow: var(--elev-3), var(--glow-accent-soft);
+}
+
+.page .lifecycle-step {
+  transition: border-color var(--dur-2) var(--ease-soft), box-shadow var(--dur-2) var(--ease-soft),
+    transform var(--dur-2) var(--ease-soft);
+}
+
+.page .record-link:hover,
+.page .record-link:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: var(--glow-accent-soft);
+}
+
+/* --- interactive polish --- */
+.button {
+  transition: transform var(--dur-1) var(--ease-soft), box-shadow var(--dur-2) var(--ease-soft),
+    border-color var(--dur-2) var(--ease-soft), background-color var(--dur-2) var(--ease-soft);
+}
+
+.button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.button:focus-visible,
+.input:focus-visible,
+.textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.status-badge {
+  letter-spacing: 0.04em;
+  transition: box-shadow var(--dur-2) var(--ease-soft);
+}
+
+/* --- navigation active state --- */
+.navbar .nav-item-active {
+  color: #ffffff;
+  background: rgba(0, 198, 167, 0.12);
+  box-shadow: inset 0 -2px 0 var(--status-success);
+}
+
+/* --- reveal-on-scroll for marketing sections --- */
+.reveal-up {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.reveal-up.is-visible {
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--dur-3) var(--ease-soft), transform var(--dur-3) var(--ease-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal-up {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
