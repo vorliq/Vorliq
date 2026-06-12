@@ -33,6 +33,14 @@ router.post("/api/mine", async (req, res, next) => {
     const response = await axios.post(`${flaskUrl}/mine`, req.body);
     res.status(response.status).json(response.data);
   } catch (error) {
+    if (error.response?.status === 503 && error.response.data?.code === "MINING_DISABLED") {
+      return res.status(503).json({
+        success: false,
+        code: "MINING_DISABLED",
+        message: error.response.data?.message || "Mining is disabled on this node.",
+      });
+    }
+
     if (error.response?.status === 429) {
       return res.status(429).json({
         success: false,

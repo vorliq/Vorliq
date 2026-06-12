@@ -72,6 +72,30 @@ describe("mining routes", () => {
     });
   });
 
+  test("POST /api/mine preserves the mining-disabled application code", async () => {
+    axios.post.mockRejectedValue({
+      response: {
+        status: 503,
+        data: {
+          success: false,
+          code: "MINING_DISABLED",
+          message: "Mining is disabled on this node.",
+        },
+      },
+    });
+
+    const response = await request(app)
+      .post("/api/mine")
+      .send({ miner_address: "3brk5dNy9mn4Pk8YjQaqRtmTBTXG" });
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      success: false,
+      code: "MINING_DISABLED",
+      message: "Mining is disabled on this node.",
+    });
+  });
+
   test("admin mining status requires token", async () => {
     const response = await request(app).get("/api/admin/mining/status");
 
