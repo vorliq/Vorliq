@@ -80,7 +80,7 @@ function Register() {
           </div>
         </section>
 
-        <section className="card card-pad stack" aria-label="Create wallet form">
+        <section className="card card-pad stack elev-2" aria-label="Create wallet form">
           <div className="section-title">
             <div>
               <span className="eyebrow">Create Wallet</span>
