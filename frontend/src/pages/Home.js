@@ -220,7 +220,7 @@ function TrustFacts() {
   return (
     <section className="grid quick-link-grid" aria-label="Vorliq product facts">
       {trustFacts.map((fact) => (
-        <div className="card card-pad stat-card compact-stat" key={fact}>
+        <div className="card card-pad stat-card compact-stat trust-fact" key={fact}>
           <span className="stat-value">{fact}</span>
         </div>
       ))}

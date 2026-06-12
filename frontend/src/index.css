@@ -3610,6 +3610,15 @@ body {
   background: #0A0E1A;
 }
 
+/* Home trust-fact cards: text facts, not numbers, so size them to wrap on word
+   boundaries inside the narrow 4-up cells. Scoped to Home only. */
+.trust-fact .stat-value {
+  font-size: 1.05rem;
+  line-height: 1.45;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
 /* Record cards rendered as links (Home recent transactions, Blockchain explorer rows). */
 .record-link {
   display: grid;
