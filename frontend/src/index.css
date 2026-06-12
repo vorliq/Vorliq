@@ -3294,6 +3294,16 @@ a:focus-visible {
   --brand-link-glow: rgba(255, 255, 255, 0.16);
 }
 
+.social-brand-link.reddit {
+  --brand-link-color: #ff4500;
+  --brand-link-glow: rgba(255, 69, 0, 0.26);
+}
+
+.social-brand-link.facebook {
+  --brand-link-color: #1877f2;
+  --brand-link-glow: rgba(24, 119, 242, 0.26);
+}
+
 .brand-social-links .social-brand-link:hover,
 .brand-social-links .social-brand-link:focus-visible {
   border-color: color-mix(in srgb, var(--brand-link-color) 70%, transparent);

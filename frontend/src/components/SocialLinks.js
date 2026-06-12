@@ -1,8 +1,9 @@
 const socialLinks = [
+  { label: "X", href: "https://x.com/Vorliq", icon: XIcon, brand: "x" },
   { label: "Discord", href: "https://discord.gg/qpX5sHD4pC", icon: DiscordIcon, brand: "discord" },
+  { label: "Reddit", href: "https://www.reddit.com/r/VorliqOfficial/s/WI3zSuX44I", icon: RedditIcon, brand: "reddit" },
+  { label: "Facebook", href: "https://www.facebook.com/share/1CBqtEs7rS/?mibextid=wwXIfr", icon: FacebookIcon, brand: "facebook" },
   { label: "Telegram", href: "https://t.me/Vorliq", icon: TelegramIcon, brand: "telegram" },
-  { label: "GitHub", href: "https://github.com/vorliq/Vorliq", icon: GitHubIcon, brand: "github" },
-  { label: "X", href: "https://x.com/vorliq", icon: XIcon, brand: "x" },
 ];
 
 function SocialLinks({ compact = false, className = "" }) {
@@ -50,11 +51,25 @@ function TelegramIcon() {
   );
 }
 
-function GitHubIcon() {
+function RedditIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M9 19c-4 1.3-4-2-5.6-2.4" />
-      <path d="M15 22v-3.5c0-1 .1-1.6-.5-2.2 2.8-.3 5.8-1.4 5.8-6A4.7 4.7 0 0 0 19 7.1c.1-.3.6-1.6-.1-3.1 0 0-1.1-.3-3.5 1.3a12.2 12.2 0 0 0-6.4 0C6.6 3.7 5.5 4 5.5 4c-.7 1.5-.2 2.8-.1 3.1a4.7 4.7 0 0 0-1.3 3.2c0 4.6 3 5.7 5.8 6-.6.6-.6 1.3-.5 2.2V22" />
+      <circle cx="12" cy="14" r="7" />
+      <circle cx="9.2" cy="13.2" r="0.6" />
+      <circle cx="14.8" cy="13.2" r="0.6" />
+      <path d="M9.2 16.4c1.8 1.1 3.8 1.1 5.6 0" />
+      <path d="M12 7l1-4 4 1.2" />
+      <circle cx="17.8" cy="4.6" r="1.2" />
+      <path d="M5 11.5a1.8 1.8 0 0 1 2-3" />
+      <path d="M19 11.5a1.8 1.8 0 0 0-2-3" />
+    </svg>
+  );
+}
+
+function FacebookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M14 8h2.5V4.5H14a4 4 0 0 0-4 4V11H7.5v3.5H10V21h3.5v-6.5h2.6l.6-3.5h-3.2V8.8c0-.5.3-.8.5-.8Z" />
     </svg>
   );
 }

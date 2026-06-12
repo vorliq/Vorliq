@@ -76,8 +76,8 @@ test.describe("responsive layout and visual guardrails", () => {
     const footer = page.locator("footer.site-footer");
     await expect(footer).toBeVisible();
     await expect(footer.locator(".social-links")).toHaveCount(1);
-    await expect(footer.locator(".social-links a")).toHaveCount(4);
-    await expect(footer.locator(".social-links a svg")).toHaveCount(4);
+    await expect(footer.locator(".social-links a")).toHaveCount(5);
+    await expect(footer.locator(".social-links a svg")).toHaveCount(5);
     await expect(footer).not.toContainText(/reddit/i);
   });
 

@@ -1326,11 +1326,12 @@ test("Dashboard shows branded official social icon links", async () => {
   expect(await screen.findByRole("heading", { name: /join the conversation/i })).toBeInTheDocument();
   const socialLinks = container.querySelector(".dashboard-social-links");
 
-  expect(socialLinks.querySelectorAll(".social-brand-link")).toHaveLength(4);
+  expect(socialLinks.querySelectorAll(".social-brand-link")).toHaveLength(5);
   expect(socialLinks.querySelector(".discord")).toHaveAttribute("href", "https://discord.gg/qpX5sHD4pC");
   expect(socialLinks.querySelector(".telegram")).toHaveAttribute("href", "https://t.me/Vorliq");
-  expect(socialLinks.querySelector(".github")).toHaveAttribute("href", "https://github.com/vorliq/Vorliq");
-  expect(socialLinks.querySelector(".x")).toHaveAttribute("href", "https://x.com/vorliq");
+  expect(socialLinks.querySelector(".reddit")).toHaveAttribute("href", "https://www.reddit.com/r/VorliqOfficial/s/WI3zSuX44I");
+  expect(socialLinks.querySelector(".facebook")).toHaveAttribute("href", "https://www.facebook.com/share/1CBqtEs7rS/?mibextid=wwXIfr");
+  expect(socialLinks.querySelector(".x")).toHaveAttribute("href", "https://x.com/Vorliq");
 });
 
 test("mobile hamburger announces expanded state when opened", async () => {
@@ -1465,20 +1466,21 @@ test("New product shell removes old More menu and notification bell controls", a
   expect(screen.queryByRole("button", { name: /open notifications page/i })).not.toBeInTheDocument();
 });
 
-test("Footer renders official community links without Reddit", async () => {
+test("Footer renders the five official community links", async () => {
   render(<App />);
 
   await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
   const footer = document.querySelector("footer");
 
   expect(footer.querySelectorAll(".social-links")).toHaveLength(1);
-  expect(within(footer).getByRole("link", { name: /open vorliq on github/i })).toHaveAttribute("href", "https://github.com/vorliq/Vorliq");
-  expect(within(footer).getByRole("link", { name: /open vorliq on x/i })).toHaveAttribute("href", "https://x.com/vorliq");
-  expect(within(footer).getByRole("link", { name: /open vorliq on telegram/i })).toHaveAttribute("href", "https://t.me/Vorliq");
+  expect(within(footer).getByRole("link", { name: /open vorliq on x/i })).toHaveAttribute("href", "https://x.com/Vorliq");
   expect(within(footer).getByRole("link", { name: /open vorliq on discord/i })).toHaveAttribute("href", "https://discord.gg/qpX5sHD4pC");
+  expect(within(footer).getByRole("link", { name: /open vorliq on reddit/i })).toHaveAttribute("href", "https://www.reddit.com/r/VorliqOfficial/s/WI3zSuX44I");
+  expect(within(footer).getByRole("link", { name: /open vorliq on facebook/i })).toHaveAttribute("href", "https://www.facebook.com/share/1CBqtEs7rS/?mibextid=wwXIfr");
+  expect(within(footer).getByRole("link", { name: /open vorliq on telegram/i })).toHaveAttribute("href", "https://t.me/Vorliq");
+  expect(within(footer).queryByRole("link", { name: /open vorliq on github/i })).not.toBeInTheDocument();
   expect(within(footer).getByRole("link", { name: /vlq overview/i })).toHaveAttribute("href", "/vlq");
   expect(within(footer).getByRole("link", { name: /^lending$/i })).toHaveAttribute("href", "/lending");
-  expect(within(footer).queryByRole("link", { name: /reddit/i })).not.toBeInTheDocument();
 });
 
 test("Features route states responsible limits without wallet-connect integrations", async () => {
