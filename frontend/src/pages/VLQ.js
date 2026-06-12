@@ -227,7 +227,7 @@ function VLQ() {
           </section>
 
           <div className="two-column">
-            <section className="card card-pad stack" aria-label="Wallet view">
+            <section className="card card-pad stack elev-2" aria-label="Wallet view">
               <div className="section-title">
                 <div>
                   <span className="eyebrow">Wallet View</span>
