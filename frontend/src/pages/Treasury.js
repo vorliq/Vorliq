@@ -362,7 +362,7 @@ function Treasury() {
       )}
 
       {!loading && activeTab === "submit" && (
-        <section className="card card-pad stack">
+        <section className="card card-pad stack elev-2">
           <div className="section-title">
             <div>
               <span className="eyebrow">Proposal Limits</span>
