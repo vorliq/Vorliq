@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 
+import useReveal from "../helpers/useReveal";
+
 const pillars = [
   {
     title: "Savings",
@@ -41,6 +43,10 @@ const commitments = [
 ];
 
 function Features() {
+  const pillarsRevealRef = useReveal();
+  const limitsRevealRef = useReveal();
+  const exploreRevealRef = useReveal();
+
   return (
     <div className="page">
       <section className="hero" aria-label="Features introduction">
@@ -52,7 +58,7 @@ function Features() {
         </p>
       </section>
 
-      <section className="card card-pad stack" aria-label="Product pillars">
+      <section className="card card-pad stack reveal-up" aria-label="Product pillars" ref={pillarsRevealRef}>
         <div className="section-title">
           <div>
             <span className="eyebrow">Pillars</span>
@@ -69,7 +75,7 @@ function Features() {
         </div>
       </section>
 
-      <section className="card card-pad stack" aria-label="What Vorliq is not">
+      <section className="card card-pad stack reveal-up" aria-label="What Vorliq is not" ref={limitsRevealRef}>
         <div className="section-title">
           <div>
             <span className="eyebrow">Honest Limits</span>
@@ -89,7 +95,7 @@ function Features() {
         </div>
       </section>
 
-      <section className="card card-pad stack" aria-label="Explore the public chain">
+      <section className="card card-pad stack elev-3 reveal-up" aria-label="Explore the public chain" ref={exploreRevealRef}>
         <div className="section-title">
           <div>
             <span className="eyebrow">Explore</span>
