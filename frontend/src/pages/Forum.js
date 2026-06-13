@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
+import RevealSection from "../components/RevealSection";
 import ReportButton from "../components/ReportButton";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
@@ -282,7 +283,7 @@ function Forum() {
 
       <ErrorMessage message={errorMessage} />
 
-      <section className="card card-pad stack" aria-label="Forum and moderation clarity">
+      <RevealSection className="card card-pad stack" aria-label="Forum and moderation clarity">
         <div className="section-title">
           <div>
             <span className="eyebrow">Community Layer</span>
@@ -315,7 +316,7 @@ function Forum() {
             locally on the <Link className="text-button" to="/send">Send</Link> page.
           </p>
         </div>
-      </section>
+      </RevealSection>
 
       <section className="two-column grid">
         <div className="card card-pad stack">

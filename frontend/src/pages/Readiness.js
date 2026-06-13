@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import ErrorMessage from "../components/ErrorMessage";
+import RevealSection from "../components/RevealSection";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
@@ -79,7 +80,7 @@ function Readiness() {
         </section>
       ) : readiness ? (
         <>
-          <section className="card card-pad">
+          <RevealSection className="card card-pad">
             <div className="section-title">
               <h2>Production Readiness</h2>
               <span className={`status-badge ${readiness.overall_status}`}>
@@ -192,7 +193,7 @@ function Readiness() {
                 <strong>{readiness.bootstrap_package_snapshot_signature_verified ? "Verified" : "Review"}</strong>
               </div>
             </div>
-          </section>
+          </RevealSection>
 
           <section className="card card-pad">
             <div className="section-title">

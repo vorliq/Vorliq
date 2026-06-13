@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
+import RevealSection from "../components/RevealSection";
 import ErrorMessage from "../components/ErrorMessage";
 import Spinner from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
@@ -101,7 +102,7 @@ function Faucet() {
       {loading ? (
         <Spinner label="Loading faucet..." />
       ) : (
-        <section className="grid stats-grid" aria-label="Faucet summary">
+        <RevealSection className="grid stats-grid" aria-label="Faucet summary">
           <div className="card card-pad stat-card">
             <span className="stat-label">Starter Amount</span>
             <span className="stat-value">{summary?.starter_amount ?? 1} VLQ</span>
@@ -118,10 +119,10 @@ function Faucet() {
             <span className="stat-label">Confirmed Claims</span>
             <span className="stat-value">{summary?.confirmed_claims ?? 0}</span>
           </div>
-        </section>
+        </RevealSection>
       )}
 
-      <section className="card card-pad stack">
+      <RevealSection className="card card-pad stack">
         <div className="section-title">
           <div>
             <span className="eyebrow">Claim</span>
@@ -163,12 +164,12 @@ function Faucet() {
             )}
           </div>
         )}
-      </section>
+      </RevealSection>
 
-      <section className="grid two-column">
+      <RevealSection className="grid two-column">
         <ClaimList title="My Faucet Claims" claims={myClaims} empty="No faucet claims found for this wallet yet." />
         <ClaimList title="Recent Public Claims" claims={recentClaims} empty="No public faucet claims yet." />
-      </section>
+      </RevealSection>
     </div>
   );
 }

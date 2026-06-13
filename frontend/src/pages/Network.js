@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import RevealSection from "../components/RevealSection";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
@@ -84,6 +85,7 @@ function Network() {
   const [peerUrl, setPeerUrl] = useState("");
   const [data, setData] = useState(initialNetworkData);
   const [loading, setLoading] = useState(true);
+  const [hasPublicData, setHasPublicData] = useState(false);
   const [adding, setAdding] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [peerStatuses, setPeerStatuses] = useState({});
@@ -112,6 +114,7 @@ function Network() {
     const anyPublicData = Object.values(nextData).some(Boolean);
 
     setData(nextData);
+    setHasPublicData(anyPublicData);
     setLoading(false);
     if (anyPublicData) {
       setErrorMessage("");
@@ -242,16 +245,36 @@ function Network() {
 
       <ErrorMessage message={errorMessage} />
 
-      <section className="card card-pad health-section">
+      {loading ? (
+        <section className="card card-pad">
+          <Spinner label="Checking the public network…" />
+        </section>
+      ) : !hasPublicData ? (
+        <section className="card card-pad stack">
+          <div className="section-title">
+            <h2>Public network status</h2>
+          </div>
+          <div className="empty-state">
+            The public network view is not yet available. Vorliq could not reach the public node,
+            registry, and snapshot services from here right now, so there is nothing verified to
+            show. This page never fills in placeholder network numbers — it stays empty until real
+            status data comes back, and it refreshes on its own every few seconds.
+          </div>
+          <div className="hero-actions">
+            <a className="button secondary" href="/nodes/compare">Node Sync</a>
+            <a className="button secondary" href="/peers/propagation">Peer Propagation</a>
+            <a className="button secondary" href="/readiness">Readiness</a>
+          </div>
+        </section>
+      ) : (
+        <>
+      <RevealSection className="card card-pad health-section">
         <div className="section-title">
           <h2>Public Network Overview</h2>
           <span className={`status-badge ${badgeClass(comparisonSummary.overall_status || data.readiness?.overall_status)}`}>
             {comparisonSummary.overall_status || data.readiness?.overall_status || "unavailable"}
           </span>
         </div>
-        {loading ? (
-          <Spinner label="Loading public network status..." />
-        ) : (
           <div className="stats-grid compact-stats">
             <Metric
               label="Registered nodes"
@@ -290,11 +313,10 @@ function Network() {
               )}
             />
           </div>
-        )}
-      </section>
+      </RevealSection>
 
       <div className="grid two-column">
-        <section className="card card-pad stack">
+        <RevealSection className="card card-pad stack">
           <div className="section-title">
             <h2>Trusted Chain Sync</h2>
             <span className={`status-badge ${badgeClass(comparisonSummary.overall_status)}`}>
@@ -323,9 +345,9 @@ function Network() {
           ) : (
             <div className="empty-state">Node comparison is unavailable right now.</div>
           )}
-        </section>
+        </RevealSection>
 
-        <section className="card card-pad stack">
+        <RevealSection className="card card-pad stack">
           <div className="section-title">
             <h2>Peer Propagation</h2>
             <span className={`status-badge ${badgeClass(propagation?.receive_enabled ? "ok" : "warning")}`}>
@@ -346,10 +368,10 @@ function Network() {
             Broadcast disabled can be normal during receive-only validation. Non-next blocks should
             be quarantined rather than trusted automatically.
           </p>
-        </section>
+        </RevealSection>
       </div>
 
-      <section className="card card-pad health-section">
+      <RevealSection className="card card-pad health-section">
         <div className="section-title">
           <h2>Bootstrap, Snapshot, Audit</h2>
           <span className={`status-badge ${badgeClass(data.snapshotVerification?.verified || data.snapshotVerification?.signature_verified)}`}>
@@ -382,9 +404,9 @@ function Network() {
             value={data.networkManifest?.success ? "available" : "unavailable"}
           />
         </div>
-      </section>
+      </RevealSection>
 
-      <section className="card card-pad peer-section">
+      <RevealSection className="card card-pad peer-section">
         <div className="section-title">
           <h2>Warnings</h2>
           <span className={`status-badge ${seriousWarnings.length ? "warning" : "pass"}`}>
@@ -411,9 +433,9 @@ function Network() {
             </article>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
-      <section className="card card-pad health-section">
+      <RevealSection className="card card-pad health-section">
         <div className="section-title">
           <h2>Registry Lifecycle</h2>
           <span className="eyebrow">
@@ -432,9 +454,11 @@ function Network() {
           Archived and retired nodes remain visible as public lifecycle signals, but they should not
           be treated as default live peers.
         </p>
-      </section>
+      </RevealSection>
+        </>
+      )}
 
-      <section className="card card-pad peer-section">
+      <RevealSection className="card card-pad peer-section">
         <div className="section-title">
           <h2>Node Operator Tools</h2>
           <span className="eyebrow">Verified onboarding</span>
@@ -453,7 +477,7 @@ function Network() {
           <a className="button secondary small-button" href="/readiness">Readiness Page</a>
           <a className="button secondary small-button" href="/audit">Audit Page</a>
         </div>
-      </section>
+      </RevealSection>
 
       <div className="grid two-column">
         <section className="card card-pad stack">
@@ -491,7 +515,7 @@ function Network() {
         </section>
       </div>
 
-      <section className="card card-pad peer-section">
+      <RevealSection className="card card-pad peer-section">
         <div className="section-title">
           <h2>Known Peers</h2>
           <span className="eyebrow">Auto refreshes every 10 seconds</span>
@@ -523,9 +547,9 @@ function Network() {
             </div>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
-      <section className="card card-pad peer-section">
+      <RevealSection className="card card-pad peer-section">
         <div className="section-title">
           <h2>Recommended Active Nodes</h2>
           <span className="eyebrow">{displayCount(recommendedNodes.length, Boolean(data.registryNodes?.success))} from registry</span>
@@ -560,7 +584,7 @@ function Network() {
             </div>
           ))}
         </div>
-      </section>
+      </RevealSection>
     </div>
   );
 }

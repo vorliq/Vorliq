@@ -3,8 +3,13 @@ const { expectNoHorizontalOverflow, prepareReadOnlyPage, safeGoto } = require(".
 
 const viewports = [
   { name: "mobile", width: 375, height: 812 },
+  { name: "mobile-390", width: 390, height: 844 },
+  { name: "mobile-414", width: 414, height: 896 },
   { name: "tablet", width: 768, height: 1024 },
+  { name: "tablet-820", width: 820, height: 1180 },
+  { name: "tablet-1024", width: 1024, height: 1366 },
   { name: "desktop", width: 1366, height: 768 },
+  { name: "desktop-1440", width: 1440, height: 1100 },
   { name: "wide", width: 1920, height: 1080 },
 ];
 

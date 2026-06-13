@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import RevealSection from "../components/RevealSection";
 import { useAuth } from "../context/AuthContext";
 import { apiErrorMessage } from "../helpers/errors";
 import { hasWallet, importEncryptedWalletBackup } from "../helpers/storage";
@@ -141,7 +142,7 @@ function Login() {
 
       <ErrorMessage message={errorMessage} />
 
-      <section className="auth-card stack">
+      <RevealSection className="auth-card stack">
         {walletExists ? (
           <>
             <section className="card card-pad stack wallet-entry-panel primary">
@@ -294,7 +295,7 @@ function Login() {
             </section>
           </>
         )}
-      </section>
+      </RevealSection>
     </div>
   );
 }

@@ -146,9 +146,11 @@ test("Network page hides raw peer endpoints in rendered public lists", async () 
   render(<Network />);
 
   expect(await screen.findByText(/known peers/i)).toBeInTheDocument();
+  // Wait for the async public node/peer data to load before asserting on the
+  // rendered labels, so the check does not race the network request.
+  expect((await screen.findAllByText(/endpoint hidden/i)).length).toBeGreaterThan(0);
   expect(screen.queryByText("https://private-node.example.org")).not.toBeInTheDocument();
   expect(screen.queryByText("https://node.example.org")).not.toBeInTheDocument();
-  expect(screen.getAllByText(/endpoint hidden/i).length).toBeGreaterThan(0);
 });
 
 test("Network page keeps sections visible when optional status APIs are unavailable", async () => {

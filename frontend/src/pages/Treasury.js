@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
 import AuthorityPasswordField from "../components/AuthorityPasswordField";
+import RevealSection from "../components/RevealSection";
 import AuthorityWriteNotice from "../components/AuthorityWriteNotice";
 import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
@@ -496,7 +497,7 @@ function Overview({ balance, summary, ledger }) {
     ["Paid Proposals", treasuryCount(summary, "paid_proposal_count")],
   ];
   return (
-    <section className="stack">
+    <RevealSection className="stack">
       <section className="grid lending-guide-grid">
         <div className="card card-pad stack">
           <span className="eyebrow">Read-only status</span>
@@ -561,7 +562,7 @@ function Overview({ balance, summary, ledger }) {
         </div>
         <Ledger entries={ledger.slice(0, 5)} compact />
       </section>
-    </section>
+    </RevealSection>
   );
 }
 

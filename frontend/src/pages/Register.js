@@ -3,6 +3,7 @@ import { Navigate, Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import RevealSection from "../components/RevealSection";
 import { useAuth } from "../context/AuthContext";
 import { apiErrorMessage } from "../helpers/errors";
 
@@ -80,7 +81,7 @@ function Register() {
           </div>
         </section>
 
-        <section className="card card-pad stack elev-2" aria-label="Create wallet form">
+        <RevealSection className="card card-pad stack elev-2" aria-label="Create wallet form">
           <div className="section-title">
             <div>
               <span className="eyebrow">Create Wallet</span>
@@ -137,7 +138,7 @@ function Register() {
               <Link to="/login">Sign in</Link>.
             </p>
           </form>
-        </section>
+        </RevealSection>
       </div>
     </div>
   );

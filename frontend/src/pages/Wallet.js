@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import RevealSection from "../components/RevealSection";
 import QRPayment from "../components/QRPayment";
 import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
@@ -123,7 +124,7 @@ function Wallet() {
       <RiskNotice />
 
       <div className="grid two-column">
-        <section className="card card-pad stack">
+        <RevealSection className="card card-pad stack">
           <div className="section-title">
             <h2>New Wallet</h2>
             <button className="button" onClick={createWallet} disabled={creating || !safetyConfirmed}>
@@ -258,9 +259,9 @@ function Wallet() {
           ) : (
             <div className="empty-state">Create a wallet to display its address and keys.</div>
           )}
-        </section>
+        </RevealSection>
 
-        <section className="card card-pad stack">
+        <RevealSection className="card card-pad stack">
           <h2>Check Balance</h2>
           <p className="help-text">
             Need the bigger picture? <Link to="/vlq">Open the VLQ overview</Link> to compare confirmed balance, pending movement, faucet status, mining rewards, and treasury records.
@@ -293,8 +294,40 @@ function Wallet() {
               <Link to="/vlq">View VLQ movement overview</Link>
             </div>
           )}
-        </section>
+        </RevealSection>
       </div>
+
+      <RevealSection className="card card-pad stack">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">Self-custody, in plain terms</span>
+            <h2>What a Vorliq wallet is</h2>
+          </div>
+        </div>
+        <div className="grid three-column">
+          <article className="lifecycle-step">
+            <h3>Keys stay in your browser</h3>
+            <p>
+              A Vorliq wallet is a keypair created and encrypted on this device. Vorliq keeps the
+              encrypted backup locally and never sends your private key or password to the server.
+            </p>
+          </article>
+          <article className="lifecycle-step">
+            <h3>Back up before you fund</h3>
+            <p>
+              Download the encrypted backup and remember its password before receiving VLQ. If the
+              key and its backup are lost, Vorliq cannot restore them for you.
+            </p>
+          </article>
+          <article className="lifecycle-step">
+            <h3>Public address is shareable</h3>
+            <p>
+              Share your public address to receive VLQ. Only the private key can spend from the
+              wallet, so keep that part to yourself.
+            </p>
+          </article>
+        </div>
+      </RevealSection>
     </div>
   );
 }

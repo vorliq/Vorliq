@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import RevealSection from "../components/RevealSection";
 import QRPayment from "../components/QRPayment";
 import { useAuth } from "../context/AuthContext";
 import api from "../helpers/api";
@@ -256,7 +257,7 @@ function Send() {
 
       <ErrorMessage message={errorMessage} />
 
-      <section className="card card-pad">
+      <RevealSection className="card card-pad">
         <div className="section-title">
           <div>
             <span className="eyebrow">Step {step === "details" ? "1" : step === "review" ? "2" : "3"} of 3</span>
@@ -505,7 +506,42 @@ function Send() {
             </div>
           </div>
         )}
-      </section>
+      </RevealSection>
+
+      <RevealSection className="card card-pad stack">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">How sending works</span>
+            <h2>Signed by you, recorded on Vorliq's chain</h2>
+          </div>
+        </div>
+        <div className="grid three-column">
+          <article className="lifecycle-step">
+            <h3>Signed locally</h3>
+            <p>
+              Your transaction is signed inside this browser with your unlocked wallet. Vorliq
+              never receives your private key or wallet password.
+            </p>
+          </article>
+          <article className="lifecycle-step">
+            <h3>Pending, then confirmed</h3>
+            <p>
+              A submitted transaction stays pending until a miner includes it in a block. Until
+              then it is recorded as pending, not confirmed.
+            </p>
+          </article>
+          <article className="lifecycle-step">
+            <h3>On Vorliq's own chain</h3>
+            <p>
+              VLQ moves only on Vorliq's lightweight blockchain. There are no external chains,
+              bridges, or separate gas tokens involved.
+            </p>
+          </article>
+        </div>
+        <p className="help-text">
+          <Link to="/vlq">See how VLQ moves from pending to confirmed.</Link>
+        </p>
+      </RevealSection>
     </div>
   );
 }

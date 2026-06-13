@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
 import AuthorityPasswordField from "../components/AuthorityPasswordField";
+import RevealSection from "../components/RevealSection";
 import AuthorityWriteNotice from "../components/AuthorityWriteNotice";
 import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
@@ -338,7 +339,7 @@ function Lending() {
       <AuthorityWriteNotice />
       <RiskNotice />
 
-      <section className="grid lending-guide-grid">
+      <RevealSection className="grid lending-guide-grid">
         <div className="card card-pad stack">
           <span className="eyebrow">Read-only status</span>
           <h2>Lending lifecycle</h2>
@@ -371,7 +372,7 @@ function Lending() {
             </Link>
           </div>
         </div>
-      </section>
+      </RevealSection>
 
       {summary ? (
         <section className="card card-pad">

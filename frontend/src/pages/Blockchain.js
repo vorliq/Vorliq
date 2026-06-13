@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import ErrorMessage from "../components/ErrorMessage";
+import RevealSection from "../components/RevealSection";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
@@ -183,7 +184,7 @@ function Blockchain() {
 
       <ErrorMessage message={errorMessage} />
 
-      <section className="card card-pad stack elev-2" aria-label="Explorer search">
+      <RevealSection className="card card-pad stack elev-2" aria-label="Explorer search">
         <form className="form" onSubmit={handleSearch}>
           <div className="field">
             <label htmlFor="chain-search">Search block, transaction, or wallet address</label>
@@ -202,7 +203,7 @@ function Blockchain() {
             </button>
           </div>
         </form>
-      </section>
+      </RevealSection>
 
       {loading && <Spinner label="Loading blockchain explorer..." />}
 
