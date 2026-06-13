@@ -7,7 +7,6 @@ import IncidentBanner from "./components/IncidentBanner";
 import { AuthProvider } from "./context/AuthContext";
 import { AuthContext } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
-import { ThemeProvider } from "./context/ThemeContext";
 import api from "./helpers/api";
 import { authorityErrorMessage, postSignedAuthority } from "./helpers/signedAuthority";
 import Account from "./pages/Account";
@@ -1109,13 +1108,11 @@ function defaultApiGet(path) {
 
 function renderWithProviders(ui, route = "/") {
   return render(
-    <ThemeProvider>
       <NotificationProvider>
         <AuthProvider>
           <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
         </AuthProvider>
       </NotificationProvider>
-    </ThemeProvider>
   );
 }
 
@@ -1130,13 +1127,11 @@ function renderWithAuth(ui, auth, route = "/") {
   };
 
   return render(
-    <ThemeProvider>
       <NotificationProvider>
         <AuthContext.Provider value={{ ...defaultAuth, ...auth }}>
           <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
         </AuthContext.Provider>
       </NotificationProvider>
-    </ThemeProvider>
   );
 }
 
@@ -1679,7 +1674,6 @@ test("Profile page renders a public member profile", async () => {
 test("Profile form validation blocks short display names", async () => {
   api.get.mockImplementation(defaultApiGet);
   render(
-    <ThemeProvider>
       <NotificationProvider>
         <AuthContext.Provider value={{ wallet: { address: "VLQ_ME" }, isLoggedIn: true }}>
           <MemoryRouter initialEntries={["/profile?address=VLQ_ME"]}>
@@ -1687,7 +1681,6 @@ test("Profile form validation blocks short display names", async () => {
           </MemoryRouter>
         </AuthContext.Provider>
       </NotificationProvider>
-    </ThemeProvider>
   );
 
   expect(await screen.findByRole("heading", { name: /create your public profile/i })).toBeInTheDocument();
@@ -2022,7 +2015,6 @@ test("Account loan section handles active lifecycle statuses", async () => {
   });
 
   render(
-    <ThemeProvider>
       <NotificationProvider>
         <AuthContext.Provider value={{ wallet: { address: "VLQ_ME" }, isLoggedIn: true }}>
           <MemoryRouter initialEntries={["/account"]}>
@@ -2030,7 +2022,6 @@ test("Account loan section handles active lifecycle statuses", async () => {
           </MemoryRouter>
         </AuthContext.Provider>
       </NotificationProvider>
-    </ThemeProvider>
   );
 
   expect(await screen.findByRole("heading", { name: /my active loans/i })).toBeInTheDocument();
@@ -2330,7 +2321,6 @@ test("Governance My Governance state renders", async () => {
   });
 
   render(
-    <ThemeProvider>
       <NotificationProvider>
         <AuthContext.Provider value={{ wallet: { address: "VLQ_ME" }, isLoggedIn: true }}>
           <MemoryRouter initialEntries={["/governance"]}>
@@ -2338,7 +2328,6 @@ test("Governance My Governance state renders", async () => {
           </MemoryRouter>
         </AuthContext.Provider>
       </NotificationProvider>
-    </ThemeProvider>
   );
 
   await userEvent.click(await screen.findByRole("button", { name: /my governance/i }));

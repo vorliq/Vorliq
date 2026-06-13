@@ -8,7 +8,6 @@ import { ProductFooter, ProductNav } from "./components/ProductShell";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
-import { ThemeProvider } from "./context/ThemeContext";
 import Account from "./pages/Account";
 import Achievements from "./pages/Achievements";
 import Admin from "./pages/Admin";
@@ -96,15 +95,13 @@ const navSections = [
 
 function App() {
   return (
-    <ThemeProvider>
-      <NotificationProvider>
-        <AuthProvider>
-          <BrowserRouter>
-            <AppShell />
-          </BrowserRouter>
-        </AuthProvider>
-      </NotificationProvider>
-    </ThemeProvider>
+    <NotificationProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppShell />
+        </BrowserRouter>
+      </AuthProvider>
+    </NotificationProvider>
   );
 }
 

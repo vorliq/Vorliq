@@ -77,3 +77,8 @@ if (!navigator.clipboard) {
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = jest.fn();
 }
+
+// Vorliq ships dark mode only. Production sets data-theme="dark" on <html> in
+// public/index.html; mirror that baseline in the jsdom test document so themed
+// CSS variables resolve the same way they do in the browser.
+document.documentElement.setAttribute("data-theme", "dark");
