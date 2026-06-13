@@ -159,6 +159,23 @@ describe("analytics routes", () => {
     expect(events[0].route).toBe("/growth");
   });
 
+  test("a stale analytics storage lock is recovered instead of deadlocking writes", async () => {
+    // Simulate a lock left behind by a writer that died mid-write (for example,
+    // killed during a deploy restart). Without recovery this would block every
+    // future analytics write until the file was removed by hand.
+    await request(app).post("/api/analytics/event").send(safeEvent());
+    const lockPath = `${analyticsFile}.lock`;
+    fs.writeFileSync(lockPath, "999999");
+    const stale = new Date(Date.now() - 60000);
+    fs.utimesSync(lockPath, stale, stale);
+
+    const response = await request(app).post("/api/analytics/event").send(safeEvent({ route: "/recovered" }));
+
+    expect(response.status).toBe(200);
+    expect(fs.existsSync(lockPath)).toBe(false);
+    expect(readEvents().some((event) => event.route === "/recovered")).toBe(true);
+  });
+
   test("batch endpoint accepts a valid batch of interaction events", async () => {
     const response = await request(app)
       .post("/api/analytics/events")

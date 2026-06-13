@@ -63,6 +63,27 @@ function emptyStore() {
   return { events: [] };
 }
 
+// Storage lock recovery, scoped to the analytics file only. A legitimate write
+// holds the lock for milliseconds, and the shared lock helper gives up after 5s,
+// so any analytics.json.lock older than this threshold belongs to a process that
+// died mid-write (for example, killed during a deploy restart). Such a stale lock
+// would otherwise deadlock every future analytics write forever. Removing it is
+// safe: the holder is gone, atomic writes rename a complete temp file, and at
+// worst a single best-effort event is lost. This never touches any other store.
+const STALE_LOCK_MS = 12000;
+
+function clearStaleAnalyticsLock() {
+  const lockPath = `${analyticsFile()}.lock`;
+  try {
+    const stats = fs.statSync(lockPath);
+    if (Date.now() - stats.mtimeMs > STALE_LOCK_MS) {
+      fs.unlinkSync(lockPath);
+    }
+  } catch (error) {
+    // No lock file, or it was removed by a concurrent writer. Nothing to do.
+  }
+}
+
 function ensureStoreFile() {
   const file = analyticsFile();
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -79,6 +100,7 @@ function readStore() {
 
 function writeStore(store) {
   ensureStoreFile();
+  clearStaleAnalyticsLock();
   atomicWriteJson(analyticsFile(), { events: store.events || [] });
 }
 
