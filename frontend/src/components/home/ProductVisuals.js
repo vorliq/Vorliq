@@ -42,7 +42,7 @@ function Chrome({ title, badge, live }) {
 // A card is a single Link so the whole area is clickable, with a clear CTA row.
 function InterfaceCard({ to, label, variant, title, badge, live, cta, children }) {
   return (
-    <Link className={`vq-ui vq-ui--${variant}`} to={to} aria-label={label}>
+    <Link className={`vq-ui vq-ui--${variant}`} to={to} aria-label={label} data-vq-track={`card:${variant}`}>
       <Chrome title={title} badge={badge} live={live} />
       <div className="vq-ui__body">{children}</div>
       <span className="vq-ui-cta">

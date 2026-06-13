@@ -23,9 +23,30 @@ const SAFE_EVENT_TYPES = new Set([
   "node_sync_page_opened",
   "docs_link_clicked",
   "error_boundary_seen",
+  "cta_click",
+  "nav_click",
+  "card_click",
+  "section_view",
+  "dashboard_action",
+  "api_failure",
+  "frontend_error",
 ]);
 
-const SAFE_METADATA_KEYS = new Set(["source", "section", "link", "status", "reason", "route_category", "feature"]);
+const SAFE_METADATA_KEYS = new Set([
+  "source",
+  "section",
+  "link",
+  "status",
+  "reason",
+  "route_category",
+  "feature",
+  "element",
+  "device",
+  "endpoint",
+  "outcome",
+  "duration_ms",
+  "value",
+]);
 
 function storageAvailable() {
   return typeof window !== "undefined" && window.localStorage;
@@ -128,4 +149,179 @@ export function featureEventForRoute(pathname) {
     "/nodes/compare": "node_sync_page_opened",
   };
   return exact[pathname || "/"] || null;
+}
+
+// ---- Viewport bucket (non-identifying) ----
+export function deviceBucket() {
+  if (typeof window === "undefined") return "unknown";
+  const width = window.innerWidth || 0;
+  if (width === 0) return "unknown";
+  if (width < 768) return "mobile";
+  if (width < 1024) return "tablet";
+  return "desktop";
+}
+
+// ---- Batched, fire-and-forget event queue ----
+// Interaction events are queued and flushed in small batches so they never block
+// navigation, clicks or rendering. Flush uses sendBeacon (or keepalive fetch) so
+// in-flight events survive page unloads, and every path fails silently.
+const queue = [];
+let flushTimer = null;
+const BATCH_LIMIT = 10;
+const FLUSH_DELAY_MS = 2500;
+
+function analyticsEndpoint(pathSuffix) {
+  const base = api?.defaults?.baseURL || "/api";
+  return `${base.replace(/\/$/, "")}${pathSuffix}`;
+}
+
+export function flushAnalytics() {
+  if (queue.length === 0) return;
+  const events = queue.splice(0, queue.length);
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+  const body = JSON.stringify({ events });
+  try {
+    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+      const blob = new Blob([body], { type: "application/json" });
+      if (navigator.sendBeacon(analyticsEndpoint("/analytics/events"), blob)) return;
+    }
+    if (typeof fetch === "function") {
+      fetch(analyticsEndpoint("/analytics/events"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true,
+      }).catch(() => {});
+    }
+  } catch (error) {
+    // Analytics must never surface errors to the user.
+  }
+}
+
+function scheduleFlush() {
+  if (queue.length >= BATCH_LIMIT) {
+    flushAnalytics();
+    return;
+  }
+  if (flushTimer) return;
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    flushAnalytics();
+  }, FLUSH_DELAY_MS);
+}
+
+// Queue a single interaction event. Returns false and does nothing when analytics
+// is disabled or the event/payload is not allowed.
+export function track(eventType, options = {}) {
+  const payload = buildAnalyticsPayload(eventType, {
+    ...options,
+    metadata: { device: deviceBucket(), ...(options.metadata || {}) },
+  });
+  if (!payload) return false;
+  queue.push(payload);
+  scheduleFlush();
+  return true;
+}
+
+export function trackClick(kind, element, options = {}) {
+  const typeByKind = { cta: "cta_click", nav: "nav_click", card: "card_click", dashboard: "dashboard_action" };
+  const eventType = typeByKind[kind] || "cta_click";
+  return track(eventType, { ...options, metadata: { element: cleanText(element, 80), ...(options.metadata || {}) } });
+}
+
+export function trackSection(section, options = {}) {
+  return track("section_view", { ...options, metadata: { section: cleanText(section, 80), ...(options.metadata || {}) } });
+}
+
+export function trackApiFailure(endpoint, outcome, durationMs) {
+  return track("api_failure", {
+    metadata: {
+      endpoint: cleanText(endpoint, 80),
+      outcome: cleanText(outcome || "error", 24),
+      ...(Number.isFinite(durationMs) ? { duration_ms: String(Math.round(durationMs)) } : {}),
+    },
+  });
+}
+
+export function trackError(source) {
+  return track("frontend_error", { metadata: { element: cleanText(source || "window_error", 60) } });
+}
+
+// Parse a data-vq-track value of the form "kind:element" (e.g. "cta:create-account").
+function parseTrackAttr(value) {
+  const text = String(value || "");
+  const separator = text.indexOf(":");
+  if (separator === -1) return { kind: "cta", element: text };
+  return { kind: text.slice(0, separator), element: text.slice(separator + 1) };
+}
+
+let analyticsInitialised = false;
+
+// Wire up delegated click tracking, section visibility, error capture, and flush
+// on unload. Idempotent and safe to call once at app start.
+export function initAnalytics() {
+  if (analyticsInitialised || typeof document === "undefined") return () => {};
+  analyticsInitialised = true;
+
+  function onClick(event) {
+    const target = event.target?.closest?.("[data-vq-track]");
+    if (!target) return;
+    const { kind, element } = parseTrackAttr(target.getAttribute("data-vq-track"));
+    trackClick(kind, element);
+  }
+
+  function onError() {
+    trackError("window_error");
+  }
+  function onRejection() {
+    trackError("unhandled_rejection");
+  }
+  function onHide() {
+    flushAnalytics();
+  }
+
+  document.addEventListener("click", onClick, { capture: true });
+  window.addEventListener("error", onError);
+  window.addEventListener("unhandledrejection", onRejection);
+  window.addEventListener("pagehide", onHide);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flushAnalytics();
+  });
+
+  let observer = null;
+  if (typeof IntersectionObserver === "function") {
+    observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const section = entry.target.getAttribute("data-vq-section");
+          trackSection(section);
+          observer.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.4 }
+    );
+    // Observe current and future sections.
+    document.querySelectorAll("[data-vq-section]").forEach((node) => observer.observe(node));
+    window.setTimeout(() => {
+      document.querySelectorAll("[data-vq-section]").forEach((node) => observer.observe(node));
+    }, 1500);
+  }
+
+  return () => {
+    document.removeEventListener("click", onClick, { capture: true });
+    window.removeEventListener("error", onError);
+    window.removeEventListener("unhandledrejection", onRejection);
+    window.removeEventListener("pagehide", onHide);
+    if (observer) observer.disconnect();
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    }
+    queue.length = 0;
+    analyticsInitialised = false;
+  };
 }

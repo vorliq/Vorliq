@@ -1,7 +1,7 @@
 const express = require("express");
 
 const adminAuth = require("../middleware/adminAuth");
-const { adminSummary, appendEvent, summary } = require("../analytics");
+const { adminSummary, appendEvent, appendEvents, summary } = require("../analytics");
 
 const router = express.Router();
 
@@ -13,6 +13,18 @@ router.post("/api/analytics/event", (req, res) => {
     return res.status(error.status || 400).json({
       success: false,
       message: error.message || "Analytics event was rejected.",
+    });
+  }
+});
+
+router.post("/api/analytics/events", (req, res) => {
+  try {
+    const accepted = appendEvents((req.body && req.body.events) || req.body || []);
+    return res.json({ success: true, accepted });
+  } catch (error) {
+    return res.status(error.status || 400).json({
+      success: false,
+      message: error.message || "Analytics events were rejected.",
     });
   }
 });

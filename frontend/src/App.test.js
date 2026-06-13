@@ -1237,6 +1237,19 @@ test("Settings theme toggle applies the light theme and persists across routes",
   expect(document.documentElement).toHaveAttribute("data-theme", "light");
 });
 
+test("Settings analytics opt-out toggle disables analytics and persists", async () => {
+  window.history.pushState({}, "", "/settings");
+  render(<App />);
+
+  await screen.findByRole("heading", { level: 1, name: /appearance/i });
+  const toggle = screen.getByRole("switch", { name: /share anonymous usage analytics/i });
+  expect(toggle).toHaveAttribute("aria-checked", "true");
+
+  await userEvent.click(toggle);
+  expect(toggle).toHaveAttribute("aria-checked", "false");
+  expect(window.localStorage.getItem("vorliq_analytics_enabled")).toBe("false");
+});
+
 test("Header is authentication-aware based on the existing stored wallet", async () => {
   // A valid encrypted wallet backup means the visitor already has an account, so
   // the header must drop Sign In / Create Account and surface account actions.

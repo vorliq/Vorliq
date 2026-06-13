@@ -158,4 +158,82 @@ describe("analytics routes", () => {
     expect(events).toHaveLength(1);
     expect(events[0].route).toBe("/growth");
   });
+
+  test("batch endpoint accepts a valid batch of interaction events", async () => {
+    const response = await request(app)
+      .post("/api/analytics/events")
+      .send({
+        events: [
+          safeEvent({ event_type: "cta_click", metadata: { element: "create-account", device: "desktop" } }),
+          safeEvent({ event_type: "card_click", metadata: { element: "explorer", device: "mobile" } }),
+        ],
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.accepted).toBe(2);
+    expect(readEvents()).toHaveLength(2);
+    expect(readEvents().map((event) => event.event_type).sort()).toEqual(["card_click", "cta_click"]);
+  });
+
+  test("batch endpoint rejects a batch containing an invalid event and writes nothing", async () => {
+    const response = await request(app)
+      .post("/api/analytics/events")
+      .send({
+        events: [
+          safeEvent({ event_type: "cta_click", metadata: { element: "create-account" } }),
+          safeEvent({ event_type: "private_key_exported" }),
+        ],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(fs.existsSync(analyticsFile) ? readEvents() : []).toHaveLength(0);
+  });
+
+  test("batch endpoint rejects an empty or oversized batch", async () => {
+    const empty = await request(app).post("/api/analytics/events").send({ events: [] });
+    expect(empty.status).toBe(400);
+
+    const oversized = await request(app)
+      .post("/api/analytics/events")
+      .send({ events: Array.from({ length: 26 }, () => safeEvent({ event_type: "nav_click", metadata: { element: "blockchain" } })) });
+    expect(oversized.status).toBe(400);
+  });
+
+  test("batch endpoint rejects unsafe metadata keys", async () => {
+    const response = await request(app)
+      .post("/api/analytics/events")
+      .send({ events: [safeEvent({ event_type: "cta_click", metadata: { private_key: "secret" } })] });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+  });
+
+  test("admin analytics returns the additive aggregate sections", async () => {
+    await request(app)
+      .post("/api/analytics/events")
+      .send({
+        events: [
+          safeEvent({ event_type: "cta_click", route: "/", metadata: { element: "create-account", device: "desktop" } }),
+          safeEvent({ event_type: "card_click", metadata: { element: "explorer", device: "mobile" } }),
+          safeEvent({ event_type: "api_failure", metadata: { endpoint: "/readiness", outcome: "timeout" } }),
+          safeEvent({ event_type: "frontend_error", metadata: { element: "window_error" } }),
+        ],
+      });
+
+    const response = await request(app)
+      .get("/api/admin/analytics")
+      .set("Authorization", "Bearer analytics-admin-token");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(Array.isArray(response.body.top_buttons)).toBe(true);
+    expect(response.body.top_buttons).toEqual(expect.arrayContaining([{ name: "create-account", count: 1 }]));
+    expect(response.body.top_cards).toEqual(expect.arrayContaining([{ name: "explorer", count: 1 }]));
+    expect(response.body.api_failure_total_30d).toBe(1);
+    expect(response.body.frontend_error_count_30d).toBe(1);
+    expect(Array.isArray(response.body.device_breakdown)).toBe(true);
+    expect(Array.isArray(response.body.journey_funnel)).toBe(true);
+  });
 });

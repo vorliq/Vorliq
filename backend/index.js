@@ -170,7 +170,7 @@ app.use((req, res, next) => {
   });
   next();
 });
-app.use("/api/analytics/event", analyticsLimiter);
+app.use(["/api/analytics/event", "/api/analytics/events"], analyticsLimiter);
 app.use(analyticsRoutes);
 app.use("/api", generalLimiter, apiSlowDown);
 app.use("/api/socket.io", chatLimiter);

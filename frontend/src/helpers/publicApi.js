@@ -1,3 +1,4 @@
+import { trackApiFailure } from "./analytics";
 import api from "./api";
 
 function settledValue(result, fallback) {
@@ -7,6 +8,18 @@ function settledValue(result, fallback) {
 function isUnavailable(result) {
   if (result.status === "rejected") return true;
   return result.value?.data?.success !== true;
+}
+
+// Report rejected public GET endpoints to analytics (endpoint + timeout/error).
+// Fire-and-forget; never affects the returned data.
+function reportFailures(pairs) {
+  pairs.forEach(([result, endpoint]) => {
+    if (result.status !== "rejected") return;
+    const reason = result.reason || {};
+    const outcome =
+      reason.code === "ECONNABORTED" || /timeout/i.test(reason.message || "") ? "timeout" : "error";
+    trackApiFailure(endpoint, outcome);
+  });
 }
 
 // Core chain snapshot. These endpoints are fast, so the main homepage cards and
@@ -21,6 +34,15 @@ export async function loadPublicChainSnapshot() {
       api.get("/health", { timeout: 5000 }),
       api.get("/leaderboard", { params: { limit: 1, offset: 0 } }),
     ]);
+
+  reportFailures([
+    [summaryResult, "/chain/summary"],
+    [blocksResult, "/chain/blocks"],
+    [confirmedResult, "/transactions"],
+    [pendingResult, "/transactions/pending"],
+    [healthResult, "/health"],
+    [leaderboardResult, "/leaderboard"],
+  ]);
 
   const summaryData = settledValue(summaryResult, {});
   const blocksData = settledValue(blocksResult, {});
@@ -59,6 +81,12 @@ export async function loadNetworkStatus() {
     api.get("/readiness", { timeout: 20000 }),
     api.get("/deployment", { timeout: 20000 }),
     api.get("/peers/propagation/status", { timeout: 15000 }),
+  ]);
+
+  reportFailures([
+    [readinessResult, "/readiness"],
+    [deploymentResult, "/deployment"],
+    [propagationResult, "/peers/propagation/status"],
   ]);
 
   return {

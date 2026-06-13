@@ -173,10 +173,10 @@ function Hero({ snapshot, loading }) {
           activity in real time.
         </p>
         <div className="button-row">
-          <Link className="button" to="/register">
+          <Link className="button" to="/register" data-vq-track="cta:create-account">
             Create Your Account
           </Link>
-          <Link className="button secondary" to="/blockchain">
+          <Link className="button secondary" to="/blockchain" data-vq-track="cta:explore-blockchain">
             Explore the Blockchain
           </Link>
         </div>
@@ -263,7 +263,7 @@ function LiveNetwork({ snapshot, loading, status, statusLoading }) {
   const live = !loading && snapshot && !snapshot.unavailable?.summary;
 
   return (
-    <section className="card card-pad stack reveal-up vq-live" id="network" aria-label="Live Vorliq network" ref={revealRef}>
+    <section className="card card-pad stack reveal-up vq-live" id="network" aria-label="Live Vorliq network" data-vq-section="live-network" ref={revealRef}>
       <div className="section-title">
         <div>
           <span className="eyebrow">Live network</span>
@@ -273,7 +273,7 @@ function LiveNetwork({ snapshot, loading, status, statusLoading }) {
           <span className={`status-badge ${loading ? "active" : live ? "executed" : "expired"}`} role="status">
             {loading ? "Connecting" : live ? "Live data" : "Data unavailable"}
           </span>
-          <Link className="button secondary small-button" to="/blockchain">
+          <Link className="button secondary small-button" to="/blockchain" data-vq-track="cta:open-explorer">
             Open Explorer
           </Link>
         </div>
@@ -299,7 +299,7 @@ function LiveNetwork({ snapshot, loading, status, statusLoading }) {
 function ProductShowcase({ snapshot, loading, status, statusLoading }) {
   const revealRef = useReveal();
   return (
-    <section className="stack reveal-up vq-showcase" id="product" aria-label="Vorliq product interfaces" ref={revealRef}>
+    <section className="stack reveal-up vq-showcase" id="product" aria-label="Vorliq product interfaces" data-vq-section="product" ref={revealRef}>
       <div className="section-title">
         <div>
           <span className="eyebrow">Product</span>
@@ -324,7 +324,7 @@ function ProductShowcase({ snapshot, loading, status, statusLoading }) {
 function HowItWorks() {
   const revealRef = useReveal();
   return (
-    <section className="card card-pad stack reveal-up" id="how-it-works" aria-label="How Vorliq works" ref={revealRef}>
+    <section className="card card-pad stack reveal-up" id="how-it-works" aria-label="How Vorliq works" data-vq-section="how-it-works" ref={revealRef}>
       <div className="section-title">
         <div>
           <span className="eyebrow">How it works</span>
@@ -350,7 +350,7 @@ function HowItWorks() {
 function ExplorerSection({ snapshot, loading }) {
   const revealRef = useReveal();
   return (
-    <section className="stack reveal-up vq-explorer-section" id="explorer" aria-label="Blockchain explorer preview" ref={revealRef}>
+    <section className="stack reveal-up vq-explorer-section" id="explorer" aria-label="Blockchain explorer preview" data-vq-section="explorer" ref={revealRef}>
       <div className="section-title">
         <div>
           <span className="eyebrow">On chain</span>
@@ -387,7 +387,7 @@ function CommunitySavings() {
     "Decisions stay close to the people who understand the community.",
   ];
   return (
-    <section className="card card-pad stack reveal-up vq-community" id="community" aria-label="Community savings" ref={revealRef}>
+    <section className="card card-pad stack reveal-up vq-community" id="community" aria-label="Community savings" data-vq-section="community" ref={revealRef}>
       <div className="vq-community__copy">
         <span className="eyebrow">Community savings</span>
         <h2>Save together, with a record everyone can check</h2>
@@ -422,7 +422,7 @@ function CommunitySavings() {
 function Safety() {
   const revealRef = useReveal();
   return (
-    <section className="card card-pad stack reveal-up vq-safety" id="transparency-overview" aria-label="Safety and transparency" ref={revealRef}>
+    <section className="card card-pad stack reveal-up vq-safety" id="transparency-overview" aria-label="Safety and transparency" data-vq-section="safety" ref={revealRef}>
       <div className="section-title">
         <div>
           <span className="eyebrow">Safety and transparency</span>
@@ -447,7 +447,7 @@ function Safety() {
 function Learn() {
   const revealRef = useReveal();
   return (
-    <section className="card card-pad stack reveal-up" id="learn" aria-label="Learn about Vorliq" ref={revealRef}>
+    <section className="card card-pad stack reveal-up" id="learn" aria-label="Learn about Vorliq" data-vq-section="learn" ref={revealRef}>
       <div className="section-title">
         <div>
           <span className="eyebrow">Learn</span>
@@ -475,7 +475,7 @@ function Learn() {
 function FinalCta() {
   const revealRef = useReveal();
   return (
-    <section className="card card-pad reveal-up vq-final" aria-label="Get started with Vorliq" ref={revealRef}>
+    <section className="card card-pad reveal-up vq-final" aria-label="Get started with Vorliq" data-vq-section="final-cta" ref={revealRef}>
       <div className="vq-final__copy">
         <span className="eyebrow">Get started</span>
         <h2>Ready to save with your community?</h2>
@@ -484,10 +484,10 @@ function FinalCta() {
           for the people who use it.
         </p>
         <div className="button-row">
-          <Link className="button" to="/register">
+          <Link className="button" to="/register" data-vq-track="cta:create-account">
             Create Account
           </Link>
-          <Link className="button secondary" to="/blockchain">
+          <Link className="button secondary" to="/blockchain" data-vq-track="cta:view-blockchain">
             View Blockchain
           </Link>
         </div>

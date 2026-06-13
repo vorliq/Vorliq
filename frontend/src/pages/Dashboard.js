@@ -302,12 +302,12 @@ function Dashboard() {
           into one network.
         </p>
         <div className="hero-actions">
-          <Link className="button brand-button" to="/login">Create Wallet</Link>
-          <Link className="button secondary brand-button-secondary" to="/faucet">Get Starter VLQ</Link>
-          <Link className="button secondary brand-button-secondary" to="/vlq">Understand VLQ</Link>
-          <Link className="button secondary brand-button-secondary" to="/mine">Mine VLQ</Link>
-          <Link className="button secondary brand-button-secondary" to="/forum">Explore Forum</Link>
-          <Link className="button secondary brand-button-secondary" to="/transparency">View Transparency</Link>
+          <Link className="button brand-button" to="/login" data-vq-track="dashboard:create-wallet">Create Wallet</Link>
+          <Link className="button secondary brand-button-secondary" to="/faucet" data-vq-track="dashboard:get-starter-vlq">Get Starter VLQ</Link>
+          <Link className="button secondary brand-button-secondary" to="/vlq" data-vq-track="dashboard:understand-vlq">Understand VLQ</Link>
+          <Link className="button secondary brand-button-secondary" to="/mine" data-vq-track="dashboard:mine-vlq">Mine VLQ</Link>
+          <Link className="button secondary brand-button-secondary" to="/forum" data-vq-track="dashboard:explore-forum">Explore Forum</Link>
+          <Link className="button secondary brand-button-secondary" to="/transparency" data-vq-track="dashboard:view-transparency">View Transparency</Link>
         </div>
       </section>
 

@@ -8,12 +8,14 @@ import BrandBackground from "./components/BrandBackground";
 import IncidentBanner from "./components/IncidentBanner";
 import { ProductFooter, ProductNav } from "./components/ProductShell";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { initAnalytics } from "./helpers/analytics";
 import { applyTheme, getStoredTheme } from "./helpers/theme";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import Account from "./pages/Account";
 import Achievements from "./pages/Achievements";
 import Admin from "./pages/Admin";
+import AdminAnalytics from "./pages/AdminAnalytics";
 import Ambassador from "./pages/Ambassador";
 import Audit from "./pages/Audit";
 import Blockchain from "./pages/Blockchain";
@@ -112,6 +114,7 @@ function App() {
 function AppShell() {
   useEffect(() => {
     applyTheme(getStoredTheme());
+    return initAnalytics();
   }, []);
 
   return (
@@ -166,6 +169,7 @@ function AppShell() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/profiles" element={<Profile />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route
             path="/account"

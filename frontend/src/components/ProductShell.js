@@ -216,6 +216,7 @@ function NavItem({ link, mobile = false, onClick }) {
       to={link.to}
       aria-current={isActive ? "page" : undefined}
       onClick={onClick}
+      data-vq-track={`nav:${link.label.toLowerCase().replace(/\s+/g, "-")}`}
     >
       {link.label}
     </Link>
@@ -247,13 +248,13 @@ function HeaderActions({ mobile = false, onNavigate }) {
   if (isLoggedIn) {
     return (
       <>
-        <Link className={ghost} to="/dashboard" onClick={onNavigate}>
+        <Link className={ghost} to="/dashboard" onClick={onNavigate} data-vq-track="nav:dashboard">
           Dashboard
         </Link>
-        <Link className={solid} to="/wallet" onClick={onNavigate}>
+        <Link className={solid} to="/wallet" onClick={onNavigate} data-vq-track="nav:wallet">
           Wallet
         </Link>
-        <button className={ghost} type="button" onClick={handleSignOut}>
+        <button className={ghost} type="button" onClick={handleSignOut} data-vq-track="cta:sign-out">
           Sign Out
         </button>
       </>
@@ -263,10 +264,10 @@ function HeaderActions({ mobile = false, onNavigate }) {
   if (accountExists) {
     return (
       <>
-        <Link className={ghost} to="/dashboard" onClick={onNavigate}>
+        <Link className={ghost} to="/dashboard" onClick={onNavigate} data-vq-track="nav:dashboard">
           Dashboard
         </Link>
-        <Link className={solid} to="/login" onClick={onNavigate}>
+        <Link className={solid} to="/login" onClick={onNavigate} data-vq-track="cta:sign-in">
           Sign In
         </Link>
       </>
@@ -275,10 +276,10 @@ function HeaderActions({ mobile = false, onNavigate }) {
 
   return (
     <>
-      <Link className={ghost} to="/login" onClick={onNavigate}>
+      <Link className={ghost} to="/login" onClick={onNavigate} data-vq-track="cta:sign-in">
         Sign In
       </Link>
-      <Link className={solid} to="/register" onClick={onNavigate}>
+      <Link className={solid} to="/register" onClick={onNavigate} data-vq-track="cta:create-account">
         Create Account
       </Link>
     </>
