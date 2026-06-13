@@ -1,115 +1,129 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { formatVlq, loadPublicChainSnapshot, shortHash } from "../helpers/publicApi";
+import BrandLoader from "../components/BrandLoader";
+import HeroScene from "../components/home/HeroScene";
+import {
+  ExplorerPreviewVisual,
+  GovernanceProposalVisual,
+  NetworkHealthVisual,
+  RecentTransactionsVisual,
+  SavingsPoolVisual,
+  WalletDashboardVisual,
+} from "../components/home/ProductVisuals";
+import { formatNumber, loadPublicChainSnapshot, shortHash } from "../helpers/publicApi";
 import useReveal from "../helpers/useReveal";
 
-const trustFacts = [
-  "100% Vorliq Chain",
-  "No External Blockchains",
-  "VLQ Community Coin",
-  "Open Source",
-];
+function Icon({ paths, viewBox = "0 0 24 24" }) {
+  return (
+    <svg viewBox={viewBox} className="vq-step-icon" aria-hidden="true" focusable="false">
+      {paths.map((d) => (
+        <path key={d} d={d} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      ))}
+    </svg>
+  );
+}
 
 const steps = [
   {
     number: "01",
-    title: "Save Together.",
-    body: "Save together as a community — pool VLQ, track shared balances transparently, and keep every record on Vorliq's own chain.",
+    title: "Create your wallet",
+    body: "Set up a Vorliq wallet in your browser. Your keys stay with you, encrypted on your own device.",
+    icon: ["M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z", "M16 12h3", "M3 9h13"],
   },
   {
     number: "02",
-    title: "Save and Lend Together.",
-    body: "Pool VLQ savings and vote on lending decisions.",
+    title: "Join or start community saving activity",
+    body: "Pool VLQ with people you trust, set shared goals, and keep every contribution visible to the group.",
+    icon: ["M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2", "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8", "M21 21v-2a4 4 0 0 0-3-3.87", "M16 3.13a4 4 0 0 1 0 7.75"],
   },
   {
     number: "03",
-    title: "Track It On Chain.",
-    body: "Every accepted transaction is recorded on Vorliq's own blockchain.",
+    title: "Move and track VLQ on chain",
+    body: "Send and receive VLQ with signed transactions. Each accepted transfer is written to the Vorliq blockchain.",
+    icon: ["M4 12h16", "M14 6l6 6-6 6", "M10 18l-6-6 6-6"],
+  },
+  {
+    number: "04",
+    title: "Verify records through the explorer",
+    body: "Open the public explorer to confirm blocks, balances, and history for yourself at any time.",
+    icon: ["M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z", "M21 21l-4.3-4.3"],
   },
 ];
 
-const features = [
+const safetyItems = [
   {
-    title: "Everyone Saves. Everyone Benefits.",
-    copy:
-      "Pool VLQ together as a community. Track deposits, withdrawals, and movement in real time on the Vorliq blockchain. No hidden platform claims. No middlemen.",
-    cta: "Start Saving",
-    to: "/register",
+    title: "You hold your keys",
+    body: "Vorliq wallets are created and encrypted on your device. Your private key is your responsibility and is never sent to a server.",
+    icon: ["M12 2l8 4v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6z", "M9 12l2 2 4-4"],
   },
   {
-    title: "Lend to People You Trust.",
-    copy:
-      "Community members can propose and vote on loans. Lending activity is recorded on chain so decisions stay transparent and traceable.",
-    cta: "Learn About Lending",
-    to: "/features",
+    title: "Public verification",
+    body: "Every block and transaction is openly readable. Anyone can check the chain through the explorer instead of trusting a private record.",
+    icon: ["M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"],
   },
   {
-    title: "Native VLQ. Built for Vorliq.",
-    copy:
-      "VLQ runs on Vorliq's own lightweight blockchain. Wallets, blocks, and transactions are internal to this platform, with no external validators or gas fees.",
-    cta: "Explore the Chain",
+    title: "Readiness checks",
+    body: "A technical readiness gate reports on storage, indexes, backups, and node status. It is a health signal, not a legal status.",
+    icon: ["M22 12h-4l-3 9L9 3l-3 9H2"],
+  },
+  {
+    title: "Open source",
+    body: "The Vorliq code is open for review on GitHub. You can read how wallets, blocks, and validation actually work.",
+    icon: ["M16 18l6-6-6-6", "M8 6l-6 6 6 6", "M14 4l-4 16"],
+  },
+  {
+    title: "Honest about VLQ risk",
+    body: "VLQ is a community coin with no guaranteed market value. Vorliq is community software, not a licensed banking service or a promise of profit.",
+    icon: ["M12 9v4", "M12 17h.01", "M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"],
+  },
+];
+
+const learnCards = [
+  {
+    title: "What is VLQ",
+    body: "A plain explanation of the native Vorliq coin and how it moves between wallets.",
+    to: "/vlq",
+  },
+  {
+    title: "How Vorliq's blockchain works",
+    body: "Blocks, transactions, validation, and the public record that holds it all together.",
     to: "/blockchain",
   },
-];
-
-const communityCards = [
-  { title: "Transparent", body: "Shared records are visible on Vorliq's own chain so members can inspect activity." },
-  { title: "Trustless", body: "Rules are enforced by signed transactions and blockchain validation, not private spreadsheets." },
-  { title: "Together", body: "Savings and lending decisions stay close to the people who understand the community." },
-];
-
-const guides = [
   {
-    title: "What is VLQ?",
-    body: "A plain-English guide to Vorliq's internal community coin.",
+    title: "Wallet safety",
+    body: "How keys, passwords, and encrypted backups keep your wallet under your control.",
+    to: "/transparency",
+  },
+  {
+    title: "Community savings",
+    body: "How groups organise shared saving activity with VLQ and a common chain record.",
     to: "/features",
   },
   {
-    title: "How Does the Vorliq Blockchain Work?",
-    body: "Blocks, transactions, mining, and public records without third party chains.",
-    to: "/blockchain",
+    title: "Running a node",
+    body: "What it takes to run a Vorliq node and help verify the network.",
+    to: "/registry",
   },
   {
-    title: "How to Start a Community Savings Group",
-    body: "A responsible first step for groups saving and lending together.",
-    to: "/features",
+    title: "Transparency",
+    body: "Where to read the chain, the readiness signal, and the public project records.",
+    to: "/transparency",
   },
 ];
-
-function chainStatusBadge(loading, snapshot) {
-  if (loading) return { className: "status-badge active", label: "Connecting..." };
-  if (!snapshot || snapshot.unavailable.summary) {
-    return { className: "status-badge expired", label: "Chain data unavailable" };
-  }
-  return snapshot.summary?.chain_valid
-    ? { className: "status-badge executed", label: "Chain online" }
-    : { className: "status-badge rejected", label: "Chain under review" };
-}
 
 function Home() {
   const [snapshot, setSnapshot] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
     let mounted = true;
     loadPublicChainSnapshot()
       .then((data) => {
-        if (!mounted) return;
-        setSnapshot(data);
-        setUnavailable(
-          data.unavailable.summary &&
-            data.unavailable.blocks &&
-            data.unavailable.confirmedTransactions &&
-            data.unavailable.pendingTransactions
-        );
+        if (mounted) setSnapshot(data);
       })
       .catch(() => {
-        if (mounted) {
-          setSnapshot(null);
-          setUnavailable(true);
-        }
+        if (mounted) setSnapshot(null);
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -120,111 +134,167 @@ function Home() {
   }, []);
 
   return (
-    <div className="page">
-      <Hero loading={loading} snapshot={snapshot} />
-      <TrustFacts />
+    <div className="page vq-home">
+      <Hero snapshot={snapshot} loading={loading} />
+      <LiveNetwork snapshot={snapshot} loading={loading} />
+      <ProductShowcase snapshot={snapshot} loading={loading} />
       <HowItWorks />
-      <Features />
-      <LiveSnapshot loading={loading} snapshot={snapshot} unavailable={unavailable} />
-      <Community />
+      <ExplorerSection snapshot={snapshot} loading={loading} />
+      <CommunitySavings />
+      <Safety />
       <Learn />
       <FinalCta />
     </div>
   );
 }
 
-function Hero({ loading, snapshot }) {
+function Hero({ snapshot, loading }) {
   return (
-    <section className="hero two-column" aria-label="Vorliq introduction">
-      <div className="stack">
-        <span className="eyebrow">Community Savings Bank</span>
-        <h1>Your Community's Platform. Your Rules.</h1>
+    <section className="vq-hero" aria-label="Vorliq introduction">
+      <div className="vq-hero__copy">
+        <span className="eyebrow">Community savings bank</span>
+        <h1>Your Community's Bank. Your Rules.</h1>
         <p className="subtitle">
-          Vorliq is a community savings and lending platform built on its own lightweight blockchain.
+          Create a wallet, save together, move VLQ, vote on community activity, and verify your community's blockchain
+          activity in real time.
         </p>
         <div className="button-row">
           <Link className="button" to="/register">
             Create Your Account
           </Link>
-          <a className="button secondary" href="#how-it-works">
-            See How It Works
-          </a>
+          <Link className="button secondary" to="/blockchain">
+            Explore the Blockchain
+          </Link>
         </div>
-        <p className="help-text">Community-run software. VLQ powered. No third party chains.</p>
+        <p className="help-text">
+          Vorliq is a community savings bank built on its own blockchain with the VLQ coin.
+        </p>
       </div>
-      <HeroChainPanel loading={loading} snapshot={snapshot} />
+      <div className="vq-hero__scene">
+        <HeroScene snapshot={snapshot} loading={loading} />
+      </div>
     </section>
   );
 }
 
-function HeroChainPanel({ loading, snapshot }) {
+function deploymentLabel(snapshot, loading) {
+  if (loading) return "Checking";
+  const deployment = snapshot?.deployment;
+  if (!deployment || snapshot?.unavailable?.deployment) return "Unavailable";
+  const short = deployment.commit_hash ? deployment.commit_hash.slice(0, 7) : "Live";
+  return short;
+}
+
+function readinessLabel(snapshot, loading) {
+  if (loading) return "Checking";
+  const readiness = snapshot?.readiness;
+  if (!readiness || snapshot?.unavailable?.readiness) return "Unavailable";
+  if (readiness.overall_status === "pass") return "Operational";
+  if (readiness.overall_status === "warning") return "Monitoring";
+  return "Attention";
+}
+
+function LiveNetwork({ snapshot, loading }) {
+  const revealRef = useReveal();
   const summary = snapshot?.summary || {};
-  const badge = chainStatusBadge(loading, snapshot);
   const latestBlock = snapshot?.blocks?.[0];
 
-  const rows = [
+  function value(available, content) {
+    if (loading) return "…";
+    if (!available) return "Unavailable";
+    return content;
+  }
+
+  const cards = [
     {
-      label: "Latest accepted block",
-      value: loading
-        ? "Loading..."
-        : latestBlock?.index != null
-          ? `#${latestBlock.index}`
-          : summary.block_height != null
-            ? `#${summary.block_height}`
-            : "Unavailable",
+      label: "Chain height",
+      value: value(
+        !snapshot?.unavailable?.summary && summary.block_height != null,
+        `#${formatNumber(summary.block_height)}`
+      ),
     },
     {
-      label: "Public transactions",
-      value: loading ? "Loading..." : summary.total_transactions ?? "Unavailable",
+      label: "Latest block",
+      value: value(latestBlock?.hash != null, latestBlock ? shortHash(latestBlock.hash) : null),
+      mono: true,
     },
     {
-      label: "Total VLQ issued",
-      value: loading ? "Loading..." : snapshot?.unavailable.summary ? "Unavailable" : formatVlq(summary.total_issued),
+      label: "Transactions",
+      value: value(!snapshot?.unavailable?.summary && summary.total_transactions != null, formatNumber(summary.total_transactions)),
+    },
+    {
+      label: "Pending",
+      value: value(!snapshot?.unavailable?.pendingTransactions && snapshot?.pendingTotal != null, formatNumber(snapshot?.pendingTotal)),
     },
     {
       label: "Wallet holders",
-      value: loading
-        ? "Loading..."
-        : snapshot?.unavailable.holders
-          ? "Unavailable"
-          : snapshot?.holderTotal ?? "Unavailable",
+      value: value(!snapshot?.unavailable?.holders, formatNumber(snapshot?.holderTotal)),
+    },
+    {
+      label: "Readiness",
+      value: readinessLabel(snapshot, loading),
+    },
+    {
+      label: "Deployment",
+      value: deploymentLabel(snapshot, loading),
+      mono: true,
+    },
+    {
+      label: "Chain status",
+      value: value(!snapshot?.unavailable?.summary, summary.chain_valid ? "Valid" : "Under review"),
     },
   ];
 
+  const live = !loading && snapshot && !snapshot.unavailable?.summary;
+
   return (
-    <article className="card card-pad stack elev-2" aria-label="Live chain panel">
+    <section className="card card-pad stack reveal-up vq-live" id="network" aria-label="Live Vorliq network" ref={revealRef}>
       <div className="section-title">
         <div>
-          <span className="eyebrow">Vorliq Chain</span>
-          <h2>Community Pool</h2>
+          <span className="eyebrow">Live network</span>
+          <h2>The Vorliq network, right now</h2>
         </div>
-        <span className={badge.className} role="status">
-          {badge.label}
+        <span className={`status-badge ${loading ? "active" : live ? "executed" : "expired"}`} role="status">
+          {loading ? "Connecting" : live ? "Live data" : "Data unavailable"}
         </span>
       </div>
-      <div className="stack">
-        {rows.map((row) => (
-          <div className="meta-item" key={row.label}>
-            <span className="meta-label">{row.label}</span>
-            <span className="meta-value mono-wrap">{row.value}</span>
+      <p className="muted-text">
+        These values come from the public Vorliq APIs. When a value is not available it stays marked unavailable and is
+        never estimated.
+      </p>
+      <div className="grid vq-live-grid">
+        {cards.map((card) => (
+          <div className="card card-pad stat-card compact-stat" key={card.label}>
+            <span className="stat-label">{card.label}</span>
+            <span className={`stat-value ${card.mono ? "mono-wrap" : ""}`}>{card.value}</span>
           </div>
         ))}
       </div>
-      <p className="muted-text">
-        Values come from public Vorliq APIs. When a value is not available it is shown as unavailable, never estimated.
-      </p>
-    </article>
+    </section>
   );
 }
 
-function TrustFacts() {
+function ProductShowcase({ snapshot, loading }) {
+  const revealRef = useReveal();
   return (
-    <section className="grid quick-link-grid" aria-label="Vorliq product facts">
-      {trustFacts.map((fact) => (
-        <div className="card card-pad stat-card compact-stat trust-fact" key={fact}>
-          <span className="stat-value">{fact}</span>
+    <section className="stack reveal-up vq-showcase" id="product" aria-label="Vorliq product interfaces" ref={revealRef}>
+      <div className="section-title">
+        <div>
+          <span className="eyebrow">Product</span>
+          <h2>One place to save, move, and verify</h2>
         </div>
-      ))}
+      </div>
+      <p className="subtitle">
+        A wallet for your VLQ, shared savings pools for your group, community proposals you can vote on, and an open
+        explorer to check every record.
+      </p>
+      <div className="vq-showcase-grid">
+        <WalletDashboardVisual />
+        <SavingsPoolVisual />
+        <GovernanceProposalVisual />
+        <ExplorerPreviewVisual snapshot={snapshot} loading={loading} />
+        <NetworkHealthVisual snapshot={snapshot} loading={loading} />
+      </div>
     </section>
   );
 }
@@ -235,14 +305,17 @@ function HowItWorks() {
     <section className="card card-pad stack reveal-up" id="how-it-works" aria-label="How Vorliq works" ref={revealRef}>
       <div className="section-title">
         <div>
-          <span className="eyebrow">How It Works</span>
-          <h2>Savings and Lending That Work for Your Community</h2>
+          <span className="eyebrow">How it works</span>
+          <h2>Four steps from new wallet to verified record</h2>
         </div>
       </div>
-      <div className="lifecycle-grid">
+      <div className="vq-steps">
         {steps.map((step) => (
-          <article className="lifecycle-step" key={step.title}>
-            <span className="eyebrow">{step.number}</span>
+          <article className="vq-step" key={step.title}>
+            <span className="vq-step__badge">
+              <Icon paths={step.icon} />
+            </span>
+            <span className="vq-step__num">{step.number}</span>
             <h3>{step.title}</h3>
             <p>{step.body}</p>
           </article>
@@ -252,134 +325,96 @@ function HowItWorks() {
   );
 }
 
-function Features() {
+function ExplorerSection({ snapshot, loading }) {
+  const revealRef = useReveal();
   return (
-    <section className="stack" id="features" aria-label="What you can do on Vorliq">
-      {features.map((feature) => (
-        <article className="card card-pad stack" key={feature.title}>
-          <div className="section-title">
-            <div>
-              <span className="eyebrow">Vorliq Feature</span>
-              <h2>{feature.title}</h2>
-            </div>
-          </div>
-          <p className="subtitle">{feature.copy}</p>
-          <div className="button-row">
-            <Link className="button secondary small-button" to={feature.to}>
-              {feature.cta}
-            </Link>
-          </div>
-        </article>
-      ))}
-    </section>
-  );
-}
-
-function LiveSnapshot({ loading, snapshot, unavailable }) {
-  const transactions = useMemo(() => {
-    if (!snapshot) return [];
-    return [...snapshot.confirmedTransactions, ...snapshot.pendingTransactions].slice(0, 6);
-  }, [snapshot]);
-
-  const summary = snapshot?.summary || {};
-  const statCards = [
-    {
-      label: "Wallet Holders",
-      value: snapshot?.unavailable.holders ? "Unavailable" : snapshot?.holderTotal ?? "Unavailable",
-    },
-    { label: "Total Blocks", value: snapshot?.unavailable.summary ? "Unavailable" : summary.total_blocks ?? "Unavailable" },
-    {
-      label: "Total Transactions",
-      value: snapshot?.unavailable.summary ? "Unavailable" : summary.total_transactions ?? "Unavailable",
-    },
-    {
-      label: "Pending Transactions",
-      value:
-        snapshot?.unavailable.pendingTransactions || snapshot?.pendingTotal == null
-          ? "Unavailable"
-          : snapshot.pendingTotal,
-    },
-    {
-      label: "Chain Status",
-      value: snapshot?.unavailable.summary ? "Unavailable" : summary.chain_valid ? "Valid" : "Needs review",
-    },
-  ];
-
-  return (
-    <section className="card card-pad stack" id="live-chain" aria-label="Live chain snapshot">
+    <section className="stack reveal-up vq-explorer-section" id="explorer" aria-label="Blockchain explorer preview" ref={revealRef}>
       <div className="section-title">
         <div>
-          <span className="eyebrow">Live Data</span>
-          <h2>Live VLQ and Chain Snapshot</h2>
+          <span className="eyebrow">On chain</span>
+          <h2>Recent blocks and transactions</h2>
         </div>
         <Link className="button secondary small-button" to="/blockchain">
           Open Explorer
         </Link>
       </div>
-      <p className="muted-text">
-        This panel uses existing public backend APIs. When a value is not exposed by an API, it stays unavailable
-        instead of being estimated.
-      </p>
-      <p className="help-text" role="status">
-        {loading && "Loading live chain data..."}
-        {!loading && unavailable && "Live chain data is unavailable right now."}
-        {!loading && !unavailable && "Live public API data loaded."}
-      </p>
-      <div className="grid stats-grid">
-        {statCards.map((stat) => (
-          <div className="card card-pad stat-card compact-stat" key={stat.label}>
-            <span className="stat-label">{stat.label}</span>
-            <span className="stat-value mono-wrap">{loading ? "Loading..." : stat.value}</span>
-          </div>
-        ))}
-      </div>
-      <div className="section-title">
-        <div>
-          <span className="eyebrow">Recent</span>
-          <h3>Recent On-Chain Transactions</h3>
-        </div>
-      </div>
       {loading ? (
-        <div className="empty-state">Loading recent transactions...</div>
-      ) : transactions.length ? (
-        <div className="governance-grid">
-          {transactions.map((tx, index) => (
-            <Link
-              className="lifecycle-step record-link"
-              to={`/tx/${encodeURIComponent(tx.tx_id)}`}
-              key={tx.tx_id || index}
-            >
-              <span className={`status-badge ${tx.status === "pending" ? "active" : "executed"}`}>
-                {tx.status || "confirmed"}
-              </span>
-              <span className="meta-value mono-wrap">{shortHash(tx.tx_id)}</span>
-              <span className="muted-text">{formatVlq(tx.amount)}</span>
-            </Link>
-          ))}
-        </div>
+        <BrandLoader compact label="Loading live chain data" />
       ) : (
-        <div className="empty-state">Recent transaction data is unavailable or empty.</div>
+        <div className="vq-explorer-pair">
+          <ExplorerPreviewVisual snapshot={snapshot} loading={loading} />
+          <RecentTransactionsVisual snapshot={snapshot} loading={loading} />
+        </div>
       )}
+      <p className="muted-text">
+        {loading
+          ? "Loading the latest public chain data…"
+          : snapshot && !snapshot.unavailable?.blocks
+            ? "Rows update from the public Vorliq explorer APIs."
+            : "Live explorer data is unavailable right now. The page stays readable until it returns."}
+      </p>
     </section>
   );
 }
 
-function Community() {
+function CommunitySavings() {
+  const revealRef = useReveal();
+  const points = [
+    "Members contribute VLQ toward a shared goal and can see the running total.",
+    "Contributions and withdrawals are signed and recorded on the Vorliq chain.",
+    "Decisions stay close to the people who understand the community.",
+  ];
+  return (
+    <section className="card card-pad stack reveal-up vq-community" id="community" aria-label="Community savings" ref={revealRef}>
+      <div className="vq-community__copy">
+        <span className="eyebrow">Community savings</span>
+        <h2>Save together, with a record everyone can check</h2>
+        <p className="subtitle">
+          Vorliq helps a community organise its saving activity using VLQ and a shared blockchain record. The goal is
+          clarity. Everyone sees the same numbers, and nothing depends on a private spreadsheet.
+        </p>
+        <ul className="vq-checklist">
+          {points.map((point) => (
+            <li key={point}>
+              <span className="vq-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M5 13l4 4 10-10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span>{point}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="help-text">
+          Vorliq does not promise profit and does not hold your funds for you. It is software for organising community
+          saving activity transparently.
+        </p>
+      </div>
+      <div className="vq-community__visual">
+        <SavingsPoolVisual />
+      </div>
+    </section>
+  );
+}
+
+function Safety() {
   const revealRef = useReveal();
   return (
-    <section className="card card-pad stack reveal-up" id="community" aria-label="Community principles" ref={revealRef}>
+    <section className="card card-pad stack reveal-up vq-safety" id="transparency-overview" aria-label="Safety and transparency" ref={revealRef}>
       <div className="section-title">
         <div>
-          <span className="eyebrow">Community</span>
-          <h2>Built for Communities. Run by Communities.</h2>
+          <span className="eyebrow">Safety and transparency</span>
+          <h2>Built to be checked, not just trusted</h2>
         </div>
       </div>
-      <p className="subtitle">Vorliq is open source. It belongs to the people who use it.</p>
-      <div className="lifecycle-grid">
-        {communityCards.map((card) => (
-          <article className="lifecycle-step" key={card.title}>
-            <h3>{card.title}</h3>
-            <p>{card.body}</p>
+      <div className="vq-safety-grid">
+        {safetyItems.map((item) => (
+          <article className="vq-safety-card" key={item.title}>
+            <span className="vq-safety-card__icon">
+              <Icon paths={item.icon} />
+            </span>
+            <h3>{item.title}</h3>
+            <p>{item.body}</p>
           </article>
         ))}
       </div>
@@ -390,22 +425,25 @@ function Community() {
 function Learn() {
   const revealRef = useReveal();
   return (
-    <section className="card card-pad stack reveal-up" id="learn" aria-label="Learning guides" ref={revealRef}>
+    <section className="card card-pad stack reveal-up" id="learn" aria-label="Learn about Vorliq" ref={revealRef}>
       <div className="section-title">
         <div>
           <span className="eyebrow">Learn</span>
-          <h2>New to Community Savings on the Blockchain?</h2>
+          <h2>New to community savings on a blockchain?</h2>
         </div>
       </div>
-      <div className="lifecycle-grid">
-        {guides.map((guide) => (
-          <article className="lifecycle-step" key={guide.title}>
-            <h3>{guide.title}</h3>
-            <p>{guide.body}</p>
-            <Link className="button secondary small-button" to={guide.to}>
-              Read More
-            </Link>
-          </article>
+      <div className="vq-learn-grid">
+        {learnCards.map((card) => (
+          <Link className="vq-learn-card" to={card.to} key={card.title}>
+            <h3>{card.title}</h3>
+            <p>{card.body}</p>
+            <span className="vq-learn-card__more">
+              Read more
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </Link>
         ))}
       </div>
     </section>
@@ -415,26 +453,31 @@ function Learn() {
 function FinalCta() {
   const revealRef = useReveal();
   return (
-    <section className="card card-pad stack elev-3 reveal-up" aria-label="Get started" ref={revealRef}>
-      <div className="section-title">
-        <div>
-          <span className="eyebrow">Get Started</span>
-          <h2>Ready to Build with Your Community?</h2>
+    <section className="card card-pad reveal-up vq-final" aria-label="Get started with Vorliq" ref={revealRef}>
+      <div className="vq-final__copy">
+        <span className="eyebrow">Get started</span>
+        <h2>Ready to save with your community?</h2>
+        <p className="subtitle">
+          Create a wallet, join a savings pool, and verify every record on the Vorliq chain. It is open software, built
+          for the people who use it.
+        </p>
+        <div className="button-row">
+          <Link className="button" to="/register">
+            Create Account
+          </Link>
+          <Link className="button secondary" to="/blockchain">
+            View Blockchain
+          </Link>
         </div>
       </div>
-      <p className="subtitle">Join Vorliq. Save together, lend together, and own the shared record together.</p>
-      <div className="button-row">
-        <Link className="button" to="/register">
-          Create Account
-        </Link>
-        <a
-          className="button secondary"
-          href="https://github.com/vorliq/Vorliq"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          View on GitHub
-        </a>
+      <div className="vq-final__orb" aria-hidden="true">
+        <span className="vq-orb-core">VLQ</span>
+        <span className="vq-orb-ring vq-orb-ring--1" />
+        <span className="vq-orb-ring vq-orb-ring--2" />
+        <span className="vq-orb-node n1" />
+        <span className="vq-orb-node n2" />
+        <span className="vq-orb-node n3" />
+        <span className="vq-orb-node n4" />
       </div>
     </section>
   );

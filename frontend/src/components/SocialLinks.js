@@ -1,9 +1,7 @@
 const socialLinks = [
   { label: "X", href: "https://x.com/Vorliq", icon: XIcon, brand: "x" },
   { label: "Discord", href: "https://discord.gg/qpX5sHD4pC", icon: DiscordIcon, brand: "discord" },
-  { label: "Reddit", href: "https://www.reddit.com/r/VorliqOfficial/", icon: RedditIcon, brand: "reddit" },
-  { label: "Facebook", href: "https://www.facebook.com/people/Vorliq/61590708960405/", icon: FacebookIcon, brand: "facebook" },
-  { label: "Telegram", href: "https://t.me/Vorliq", icon: TelegramIcon, brand: "telegram" },
+  { label: "GitHub", href: "https://github.com/vorliq/Vorliq", icon: GitHubIcon, brand: "github" },
 ];
 
 function SocialLinks({ compact = false, className = "" }) {
@@ -30,55 +28,40 @@ function SocialLinks({ compact = false, className = "" }) {
   );
 }
 
-function DiscordIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M8.3 8.7c2.4-.7 5-.7 7.4 0" />
-      <path d="M9.1 15.2c2 .7 3.8.7 5.8 0" />
-      <path d="M8.8 12.9h.01" />
-      <path d="M15.2 12.9h.01" />
-      <path d="M7.4 5.5c3-1.2 6.2-1.2 9.2 0 1.7 2.4 2.6 5.2 2.7 8.4-2.1 1.6-4.1 2.5-6.1 2.8l-.8-1.4" />
-      <path d="M11.6 15.3l-.8 1.4c-2-.3-4-1.2-6.1-2.8.1-3.2 1-6 2.7-8.4" />
-    </svg>
-  );
-}
-
-function TelegramIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M21 4 3 11.2l6.9 2.2L17 8.2l-5.4 6.6.2 5.2 3.1-3.4 3.9 2.9L21 4Z" />
-    </svg>
-  );
-}
-
-function RedditIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="14" r="7" />
-      <circle cx="9.2" cy="13.2" r="0.6" />
-      <circle cx="14.8" cy="13.2" r="0.6" />
-      <path d="M9.2 16.4c1.8 1.1 3.8 1.1 5.6 0" />
-      <path d="M12 7l1-4 4 1.2" />
-      <circle cx="17.8" cy="4.6" r="1.2" />
-      <path d="M5 11.5a1.8 1.8 0 0 1 2-3" />
-      <path d="M19 11.5a1.8 1.8 0 0 0-2-3" />
-    </svg>
-  );
-}
-
-function FacebookIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M14 8h2.5V4.5H14a4 4 0 0 0-4 4V11H7.5v3.5H10V21h3.5v-6.5h2.6l.6-3.5h-3.2V8.8c0-.5.3-.8.5-.8Z" />
-    </svg>
-  );
-}
-
+// Official X (formerly Twitter) mark.
 function XIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 4l16 16" />
-      <path d="M20 4 4 20" />
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.656l-5.214-6.817-5.966 6.817H1.683l7.73-8.835L1.254 2.25h6.826l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z"
+      />
+    </svg>
+  );
+}
+
+// Official Discord mark.
+function DiscordIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M20.317 4.369A19.79 19.79 0 0 0 15.432 2.86a.074.074 0 0 0-.079.037c-.211.375-.444.865-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.6 12.6 0 0 0-.617-1.249.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.369a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.127c-.598.349-1.225.645-1.873.891a.076.076 0 0 0-.04.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.029 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.056c.5-5.177-.838-9.674-3.549-13.66a.06.06 0 0 0-.031-.028ZM8.02 15.331c-1.182 0-2.157-1.085-2.157-2.419 0-1.333.956-2.418 2.157-2.418 1.21 0 2.176 1.094 2.157 2.418 0 1.334-.956 2.419-2.157 2.419Zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.418 2.157-2.418 1.21 0 2.176 1.094 2.157 2.418 0 1.334-.946 2.419-2.157 2.419Z"
+      />
+    </svg>
+  );
+}
+
+// Official GitHub mark.
+function GitHubIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M12 2C6.477 2 2 6.486 2 12.02c0 4.428 2.865 8.184 6.839 9.51.5.092.682-.218.682-.483 0-.237-.009-.866-.013-1.7-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.467-1.11-1.467-.908-.622.069-.61.069-.61 1.004.071 1.532 1.034 1.532 1.034.892 1.532 2.341 1.09 2.91.834.092-.648.35-1.09.636-1.341-2.22-.254-4.555-1.114-4.555-4.957 0-1.095.39-1.99 1.029-2.692-.103-.254-.446-1.274.098-2.655 0 0 .84-.27 2.75 1.028A9.56 9.56 0 0 1 12 6.847c.85.004 1.705.116 2.504.34 1.909-1.298 2.747-1.028 2.747-1.028.546 1.381.203 2.401.1 2.655.64.702 1.028 1.597 1.028 2.692 0 3.853-2.339 4.7-4.566 4.949.359.31.678.921.678 1.856 0 1.339-.012 2.419-.012 2.748 0 .267.18.58.688.482A10.02 10.02 0 0 0 22 12.02C22 6.486 17.523 2 12 2Z"
+      />
     </svg>
   );
 }

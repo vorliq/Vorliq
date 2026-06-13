@@ -15,6 +15,17 @@
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <div id="root">
+      <div id="vq-boot" style="position:fixed;inset:0;display:grid;place-items:center;background:#0A0E1A">
+        <div style="display:grid;justify-items:center;gap:16px">
+          <div style="position:relative;width:84px;height:84px;display:grid;place-items:center">
+            <div style="position:absolute;inset:0;border-radius:999px;border:2px solid transparent;border-top-color:#00C6A7;border-right-color:#86e33b;animation:vqBoot .9s linear infinite"></div>
+            <img src="%PUBLIC_URL%/logo.png" alt="Vorliq" width="54" height="54" style="object-fit:contain" />
+          </div>
+          <span style="color:#A0AEC0;font:800 14px/1 -apple-system,Segoe UI,sans-serif;letter-spacing:.01em">Loading Vorliq</span>
+        </div>
+      </div>
+    </div>
+    <style>@keyframes vqBoot{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){#vq-boot div div{animation:none!important}}</style>
   </body>
 </html>

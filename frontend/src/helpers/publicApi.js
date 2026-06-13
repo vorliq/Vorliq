@@ -10,13 +10,26 @@ function isUnavailable(result) {
 }
 
 export async function loadPublicChainSnapshot() {
-  const [summaryResult, blocksResult, confirmedResult, pendingResult, healthResult, leaderboardResult] = await Promise.allSettled([
+  const [
+    summaryResult,
+    blocksResult,
+    confirmedResult,
+    pendingResult,
+    healthResult,
+    leaderboardResult,
+    readinessResult,
+    deploymentResult,
+    propagationResult,
+  ] = await Promise.allSettled([
     api.get("/chain/summary"),
     api.get("/chain/blocks", { params: { limit: 6, offset: 0 } }),
     api.get("/transactions", { params: { status: "confirmed", limit: 8, offset: 0 } }),
     api.get("/transactions/pending", { params: { limit: 8, offset: 0 } }),
     api.get("/health", { timeout: 5000 }),
     api.get("/leaderboard", { params: { limit: 1, offset: 0 } }),
+    api.get("/readiness", { timeout: 8000 }),
+    api.get("/deployment", { timeout: 8000 }),
+    api.get("/peers/propagation/status", { timeout: 8000 }),
   ]);
 
   const summaryData = settledValue(summaryResult, {});
@@ -25,7 +38,11 @@ export async function loadPublicChainSnapshot() {
   const pendingData = settledValue(pendingResult, {});
   const healthData = settledValue(healthResult, {});
   const leaderboardData = settledValue(leaderboardResult, {});
-  const holderTotal = leaderboardData?.totals?.holders ?? leaderboardData?.holders_total ?? leaderboardData?.holders?.length;
+  const readinessData = settledValue(readinessResult, {});
+  const deploymentData = settledValue(deploymentResult, {});
+  const propagationData = settledValue(propagationResult, {});
+  const holderTotal =
+    leaderboardData?.totals?.holders ?? leaderboardData?.holders_total ?? leaderboardData?.holders?.length;
 
   return {
     summary: summaryData.summary || null,
@@ -36,6 +53,9 @@ export async function loadPublicChainSnapshot() {
     pendingTotal: pendingData.total,
     health: healthData,
     holderTotal,
+    readiness: isUnavailable(readinessResult) ? null : readinessData,
+    deployment: isUnavailable(deploymentResult) ? null : deploymentData,
+    propagation: isUnavailable(propagationResult) ? null : propagationData,
     unavailable: {
       summary: isUnavailable(summaryResult),
       blocks: isUnavailable(blocksResult),
@@ -43,6 +63,9 @@ export async function loadPublicChainSnapshot() {
       pendingTransactions: isUnavailable(pendingResult),
       health: isUnavailable(healthResult),
       holders: isUnavailable(leaderboardResult) || holderTotal == null,
+      readiness: isUnavailable(readinessResult),
+      deployment: isUnavailable(deploymentResult),
+      propagation: isUnavailable(propagationResult),
     },
   };
 }
@@ -59,8 +82,27 @@ export function formatTime(timestamp) {
   return new Date(numeric * 1000).toLocaleString();
 }
 
+export function formatRelativeTime(timestamp) {
+  const numeric = Number(timestamp);
+  if (!Number.isFinite(numeric)) return "";
+  const seconds = Math.max(0, Math.floor(Date.now() / 1000 - numeric));
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export function formatVlq(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return "Unavailable";
   return `${numeric.toLocaleString(undefined, { maximumFractionDigits: 8 })} VLQ`;
+}
+
+export function formatNumber(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return "Unavailable";
+  return numeric.toLocaleString();
 }

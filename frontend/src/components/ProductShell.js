@@ -6,11 +6,12 @@ import logo from "../assets/logo.png";
 import SocialLinks from "./SocialLinks";
 
 const navLinks = [
+  { label: "Product", to: "/features" },
   { label: "How It Works", to: "/#how-it-works" },
-  { label: "Features", to: "/features" },
-  { label: "Lending", to: "/lending" },
+  { label: "Blockchain", to: "/blockchain" },
   { label: "Community", to: "/#community" },
   { label: "Learn", to: "/#learn" },
+  { label: "Transparency", to: "/transparency" },
 ];
 
 const footerGroups = [
@@ -18,30 +19,27 @@ const footerGroups = [
     title: "Product",
     links: [
       { label: "Features", to: "/features" },
+      { label: "Wallet", to: "/wallet" },
       { label: "Dashboard", to: "/dashboard" },
-      { label: "Blockchain", to: "/blockchain" },
-      { label: "Treasury", to: "/treasury" },
-      { label: "Lending", to: "/lending" },
       { label: "Create Account", to: "/register" },
     ],
   },
   {
-    title: "Community",
+    title: "Network",
     links: [
-      { label: "Forum", to: "/forum" },
-      { label: "Governance", to: "/governance" },
-      { label: "GitHub", href: "https://github.com/vorliq/Vorliq" },
-      { label: "Discord", href: "https://discord.gg/qpX5sHD4pC" },
+      { label: "Blockchain", to: "/blockchain" },
+      { label: "Network", to: "/network" },
+      { label: "Readiness", to: "/readiness" },
+      { label: "Transparency", to: "/transparency" },
     ],
   },
   {
     title: "Learn",
     links: [
-      { label: "What is VLQ?", to: "/features" },
-      { label: "VLQ Overview", to: "/vlq" },
-      { label: "Vorliq Chain", to: "/blockchain" },
+      { label: "What is VLQ", to: "/vlq" },
+      { label: "How It Works", to: "/#how-it-works" },
+      { label: "Community", to: "/#community" },
       { label: "Whitepaper", to: "/whitepaper" },
-      { label: "Transparency", to: "/transparency" },
     ],
   },
   {
@@ -253,7 +251,7 @@ export function ProductFooter() {
       <div className="footer-inner mx-auto grid w-[min(1180px,calc(100%_-_32px))] gap-10 py-12 lg:grid-cols-[1.1fr_1.9fr]">
         <div className="footer-brand grid content-start gap-5">
           <BrandLockup compact />
-          <p className="max-w-sm text-sm leading-7 text-vorliq-muted">Community savings and lending on the blockchain.</p>
+          <p className="max-w-sm text-sm leading-7 text-vorliq-muted">A community savings bank built on its own blockchain with the VLQ coin.</p>
           <SocialLinks compact />
         </div>
         <div className="footer-links grid gap-8 sm:grid-cols-2 lg:grid-cols-4">

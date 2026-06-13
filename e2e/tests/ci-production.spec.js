@@ -14,7 +14,7 @@ test.describe("CI production smoke", () => {
     await prepareReadOnlyPage(page);
     await safeGoto(page, "/");
 
-    await expectMainContent(page, /Your Community's Platform/i);
+    await expectMainContent(page, /Your Community.s Bank/i);
     await expectNoCrashText(page);
     await expectNoHorizontalOverflow(page);
   });

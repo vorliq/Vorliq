@@ -8,7 +8,7 @@ const {
 } = require("./helpers");
 
 const routes = [
-  ["/", /Your Community's Platform/i],
+  ["/", /Your Community.s Bank/i],
   ["/wallet", /Wallet/i],
   ["/send", /Send VLQ/i],
   ["/mine", /Mine VLQ|Mining Status/i],

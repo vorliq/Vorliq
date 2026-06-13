@@ -1157,18 +1157,18 @@ test("App renders without crashing inside its providers", async () => {
   expect(
     await screen.findByRole("heading", {
       level: 1,
-      name: /your community's platform\. your rules\./i,
+      name: /your community's bank\. your rules\./i,
     })
   ).toBeInTheDocument();
   expect(screen.getByRole("navigation")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /^create your account$/i })).toHaveAttribute("href", "/register");
-  expect(screen.getByText(/Vorliq is a community savings and lending platform built on its own lightweight blockchain/i)).toBeInTheDocument();
+  expect(screen.getByText(/Vorliq is a community savings bank built on its own blockchain with the VLQ coin/i)).toBeInTheDocument();
 });
 
 test("Production shell is dark only and no longer exposes the old theme toggle", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
   expect(document.documentElement).toHaveAttribute("data-theme", "dark");
   expect(screen.queryByRole("button", { name: /switch to light theme/i })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /switch to dark theme/i })).not.toBeInTheDocument();
@@ -1177,7 +1177,7 @@ test("Production shell is dark only and no longer exposes the old theme toggle",
 test("Production homepage replaces the legacy onboarding modal", async () => {
   render(<App />);
 
-  expect(await screen.findByRole("heading", { level: 1, name: /your community's platform/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: /your community's bank/i })).toBeInTheDocument();
   expect(screen.queryByRole("dialog", { name: /welcome to vorliq/i })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /^skip$/i })).not.toBeInTheDocument();
 });
@@ -1195,14 +1195,15 @@ test("App exposes a keyboard skip link to the main content", async () => {
 test("Homepage navigation exposes current product routes", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
   const nav = screen.getByRole("navigation");
 
+  expect(within(nav).getByRole("link", { name: /^product$/i })).toHaveAttribute("href", "/features");
   expect(within(nav).getByRole("link", { name: /how it works/i })).toHaveAttribute("href", "/#how-it-works");
-  expect(within(nav).getByRole("link", { name: /^features$/i })).toHaveAttribute("href", "/features");
-  expect(within(nav).getByRole("link", { name: /^lending$/i })).toHaveAttribute("href", "/lending");
+  expect(within(nav).getByRole("link", { name: /^blockchain$/i })).toHaveAttribute("href", "/blockchain");
   expect(within(nav).getByRole("link", { name: /^community$/i })).toHaveAttribute("href", "/#community");
   expect(within(nav).getByRole("link", { name: /^learn$/i })).toHaveAttribute("href", "/#learn");
+  expect(within(nav).getByRole("link", { name: /^transparency$/i })).toHaveAttribute("href", "/transparency");
   expect(within(nav).getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
   expect(within(nav).getByRole("link", { name: /^create account$/i })).toHaveAttribute("href", "/register");
 });
@@ -1210,10 +1211,10 @@ test("Homepage navigation exposes current product routes", async () => {
 test("Homepage has responsible product wording and no external wallet integration copy", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
 
-  expect(screen.getByText(/Vorliq is a community savings and lending platform built on its own lightweight blockchain/i)).toBeInTheDocument();
-  expect(screen.getByText(/Native VLQ\. Built for Vorliq\./i)).toBeInTheDocument();
+  expect(screen.getByText(/Vorliq is a community savings bank built on its own blockchain with the VLQ coin/i)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /one place to save, move, and verify/i })).toBeInTheDocument();
   expect(screen.queryByText(/MetaMask/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/WalletConnect/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/wallet-connect|connect wallet/i)).not.toBeInTheDocument();
@@ -1325,7 +1326,7 @@ test("Dashboard renders no in-page social links", async () => {
 test("mobile hamburger announces expanded state when opened", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
   const hamburger = screen.getByRole("button", { name: /open navigation menu/i });
 
   expect(hamburger).toHaveAttribute("aria-expanded", "false");
@@ -1337,7 +1338,7 @@ test("mobile hamburger announces expanded state when opened", async () => {
 test("mobile drawer traps focus and closes from outside click", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
   const hamburger = screen.getByRole("button", { name: /open navigation menu/i });
   await userEvent.click(hamburger);
 
@@ -1345,7 +1346,7 @@ test("mobile drawer traps focus and closes from outside click", async () => {
   expect(drawer).toHaveAttribute("aria-modal", "true");
   expect(drawer.closest("nav")).toBeNull();
   expect(drawer.closest("header")).toBeNull();
-  expect(within(drawer).getByRole("link", { name: /^features$/i })).toHaveAttribute("href", "/features");
+  expect(within(drawer).getByRole("link", { name: /^product$/i })).toHaveAttribute("href", "/features");
   expect(within(drawer).getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
 
   const focusTargets = drawer.querySelectorAll("a, button");
@@ -1365,7 +1366,7 @@ test("mobile drawer traps focus and closes from outside click", async () => {
 test("mobile drawer content is hidden when closed and drawer links close cleanly", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
   expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
 
   const hamburger = screen.getByRole("button", { name: /open navigation menu/i });
@@ -1375,7 +1376,7 @@ test("mobile drawer content is hidden when closed and drawer links close cleanly
   expect(drawer.querySelectorAll(".brand")).toHaveLength(1);
   expect(within(drawer).getByRole("button", { name: /close navigation menu/i }).closest("#mobile-product-navigation")).toBe(drawer);
 
-  await userEvent.click(within(drawer).getByRole("link", { name: /^features$/i }));
+  await userEvent.click(within(drawer).getByRole("link", { name: /^product$/i }));
   await waitFor(() => expect(window.location.pathname).toBe("/features"));
   expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
   expect(document.body).not.toHaveClass("mobile-nav-open");
@@ -1395,7 +1396,7 @@ test("mobile drawer content is hidden when closed and drawer links close cleanly
 test("mobile drawer backdrop closes without leaving hidden overlay content", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
   await userEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
 
   expect(screen.getByRole("dialog", { name: /navigation menu/i })).toBeInTheDocument();
@@ -1413,7 +1414,7 @@ test("mobile drawer hash link closes and scrolls to the target section", async (
 
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
   await userEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
 
   const drawer = screen.getByRole("dialog", { name: /navigation menu/i });
@@ -1427,7 +1428,7 @@ test("mobile drawer hash link closes and scrolls to the target section", async (
 test("primary CTAs navigate with one click to their route targets", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
   await userEvent.click(screen.getByRole("link", { name: /create your account/i }));
   await waitFor(() => expect(window.location.pathname).toBe("/register"));
 
@@ -1448,27 +1449,27 @@ test("primary CTAs navigate with one click to their route targets", async () => 
 test("New product shell removes old More menu and notification bell controls", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
 
   expect(screen.queryByRole("button", { name: /^more/i })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /open notifications page/i })).not.toBeInTheDocument();
 });
 
-test("Footer renders the five official community links", async () => {
+test("Footer renders only the three official social links", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
   const footer = document.querySelector("footer");
 
   expect(footer.querySelectorAll(".social-links")).toHaveLength(1);
   expect(within(footer).getByRole("link", { name: /open vorliq on x/i })).toHaveAttribute("href", "https://x.com/Vorliq");
   expect(within(footer).getByRole("link", { name: /open vorliq on discord/i })).toHaveAttribute("href", "https://discord.gg/qpX5sHD4pC");
-  expect(within(footer).getByRole("link", { name: /open vorliq on reddit/i })).toHaveAttribute("href", "https://www.reddit.com/r/VorliqOfficial/");
-  expect(within(footer).getByRole("link", { name: /open vorliq on facebook/i })).toHaveAttribute("href", "https://www.facebook.com/people/Vorliq/61590708960405/");
-  expect(within(footer).getByRole("link", { name: /open vorliq on telegram/i })).toHaveAttribute("href", "https://t.me/Vorliq");
-  expect(within(footer).queryByRole("link", { name: /open vorliq on github/i })).not.toBeInTheDocument();
-  expect(within(footer).getByRole("link", { name: /vlq overview/i })).toHaveAttribute("href", "/vlq");
-  expect(within(footer).getByRole("link", { name: /^lending$/i })).toHaveAttribute("href", "/lending");
+  expect(within(footer).getByRole("link", { name: /open vorliq on github/i })).toHaveAttribute("href", "https://github.com/vorliq/Vorliq");
+  expect(within(footer).queryByRole("link", { name: /open vorliq on reddit/i })).not.toBeInTheDocument();
+  expect(within(footer).queryByRole("link", { name: /open vorliq on facebook/i })).not.toBeInTheDocument();
+  expect(within(footer).queryByRole("link", { name: /open vorliq on telegram/i })).not.toBeInTheDocument();
+  expect(within(footer).getByRole("link", { name: /what is vlq/i })).toHaveAttribute("href", "/vlq");
+  expect(within(footer).getByRole("link", { name: /^blockchain$/i })).toHaveAttribute("href", "/blockchain");
 });
 
 test("Features route states responsible limits without wallet-connect integrations", async () => {
@@ -1631,7 +1632,7 @@ test("wallet safety confirmation blocks wallet creation until checked", async ()
 test("Footer exposes a public Risk Notice link", async () => {
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /your community's platform/i });
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
   const footer = document.querySelector("footer");
 
   expect(within(footer).getByRole("link", { name: /risk notice/i })).toHaveAttribute(
