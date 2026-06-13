@@ -339,6 +339,7 @@ strong {
   opacity: 0.22;
   background-image: radial-gradient(circle, var(--accent-green) 1.5px, transparent 1.8px);
   background-size: 18px 18px;
+  -webkit-mask-image: radial-gradient(circle at 0 50%, #000 0 44%, transparent 72%);
   mask-image: radial-gradient(circle at 0 50%, #000 0 44%, transparent 72%);
 }
 
@@ -348,6 +349,7 @@ strong {
   top: 20%;
   bottom: auto;
   background-image: radial-gradient(circle, var(--accent-blue) 1.4px, transparent 1.8px);
+  -webkit-mask-image: radial-gradient(circle at 100% 50%, #000 0 38%, transparent 70%);
   mask-image: radial-gradient(circle at 100% 50%, #000 0 38%, transparent 70%);
 }
 
@@ -377,6 +379,7 @@ strong {
     linear-gradient(90deg, transparent 49%, rgba(0, 198, 167, 0.24) 50%, transparent 51%),
     repeating-linear-gradient(0deg, rgba(0, 198, 167, 0.16) 0 1px, transparent 1px 34px),
     repeating-linear-gradient(90deg, rgba(20, 121, 255, 0.16) 0 1px, transparent 1px 58px);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 0, #000 0 56%, transparent 72%);
   mask-image: radial-gradient(ellipse at 50% 0, #000 0 56%, transparent 72%);
 }
 
@@ -422,6 +425,7 @@ html[data-glow="reduced"] .brand-network {
   z-index: 1000;
   border-bottom: 1px solid rgba(0, 198, 167, 0.2);
   background: rgba(2, 8, 23, 0.78);
+  -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   box-shadow: 0 18px 54px rgba(0, 0, 0, 0.18);
 }
@@ -541,6 +545,7 @@ html[data-glow="reduced"] .brand-network {
     linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
     rgba(2, 8, 23, 0.98);
   box-shadow: 0 30px 110px rgba(0, 0, 0, 0.64), 0 0 46px rgba(0, 198, 167, 0.16);
+  -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
   padding: 12px;
 }
@@ -794,6 +799,7 @@ html[data-glow="reduced"] .brand-network {
     linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
     var(--surface-glass);
   box-shadow: var(--shadow-soft), 0 0 36px rgba(0, 198, 167, 0.08);
+  -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
 }
 
@@ -886,6 +892,7 @@ html[data-glow="reduced"] .brand-network {
   border: 1px solid rgba(0, 198, 167, 0.18);
   border-radius: var(--radius-md);
   background: rgba(2, 8, 23, 0.48);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
 
@@ -1762,6 +1769,7 @@ summary {
   border-left: 1px solid var(--border-strong);
   background: rgba(2, 8, 23, 0.98);
   box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
   transform: translateX(100%);
   transition: transform 180ms ease;
@@ -1837,6 +1845,7 @@ summary {
   flex-shrink: 0;
   border-top: 1px solid rgba(0, 198, 167, 0.18);
   background: rgba(2, 8, 23, 0.72);
+  -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
 }
 
@@ -1919,6 +1928,7 @@ summary {
   border-radius: var(--radius-lg);
   background: rgba(2, 8, 23, 0.98);
   box-shadow: var(--shadow), 0 0 42px rgba(0, 198, 167, 0.14);
+  -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
   padding: clamp(22px, 5vw, 34px);
 }
@@ -2275,10 +2285,9 @@ summary {
     border-radius: 18px;
     background: rgba(2, 8, 23, 0.98);
     box-shadow: 0 30px 110px rgba(0, 0, 0, 0.64), 0 0 46px rgba(0, 198, 167, 0.16);
+    -webkit-backdrop-filter: blur(24px);
     backdrop-filter: blur(24px);
-    padding: 14px;
-    -webkit-overflow-scrolling: touch;
-  }
+    padding: 14px;  }
 
   .mobile-drawer.nav-open {
     display: grid;
@@ -2883,6 +2892,7 @@ html[data-theme="light"] .brand-horizon {
   background: transparent;
   border: 0;
   box-shadow: none;
+  -webkit-backdrop-filter: none;
   backdrop-filter: none;
   padding-inline: 0;
 }
@@ -2965,6 +2975,7 @@ h3 {
     linear-gradient(180deg, color-mix(in srgb, #ffffff 5%, transparent), color-mix(in srgb, #ffffff 1.5%, transparent)),
     var(--surface-glass);
   box-shadow: 0 10px 34px color-mix(in srgb, var(--bg-deep) 22%, transparent);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 
@@ -3097,6 +3108,7 @@ a:focus-visible {
 .transparency-notice,
 .experimental,
 .custody {
+  border-color: rgba(245, 166, 35, 0.4);
   border-color: color-mix(in srgb, var(--warning) 40%, transparent);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--warning) 8%, transparent), transparent),
@@ -3320,6 +3332,7 @@ a:focus-visible {
 
 .brand-social-links .social-brand-link:hover,
 .brand-social-links .social-brand-link:focus-visible {
+  border-color: rgba(160, 174, 192, 0.55);
   border-color: color-mix(in srgb, var(--brand-link-color) 70%, transparent);
   background: color-mix(in srgb, var(--brand-link-color) 14%, transparent);
   box-shadow: 0 0 24px var(--brand-link-glow);
@@ -3378,6 +3391,7 @@ th {
     z-index: 1001;
     display: block;
     background: rgba(0, 5, 14, 0.58);
+    -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
   }
 
@@ -3492,6 +3506,7 @@ th {
   border: 0;
   background: transparent;
   box-shadow: none;
+  -webkit-backdrop-filter: none;
   backdrop-filter: none;
   padding-inline: 0;
 }
@@ -3534,6 +3549,7 @@ html[data-theme="light"] .account-profile-section,
 html[data-theme="light"] .stat-card {
   background: rgba(255, 255, 255, 0.24);
   box-shadow: 0 10px 30px rgba(36, 75, 110, 0.08);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
 
@@ -3578,6 +3594,7 @@ html[data-theme="light"] .community-links-card.glass-section {
   border: 0;
   background: transparent;
   box-shadow: none;
+  -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
 
