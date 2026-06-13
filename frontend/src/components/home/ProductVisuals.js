@@ -180,21 +180,22 @@ export function ExplorerPreviewVisual({ snapshot, loading }) {
   );
 }
 
-export function NetworkHealthVisual({ snapshot, loading }) {
-  const readiness = snapshot?.readiness;
-  const propagation = snapshot?.propagation;
+export function NetworkHealthVisual({ snapshot, status, statusLoading }) {
+  const readiness = status?.readiness;
+  const propagation = status?.propagation;
   const score = readiness?.score;
-  const status = readiness?.overall_status;
+  const overall = readiness?.overall_status;
   const chainValid = snapshot?.summary?.chain_valid;
+  const chainKnown = snapshot != null && !snapshot.unavailable?.summary;
   const activePeers = propagation?.active_peer_count;
 
-  const statusLabel = loading
+  const statusLabel = statusLoading
     ? "Checking"
-    : status === "pass"
+    : overall === "pass"
       ? "Operational"
-      : status === "warning"
+      : overall === "warning"
         ? "Monitoring"
-        : status
+        : overall
           ? "Attention"
           : "Unavailable";
 
@@ -203,12 +204,12 @@ export function NetworkHealthVisual({ snapshot, loading }) {
       <WindowChrome title="Network readiness" badge="Live data" />
       <div className="vq-ui__body">
         <div className="vq-health-top">
-          <div className={`vq-health-ring ${status || "unknown"}`}>
-            <strong>{loading ? "…" : score != null ? score : "—"}</strong>
+          <div className={`vq-health-ring ${overall || "unknown"}`}>
+            <strong>{statusLoading ? "…" : score != null ? score : "—"}</strong>
             <span>score</span>
           </div>
           <div className="vq-health-status">
-            <span className={`vq-ui-chip-soft ${status === "pass" ? "live" : ""}`}>{statusLabel}</span>
+            <span className={`vq-ui-chip-soft ${overall === "pass" ? "live" : ""}`}>{statusLabel}</span>
             <span className="vq-ui__muted">Readiness is a technical signal, not a legal status.</span>
           </div>
         </div>
@@ -216,16 +217,18 @@ export function NetworkHealthVisual({ snapshot, loading }) {
           <li>
             <span>Chain validation</span>
             <span className={chainValid ? "ok" : "muted"}>
-              {loading ? "…" : chainValid == null ? "Unavailable" : chainValid ? "Valid" : "Under review"}
+              {!chainKnown ? "Unavailable" : chainValid ? "Valid" : "Under review"}
             </span>
           </li>
           <li>
             <span>Active peers</span>
-            <span className="muted">{loading ? "…" : activePeers != null ? formatNumber(activePeers) : "Unavailable"}</span>
+            <span className="muted">
+              {statusLoading ? "…" : activePeers != null ? formatNumber(activePeers) : "Unavailable"}
+            </span>
           </li>
           <li>
             <span>Index health</span>
-            <span className="muted">{loading ? "…" : readiness?.index_health || "Unavailable"}</span>
+            <span className="muted">{statusLoading ? "…" : readiness?.index_health || "Unavailable"}</span>
           </li>
         </ul>
       </div>

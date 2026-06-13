@@ -9,28 +9,18 @@ function isUnavailable(result) {
   return result.value?.data?.success !== true;
 }
 
+// Core chain snapshot. These endpoints are fast, so the main homepage cards and
+// the hero card can render quickly without waiting on slower status checks.
 export async function loadPublicChainSnapshot() {
-  const [
-    summaryResult,
-    blocksResult,
-    confirmedResult,
-    pendingResult,
-    healthResult,
-    leaderboardResult,
-    readinessResult,
-    deploymentResult,
-    propagationResult,
-  ] = await Promise.allSettled([
-    api.get("/chain/summary"),
-    api.get("/chain/blocks", { params: { limit: 6, offset: 0 } }),
-    api.get("/transactions", { params: { status: "confirmed", limit: 8, offset: 0 } }),
-    api.get("/transactions/pending", { params: { limit: 8, offset: 0 } }),
-    api.get("/health", { timeout: 5000 }),
-    api.get("/leaderboard", { params: { limit: 1, offset: 0 } }),
-    api.get("/readiness", { timeout: 8000 }),
-    api.get("/deployment", { timeout: 8000 }),
-    api.get("/peers/propagation/status", { timeout: 8000 }),
-  ]);
+  const [summaryResult, blocksResult, confirmedResult, pendingResult, healthResult, leaderboardResult] =
+    await Promise.allSettled([
+      api.get("/chain/summary"),
+      api.get("/chain/blocks", { params: { limit: 6, offset: 0 } }),
+      api.get("/transactions", { params: { status: "confirmed", limit: 8, offset: 0 } }),
+      api.get("/transactions/pending", { params: { limit: 8, offset: 0 } }),
+      api.get("/health", { timeout: 5000 }),
+      api.get("/leaderboard", { params: { limit: 1, offset: 0 } }),
+    ]);
 
   const summaryData = settledValue(summaryResult, {});
   const blocksData = settledValue(blocksResult, {});
@@ -38,9 +28,6 @@ export async function loadPublicChainSnapshot() {
   const pendingData = settledValue(pendingResult, {});
   const healthData = settledValue(healthResult, {});
   const leaderboardData = settledValue(leaderboardResult, {});
-  const readinessData = settledValue(readinessResult, {});
-  const deploymentData = settledValue(deploymentResult, {});
-  const propagationData = settledValue(propagationResult, {});
   const holderTotal =
     leaderboardData?.totals?.holders ?? leaderboardData?.holders_total ?? leaderboardData?.holders?.length;
 
@@ -53,9 +40,6 @@ export async function loadPublicChainSnapshot() {
     pendingTotal: pendingData.total,
     health: healthData,
     holderTotal,
-    readiness: isUnavailable(readinessResult) ? null : readinessData,
-    deployment: isUnavailable(deploymentResult) ? null : deploymentData,
-    propagation: isUnavailable(propagationResult) ? null : propagationData,
     unavailable: {
       summary: isUnavailable(summaryResult),
       blocks: isUnavailable(blocksResult),
@@ -63,6 +47,25 @@ export async function loadPublicChainSnapshot() {
       pendingTransactions: isUnavailable(pendingResult),
       health: isUnavailable(healthResult),
       holders: isUnavailable(leaderboardResult) || holderTotal == null,
+    },
+  };
+}
+
+// Network status (readiness, deployment, peer propagation). The readiness check
+// runs many gates and can be slow, so it is loaded separately with a generous
+// timeout and never blocks the core chain cards from rendering.
+export async function loadNetworkStatus() {
+  const [readinessResult, deploymentResult, propagationResult] = await Promise.allSettled([
+    api.get("/readiness", { timeout: 20000 }),
+    api.get("/deployment", { timeout: 20000 }),
+    api.get("/peers/propagation/status", { timeout: 15000 }),
+  ]);
+
+  return {
+    readiness: isUnavailable(readinessResult) ? null : settledValue(readinessResult, {}),
+    deployment: isUnavailable(deploymentResult) ? null : settledValue(deploymentResult, {}),
+    propagation: isUnavailable(propagationResult) ? null : settledValue(propagationResult, {}),
+    unavailable: {
       readiness: isUnavailable(readinessResult),
       deployment: isUnavailable(deploymentResult),
       propagation: isUnavailable(propagationResult),

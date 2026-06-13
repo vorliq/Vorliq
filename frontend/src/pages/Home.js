@@ -11,7 +11,7 @@ import {
   SavingsPoolVisual,
   WalletDashboardVisual,
 } from "../components/home/ProductVisuals";
-import { formatNumber, loadPublicChainSnapshot, shortHash } from "../helpers/publicApi";
+import { formatNumber, loadNetworkStatus, loadPublicChainSnapshot, shortHash } from "../helpers/publicApi";
 import useReveal from "../helpers/useReveal";
 
 function Icon({ paths, viewBox = "0 0 24 24" }) {
@@ -115,6 +115,8 @@ const learnCards = [
 function Home() {
   const [snapshot, setSnapshot] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState(null);
+  const [statusLoading, setStatusLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -128,6 +130,18 @@ function Home() {
       .finally(() => {
         if (mounted) setLoading(false);
       });
+    // Readiness and deployment are slower, so they load on their own and update
+    // their cards when ready without holding back the core chain data.
+    loadNetworkStatus()
+      .then((data) => {
+        if (mounted) setStatus(data);
+      })
+      .catch(() => {
+        if (mounted) setStatus(null);
+      })
+      .finally(() => {
+        if (mounted) setStatusLoading(false);
+      });
     return () => {
       mounted = false;
     };
@@ -136,8 +150,8 @@ function Home() {
   return (
     <div className="page vq-home">
       <Hero snapshot={snapshot} loading={loading} />
-      <LiveNetwork snapshot={snapshot} loading={loading} />
-      <ProductShowcase snapshot={snapshot} loading={loading} />
+      <LiveNetwork snapshot={snapshot} loading={loading} status={status} statusLoading={statusLoading} />
+      <ProductShowcase snapshot={snapshot} loading={loading} status={status} statusLoading={statusLoading} />
       <HowItWorks />
       <ExplorerSection snapshot={snapshot} loading={loading} />
       <CommunitySavings />
@@ -177,24 +191,23 @@ function Hero({ snapshot, loading }) {
   );
 }
 
-function deploymentLabel(snapshot, loading) {
-  if (loading) return "Checking";
-  const deployment = snapshot?.deployment;
-  if (!deployment || snapshot?.unavailable?.deployment) return "Unavailable";
-  const short = deployment.commit_hash ? deployment.commit_hash.slice(0, 7) : "Live";
-  return short;
+function deploymentLabel(status, statusLoading) {
+  if (statusLoading) return "Checking";
+  const deployment = status?.deployment;
+  if (!deployment || status?.unavailable?.deployment) return "Unavailable";
+  return deployment.commit_hash ? deployment.commit_hash.slice(0, 7) : "Live";
 }
 
-function readinessLabel(snapshot, loading) {
-  if (loading) return "Checking";
-  const readiness = snapshot?.readiness;
-  if (!readiness || snapshot?.unavailable?.readiness) return "Unavailable";
+function readinessLabel(status, statusLoading) {
+  if (statusLoading) return "Checking";
+  const readiness = status?.readiness;
+  if (!readiness || status?.unavailable?.readiness) return "Unavailable";
   if (readiness.overall_status === "pass") return "Operational";
   if (readiness.overall_status === "warning") return "Monitoring";
   return "Attention";
 }
 
-function LiveNetwork({ snapshot, loading }) {
+function LiveNetwork({ snapshot, loading, status, statusLoading }) {
   const revealRef = useReveal();
   const summary = snapshot?.summary || {};
   const latestBlock = snapshot?.blocks?.[0];
@@ -232,11 +245,11 @@ function LiveNetwork({ snapshot, loading }) {
     },
     {
       label: "Readiness",
-      value: readinessLabel(snapshot, loading),
+      value: readinessLabel(status, statusLoading),
     },
     {
       label: "Deployment",
-      value: deploymentLabel(snapshot, loading),
+      value: deploymentLabel(status, statusLoading),
       mono: true,
     },
     {
@@ -274,7 +287,7 @@ function LiveNetwork({ snapshot, loading }) {
   );
 }
 
-function ProductShowcase({ snapshot, loading }) {
+function ProductShowcase({ snapshot, loading, status, statusLoading }) {
   const revealRef = useReveal();
   return (
     <section className="stack reveal-up vq-showcase" id="product" aria-label="Vorliq product interfaces" ref={revealRef}>
@@ -293,7 +306,7 @@ function ProductShowcase({ snapshot, loading }) {
         <SavingsPoolVisual />
         <GovernanceProposalVisual />
         <ExplorerPreviewVisual snapshot={snapshot} loading={loading} />
-        <NetworkHealthVisual snapshot={snapshot} loading={loading} />
+        <NetworkHealthVisual snapshot={snapshot} status={status} statusLoading={statusLoading} />
       </div>
     </section>
   );
