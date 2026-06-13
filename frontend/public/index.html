@@ -3,7 +3,6 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0A0E1A" />
 
     <title>Vorliq — Your Community's Bank. Your Rules.</title>
     <meta
@@ -12,11 +11,20 @@
     />
     <link rel="canonical" href="https://vorliq.org/" />
 
-    <!-- Icons -->
+    <!-- Icons: the existing Vorliq logo only -->
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" sizes="any" />
-    <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg" />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+    <!-- Apply the saved theme before paint to avoid a flash. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("vorliq_theme");
+          document.documentElement.setAttribute("data-theme", t === "light" ? "light" : "dark");
+        } catch (e) {}
+      })();
+    </script>
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />

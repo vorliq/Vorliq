@@ -1,11 +1,14 @@
+import { useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import AnalyticsRouteTracker from "./components/AnalyticsRouteTracker";
+import BrandBackground from "./components/BrandBackground";
 import IncidentBanner from "./components/IncidentBanner";
 import { ProductFooter, ProductNav } from "./components/ProductShell";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { applyTheme, getStoredTheme } from "./helpers/theme";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import Account from "./pages/Account";
@@ -42,6 +45,7 @@ import Register from "./pages/Register";
 import Registry from "./pages/Registry";
 import Releases from "./pages/Releases";
 import Roadmap from "./pages/Roadmap";
+import Settings from "./pages/Settings";
 import Send from "./pages/Send";
 import Snapshot from "./pages/Snapshot";
 import SnapshotArchive from "./pages/SnapshotArchive";
@@ -106,8 +110,13 @@ function App() {
 }
 
 function AppShell() {
+  useEffect(() => {
+    applyTheme(getStoredTheme());
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white">
+    <div className="app-shell">
+      <BrandBackground />
       <ProductNav />
       <IncidentBanner />
       <AnalyticsRouteTracker />
@@ -145,6 +154,7 @@ function AppShell() {
           <Route path="/health" element={<Health />} />
           <Route path="/growth" element={<Growth />} />
           <Route path="/roadmap" element={<Roadmap />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/releases" element={<Releases />} />
           <Route path="/readiness" element={<Readiness />} />
           <Route path="/migration-readiness" element={<MigrationReadiness />} />

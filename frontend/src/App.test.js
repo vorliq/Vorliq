@@ -1139,6 +1139,7 @@ beforeEach(() => {
   window.history.pushState({}, "", "/");
   window.localStorage.clear();
   window.sessionStorage.clear();
+  document.documentElement.setAttribute("data-theme", "dark");
   jest.clearAllMocks();
   api.get.mockImplementation(defaultApiGet);
   api.post.mockResolvedValue({ data: { success: true } });
@@ -1206,6 +1207,34 @@ test("Homepage navigation exposes current product routes", async () => {
   expect(within(nav).getByRole("link", { name: /^transparency$/i })).toHaveAttribute("href", "/transparency");
   expect(within(nav).getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
   expect(within(nav).getByRole("link", { name: /^create account$/i })).toHaveAttribute("href", "/register");
+});
+
+test("Settings theme toggle applies the light theme and persists across routes", async () => {
+  window.history.pushState({}, "", "/settings");
+  render(<App />);
+
+  expect(await screen.findByRole("heading", { level: 1, name: /appearance/i })).toBeInTheDocument();
+  expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+
+  await userEvent.click(screen.getByRole("button", { name: /use light theme/i }));
+  expect(document.documentElement).toHaveAttribute("data-theme", "light");
+  expect(window.localStorage.getItem("vorliq_theme")).toBe("light");
+
+  // The stored choice survives a fresh load on another route (landing).
+  cleanup();
+  document.documentElement.setAttribute("data-theme", "dark");
+  window.history.pushState({}, "", "/");
+  render(<App />);
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
+  expect(document.documentElement).toHaveAttribute("data-theme", "light");
+
+  // And on the dashboard route.
+  cleanup();
+  document.documentElement.setAttribute("data-theme", "dark");
+  window.history.pushState({}, "", "/dashboard");
+  render(<App />);
+  await screen.findByRole("heading", { level: 1, name: /^vorliq dashboard$/i });
+  expect(document.documentElement).toHaveAttribute("data-theme", "light");
 });
 
 test("Header is authentication-aware based on the existing stored wallet", async () => {

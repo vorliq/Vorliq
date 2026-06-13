@@ -23,6 +23,7 @@ const footerGroups = [
       { label: "Features", to: "/features" },
       { label: "Wallet", to: "/wallet" },
       { label: "Dashboard", to: "/dashboard" },
+      { label: "Settings", to: "/settings" },
       { label: "Create Account", to: "/register" },
     ],
   },
