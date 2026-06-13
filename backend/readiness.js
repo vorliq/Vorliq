@@ -94,6 +94,65 @@ async function flaskGet(pathname, timeout = 7000) {
   return response.data || {};
 }
 
+// Node-dependent readiness calls (the blockchain node over HTTP) can briefly
+// fail to connect or time out while the node is busy — most notably during a
+// serialized block append while mining. A single momentary hiccup like that is
+// not a real readiness failure. So node calls get a small bounded retry, and a
+// connection/timeout failure is interpreted as a transient "warning" rather
+// than an immediate critical "fail". It only escalates to a real "fail" if the
+// same check is still unavailable on the next readiness computation (two
+// consecutive). A call that actually connects and returns a bad value, or fails
+// for a non-transient reason (e.g. an HTTP error response), still fails
+// immediately and visibly. This changes how results are interpreted, not what
+// is checked.
+const NODE_RETRY_ATTEMPTS = 2;
+const NODE_RETRY_BACKOFF_MS = 200;
+let previousTransientUnavailable = new Set();
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientNodeError(error) {
+  if (!error) return false;
+  // A real HTTP response (even an error status) means the node was reachable and
+  // answered, so this is not a transient connect/timeout failure.
+  if (error.response) return false;
+  const code = String(error.code || "");
+  const transientCodes = new Set([
+    "ECONNREFUSED",
+    "ECONNABORTED",
+    "ETIMEDOUT",
+    "ECONNRESET",
+    "ENOTFOUND",
+    "EAI_AGAIN",
+    "ENETUNREACH",
+    "EHOSTUNREACH",
+    "EPIPE",
+  ]);
+  if (transientCodes.has(code)) return true;
+  return /timeout|timed out|socket hang up|network error|aborted|ECONN|ETIMEDOUT/i.test(
+    String(error.message || "")
+  );
+}
+
+// Like safeCall, but for node-dependent calls: retries briefly on transient
+// connect/timeout errors and reports whether the final failure was transient.
+async function safeNodeCall(label, fn) {
+  let lastError;
+  for (let attempt = 0; attempt <= NODE_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      return { ok: true, value: await fn(), transient: false };
+    } catch (error) {
+      lastError = error;
+      if (!isTransientNodeError(error) || attempt === NODE_RETRY_ATTEMPTS) break;
+      await delay(NODE_RETRY_BACKOFF_MS);
+    }
+  }
+  logError(`Readiness ${label} check failed: ${lastError?.message}`);
+  return { ok: false, error: lastError, transient: isTransientNodeError(lastError) };
+}
+
 function backupAgeHours(backupStatus) {
   const timestamp = Date.parse(backupStatus?.latest_backup?.modified_time || "");
   if (!Number.isFinite(timestamp)) return null;
@@ -147,6 +206,22 @@ function incidentCounts(activeIncidents) {
 async function buildReadiness(options = {}) {
   const checks = [];
   const checkedAt = new Date().toISOString();
+  const currentTransientUnavailable = new Set();
+
+  // Resolve a node-dependent check's status. When the node call connected and
+  // returned a value (result.ok), use the caller's evaluated status as-is —
+  // including an immediate "fail" for a genuinely bad value. When the call
+  // failed: a transient connect/timeout reports "warning" the first time and
+  // only escalates to "fail" if the same check was already unavailable on the
+  // previous computation; a non-transient failure fails immediately.
+  const resolveNodeStatus = (id, result, okStatus) => {
+    if (result.ok) return okStatus;
+    if (result.transient) {
+      currentTransientUnavailable.add(id);
+      return previousTransientUnavailable.has(id) ? "fail" : "warning";
+    }
+    return "fail";
+  };
 
   addCheck(checks, {
     id: "backend_health",
@@ -178,16 +253,16 @@ async function buildReadiness(options = {}) {
     archiveResult,
   ] = await Promise.all([
     safeCall("deployment commit", deploymentCommit),
-    safeCall("diagnostics", () => flaskGet("/diagnostics")),
-    safeCall("chain summary", () => flaskGet("/chain/summary")),
-    safeCall("storage health", loadStorageHealth),
-    safeCall("index health", () => flaskGet("/indexes/health")),
+    safeNodeCall("diagnostics", () => flaskGet("/diagnostics")),
+    safeNodeCall("chain summary", () => flaskGet("/chain/summary")),
+    safeNodeCall("storage health", loadStorageHealth),
+    safeNodeCall("index health", () => flaskGet("/indexes/health")),
     safeCall("backup status", () => Promise.resolve(publicBackupStatus())),
     safeCall("audit manifest", () => buildAuditSnapshot()),
-    safeCall("registry summary", () => flaskGet("/registry/summary")),
-    safeCall("mining status", () => flaskGet("/mining/status")),
-    safeCall("treasury summary", () => flaskGet("/treasury/summary")),
-    safeCall("faucet summary", () => flaskGet("/faucet/summary")),
+    safeNodeCall("registry summary", () => flaskGet("/registry/summary")),
+    safeNodeCall("mining status", () => flaskGet("/mining/status")),
+    safeNodeCall("treasury summary", () => flaskGet("/treasury/summary")),
+    safeNodeCall("faucet summary", () => flaskGet("/faucet/summary")),
     safeCall("analytics summary", () => Promise.resolve(analyticsSummary())),
     safeCall("version metadata", () => Promise.resolve(readVersionMetadata())),
     safeCall("network manifest", async () => {
@@ -265,7 +340,11 @@ async function buildReadiness(options = {}) {
     id: "storage_health_ok",
     name: "Storage health ok",
     category: "Storage",
-    status: storageResult.ok ? storage.overall_status === "ok" ? "pass" : storage.overall_status === "warning" ? "warning" : "fail" : "fail",
+    status: resolveNodeStatus(
+      "storage_health_ok",
+      storageResult,
+      storage.overall_status === "ok" ? "pass" : storage.overall_status === "warning" ? "warning" : "fail"
+    ),
     severity: "critical",
     message: storageResult.ok ? `Storage health is ${storage.overall_status || "unknown"}.` : "Storage health could not be loaded.",
     safe_metadata: {
@@ -282,7 +361,11 @@ async function buildReadiness(options = {}) {
     id: "index_health_ok",
     name: "Index health ok",
     category: "Storage",
-    status: indexResult.ok && indexHealth.status === "ok" && indexHealth.rebuild_needed !== true ? "pass" : indexResult.ok ? "warning" : "fail",
+    status: resolveNodeStatus(
+      "index_health_ok",
+      indexResult,
+      indexHealth.status === "ok" && indexHealth.rebuild_needed !== true ? "pass" : "warning"
+    ),
     severity: "medium",
     message: indexResult.ok
       ? `Index health is ${indexHealth.status || "unknown"}.`
@@ -724,7 +807,11 @@ async function buildReadiness(options = {}) {
     id: "public_node_active",
     name: "Public node active",
     category: "Network",
-    status: registryNodeActive || diagnosticsNodeActive ? "pass" : "fail",
+    status: resolveNodeStatus(
+      "public_node_active",
+      { ok: registryResult.ok || diagnosticsResult.ok, transient: registryResult.transient || diagnosticsResult.transient },
+      registryNodeActive || diagnosticsNodeActive ? "pass" : "fail"
+    ),
     severity: "critical",
     message: registryNodeActive
       ? "At least one registry-listed public node is active."
@@ -742,7 +829,7 @@ async function buildReadiness(options = {}) {
     id: "registry_active_node_count",
     name: "Registry active node count",
     category: "Network",
-    status: registryResult.ok && (activeNodeCount || 0) > 0 ? "pass" : "warning",
+    status: resolveNodeStatus("registry_active_node_count", registryResult, (activeNodeCount || 0) > 0 ? "pass" : "warning"),
     severity: "medium",
     message: registryResult.ok ? `${activeNodeCount || 0} active registry node(s) are visible.` : "Registry summary is unavailable.",
     safe_metadata: {
@@ -757,7 +844,11 @@ async function buildReadiness(options = {}) {
     id: "chain_valid",
     name: "Chain valid",
     category: "Blockchain",
-    status: diagnosticsResult.ok && chainValid === true ? "pass" : "fail",
+    status: resolveNodeStatus(
+      "chain_valid",
+      { ok: chainValid !== undefined, transient: diagnosticsResult.transient || chainSummaryResult.transient },
+      chainValid === true ? "pass" : "fail"
+    ),
     severity: "critical",
     message: chainValid === true ? "Blockchain diagnostics report a valid chain." : "Blockchain diagnostics do not confirm a valid chain.",
     safe_metadata: {
@@ -770,7 +861,7 @@ async function buildReadiness(options = {}) {
     id: "mining_status_available",
     name: "Mining status available",
     category: "Blockchain",
-    status: miningResult.ok && miningResult.value?.success !== false ? "pass" : "warning",
+    status: resolveNodeStatus("mining_status_available", miningResult, miningResult.value?.success !== false ? "pass" : "warning"),
     severity: "medium",
     message: miningResult.ok ? "Mining status is available." : "Mining status is unavailable.",
     safe_metadata: {
@@ -783,7 +874,7 @@ async function buildReadiness(options = {}) {
     id: "treasury_summary_available",
     name: "Treasury summary available",
     category: "Economy",
-    status: treasuryResult.ok && treasuryResult.value?.success !== false ? "pass" : "warning",
+    status: resolveNodeStatus("treasury_summary_available", treasuryResult, treasuryResult.value?.success !== false ? "pass" : "warning"),
     severity: "medium",
     message: treasuryResult.ok ? "Treasury summary is available." : "Treasury summary is unavailable.",
     safe_metadata: { summary_available: treasuryResult.ok },
@@ -793,7 +884,7 @@ async function buildReadiness(options = {}) {
     id: "faucet_summary_available",
     name: "Faucet summary available",
     category: "Economy",
-    status: faucetResult.ok && faucetResult.value?.success !== false ? "pass" : "warning",
+    status: resolveNodeStatus("faucet_summary_available", faucetResult, faucetResult.value?.success !== false ? "pass" : "warning"),
     severity: "medium",
     message: faucetResult.ok ? "Faucet summary is available." : "Faucet summary is unavailable.",
     safe_metadata: { summary_available: faucetResult.ok },
@@ -948,6 +1039,11 @@ async function buildReadiness(options = {}) {
       services: ["backend", "blockchain", "nginx", "heartbeat", "backup", "monitor"],
     });
   }
+
+  // Remember which node-dependent checks were transiently unavailable this
+  // computation so a still-unavailable check escalates to a real fail on the
+  // next computation (two consecutive). Reachable checks clear themselves.
+  previousTransientUnavailable = currentTransientUnavailable;
 
   return response;
 }

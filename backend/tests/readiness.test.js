@@ -319,4 +319,53 @@ describe("production readiness", () => {
     expect(publicNodeCheck.message).toMatch(/registry heartbeat visibility needs attention/i);
     expect(registryCheck.status).toBe("warning");
   });
+
+  test("transient node connect errors warn then escalate, but real bad values fail immediately", async () => {
+    mockFlask();
+    const successImpl = axios.get.getMockImplementation();
+    // Baseline success computation clears any prior transient state.
+    await buildReadiness();
+
+    const connError = Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:5001"), { code: "ECONNREFUSED" });
+    const withNodeUnreachable = (url) => {
+      if (url.endsWith("/diagnostics") || url.endsWith("/chain/summary")) return Promise.reject(connError);
+      return successImpl(url);
+    };
+
+    // 1) First transient connect failure -> warning, not an immediate critical fail.
+    axios.get.mockImplementation(withNodeUnreachable);
+    const first = await buildReadiness();
+    const chainFirst = first.checks.find((check) => check.id === "chain_valid");
+    // The critical chain check degrades to a transient warning, never an
+    // instant critical fail, so the old score-0 criticalFail cascade is gone.
+    expect(chainFirst.status).toBe("warning");
+    expect(first.checks.some((check) => check.severity === "critical" && check.status === "fail")).toBe(false);
+    expect(first.score).toBeGreaterThan(0);
+
+    // 2) Still unreachable on the next computation -> escalates to a real fail.
+    axios.get.mockImplementation(withNodeUnreachable);
+    const second = await buildReadiness();
+    const chainSecond = second.checks.find((check) => check.id === "chain_valid");
+    expect(chainSecond.status).toBe("fail");
+    expect(second.overall_status).toBe("fail");
+
+    // 3) A call that connects and returns a genuinely invalid chain still fails at once.
+    axios.get.mockImplementation((url) => {
+      if (url.endsWith("/diagnostics")) {
+        return Promise.resolve({ data: { success: true, chain_valid: false, block_height: 42, pending_transactions: 0 } });
+      }
+      if (url.endsWith("/chain/summary")) {
+        return Promise.resolve({ data: { success: true, summary: { block_height: 42, chain_valid: false } } });
+      }
+      return successImpl(url);
+    });
+    const third = await buildReadiness();
+    const chainThird = third.checks.find((check) => check.id === "chain_valid");
+    expect(chainThird.status).toBe("fail");
+    expect(third.overall_status).toBe("fail");
+
+    // Restore a clean success baseline so shared transient state does not leak.
+    axios.get.mockImplementation(successImpl);
+    await buildReadiness();
+  });
 });
