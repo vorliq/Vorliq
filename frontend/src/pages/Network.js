@@ -210,6 +210,16 @@ function Network() {
   const comparisonSummary = data.nodeComparison?.summary || {};
   const propagation = data.peerPropagation;
   const nodeMonitor = data.nodeMonitor;
+  // Plain-language read of the current topology. These are presentation-only
+  // derivations from the existing counts; they do not change peer registration,
+  // discovery, or sync. A single active node with no external peers connected is
+  // a normal operating state, so we say so rather than leaving a bare "0".
+  const activeNodeTotal =
+    registrySummary.active_node_count ?? comparisonSummary.active_node_count ?? nodeMonitor?.active_node_count ?? null;
+  const registeredTotal = registrySummary.total_registered_node_count ?? comparisonSummary.total_node_count ?? null;
+  const runningSingleNode = activeNodeTotal !== null && activeNodeTotal <= 1;
+  const hasInactiveRegisteredNode =
+    registeredTotal !== null && activeNodeTotal !== null && registeredTotal > activeNodeTotal;
   const seriousWarnings = useMemo(() => {
     const warnings = [];
     if (data.nodeComparison?.success && (comparisonSummary.forked_count || 0) > 0) {
@@ -275,6 +285,16 @@ function Network() {
             {comparisonSummary.overall_status || data.readiness?.overall_status || "unavailable"}
           </span>
         </div>
+        {runningSingleNode && (
+          <p className="help-text">
+            Vorliq is running as a single public node right now. It is active and serving a valid
+            chain, with no external peers currently connected — a normal operating state for this
+            phase, not a fault. The counts below include this node itself.
+            {hasInactiveRegisteredNode
+              ? " One other node is registered but inactive and not currently syncing."
+              : ""}
+          </p>
+        )}
           <div className="stats-grid compact-stats">
             <Metric
               label="Registered nodes"

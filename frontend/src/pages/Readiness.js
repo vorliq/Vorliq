@@ -205,7 +205,13 @@ function Readiness() {
             <div className="stats-grid compact-stats">
               <div className="stat-card">
                 <span>Trusted node</span>
-                <strong>{nodeMonitor?.trusted_public_node_status || "unknown"}</strong>
+                <strong>
+                  {nodeMonitor?.trusted_public_node_status === "synced"
+                    ? "Synced"
+                    : nodeMonitor
+                      ? "No external peer"
+                      : "unknown"}
+                </strong>
               </div>
               <div className="stat-card">
                 <span>Warnings</span>
@@ -220,6 +226,13 @@ function Readiness() {
                 <strong>{nodeMonitor?.active_node_count ?? "unknown"}</strong>
               </div>
             </div>
+            {nodeMonitor && (nodeMonitor.active_node_count ?? 0) <= 1 && (
+              <p className="help-text">
+                Vorliq is running as a single public node right now, with no external peers
+                connected — a normal operating state for this phase, not a fault. "No external peer"
+                means no second public node is currently syncing.
+              </p>
+            )}
           </section>
 
           <section className="card card-pad">
