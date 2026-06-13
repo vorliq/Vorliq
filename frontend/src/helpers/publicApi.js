@@ -79,6 +79,36 @@ export function shortHash(value) {
   return text.length > 18 ? `${text.slice(0, 10)}...${text.slice(-6)}` : text;
 }
 
+// Middle-truncated hash for tight card layouts, e.g. 0000096058…825192.
+// Returns the full value separately via the caller (use as title attribute).
+export function formatHash(value, lead = 10, tail = 6) {
+  if (value == null || value === "") return "Unavailable";
+  const text = String(value);
+  if (text.length <= lead + tail + 1) return text;
+  return `${text.slice(0, lead)}…${text.slice(-tail)}`;
+}
+
+// Normalises a status into a short, clean, human label.
+export function formatStatus(value) {
+  if (value == null || value === "") return "Unavailable";
+  const map = {
+    pass: "Operational",
+    ok: "Operational",
+    healthy: "Operational",
+    warning: "Monitoring",
+    warn: "Monitoring",
+    fail: "Attention",
+    error: "Attention",
+    syncing: "Syncing",
+    valid: "Valid",
+    invalid: "Under review",
+    unavailable: "Unavailable",
+  };
+  const key = String(value).toLowerCase();
+  if (map[key]) return map[key];
+  return String(value).charAt(0).toUpperCase() + String(value).slice(1);
+}
+
 export function formatTime(timestamp) {
   const numeric = Number(timestamp);
   if (!Number.isFinite(numeric)) return "Time unavailable";

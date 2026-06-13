@@ -1208,6 +1208,36 @@ test("Homepage navigation exposes current product routes", async () => {
   expect(within(nav).getByRole("link", { name: /^create account$/i })).toHaveAttribute("href", "/register");
 });
 
+test("Header is authentication-aware based on the existing stored wallet", async () => {
+  // A valid encrypted wallet backup means the visitor already has an account, so
+  // the header must drop Sign In / Create Account and surface account actions.
+  window.localStorage.setItem(
+    "vorliq_wallet",
+    JSON.stringify({
+      version: 1,
+      address: "VLQ_SAVED_ACCOUNT",
+      public_key: "PUBLIC_ONLY",
+      encrypted_private_key: "AAAA",
+      salt: "BBBB",
+      iv: "CCCC",
+      kdf: "PBKDF2",
+      encryption: "AES-GCM",
+      iterations: 250000,
+    })
+  );
+
+  render(<App />);
+
+  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
+  const nav = screen.getByRole("navigation");
+
+  expect(within(nav).getByRole("link", { name: /dashboard/i })).toHaveAttribute("href", "/dashboard");
+  expect(within(nav).getByRole("link", { name: /^wallet$/i })).toHaveAttribute("href", "/wallet");
+  expect(within(nav).getByRole("button", { name: /sign out/i })).toBeInTheDocument();
+  expect(within(nav).queryByRole("link", { name: /sign in/i })).not.toBeInTheDocument();
+  expect(within(nav).queryByRole("link", { name: /^create account$/i })).not.toBeInTheDocument();
+});
+
 test("Homepage has responsible product wording and no external wallet integration copy", async () => {
   render(<App />);
 

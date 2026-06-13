@@ -3346,6 +3346,7 @@ a:focus-visible {
 .brand-social-links .social-brand-link:focus-visible {
   border-color: rgba(160, 174, 192, 0.55);
   border-color: color-mix(in srgb, var(--brand-link-color) 70%, transparent);
+  background: rgba(255, 255, 255, 0.06);
   background: color-mix(in srgb, var(--brand-link-color) 14%, transparent);
   box-shadow: 0 0 24px var(--brand-link-glow);
   color: var(--brand-link-color);
@@ -3990,195 +3991,160 @@ a:focus-visible {
   max-width: 38ch;
 }
 
-/* ----- Hero 3D scene ----- */
-.vq-scene {
+/* ----- Hero world (composed 3D blockchain scene + interface cards) ----- */
+.vq-world {
   position: relative;
   width: 100%;
-  min-height: clamp(360px, 42vw, 520px);
-  perspective: 1300px;
-  isolation: isolate;
-  /* Clip the oversized 3D layers (grid plane, network, glow) to the scene box
-     so they never cause horizontal page overflow on any viewport. */
-  overflow: hidden;
+  min-height: clamp(430px, 44vw, 560px);
   border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(120% 90% at 72% 16%, rgba(0, 198, 167, 0.16), transparent 60%),
+    radial-gradient(110% 100% at 20% 88%, rgba(20, 121, 255, 0.18), transparent 58%),
+    linear-gradient(160deg, rgba(10, 18, 34, 0.92), rgba(6, 11, 22, 0.84));
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  perspective: 1200px;
+  isolation: isolate;
 }
 
-.vq-scene__glow {
+.vq-world__glow {
   position: absolute;
-  inset: -8% -6% -12% -6%;
-  background:
-    radial-gradient(circle at 60% 38%, rgba(0, 198, 167, 0.22), transparent 58%),
-    radial-gradient(circle at 30% 70%, rgba(20, 121, 255, 0.2), transparent 55%),
-    radial-gradient(circle at 70% 20%, rgba(134, 227, 59, 0.16), transparent 52%);
-  filter: blur(6px);
+  inset: 0;
+  background: radial-gradient(42% 38% at 50% 48%, rgba(134, 227, 59, 0.18), transparent 70%);
+  filter: blur(10px);
   z-index: 0;
 }
 
-.vq-stage {
+.vq-world__grid {
+  position: absolute;
+  inset: -12%;
+  background-image:
+    linear-gradient(rgba(0, 198, 167, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 121, 255, 0.09) 1px, transparent 1px);
+  background-size: 40px 40px;
+  transform: perspective(600px) rotateX(60deg) translateY(16%) scale(1.5);
+  transform-origin: center 68%;
+  -webkit-mask-image: radial-gradient(circle at 50% 62%, #000 32%, transparent 72%);
+  mask-image: radial-gradient(circle at 50% 62%, #000 32%, transparent 72%);
+  opacity: 0.6;
+  z-index: 0;
+}
+
+.vq-net {
   position: absolute;
   inset: 0;
-  transform-style: preserve-3d;
-  transform: rotateX(54deg) rotateZ(-32deg);
-  animation: vqStageFloat 12s ease-in-out infinite;
+  width: 100%;
+  height: 100%;
   z-index: 1;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 58%, transparent 92%);
+  mask-image: radial-gradient(circle at 50% 50%, #000 58%, transparent 92%);
 }
 
-.vq-grid-plane {
-  position: absolute;
-  left: 50%;
-  top: 52%;
-  width: 150%;
-  height: 150%;
-  transform: translate(-50%, -50%);
-  background-image:
-    linear-gradient(rgba(0, 198, 167, 0.16) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(20, 121, 255, 0.14) 1px, transparent 1px);
-  background-size: 11% 11%;
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 30%, transparent 72%);
-  mask-image: radial-gradient(circle at 50% 50%, #000 30%, transparent 72%);
-  opacity: 0.7;
-}
-
-/* Transaction network overlay (flat, sits above the grid) */
-.vq-network {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 116%;
-  height: 116%;
-  transform: translate(-50%, -50%) translateZ(2px);
-  overflow: visible;
-}
-
-.vq-network__link {
-  fill: none;
-  stroke: url(#vqLine);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-dasharray: 7 12;
-  opacity: 0.85;
-  animation: vqDashFlow 2.4s linear infinite;
-}
-
-.vq-network__node {
-  fill: url(#vqNode);
-  filter: drop-shadow(0 0 6px rgba(0, 198, 167, 0.65));
+.vq-net__node {
+  fill: url(#vqNetNode);
+  filter: drop-shadow(0 0 5px rgba(0, 198, 167, 0.6));
   animation: vqNodePulse 3s ease-in-out infinite;
 }
 
-/* Glass blockchain blocks */
-.vq-blocks {
+.vq-flow__line {
+  fill: none;
+  stroke: url(#vqNetLine);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 5 12;
+  opacity: 0.8;
+  animation: vqDashFlow 2.4s linear infinite;
+}
+
+.vq-flow__pulse {
+  fill: #c6f592;
+  filter: drop-shadow(0 0 5px rgba(134, 227, 59, 0.9));
+}
+
+/* Centered 3D island: glass cube stack + floating coin */
+.vq-world__stage {
   position: absolute;
-  left: 50%;
-  top: 50%;
+  left: 47%;
+  top: 53%;
   transform: translate(-50%, -50%);
   transform-style: preserve-3d;
+  z-index: 2;
 }
 
-.vq-block {
-  --vq-block-size: clamp(74px, 9vw, 112px);
+.vq-cubes {
+  position: relative;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(62deg) rotateZ(-46deg);
+  animation: vqStageFloat 10s ease-in-out infinite;
+}
+
+.vq-cube {
+  --s: clamp(56px, 6.6vw, 84px);
   position: absolute;
-  width: var(--vq-block-size);
-  height: var(--vq-block-size);
+  width: var(--s);
+  height: var(--s);
   transform-style: preserve-3d;
 }
 
-.vq-block--a {
-  transform: translate3d(-150%, -10%, 0) translateZ(46px);
+.vq-cube--a {
+  transform: translate3d(calc(var(--s) * -1.15), calc(var(--s) * -1.15), 0);
   animation: vqBlockBob 6s ease-in-out infinite;
 }
-
-.vq-block--b {
-  transform: translate3d(-50%, 35%, 0) translateZ(46px);
+.vq-cube--b {
+  transform: translate3d(calc(var(--s) * -0.5), calc(var(--s) * -0.5), 0);
   animation: vqBlockBob 6s ease-in-out infinite 1s;
 }
-
-.vq-block--c {
-  transform: translate3d(60%, -28%, 0) translateZ(46px);
+.vq-cube--c {
+  transform: translate3d(calc(var(--s) * 0.15), calc(var(--s) * 0.15), 0);
   animation: vqBlockBob 6s ease-in-out infinite 2s;
 }
 
-.vq-block__face {
+.vq-cube__face {
   position: absolute;
   inset: 0;
   border: 1px solid rgba(120, 230, 200, 0.5);
-  background: linear-gradient(135deg, rgba(0, 198, 167, 0.32), rgba(20, 121, 255, 0.22));
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
+  background: linear-gradient(135deg, rgba(0, 198, 167, 0.34), rgba(20, 121, 255, 0.24));
   box-shadow: inset 0 0 18px rgba(134, 227, 59, 0.18);
 }
-
-.vq-block__face--front {
-  transform: translateZ(calc(var(--vq-block-size) / 2));
+.vq-cube__front {
+  transform: translateZ(calc(var(--s) / 2));
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 9px;
-  padding: 10px;
+  gap: 8px;
+  padding: 9px;
 }
+.vq-cube__back { transform: translateZ(calc(var(--s) / -2)) rotateY(180deg); }
+.vq-cube__right { width: var(--s); transform: rotateY(90deg) translateZ(calc(var(--s) / 2)); background: linear-gradient(135deg, rgba(20, 121, 255, 0.42), rgba(0, 198, 167, 0.24)); }
+.vq-cube__left { width: var(--s); transform: rotateY(-90deg) translateZ(calc(var(--s) / 2)); background: linear-gradient(135deg, rgba(134, 227, 59, 0.36), rgba(0, 198, 167, 0.22)); }
+.vq-cube__top { height: var(--s); transform: rotateX(90deg) translateZ(calc(var(--s) / 2)); background: linear-gradient(135deg, rgba(134, 227, 59, 0.52), rgba(0, 198, 167, 0.36)); }
+.vq-cube__bottom { height: var(--s); transform: rotateX(-90deg) translateZ(calc(var(--s) / 2)); background: rgba(2, 8, 23, 0.5); }
 
-.vq-block__face--back {
-  transform: translateZ(calc(var(--vq-block-size) / -2)) rotateY(180deg);
-}
-
-.vq-block__face--right {
-  width: var(--vq-block-size);
-  transform: rotateY(90deg) translateZ(calc(var(--vq-block-size) / 2));
-  background: linear-gradient(135deg, rgba(20, 121, 255, 0.4), rgba(0, 198, 167, 0.22));
-}
-
-.vq-block__face--left {
-  width: var(--vq-block-size);
-  transform: rotateY(-90deg) translateZ(calc(var(--vq-block-size) / 2));
-  background: linear-gradient(135deg, rgba(134, 227, 59, 0.34), rgba(0, 198, 167, 0.2));
-}
-
-.vq-block__face--top {
-  height: var(--vq-block-size);
-  transform: rotateX(90deg) translateZ(calc(var(--vq-block-size) / 2));
-  background: linear-gradient(135deg, rgba(134, 227, 59, 0.5), rgba(0, 198, 167, 0.34));
-}
-
-.vq-block__face--bottom {
-  height: var(--vq-block-size);
-  transform: rotateX(-90deg) translateZ(calc(var(--vq-block-size) / 2));
-  background: rgba(2, 8, 23, 0.5);
-}
-
-.vq-block__index {
+.vq-cube__label {
   font-family: var(--font-mono, monospace);
   font-weight: 900;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: #eafff8;
   text-shadow: 0 0 10px rgba(0, 198, 167, 0.7);
 }
+.vq-cube__bars { display: grid; gap: 4px; width: 78%; }
+.vq-cube__bars i { display: block; height: 3.5px; border-radius: 999px; background: rgba(234, 255, 248, 0.7); }
 
-.vq-block__bars {
-  display: grid;
-  gap: 5px;
-  width: 80%;
-}
-
-.vq-block__bars i {
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(234, 255, 248, 0.7);
-  display: block;
-}
-
-/* Floating VLQ coin */
-.vq-coin {
+.vq-coin3d {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: clamp(96px, 11vw, 140px);
-  height: clamp(96px, 11vw, 140px);
-  transform: translate(-50%, -50%) translateZ(150px) rotateX(-54deg) rotateZ(32deg);
+  left: 0;
+  top: 0;
+  width: clamp(88px, 10vw, 124px);
+  height: clamp(88px, 10vw, 124px);
+  transform: translate(-46%, -188%) translateZ(60px);
   transform-style: preserve-3d;
   animation: vqCoinFloat 7s ease-in-out infinite;
+  z-index: 3;
 }
-
-.vq-coin__face {
+.vq-coin3d__face {
   position: absolute;
   inset: 0;
   border-radius: 999px;
@@ -4187,162 +4153,81 @@ a:focus-visible {
   background:
     radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55), transparent 42%),
     conic-gradient(from 210deg, #86e33b, #00c6a7 45%, #1479ff 78%, #86e33b);
-  box-shadow: 0 18px 40px rgba(0, 198, 167, 0.4), inset 0 0 0 3px rgba(255, 255, 255, 0.18);
+  box-shadow: 0 18px 42px rgba(0, 198, 167, 0.42), inset 0 0 0 3px rgba(255, 255, 255, 0.18);
 }
+.vq-coin3d__front { transform: translateZ(7px); animation: vqCoinSpin 9s linear infinite; }
+.vq-coin3d__back { transform: translateZ(-7px) rotateY(180deg); }
+.vq-coin3d__rim { position: absolute; inset: 0; border-radius: 999px; background: linear-gradient(90deg, rgba(7, 18, 37, 0.9), rgba(0, 198, 167, 0.4)); }
+.vq-coin3d__front svg { width: 76%; height: 76%; }
+.vq-coin3d__text { font-family: var(--font-mono, monospace); font-weight: 900; font-size: 21px; fill: #fff; letter-spacing: 1px; }
 
-.vq-coin__face--front {
-  transform: translateZ(7px);
-  animation: vqCoinSpin 9s linear infinite;
-}
-
-.vq-coin__face--back {
-  transform: translateZ(-7px) rotateY(180deg);
-}
-
-.vq-coin__edge {
+/* Floating interface cards (foreground, composed within safe insets) */
+.vq-world-card {
   position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(7, 18, 37, 0.9), rgba(0, 198, 167, 0.4));
-  transform: translateZ(0);
-  filter: blur(0.4px);
-}
-
-.vq-coin__glyph {
-  width: 78%;
-  height: 78%;
-}
-
-.vq-coin__text {
-  font-family: var(--font-mono, monospace);
-  font-weight: 900;
-  font-size: 22px;
-  fill: #ffffff;
-  letter-spacing: 1px;
-}
-
-/* Floating glass UI cards in the hero (flat, above the 3D stage) */
-.vq-glass-card {
-  position: absolute;
-  z-index: 3;
+  z-index: 4;
   display: grid;
-  gap: 10px;
-  width: clamp(184px, 21vw, 230px);
-  padding: 16px;
+  gap: 9px;
+  width: clamp(186px, 23vw, 244px);
+  padding: 15px;
   border-radius: 18px;
   border: 1px solid rgba(0, 198, 167, 0.32);
-  background: linear-gradient(160deg, rgba(10, 18, 34, 0.92), rgba(7, 12, 24, 0.82));
-  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.46), 0 0 0 1px rgba(255, 255, 255, 0.04);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+  background: linear-gradient(160deg, rgba(12, 20, 36, 0.94), rgba(7, 12, 24, 0.88));
+  box-shadow: 0 26px 58px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  -webkit-backdrop-filter: blur(13px);
+  backdrop-filter: blur(13px);
 }
+.vq-world-card--wallet { top: 6%; right: 4.5%; animation: vqCardFloat 8s ease-in-out infinite; }
+.vq-world-card--pool { bottom: 7%; left: 4%; animation: vqCardFloat 8s ease-in-out infinite 1.8s; }
 
-.vq-glass-card--wallet {
-  right: 2%;
-  top: 8%;
-  animation: vqCardFloat 8s ease-in-out infinite;
-}
+.vq-world-card__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.vq-world-card__tag { font-size: 0.68rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.vq-world-card__label { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); }
+.vq-world-card__balance { font-size: 1.62rem; font-weight: 900; color: var(--text-primary); line-height: 1; }
+.vq-world-card__balance small { font-size: 0.74rem; margin-left: 6px; color: var(--accent-cyan); font-weight: 800; }
+.vq-world-card__stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 9px; }
+.vq-world-card__stats > div { display: grid; gap: 2px; }
+.vq-world-card__stats span { font-size: 0.66rem; color: var(--text-muted); font-weight: 700; }
+.vq-world-card__stats strong { font-size: 0.86rem; color: var(--text-primary); font-weight: 800; }
 
-.vq-glass-card--pool {
-  left: 0%;
-  bottom: 6%;
-  animation: vqCardFloat 8s ease-in-out infinite 1.6s;
-}
+.vq-world-dot { width: 9px; height: 9px; border-radius: 999px; background: var(--accent-green); box-shadow: 0 0 0 4px rgba(134, 227, 59, 0.16); }
+.vq-world-dot.live { animation: vqBlink 2s ease-in-out infinite; }
+.vq-world-dot.load { background: var(--warning); box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.16); }
 
-.vq-glass-card__head {
+.vq-world-mini { font-size: 0.64rem; font-weight: 800; color: var(--accent-cyan); background: rgba(0, 198, 167, 0.14); border-radius: 999px; padding: 3px 8px; }
+.vq-world-track { height: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.vq-world-track span { display: block; height: 100%; border-radius: 999px; background: var(--gradient-brand); }
+.vq-world-avatars { display: flex; align-items: center; }
+.vq-world-avatars i { width: 21px; height: 21px; border-radius: 999px; margin-left: -7px; border: 2px solid rgba(7, 12, 24, 0.95); }
+.vq-world-avatars i:first-child { margin-left: 0; }
+.vq-world-avatars i.g { background: linear-gradient(135deg, #86e33b, #43e778); }
+.vq-world-avatars i.c { background: linear-gradient(135deg, #00c6a7, #14b8c4); }
+.vq-world-avatars i.b { background: linear-gradient(135deg, #1479ff, #4f8cff); }
+.vq-world-avatars .vq-world-mini { margin-left: 7px; }
+
+/* Small block-record chip (the explorer element) */
+.vq-world-chip {
+  position: absolute;
+  z-index: 4;
+  bottom: 9%;
+  right: 7%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 9px;
+  padding: 9px 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 198, 167, 0.3);
+  background: linear-gradient(160deg, rgba(12, 20, 36, 0.94), rgba(7, 12, 24, 0.88));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.46);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  animation: vqCardFloat 9s ease-in-out infinite 0.8s;
 }
+.vq-world-chip__icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; color: var(--accent-cyan); background: rgba(0, 198, 167, 0.14); }
+.vq-world-chip__icon svg { width: 17px; height: 17px; }
+.vq-world-chip__text { display: grid; gap: 1px; }
+.vq-world-chip__title { font-size: 0.78rem; font-weight: 800; color: var(--text-primary); }
+.vq-world-chip__hash { font-family: var(--font-mono, monospace); font-size: 0.68rem; color: var(--text-muted); }
 
-.vq-glass-card__tag {
-  font-size: 0.7rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-}
-
-.vq-glass-card__label,
-.vq-glass-card__k {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  font-weight: 700;
-}
-
-.vq-glass-card__balance {
-  font-size: 1.7rem;
-  font-weight: 900;
-  color: var(--text-primary);
-  line-height: 1;
-}
-
-.vq-glass-card__unit {
-  font-size: 0.78rem;
-  margin-left: 6px;
-  color: var(--accent-cyan);
-}
-
-.vq-glass-card__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding-top: 10px;
-}
-
-.vq-glass-card__grid > div {
-  display: grid;
-  gap: 3px;
-}
-
-.vq-glass-card__v {
-  font-weight: 800;
-  font-size: 0.9rem;
-  color: var(--text-primary);
-}
-
-.vq-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  background: var(--accent-green);
-  box-shadow: 0 0 0 4px rgba(134, 227, 59, 0.18);
-}
-
-.vq-dot.is-live {
-  animation: vqBlink 2s ease-in-out infinite;
-}
-
-.vq-dot.is-load {
-  background: var(--warning);
-  box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.18);
-}
-
-.vq-pill-mini,
-.vq-pool-more {
-  font-size: 0.66rem;
-  font-weight: 800;
-  color: var(--accent-cyan);
-  background: rgba(0, 198, 167, 0.14);
-  border-radius: 999px;
-  padding: 3px 8px;
-}
-
-.vq-pool-track {
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-}
-
-.vq-pool-fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--gradient-brand);
-}
 
 .vq-pool-avatars,
 .vq-avatars {
@@ -5384,17 +5269,37 @@ a:focus-visible {
 }
 
 @media (max-width: 600px) {
-  .vq-scene {
-    min-height: 340px;
+  .vq-world {
+    min-height: 392px;
   }
 
-  .vq-glass-card {
-    width: clamp(160px, 52vw, 200px);
-    padding: 13px;
+  /* Keep the hero composition readable on small screens: smaller cards,
+     pulled fully inside the panel, with the cube island a touch lower. */
+  .vq-world-card {
+    width: clamp(150px, 48vw, 190px);
+    padding: 12px;
   }
 
-  .vq-glass-card__balance {
-    font-size: 1.4rem;
+  .vq-world-card__balance {
+    font-size: 1.34rem;
+  }
+
+  .vq-world-card--wallet {
+    top: 5%;
+    right: 4%;
+  }
+
+  .vq-world-card--pool {
+    bottom: 6%;
+    left: 4%;
+  }
+
+  .vq-world__stage {
+    top: 50%;
+  }
+
+  .vq-world-chip {
+    display: none;
   }
 
   .vq-live-grid {
@@ -5413,4 +5318,100 @@ a:focus-visible {
   .vq-learn-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ===== Correction pass: clickable cards, metric typography, spacing ===== */
+
+/* Tighter, consistent section rhythm so the page does not feel broken. */
+.vq-home {
+  gap: clamp(34px, 4.6vw, 68px);
+}
+
+/* Interface cards are links: full-area clickable with clear hover + focus. */
+a.vq-ui {
+  grid-template-rows: auto 1fr auto;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+a.vq-ui:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-soft), 0 22px 60px rgba(0, 0, 0, 0.3), 0 0 36px rgba(0, 198, 167, 0.14);
+}
+
+a.vq-ui:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 3px;
+}
+
+.vq-ui__body {
+  align-content: start;
+}
+
+.vq-ui__chip.preview {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.vq-ui__chip.live {
+  color: var(--accent-cyan);
+  background: rgba(0, 198, 167, 0.12);
+}
+
+.vq-ui-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 16px 16px;
+  font-weight: 800;
+  font-size: 0.86rem;
+  color: var(--accent-cyan);
+}
+
+.vq-ui-cta__arrow {
+  width: 16px;
+  height: 16px;
+  transition: transform 160ms ease;
+}
+
+a.vq-ui:hover .vq-ui-cta__arrow {
+  transform: translateX(3px);
+}
+
+/* Live metric cards: readable values, clean middle-truncation, never wrap badly. */
+.vq-live-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.vq-metric {
+  min-height: 102px;
+}
+
+.vq-metric__value {
+  font-size: clamp(1.2rem, 2.3vw, 1.62rem);
+  line-height: 1.12;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vq-metric__value--mono {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: clamp(0.98rem, 1.8vw, 1.28rem);
+  letter-spacing: -0.01em;
+}
+
+/* Explorer/transaction hashes already truncate; keep them on one line. */
+.vq-explorer-hash,
+.vq-tx-hash {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

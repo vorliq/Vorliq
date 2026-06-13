@@ -2,16 +2,16 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import BrandLoader from "../components/BrandLoader";
-import HeroScene from "../components/home/HeroScene";
+import Hero3DWorld from "../components/home/HeroWorld";
 import {
-  ExplorerPreviewVisual,
-  GovernanceProposalVisual,
-  NetworkHealthVisual,
-  RecentTransactionsVisual,
-  SavingsPoolVisual,
-  WalletDashboardVisual,
+  ExplorerInterfaceCard,
+  GovernanceInterfaceCard,
+  ReadinessInterfaceCard,
+  SavingsPoolInterfaceCard,
+  TransactionListCard,
+  WalletInterfaceCard,
 } from "../components/home/ProductVisuals";
-import { formatNumber, loadNetworkStatus, loadPublicChainSnapshot, shortHash } from "../helpers/publicApi";
+import { formatHash, formatNumber, formatStatus, loadNetworkStatus, loadPublicChainSnapshot } from "../helpers/publicApi";
 import useReveal from "../helpers/useReveal";
 
 function Icon({ paths, viewBox = "0 0 24 24" }) {
@@ -185,7 +185,7 @@ function Hero({ snapshot, loading }) {
         </p>
       </div>
       <div className="vq-hero__scene">
-        <HeroScene snapshot={snapshot} loading={loading} />
+        <Hero3DWorld snapshot={snapshot} loading={loading} />
       </div>
     </section>
   );
@@ -228,7 +228,8 @@ function LiveNetwork({ snapshot, loading, status, statusLoading }) {
     },
     {
       label: "Latest block",
-      value: value(latestBlock?.hash != null, latestBlock ? shortHash(latestBlock.hash) : null),
+      value: value(latestBlock?.hash != null, latestBlock ? formatHash(latestBlock.hash) : null),
+      title: latestBlock?.hash,
       mono: true,
     },
     {
@@ -250,11 +251,12 @@ function LiveNetwork({ snapshot, loading, status, statusLoading }) {
     {
       label: "Deployment",
       value: deploymentLabel(status, statusLoading),
+      title: status?.deployment?.commit_hash,
       mono: true,
     },
     {
       label: "Chain status",
-      value: value(!snapshot?.unavailable?.summary, summary.chain_valid ? "Valid" : "Under review"),
+      value: value(!snapshot?.unavailable?.summary, summary.chain_valid ? formatStatus("valid") : "Under review"),
     },
   ];
 
@@ -267,9 +269,14 @@ function LiveNetwork({ snapshot, loading, status, statusLoading }) {
           <span className="eyebrow">Live network</span>
           <h2>The Vorliq network, right now</h2>
         </div>
-        <span className={`status-badge ${loading ? "active" : live ? "executed" : "expired"}`} role="status">
-          {loading ? "Connecting" : live ? "Live data" : "Data unavailable"}
-        </span>
+        <div className="vq-live-head-actions">
+          <span className={`status-badge ${loading ? "active" : live ? "executed" : "expired"}`} role="status">
+            {loading ? "Connecting" : live ? "Live data" : "Data unavailable"}
+          </span>
+          <Link className="button secondary small-button" to="/blockchain">
+            Open Explorer
+          </Link>
+        </div>
       </div>
       <p className="muted-text">
         These values come from the public Vorliq APIs. When a value is not available it stays marked unavailable and is
@@ -277,9 +284,11 @@ function LiveNetwork({ snapshot, loading, status, statusLoading }) {
       </p>
       <div className="grid vq-live-grid">
         {cards.map((card) => (
-          <div className="card card-pad stat-card compact-stat" key={card.label}>
+          <div className="card card-pad stat-card compact-stat vq-metric" key={card.label}>
             <span className="stat-label">{card.label}</span>
-            <span className={`stat-value ${card.mono ? "mono-wrap" : ""}`}>{card.value}</span>
+            <span className={`stat-value vq-metric__value ${card.mono ? "vq-metric__value--mono" : ""}`} title={card.title || undefined}>
+              {card.value}
+            </span>
           </div>
         ))}
       </div>
@@ -302,11 +311,11 @@ function ProductShowcase({ snapshot, loading, status, statusLoading }) {
         explorer to check every record.
       </p>
       <div className="vq-showcase-grid">
-        <WalletDashboardVisual />
-        <SavingsPoolVisual />
-        <GovernanceProposalVisual />
-        <ExplorerPreviewVisual snapshot={snapshot} loading={loading} />
-        <NetworkHealthVisual snapshot={snapshot} status={status} statusLoading={statusLoading} />
+        <WalletInterfaceCard />
+        <SavingsPoolInterfaceCard />
+        <GovernanceInterfaceCard />
+        <ExplorerInterfaceCard snapshot={snapshot} loading={loading} />
+        <ReadinessInterfaceCard snapshot={snapshot} status={status} statusLoading={statusLoading} />
       </div>
     </section>
   );
@@ -355,8 +364,8 @@ function ExplorerSection({ snapshot, loading }) {
         <BrandLoader compact label="Loading live chain data" />
       ) : (
         <div className="vq-explorer-pair">
-          <ExplorerPreviewVisual snapshot={snapshot} loading={loading} />
-          <RecentTransactionsVisual snapshot={snapshot} loading={loading} />
+          <ExplorerInterfaceCard snapshot={snapshot} loading={loading} />
+          <TransactionListCard snapshot={snapshot} loading={loading} />
         </div>
       )}
       <p className="muted-text">
@@ -404,7 +413,7 @@ function CommunitySavings() {
         </p>
       </div>
       <div className="vq-community__visual">
-        <SavingsPoolVisual />
+        <SavingsPoolInterfaceCard to="/register" />
       </div>
     </section>
   );

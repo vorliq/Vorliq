@@ -2,30 +2,107 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0f0f1a" />
+    <meta name="theme-color" content="#0A0E1A" />
+
+    <title>Vorliq — Your Community's Bank. Your Rules.</title>
     <meta
       name="description"
-      content="Vorliq is a community savings bank built on its own blockchain with the VLQ coin."
+      content="Vorliq is a community savings bank built on its own blockchain with the VLQ coin. Create a wallet, save together, move VLQ, and verify your community's blockchain activity in real time."
     />
+    <link rel="canonical" href="https://vorliq.org/" />
+
+    <!-- Icons -->
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="%PUBLIC_URL%/favicon.svg" />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <title>Vorliq</title>
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Vorliq" />
+    <meta property="og:title" content="Vorliq — Your Community's Bank. Your Rules." />
+    <meta
+      property="og:description"
+      content="A community savings bank built on its own blockchain with the VLQ coin. Create a wallet, save together, move VLQ, and verify activity in real time."
+    />
+    <meta property="og:url" content="https://vorliq.org/" />
+    <meta property="og:image" content="https://vorliq.org/logo.png" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@Vorliq" />
+    <meta name="twitter:title" content="Vorliq — Your Community's Bank. Your Rules." />
+    <meta
+      name="twitter:description"
+      content="A community savings bank built on its own blockchain with the VLQ coin."
+    />
+    <meta name="twitter:image" content="https://vorliq.org/logo.png" />
+
+    <style>
+      #vq-boot {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: #0a0e1a;
+        z-index: 9999;
+      }
+      #vq-boot .vq-boot-inner {
+        display: grid;
+        justify-items: center;
+        gap: 16px;
+      }
+      #vq-boot .vq-boot-ring {
+        position: relative;
+        width: 84px;
+        height: 84px;
+        display: grid;
+        place-items: center;
+      }
+      #vq-boot .vq-boot-spin {
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        border: 2px solid transparent;
+        border-top-color: #00c6a7;
+        border-right-color: #86e33b;
+        animation: vqBoot 0.9s linear infinite;
+      }
+      #vq-boot img {
+        width: 54px;
+        height: 54px;
+        object-fit: contain;
+      }
+      #vq-boot .vq-boot-label {
+        color: #a0aec0;
+        font: 800 14px/1 -apple-system, "Segoe UI", sans-serif;
+        letter-spacing: 0.01em;
+      }
+      @keyframes vqBoot {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #vq-boot .vq-boot-spin {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root">
-      <div id="vq-boot" style="position:fixed;inset:0;display:grid;place-items:center;background:#0A0E1A">
-        <div style="display:grid;justify-items:center;gap:16px">
-          <div style="position:relative;width:84px;height:84px;display:grid;place-items:center">
-            <div style="position:absolute;inset:0;border-radius:999px;border:2px solid transparent;border-top-color:#00C6A7;border-right-color:#86e33b;animation:vqBoot .9s linear infinite"></div>
-            <img src="%PUBLIC_URL%/logo.png" alt="Vorliq" width="54" height="54" style="object-fit:contain" />
+      <div id="vq-boot">
+        <div class="vq-boot-inner">
+          <div class="vq-boot-ring">
+            <div class="vq-boot-spin"></div>
+            <img src="%PUBLIC_URL%/logo.png" alt="Vorliq" width="54" height="54" />
           </div>
-          <span style="color:#A0AEC0;font:800 14px/1 -apple-system,Segoe UI,sans-serif;letter-spacing:.01em">Loading Vorliq</span>
+          <span class="vq-boot-label">Loading Vorliq</span>
         </div>
       </div>
     </div>
-    <style>@keyframes vqBoot{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){#vq-boot div div{animation:none!important}}</style>
   </body>
 </html>

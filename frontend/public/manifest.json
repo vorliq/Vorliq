@@ -1,7 +1,14 @@
 {
   "short_name": "Vorliq",
-  "name": "Vorliq",
+  "name": "Vorliq — Community savings bank on its own blockchain",
+  "description": "Vorliq is a community savings bank built on its own blockchain with the VLQ coin.",
   "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
     {
       "src": "favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
@@ -10,12 +17,12 @@
     {
       "src": "logo.png",
       "type": "image/png",
-      "sizes": "1254x1254",
+      "sizes": "192x192 512x512 1254x1254",
       "purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#0f0f1a",
-  "background_color": "#0f0f1a"
+  "theme_color": "#0A0E1A",
+  "background_color": "#0A0E1A"
 }

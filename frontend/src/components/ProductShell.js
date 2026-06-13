@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 
 import logo from "../assets/logo.png";
+import { useAuth } from "../context/AuthContext";
+import { hasWallet } from "../helpers/storage";
 import SocialLinks from "./SocialLinks";
 
 const navLinks = [
@@ -143,15 +145,7 @@ export function ProductNav() {
             ))}
           </div>
           <div className="hidden items-center gap-3 lg:flex">
-            <Link className="rounded-full px-4 py-2 text-sm font-extrabold text-vorliq-muted transition hover:text-white" to="/login">
-              Sign In
-            </Link>
-            <Link
-              className="rounded-full bg-vorliq-accent px-5 py-2.5 text-sm font-black text-[#06101c] shadow-glow transition hover:translate-y-[-1px]"
-              to="/register"
-            >
-              Create Account
-            </Link>
+            <HeaderActions />
           </div>
           <button
             className="grid h-11 w-11 place-items-center rounded-full border border-vorliq-border bg-white/[0.04] text-white lg:hidden"
@@ -199,12 +193,7 @@ export function ProductNav() {
               ))}
             </div>
             <div className="mt-8 grid gap-3">
-              <Link className="rounded-full border border-vorliq-border px-5 py-3 text-center font-extrabold text-white" to="/login" onClick={() => setOpen(false)}>
-                Sign In
-              </Link>
-              <Link className="rounded-full bg-vorliq-accent px-5 py-3 text-center font-black text-[#06101c] shadow-glow" to="/register" onClick={() => setOpen(false)}>
-                Create Account
-              </Link>
+              <HeaderActions mobile onNavigate={() => setOpen(false)} />
             </div>
           </aside>
         </>
@@ -229,6 +218,69 @@ function NavItem({ link, mobile = false, onClick }) {
     >
       {link.label}
     </Link>
+  );
+}
+
+// Authentication-aware header actions. Uses only the existing local wallet
+// session state (AuthContext + stored encrypted wallet). It does not add or
+// change any backend authentication. State survives refresh because the
+// AuthProvider rehydrates the wallet from storage on load.
+function HeaderActions({ mobile = false, onNavigate }) {
+  const { isLoggedIn, logout } = useAuth();
+  const navigate = useNavigate();
+  const accountExists = isLoggedIn || hasWallet();
+
+  const ghost = mobile
+    ? "rounded-full border border-vorliq-border px-5 py-3 text-center font-extrabold text-white"
+    : "rounded-full px-4 py-2 text-sm font-extrabold text-vorliq-muted transition hover:text-white";
+  const solid = mobile
+    ? "rounded-full bg-vorliq-accent px-5 py-3 text-center font-black text-[#06101c] shadow-glow"
+    : "rounded-full bg-vorliq-accent px-5 py-2.5 text-sm font-black text-[#06101c] shadow-glow transition hover:translate-y-[-1px]";
+
+  function handleSignOut() {
+    logout();
+    if (onNavigate) onNavigate();
+    navigate("/");
+  }
+
+  if (isLoggedIn) {
+    return (
+      <>
+        <Link className={ghost} to="/dashboard" onClick={onNavigate}>
+          Dashboard
+        </Link>
+        <Link className={solid} to="/wallet" onClick={onNavigate}>
+          Wallet
+        </Link>
+        <button className={ghost} type="button" onClick={handleSignOut}>
+          Sign Out
+        </button>
+      </>
+    );
+  }
+
+  if (accountExists) {
+    return (
+      <>
+        <Link className={ghost} to="/dashboard" onClick={onNavigate}>
+          Dashboard
+        </Link>
+        <Link className={solid} to="/login" onClick={onNavigate}>
+          Sign In
+        </Link>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Link className={ghost} to="/login" onClick={onNavigate}>
+        Sign In
+      </Link>
+      <Link className={solid} to="/register" onClick={onNavigate}>
+        Create Account
+      </Link>
+    </>
   );
 }
 

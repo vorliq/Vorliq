@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Vorliq">
+  <defs>
+    <linearGradient id="vq" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#86e33b"/>
+      <stop offset="0.5" stop-color="#00c6a7"/>
+      <stop offset="1" stop-color="#1479ff"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="16" fill="#0A0E1A"/>
+  <rect x="3.75" y="3.75" width="56.5" height="56.5" rx="15.25" fill="none" stroke="url(#vq)" stroke-width="2.5"/>
+  <path d="M32 14 L48 23 V41 L32 50 L16 41 V23 Z" fill="none" stroke="url(#vq)" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M32 23 L40 27.5 V36.5 L32 41 L24 36.5 V27.5 Z" fill="url(#vq)" opacity="0.95"/>
+  <path d="M32 23 L40 27.5 L32 32 L24 27.5 Z" fill="#c6f592"/>
+</svg>
