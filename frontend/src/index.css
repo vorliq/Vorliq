@@ -5762,3 +5762,16 @@ html[data-theme="light"] .mobile-drawer button {
   background: var(--gradient-brand);
   opacity: 0.9;
 }
+
+/* ===== Forum pagination ===== */
+.forum-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-glass);
+}

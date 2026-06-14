@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import AnalyticsRouteTracker from "./components/AnalyticsRouteTracker";
 import BrandBackground from "./components/BrandBackground";
+import BrandLoader from "./components/BrandLoader";
 import IncidentBanner from "./components/IncidentBanner";
 import { ProductFooter, ProductNav } from "./components/ProductShell";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -12,52 +13,52 @@ import { initAnalytics } from "./helpers/analytics";
 import { applyTheme, getStoredTheme } from "./helpers/theme";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
-import Account from "./pages/Account";
-import Achievements from "./pages/Achievements";
-import Admin from "./pages/Admin";
-import AdminAnalytics from "./pages/AdminAnalytics";
-import Ambassador from "./pages/Ambassador";
-import Audit from "./pages/Audit";
-import Blockchain from "./pages/Blockchain";
-import BlockDetail from "./pages/BlockDetail";
-import Bootstrap from "./pages/Bootstrap";
-import Chat from "./pages/Chat";
-import Dashboard from "./pages/Dashboard";
-import Exchange from "./pages/Exchange";
-import Faucet from "./pages/Faucet";
-import Features from "./pages/Features";
-import Forum from "./pages/Forum";
-import Governance from "./pages/Governance";
-import Growth from "./pages/Growth";
-import Health from "./pages/Health";
 import Home from "./pages/Home";
-import Leaderboard from "./pages/Leaderboard";
-import Lending from "./pages/Lending";
 import Login from "./pages/Login";
-import MigrationReadiness from "./pages/MigrationReadiness";
-import Mine from "./pages/Mine";
-import Network from "./pages/Network";
-import NodeSync from "./pages/NodeSync";
-import Notifications from "./pages/Notifications";
-import PeerPropagation from "./pages/PeerPropagation";
-import Price from "./pages/Price";
-import Profile from "./pages/Profile";
-import Readiness from "./pages/Readiness";
 import Register from "./pages/Register";
-import Registry from "./pages/Registry";
-import Releases from "./pages/Releases";
-import Roadmap from "./pages/Roadmap";
-import Settings from "./pages/Settings";
-import Send from "./pages/Send";
-import Snapshot from "./pages/Snapshot";
-import SnapshotArchive from "./pages/SnapshotArchive";
-import Stats from "./pages/Stats";
-import TransactionDetail from "./pages/TransactionDetail";
-import Transparency from "./pages/Transparency";
-import Treasury from "./pages/Treasury";
-import VLQ from "./pages/VLQ";
-import Wallet from "./pages/Wallet";
-import Whitepaper from "./pages/Whitepaper";
+import Features from "./pages/Features";
+const Account = lazy(() => import("./pages/Account"));
+const Achievements = lazy(() => import("./pages/Achievements"));
+const Admin = lazy(() => import("./pages/Admin"));
+const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
+const Ambassador = lazy(() => import("./pages/Ambassador"));
+const Audit = lazy(() => import("./pages/Audit"));
+const Blockchain = lazy(() => import("./pages/Blockchain"));
+const BlockDetail = lazy(() => import("./pages/BlockDetail"));
+const Bootstrap = lazy(() => import("./pages/Bootstrap"));
+const Chat = lazy(() => import("./pages/Chat"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Exchange = lazy(() => import("./pages/Exchange"));
+const Faucet = lazy(() => import("./pages/Faucet"));
+const Forum = lazy(() => import("./pages/Forum"));
+const Governance = lazy(() => import("./pages/Governance"));
+const Growth = lazy(() => import("./pages/Growth"));
+const Health = lazy(() => import("./pages/Health"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const Lending = lazy(() => import("./pages/Lending"));
+const MigrationReadiness = lazy(() => import("./pages/MigrationReadiness"));
+const Mine = lazy(() => import("./pages/Mine"));
+const Network = lazy(() => import("./pages/Network"));
+const NodeSync = lazy(() => import("./pages/NodeSync"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const PeerPropagation = lazy(() => import("./pages/PeerPropagation"));
+const Price = lazy(() => import("./pages/Price"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Readiness = lazy(() => import("./pages/Readiness"));
+const Registry = lazy(() => import("./pages/Registry"));
+const Releases = lazy(() => import("./pages/Releases"));
+const Roadmap = lazy(() => import("./pages/Roadmap"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Send = lazy(() => import("./pages/Send"));
+const Snapshot = lazy(() => import("./pages/Snapshot"));
+const SnapshotArchive = lazy(() => import("./pages/SnapshotArchive"));
+const Stats = lazy(() => import("./pages/Stats"));
+const TransactionDetail = lazy(() => import("./pages/TransactionDetail"));
+const Transparency = lazy(() => import("./pages/Transparency"));
+const Treasury = lazy(() => import("./pages/Treasury"));
+const VLQ = lazy(() => import("./pages/VLQ"));
+const Wallet = lazy(() => import("./pages/Wallet"));
+const Whitepaper = lazy(() => import("./pages/Whitepaper"));
 
 const primaryLinks = [
   { to: "/", label: "Home", end: true },
@@ -124,6 +125,7 @@ function AppShell() {
       <IncidentBanner />
       <AnalyticsRouteTracker />
       <main id="main-content" tabIndex="-1">
+        <Suspense fallback={<div className="page"><BrandLoader label="Loading Vorliq" /></div>}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />
@@ -180,6 +182,7 @@ function AppShell() {
             }
           />
         </Routes>
+        </Suspense>
       </main>
       <ProductFooter />
       <ToastContainer

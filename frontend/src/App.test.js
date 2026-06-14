@@ -1289,6 +1289,62 @@ test("Forum renders a genuine empty state when there are no posts", async () => 
   expect(screen.getByText(/select a post to read the full discussion/i)).toBeInTheDocument();
 });
 
+test("Forum All Posts tab paginates using the server total and has_more", async () => {
+  const buildPost = (id) => ({
+    post_id: `post-${id}`,
+    title: `Post ${id}`,
+    author_address: "VLQ_AUTHOR",
+    category: "general",
+    vote_count: 0,
+    feature_vote_count: 0,
+    replies: [],
+    timestamp: 1715791000,
+  });
+  const firstPage = Array.from({ length: 10 }, (_, index) => buildPost(index));
+
+  api.get.mockImplementation((path, options) => {
+    if (path === "/forum/posts") {
+      const requestedOffset = options?.params?.offset ?? 0;
+      return Promise.resolve({
+        data: {
+          success: true,
+          posts: requestedOffset === 0 ? firstPage : [buildPost(10)],
+          total: 11,
+          has_more: requestedOffset === 0,
+          limit: 10,
+          offset: requestedOffset,
+        },
+      });
+    }
+    if (path === "/forum/featured") {
+      return Promise.resolve({ data: { success: true, posts: [] } });
+    }
+    return defaultApiGet(path);
+  });
+
+  renderWithProviders(<Forum />, "/forum");
+  await screen.findByRole("heading", { level: 1, name: /^forum$/i });
+
+  await userEvent.click(screen.getByRole("button", { name: /all posts/i }));
+  expect(await screen.findByText(/showing 1 to 10 of 11 posts/i)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /^previous$/i })).toBeDisabled();
+  const next = screen.getByRole("button", { name: /^next$/i });
+  expect(next).toBeEnabled();
+
+  await userEvent.click(next);
+  expect(await screen.findByText(/showing 11 to 11 of 11 posts/i)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /^next$/i })).toBeDisabled();
+  expect(screen.getByRole("button", { name: /^previous$/i })).toBeEnabled();
+});
+
+test("Lazy-loaded routes render their content through the Suspense boundary", async () => {
+  window.history.pushState({}, "", "/blockchain");
+  render(<App />);
+
+  // Blockchain is a lazy route; its content must resolve and render.
+  expect(await screen.findByRole("heading", { level: 1, name: /vorliq blockchain/i })).toBeInTheDocument();
+});
+
 test("Account shows real wallet state and clean empty states when there is no activity", async () => {
   const auth = {
     wallet: { address: "VLQ_TEST_ADDRESS_123456", public_key: "PUBLIC_ONLY" },
@@ -1509,13 +1565,13 @@ test("mobile drawer content is hidden when closed and drawer links close cleanly
   expect(document.body).not.toHaveClass("mobile-nav-open");
 
   await userEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
-  drawer = screen.getByRole("dialog", { name: /navigation menu/i });
+  drawer = await screen.findByRole("dialog", { name: /navigation menu/i });
   await userEvent.click(within(drawer).getByRole("link", { name: /create account/i }));
   await waitFor(() => expect(window.location.pathname).toBe("/register"));
   expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
 
   await userEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
-  drawer = screen.getByRole("dialog", { name: /navigation menu/i });
+  drawer = await screen.findByRole("dialog", { name: /navigation menu/i });
   await userEvent.click(within(drawer).getByRole("link", { name: /create account/i }));
   expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
 });

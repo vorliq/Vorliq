@@ -32,6 +32,7 @@
 
         <h2>Community Content</h2>
         <p>Forum posts, chat messages, images, screenshots, governance proposals, peer community requests, price signals, lending requests, registry entries, ambassador-related public content, and similar submissions should be treated as public unless the interface clearly says otherwise. Users should not post private information, private keys, passwords, personal documents, financial details, or sensitive identity information in public fields.</p>
+        <p>The community chat is public and shows only the most recent messages. It is not private messaging and is not a permanent record. The author shown for forum posts and chat messages is a public wallet address, not a verified legal identity.</p>
 
         <h2>Public Profiles</h2>
         <p>If a user creates a Vorliq profile, the profile fields are public and linked to that wallet address. Public profile fields can include display name, bio, location, country, avatar style, website, X link, Telegram link, Discord name, badges, reputation score, and activity summary. Vorliq profiles do not store private keys, wallet passwords, recovery phrases, admin tokens, or email passwords.</p>
@@ -51,12 +52,15 @@
         <p>Vorliq infrastructure can produce logs for service health, diagnostics, errors, deployment status, rate limiting, and security monitoring. Logs are intended to operate the public node and may include IP addresses, request paths, timestamps, and technical metadata.</p>
 
         <h2>First-Party Analytics</h2>
-        <p>Vorliq uses privacy-preserving first-party analytics for aggregate product insight. Analytics can count safe events such as page views, opened feature pages, onboarding completion, documentation links, and error boundary visibility. Events use a random anonymous browser session ID stored in localStorage only when analytics is enabled.</p>
-        <p>Analytics does not collect private keys, wallet passwords, recovery phrases, admin tokens, raw IP addresses, raw user agents, message bodies, forum post bodies, private key export data, or personal identity. Analytics events are retained for up to 90 days and are not required to reconstruct blockchain balances.</p>
-        <p>Users can opt out from the Account privacy controls. When disabled, the browser stops sending analytics events and removes the anonymous session ID from that device.</p>
+        <p>Vorliq uses its own self-hosted, privacy-conscious analytics for aggregate product insight. It is not a third-party analytics service, and the data stays on the Vorliq server. Analytics can count safe events such as page views by route, visibility of sections on the landing page, clicks on buttons, navigation links and product cards identified by their on-screen label, dashboard feature clicks, and reliability signals such as frontend errors and failed or timed-out public data requests recorded by endpoint. Analytics may also record a coarse device size bucket of mobile, tablet, or desktop. Events use a random anonymous browser session ID stored in localStorage only when analytics is enabled, and that ID is not linked to any wallet or account.</p>
+        <p>Analytics does not collect private keys, wallet passwords, recovery phrases, admin tokens, raw IP addresses, raw device fingerprints or user agents, exact device identity, wallet addresses or account identity, message bodies, forum post bodies, private key export data, the contents of forms, or personal identity. Analytics events are retained for up to 90 days and are not required to reconstruct blockchain balances.</p>
+        <p>Users can opt out from the Analytics and Privacy section in Settings, or from the Account privacy controls. When disabled, the browser stops sending analytics events and removes the anonymous session ID from that device.</p>
 
         <h2>User Caution</h2>
         <p>Users should be careful on shared, borrowed, public, or work-managed devices. Anyone with access to a device, browser profile, backup, malware, screen recording tool, or private key can create serious wallet risk.</p>
+
+        <h2>About This Page</h2>
+        <p>This page is a plain-language description of how Vorliq handles data. It is not legal advice and is not a compliance certification. It should be reviewed by a qualified lawyer before being relied on as a formal legal or regulatory document.</p>
 
         <h2>Contact</h2>
         <p>Questions can be sent through the community channels listed on the Vorliq website or through GitHub at <a href="https://github.com/vorliq/Vorliq">https://github.com/vorliq/Vorliq</a>.</p>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -33,6 +33,8 @@ const forumCategories = [
   { value: "governance", label: "Governance" },
   { value: "technical", label: "Technical" },
 ];
+
+const PAGE_SIZE = 10;
 
 function formatTime(timestamp) {
   return new Date(timestamp * 1000).toLocaleString();
@@ -75,11 +77,20 @@ function Forum() {
   const [loadingPost, setLoadingPost] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [offset, setOffset] = useState(0);
+  const [totalPosts, setTotalPosts] = useState(0);
+  const [hasMorePosts, setHasMorePosts] = useState(false);
+  // A ref keeps loadPosts free of reactive dependencies so the load effects stay stable.
+  const offsetRef = useRef(0);
 
-  async function loadPosts({ quiet = false } = {}) {
+  async function loadPosts({ quiet = false, offset: nextOffset = offsetRef.current } = {}) {
     try {
-      const response = await api.get("/forum/posts");
+      const response = await api.get("/forum/posts", { params: { limit: PAGE_SIZE, offset: nextOffset } });
       setPosts(response.data.posts || []);
+      setTotalPosts(Number.isFinite(response.data.total) ? response.data.total : (response.data.posts || []).length);
+      setHasMorePosts(Boolean(response.data.has_more));
+      offsetRef.current = nextOffset;
+      setOffset(nextOffset);
       setErrorMessage("");
     } catch (error) {
       if (!quiet) {
@@ -124,16 +135,24 @@ function Forum() {
     }
   }
 
+  const searchInitialisedRef = useRef(false);
+
   useEffect(() => {
-    loadPosts();
+    loadPosts({ offset: 0 });
     loadFeaturedPosts({ quiet: true });
   }, []);
 
   useEffect(() => {
+    // Skip the first run: the mount effect already performs the initial load, so
+    // the search debounce must not fire on mount and reset pagination.
+    if (!searchInitialisedRef.current) {
+      searchInitialisedRef.current = true;
+      return undefined;
+    }
     const timeout = window.setTimeout(async () => {
       const query = searchQuery.trim();
       if (!query) {
-        await loadPosts({ quiet: true });
+        await loadPosts({ quiet: true, offset: 0 });
         return;
       }
 
@@ -342,7 +361,7 @@ function Forum() {
               type="button"
               onClick={() => {
                 setActiveTab("all");
-                loadPosts();
+                loadPosts({ offset: 0 });
               }}
             >
               All Posts
@@ -428,6 +447,34 @@ function Forum() {
               ))}
             </div>
           )}
+
+          {activeTab === "all" && !searchQuery.trim() && totalPosts > 0 ? (
+            <div className="forum-pagination">
+              <span className="muted-text">
+                {posts.length === 0
+                  ? "No posts on this page."
+                  : `Showing ${offset + 1} to ${offset + posts.length} of ${totalPosts} posts`}
+              </span>
+              <div className="button-row">
+                <button
+                  className="button secondary small-button"
+                  type="button"
+                  disabled={offset === 0 || loadingPosts}
+                  onClick={() => loadPosts({ offset: Math.max(0, offset - PAGE_SIZE) })}
+                >
+                  Previous
+                </button>
+                <button
+                  className="button secondary small-button"
+                  type="button"
+                  disabled={!hasMorePosts || loadingPosts}
+                  onClick={() => loadPosts({ offset: offset + PAGE_SIZE })}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <div className="forum-create">
             <h2>Create a New Post</h2>
