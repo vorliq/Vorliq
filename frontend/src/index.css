@@ -2700,7 +2700,10 @@ html[data-theme="light"] {
   --text: #061525;
   --text-primary: #061525;
   --text-secondary: #284158;
-  --text-muted: #607488;
+  /* WCAG AA: #607488 was 4.20:1 on the light page background (below 4.5:1 for
+     normal text). #566373 is 5.33:1 on --bg-deep and 6.13:1 on white, still
+     clearly muted vs --text-secondary. */
+  --text-muted: #566373;
   --border: rgba(10, 125, 146, 0.26);
   --border-strong: rgba(6, 112, 139, 0.52);
   --accent-green: #2c9f32;
