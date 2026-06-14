@@ -27,6 +27,7 @@ const routes = [
   ["/peers/propagation", /Peer Propagation/i],
   ["/network", /Network/i],
   ["/stats", /Stats|Statistics/i],
+  ["/status", /Network status/i],
   ["/health", /Health/i],
   ["/readiness", /Readiness/i],
   ["/migration-readiness", /Migration Readiness|Current Storage/i],

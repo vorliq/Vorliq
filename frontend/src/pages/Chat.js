@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 
 import ReportButton from "../components/ReportButton";
 import { useAuth } from "../context/AuthContext";
+import api from "../helpers/api";
 
 function socketUrl() {
   if (window.location.hostname === "localhost") {
@@ -19,6 +20,8 @@ function Chat() {
   const [messageText, setMessageText] = useState("");
   const [connectedUsers, setConnectedUsers] = useState(0);
   const [connected, setConnected] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasOlder, setHasOlder] = useState(true);
   const socketRef = useRef(null);
   const walletAddressRef = useRef(walletAddress);
   const messagesEndRef = useRef(null);
@@ -69,6 +72,27 @@ function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  async function loadOlderMessages() {
+    if (loadingOlder || messages.length === 0) return;
+    setLoadingOlder(true);
+    try {
+      const before = Number(messages[0]?.timestamp);
+      const response = await api.get("/chat/history", {
+        params: { limit: 30, ...(Number.isFinite(before) ? { before } : {}) },
+      });
+      const older = response.data.messages || [];
+      setMessages((current) => {
+        const seen = new Set(current.map((item) => item.message_id));
+        return [...older.filter((item) => !seen.has(item.message_id)), ...current];
+      });
+      setHasOlder(Boolean(response.data.has_more));
+    } catch (error) {
+      toast.error("Unable to load older messages right now.");
+    } finally {
+      setLoadingOlder(false);
+    }
+  }
+
   function sendMessage(event) {
     event.preventDefault();
     const text = messageText.trim();
@@ -104,10 +128,11 @@ function Chat() {
           Talk with Vorliq members in real time inside the application.
         </p>
         <div className="risk-box">
-          <strong>Public chat, recent messages only</strong>
+          <strong>Public chat, kept for a limited time</strong>
           <p>
-            This chat is public and shows the most recent messages. It is not a permanent record and is not private
-            messaging. Never share private keys, seed phrases, passwords, or backup files here.
+            This chat is public and is kept for up to 30 days. It is not private messaging. Older messages can be
+            loaded for that window, and messages removed by moderation are not shown. Never share private keys, seed
+            phrases, passwords, or backup files here.
           </p>
         </div>
       </section>
@@ -134,6 +159,13 @@ function Chat() {
         </div>
 
         <div className="chat-window">
+          {messages.length > 0 && hasOlder ? (
+            <div className="chat-load-older">
+              <button className="button secondary small-button" type="button" onClick={loadOlderMessages} disabled={loadingOlder}>
+                {loadingOlder ? "Loading..." : "Load older messages"}
+              </button>
+            </div>
+          ) : null}
           {messages.length === 0 ? (
             <div className="empty-state">No messages yet. Start the conversation.</div>
           ) : (

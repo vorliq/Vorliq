@@ -22,6 +22,7 @@ import VLQ from "./pages/VLQ";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Forum from "./pages/Forum";
+import Status from "./pages/Status";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
 import Send from "./pages/Send";
@@ -1335,6 +1336,36 @@ test("Forum All Posts tab paginates using the server total and has_more", async 
   expect(await screen.findByText(/showing 11 to 11 of 11 posts/i)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /^next$/i })).toBeDisabled();
   expect(screen.getByRole("button", { name: /^previous$/i })).toBeEnabled();
+});
+
+test("Status page shows live network data and marks missing values unavailable", async () => {
+  renderWithProviders(<Status />, "/status");
+
+  expect(await screen.findByRole("heading", { level: 1, name: /network status/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /^chain$/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /^readiness$/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /peer propagation/i })).toBeInTheDocument();
+
+  // Live chain height comes from the public summary endpoint.
+  expect(await screen.findByText("#0")).toBeInTheDocument();
+  // Readiness score from the public readiness endpoint.
+  expect(await screen.findByText("98")).toBeInTheDocument();
+  // No blocks and no propagation peers in the mock: shown as unavailable, never faked.
+  expect((await screen.findAllByText(/unavailable/i)).length).toBeGreaterThan(0);
+});
+
+test("Status page shows unavailable states when public endpoints report no data", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/health") return Promise.resolve({ data: { success: true, status: "ok" } });
+    return Promise.resolve({ data: { success: false } });
+  });
+
+  renderWithProviders(<Status />, "/status");
+
+  expect(await screen.findByRole("heading", { level: 1, name: /network status/i })).toBeInTheDocument();
+  // Every metric falls back to Unavailable, and nothing is faked or shown as NaN.
+  await waitFor(() => expect(screen.getAllByText(/unavailable/i).length).toBeGreaterThan(3));
+  expect(screen.queryByText(/NaN/i)).not.toBeInTheDocument();
 });
 
 test("Lazy-loaded routes render their content through the Suspense boundary", async () => {

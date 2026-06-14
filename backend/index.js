@@ -38,6 +38,7 @@ const migrationRoutes = require("./routes/migration");
 const adminAuth = require("./middleware/adminAuth");
 const { sendError } = require("./utils/apiResponse");
 const { pruneAnalytics } = require("./analytics");
+const chatStore = require("./chatStore");
 const { logError, logInfo } = require("./logger");
 const { sendWeeklyReport } = require("./reports");
 const { corsMiddleware, helmetMiddleware, isAllowedOrigin, securityStatus } = require("./middleware/security");
@@ -77,6 +78,15 @@ const socketAddresses = new Map();
 const socketMessageTimes = new Map();
 const chatHistory = [];
 let chatMessageSequence = 0;
+
+// Hydrate the in-memory recent buffer from durable storage so chat history
+// survives restarts. Best-effort: a storage problem must never block startup.
+try {
+  chatStore.loadRecentMessages(100).forEach((message) => chatHistory.push(message));
+  logInfo(`Chat history hydrated with ${chatHistory.length} stored messages.`);
+} catch (error) {
+  logError(`Chat history hydration failed: ${error.message}`);
+}
 
 function safeChatText(value) {
   return String(value || "").replace(/\0/g, "").replace(/[<>]/g, "").trim();
@@ -139,6 +149,12 @@ io.on("connection", (socket) => {
       chatHistory.shift();
     }
     io.emit("message", chatMessage);
+    // Persist after broadcasting so durability never delays the live message.
+    try {
+      chatStore.appendChatMessage(chatMessage);
+    } catch (error) {
+      logError(`Chat message persistence failed: ${error.message}`);
+    }
   });
 
   socket.on("history", () => {
@@ -234,7 +250,23 @@ app.post("/api/admin/moderation/chat/hide", adminAuth, (req, res) => {
   message.text = "This chat message is hidden by community moderation review.";
   message.warning = "";
   io.emit("history", chatHistory);
+  // Persist the moderation decision so hidden messages never resurface from history.
+  try {
+    chatStore.setModerationStatus(message.message_id, "hidden", message.text);
+  } catch (error) {
+    logError(`Chat moderation persistence failed: ${error.message}`);
+  }
   return res.json({ success: true, message });
+});
+
+app.get("/api/chat/history", (req, res) => {
+  try {
+    const history = chatStore.loadHistory({ limit: req.query.limit, before: req.query.before });
+    return res.json({ success: true, ...history });
+  } catch (error) {
+    logError(`GET /api/chat/history failed: ${error.message}`);
+    return res.status(500).json({ success: false, message: "Unable to load chat history." });
+  }
 });
 
 app.use(chainRoutes);

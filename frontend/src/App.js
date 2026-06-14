@@ -53,6 +53,7 @@ const Send = lazy(() => import("./pages/Send"));
 const Snapshot = lazy(() => import("./pages/Snapshot"));
 const SnapshotArchive = lazy(() => import("./pages/SnapshotArchive"));
 const Stats = lazy(() => import("./pages/Stats"));
+const Status = lazy(() => import("./pages/Status"));
 const TransactionDetail = lazy(() => import("./pages/TransactionDetail"));
 const Transparency = lazy(() => import("./pages/Transparency"));
 const Treasury = lazy(() => import("./pages/Treasury"));
@@ -153,6 +154,7 @@ function AppShell() {
           <Route path="/ambassador" element={<Ambassador />} />
           <Route path="/achievements" element={<Achievements />} />
           <Route path="/stats" element={<Stats />} />
+          <Route path="/status" element={<Status />} />
           <Route path="/registry" element={<Registry />} />
           <Route path="/nodes/compare" element={<NodeSync />} />
           <Route path="/peers/propagation" element={<PeerPropagation />} />

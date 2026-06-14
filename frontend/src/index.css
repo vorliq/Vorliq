@@ -5775,3 +5775,10 @@ html[data-theme="light"] .mobile-drawer button {
   border: 1px solid var(--border);
   background: var(--surface-glass);
 }
+
+/* ===== Chat: load older messages ===== */
+.chat-load-older {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 10px;
+}

@@ -32,6 +32,7 @@ const footerGroups = [
     links: [
       { label: "Blockchain", to: "/blockchain" },
       { label: "Network", to: "/network" },
+      { label: "Status", to: "/status" },
       { label: "Readiness", to: "/readiness" },
       { label: "Transparency", to: "/transparency" },
     ],

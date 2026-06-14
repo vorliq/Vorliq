@@ -41,8 +41,9 @@ test("Chat renders a clean empty state with no messages and an honest public not
 
   expect(screen.getByRole("heading", { level: 1, name: /^chat$/i })).toBeInTheDocument();
   expect(screen.getByText(/no messages yet\. start the conversation\./i)).toBeInTheDocument();
-  // Honest about the chat being public and recent-only, not a private permanent record.
-  expect(screen.getByText(/public chat, recent messages only/i)).toBeInTheDocument();
+  // Honest about the chat being public and kept only for a limited window.
+  expect(screen.getByText(/public chat, kept for a limited time/i)).toBeInTheDocument();
+  expect(screen.getByText(/kept for up to 30 days/i)).toBeInTheDocument();
   expect(screen.getByText(/never share private keys, seed phrases, passwords, or backup files/i)).toBeInTheDocument();
 });
 
