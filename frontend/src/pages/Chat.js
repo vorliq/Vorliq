@@ -103,6 +103,13 @@ function Chat() {
         <p className="subtitle">
           Talk with Vorliq members in real time inside the application.
         </p>
+        <div className="risk-box">
+          <strong>Public chat, recent messages only</strong>
+          <p>
+            This chat is public and shows the most recent messages. It is not a permanent record and is not private
+            messaging. Never share private keys, seed phrases, passwords, or backup files here.
+          </p>
+        </div>
       </section>
 
       <section className="card card-pad chat-shell">

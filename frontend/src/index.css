@@ -5645,6 +5645,11 @@ html[data-theme="light"] .mobile-drawer button {
   box-shadow: 0 0 0 3px rgba(255, 93, 108, 0.16);
 }
 
+.vq-privacy-mark.warn {
+  background: var(--warning);
+  box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.16);
+}
+
 .vq-toggle-row {
   display: flex;
   align-items: center;

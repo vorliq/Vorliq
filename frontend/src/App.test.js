@@ -1213,7 +1213,7 @@ test("Settings theme toggle applies the light theme and persists across routes",
   window.history.pushState({}, "", "/settings");
   render(<App />);
 
-  expect(await screen.findByRole("heading", { level: 1, name: /appearance/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: /^settings$/i })).toBeInTheDocument();
   expect(document.documentElement).toHaveAttribute("data-theme", "dark");
 
   await userEvent.click(screen.getByRole("button", { name: /use light theme/i }));
@@ -1241,13 +1241,68 @@ test("Settings analytics opt-out toggle disables analytics and persists", async 
   window.history.pushState({}, "", "/settings");
   render(<App />);
 
-  await screen.findByRole("heading", { level: 1, name: /appearance/i });
+  await screen.findByRole("heading", { level: 1, name: /^settings$/i });
   const toggle = screen.getByRole("switch", { name: /share anonymous usage analytics/i });
   expect(toggle).toHaveAttribute("aria-checked", "true");
 
   await userEvent.click(toggle);
   expect(toggle).toHaveAttribute("aria-checked", "false");
   expect(window.localStorage.getItem("vorliq_analytics_enabled")).toBe("false");
+});
+
+test("Settings shows the connected wallet state and the security data section", async () => {
+  window.history.pushState({}, "", "/settings");
+  render(<App />);
+
+  await screen.findByRole("heading", { level: 1, name: /^settings$/i });
+
+  // No wallet on this device: honest state, no fabricated balance.
+  expect(screen.getByRole("heading", { name: /no wallet on this device/i })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /restore a wallet/i })).toHaveAttribute("href", "/login");
+
+  // Security and data section is honest about what is and is not stored.
+  expect(screen.getByRole("heading", { name: /what vorliq stores, and what stays yours/i })).toBeInTheDocument();
+  expect(screen.getByText(/your private key or seed phrase in readable form/i)).toBeInTheDocument();
+  expect(screen.getByText(/your wallet password \(it never leaves this device\)/i)).toBeInTheDocument();
+  expect(screen.queryByText(/insured/i)).not.toBeInTheDocument();
+});
+
+test("Settings security section renders under both dark and light themes", async () => {
+  for (const theme of ["dark", "light"]) {
+    window.localStorage.setItem("vorliq_theme", theme);
+    window.history.pushState({}, "", "/settings");
+    render(<App />);
+
+    await screen.findByRole("heading", { level: 1, name: /^settings$/i });
+    expect(document.documentElement).toHaveAttribute("data-theme", theme);
+    expect(screen.getByRole("heading", { name: /what vorliq stores, and what stays yours/i })).toBeInTheDocument();
+    cleanup();
+    document.documentElement.setAttribute("data-theme", "dark");
+  }
+});
+
+test("Forum renders a genuine empty state when there are no posts", async () => {
+  renderWithProviders(<Forum />, "/forum");
+
+  expect(await screen.findByRole("heading", { level: 1, name: /^forum$/i })).toBeInTheDocument();
+  expect(await screen.findByText(/no featured posts yet/i)).toBeInTheDocument();
+  expect(screen.getByText(/select a post to read the full discussion/i)).toBeInTheDocument();
+});
+
+test("Account shows real wallet state and clean empty states when there is no activity", async () => {
+  const auth = {
+    wallet: { address: "VLQ_TEST_ADDRESS_123456", public_key: "PUBLIC_ONLY" },
+    isLoggedIn: true,
+    logout: jest.fn(),
+    clearLocalWallet: jest.fn(),
+  };
+
+  renderWithAuth(<Account />, auth, "/account");
+
+  expect(await screen.findByRole("heading", { level: 1, name: /^account$/i })).toBeInTheDocument();
+  expect(await screen.findByText("VLQ_TEST_ADDRESS_123456")).toBeInTheDocument();
+  expect(await screen.findByText(/no transactions yet/i)).toBeInTheDocument();
+  expect(screen.getByText(/no loans yet/i)).toBeInTheDocument();
 });
 
 test("Header is authentication-aware based on the existing stored wallet", async () => {

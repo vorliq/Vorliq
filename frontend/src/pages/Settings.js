@@ -1,7 +1,30 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
+import { useAuth } from "../context/AuthContext";
 import { isAnalyticsEnabled, setAnalyticsEnabled } from "../helpers/analytics";
+import { formatHash } from "../helpers/publicApi";
+import { hasWallet } from "../helpers/storage";
 import { getStoredTheme, setStoredTheme } from "../helpers/theme";
+
+const dataStored = [
+  "Your wallet, encrypted with your password, in this browser's local storage only",
+  "Public blockchain records: blocks, transactions, and balances on the Vorliq chain",
+  "Your public profile fields, if you choose to create a profile",
+  "Anonymous product analytics, only while analytics is turned on",
+];
+
+const dataNeverStored = [
+  "Your private key or seed phrase in readable form on any Vorliq server",
+  "Your wallet password (it never leaves this device)",
+  "IP addresses or raw device fingerprints tied to your activity",
+];
+
+const yourResponsibility = [
+  "Keep your password safe. Vorliq cannot reset it or recover your wallet without it.",
+  "Export an encrypted backup and store it somewhere safe before holding meaningful VLQ.",
+  "Never share your private key or seed phrase. Anyone who has it controls your wallet.",
+];
 
 const tracked = [
   "Which pages you open and how sections of the landing page are viewed",
@@ -52,6 +75,75 @@ const options = [
   { value: "light", label: "Light", icon: SunIcon, hint: "Bright surfaces with strong contrast for daytime use." },
 ];
 
+function WalletStatus() {
+  const { wallet, isLoggedIn } = useAuth();
+  const accountExists = isLoggedIn || hasWallet();
+
+  let state;
+  if (isLoggedIn && wallet?.address) {
+    state = {
+      badge: { className: "executed", label: "Unlocked" },
+      title: "Wallet unlocked on this device",
+      body: "Your saved wallet is unlocked for this session. You can view your balance, history, and account activity.",
+      address: wallet.address,
+      actions: [
+        { label: "Open account", to: "/account" },
+        { label: "Open wallet", to: "/wallet" },
+        { label: "Send VLQ", to: "/send" },
+      ],
+    };
+  } else if (accountExists) {
+    state = {
+      badge: { className: "active", label: "Locked" },
+      title: "Wallet saved but locked",
+      body: "An encrypted wallet is saved in this browser but the session is locked. Sign in with your password to unlock it.",
+      address: null,
+      actions: [{ label: "Sign in", to: "/login" }],
+    };
+  } else {
+    state = {
+      badge: { className: "expired", label: "No wallet" },
+      title: "No wallet on this device",
+      body: "There is no Vorliq wallet saved in this browser. Create an account to get a wallet, or restore an encrypted backup.",
+      address: null,
+      actions: [
+        { label: "Create account", to: "/register" },
+        { label: "Restore a wallet", to: "/login" },
+      ],
+    };
+  }
+
+  return (
+    <section className="card card-pad stack" aria-label="Connected wallet">
+      <div className="section-title">
+        <div>
+          <span className="eyebrow">Your wallet</span>
+          <h2>{state.title}</h2>
+        </div>
+        <span className={`status-badge ${state.badge.className}`} role="status">
+          {state.badge.label}
+        </span>
+      </div>
+      <p className="muted-text">{state.body}</p>
+      {state.address ? (
+        <div className="field">
+          <span className="meta-label">Wallet address</span>
+          <span className="value-box mono-wrap" title={state.address}>
+            {formatHash(state.address, 14, 8)}
+          </span>
+        </div>
+      ) : null}
+      <div className="button-row">
+        {state.actions.map((action) => (
+          <Link className="button secondary small-button" to={action.to} key={action.to + action.label}>
+            {action.label}
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Settings() {
   const [theme, setTheme] = useState(getStoredTheme());
   const [analyticsOn, setAnalyticsOn] = useState(isAnalyticsEnabled());
@@ -69,11 +161,14 @@ function Settings() {
     <div className="page">
       <section className="hero">
         <span className="eyebrow">Settings</span>
-        <h1>Appearance</h1>
+        <h1>Settings</h1>
         <p className="subtitle">
-          Control how Vorliq looks on this device. Your choice is saved in this browser and applied across the site.
+          Control how Vorliq looks and behaves on this device, review your wallet status, and understand exactly what
+          Vorliq stores and what it never stores.
         </p>
       </section>
+
+      <WalletStatus />
 
       <section className="card card-pad stack" aria-label="Theme settings">
         <div className="section-title">
@@ -167,6 +262,67 @@ function Settings() {
           >
             <span className="vq-switch__dot" aria-hidden="true" />
           </button>
+        </div>
+      </section>
+
+      <section className="card card-pad stack" aria-label="Security and your data">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">Security and your data</span>
+            <h2>What Vorliq stores, and what stays yours</h2>
+          </div>
+        </div>
+        <p className="muted-text">
+          Vorliq is self-custody software. Your wallet is encrypted on your own device, and you stay in control of it.
+          Vorliq does not insure VLQ, guarantee its value, or recover lost wallets.
+        </p>
+        <div className="vq-privacy-grid">
+          <div className="vq-privacy-card">
+            <h3>What Vorliq stores</h3>
+            <ul className="vq-privacy-list">
+              {dataStored.map((item) => (
+                <li key={item}>
+                  <span className="vq-privacy-mark ok" aria-hidden="true" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="vq-privacy-card">
+            <h3>What Vorliq never stores</h3>
+            <ul className="vq-privacy-list">
+              {dataNeverStored.map((item) => (
+                <li key={item}>
+                  <span className="vq-privacy-mark no" aria-hidden="true" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div className="risk-box">
+          <strong>What you are responsible for</strong>
+          <ul className="vq-privacy-list vq-responsibility-list">
+            {yourResponsibility.map((item) => (
+              <li key={item}>
+                <span className="vq-privacy-mark warn" aria-hidden="true" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="button-row">
+          <Link className="button secondary small-button" to="/transparency">
+            Read transparency
+          </Link>
+          <a
+            className="button secondary small-button"
+            href="https://vorliq.github.io/Vorliq/terms.html#risk-notice"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Risk notice
+          </a>
         </div>
       </section>
     </div>
