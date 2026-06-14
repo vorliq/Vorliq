@@ -1251,6 +1251,21 @@ test("Settings analytics opt-out toggle disables analytics and persists", async 
   expect(window.localStorage.getItem("vorliq_analytics_enabled")).toBe("false");
 });
 
+test("Settings in-app notification toggle persists and is honest about delivery", async () => {
+  window.history.pushState({}, "", "/settings");
+  render(<App />);
+
+  await screen.findByRole("heading", { level: 1, name: /^settings$/i });
+  // Honest: in-app only, no email or push.
+  expect(screen.getByText(/does not send email or push notifications/i)).toBeInTheDocument();
+
+  const toggle = screen.getByRole("switch", { name: /show in-app notices/i });
+  expect(toggle).toHaveAttribute("aria-checked", "true");
+  await userEvent.click(toggle);
+  expect(toggle).toHaveAttribute("aria-checked", "false");
+  expect(window.localStorage.getItem("vorliq_notifications_enabled")).toBe("false");
+});
+
 test("Settings shows the connected wallet state and the security data section", async () => {
   window.history.pushState({}, "", "/settings");
   render(<App />);

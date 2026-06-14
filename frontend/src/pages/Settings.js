@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import { useNotifications } from "../context/NotificationContext";
 import { isAnalyticsEnabled, setAnalyticsEnabled } from "../helpers/analytics";
 import { formatHash } from "../helpers/publicApi";
 import { hasWallet } from "../helpers/storage";
@@ -147,6 +148,7 @@ function WalletStatus() {
 function Settings() {
   const [theme, setTheme] = useState(getStoredTheme());
   const [analyticsOn, setAnalyticsOn] = useState(isAnalyticsEnabled());
+  const { notificationsEnabled, setNotificationsEnabled } = useNotifications();
 
   function choose(next) {
     setTheme(setStoredTheme(next));
@@ -259,6 +261,38 @@ function Settings() {
             aria-label="Share anonymous usage analytics"
             className={`vq-switch ${analyticsOn ? "on" : ""}`}
             onClick={() => toggleAnalytics(!analyticsOn)}
+          >
+            <span className="vq-switch__dot" aria-hidden="true" />
+          </button>
+        </div>
+      </section>
+
+      <section className="card card-pad stack" aria-label="Notification settings">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">Notifications</span>
+            <h2>In-app notices</h2>
+          </div>
+          <span className={`status-badge ${notificationsEnabled ? "executed" : "expired"}`} role="status">
+            {notificationsEnabled ? "On" : "Off"}
+          </span>
+        </div>
+        <p className="muted-text">
+          Vorliq can show in-app notices on this device for wallet activity, lending updates, and mining, generated
+          locally from public chain data while the app is open. Vorliq does not send email or push notifications.
+        </p>
+        <div className="vq-toggle-row">
+          <div>
+            <strong>Show in-app notices</strong>
+            <p className="muted-text">When off, no new in-app notices are created on this device.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={notificationsEnabled}
+            aria-label="Show in-app notices"
+            className={`vq-switch ${notificationsEnabled ? "on" : ""}`}
+            onClick={() => setNotificationsEnabled(!notificationsEnabled)}
           >
             <span className="vq-switch__dot" aria-hidden="true" />
           </button>

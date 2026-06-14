@@ -1,7 +1,8 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 const NotificationContext = createContext(null);
 const STORAGE_KEY = "vorliq_notifications";
+const PREF_KEY = "vorliq_notifications_enabled";
 
 function loadNotifications() {
   try {
@@ -16,8 +17,31 @@ function saveNotifications(notifications) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
 }
 
+function loadEnabled() {
+  try {
+    return window.localStorage.getItem(PREF_KEY) !== "false";
+  } catch (error) {
+    return true;
+  }
+}
+
 export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState(loadNotifications);
+  const [notificationsEnabled, setEnabledState] = useState(loadEnabled);
+  // A ref keeps addNotification stable while still respecting the live preference.
+  const enabledRef = useRef(notificationsEnabled);
+  useEffect(() => {
+    enabledRef.current = notificationsEnabled;
+  }, [notificationsEnabled]);
+
+  const setNotificationsEnabled = useCallback((next) => {
+    try {
+      window.localStorage.setItem(PREF_KEY, next ? "true" : "false");
+    } catch (error) {
+      // ignore storage errors; the in-memory state still applies
+    }
+    setEnabledState(Boolean(next));
+  }, []);
 
   const updateNotifications = useCallback((updater) => {
     setNotifications((current) => {
@@ -28,6 +52,9 @@ export function NotificationProvider({ children }) {
   }, []);
 
   const addNotification = useCallback((type, title, message) => {
+    // In-app notices are generated locally from public chain activity. When the
+    // user turns them off, none are created.
+    if (!enabledRef.current) return;
     const notification = {
       id: Date.now(),
       type,
@@ -61,8 +88,10 @@ export function NotificationProvider({ children }) {
       markAsRead,
       clearAll,
       unreadCount,
+      notificationsEnabled,
+      setNotificationsEnabled,
     }),
-    [addNotification, clearAll, markAsRead, notifications, unreadCount]
+    [addNotification, clearAll, markAsRead, notifications, unreadCount, notificationsEnabled, setNotificationsEnabled]
   );
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
