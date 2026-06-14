@@ -214,6 +214,15 @@ strong {
   position: relative;
   z-index: 2;
   flex: 1 0 auto;
+  /* Reserve at least the viewport (minus the fixed nav) for the content area
+     so the footer always starts at/below the fold -- including during the
+     brief loading/empty states of data-driven and lazy-loaded routes. Without
+     this, those pages render short, the footer sits in view, then content
+     arrives and pushes the footer down a long way: a large, measured layout
+     shift (CLS ~0.3-0.78 on dashboard/blockchain/forum vs ~0 on home). With
+     the footer below the fold during load, that downward move is off-screen
+     and does not count toward CLS. */
+  min-height: calc(100vh - var(--nav-height));
 }
 
 #main-content:focus {
