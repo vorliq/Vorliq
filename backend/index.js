@@ -35,6 +35,7 @@ const storageRoutes = require("./routes/storage");
 const auditRoutes = require("./routes/audit");
 const bootstrapRoutes = require("./routes/bootstrap");
 const migrationRoutes = require("./routes/migration");
+const newsletterRoutes = require("./routes/newsletter");
 const adminAuth = require("./middleware/adminAuth");
 const { sendError } = require("./utils/apiResponse");
 const { pruneAnalytics } = require("./analytics");
@@ -298,6 +299,7 @@ app.use(storageRoutes);
 app.use(auditRoutes);
 app.use(bootstrapRoutes);
 app.use(migrationRoutes);
+app.use(newsletterRoutes);
 app.use(adminRoutes);
 
 app.use((req, res) => {

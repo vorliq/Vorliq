@@ -261,7 +261,8 @@ export default function Landing() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
-  const [newsletterMsg, setNewsletterMsg] = useState("");
+  const [newsletter, setNewsletter] = useState({ tone: "", text: "" });
+  const [submitting, setSubmitting] = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -362,18 +363,32 @@ export default function Landing() {
     }));
   }, [roadmap]);
 
-  function handleNewsletter(e) {
+  async function handleNewsletter(e) {
     e.preventDefault();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      setNewsletterMsg("Please enter a valid email address.");
+      setNewsletter({ tone: "error", text: "Please enter a valid email address." });
       return;
     }
-    // Backend subscribe endpoint lands in the next migration increment; until
-    // then, report honestly rather than faking a success.
-    api
-      .post("/newsletter/subscribe", { email })
-      .then(() => setNewsletterMsg("Thanks — you're on the list."))
-      .catch(() => setNewsletterMsg("Sign-ups aren't open yet. Please check back soon."));
+    setSubmitting(true);
+    setNewsletter({ tone: "", text: "" });
+    try {
+      const res = await api.post("/newsletter/subscribe", { email });
+      const data = res?.data || {};
+      if (data.already_subscribed) {
+        setNewsletter({ tone: "info", text: "You're already subscribed to Vorliq updates." });
+      } else {
+        setNewsletter({ tone: "success", text: "Thanks — you're on the Vorliq list." });
+        setEmail("");
+      }
+    } catch (err) {
+      const apiMsg = err?.response?.data?.error?.message || err?.response?.data?.message;
+      setNewsletter({
+        tone: "error",
+        text: apiMsg || "We couldn't record your sign-up right now. Please try again later.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -535,11 +550,15 @@ export default function Landing() {
               onChange={(e) => setEmail(e.target.value)}
               aria-label="Email address"
             />
-            <Button variant="primary" type="submit">
-              Keep me posted
+            <Button variant="primary" type="submit" disabled={submitting}>
+              {submitting ? "Sending…" : "Keep me posted"}
             </Button>
           </form>
-          {newsletterMsg && <p className="vn-form-msg">{newsletterMsg}</p>}
+          {newsletter.text && (
+            <p className={`vn-form-msg vn-form-msg--${newsletter.tone}`} role="status">
+              {newsletter.text}
+            </p>
+          )}
         </div>
       </section>
 

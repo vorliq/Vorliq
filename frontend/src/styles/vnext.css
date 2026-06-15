@@ -234,8 +234,8 @@ html[data-theme="light"] .vnext {
   display: flex;
   align-items: center;
   background: color-mix(in srgb, var(--vn-bg) 70%, transparent);
-  backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--vn-rule);
 }
 .vnext .vn-nav__inner {
@@ -319,6 +319,7 @@ html[data-theme="light"] .vnext {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
   z-index: 1001;
 }
@@ -712,7 +713,16 @@ html[data-theme="light"] .vnext .vn-ticker__item {
   text-align: center;
   margin-top: 14px;
   font-size: 0.9rem;
+  color: var(--vn-text-2);
+}
+.vnext .vn-form-msg--success {
   color: var(--vn-green);
+}
+.vnext .vn-form-msg--info {
+  color: var(--vn-teal);
+}
+.vnext .vn-form-msg--error {
+  color: #ff5d6c;
 }
 
 /* ------------------------------------------------------- CTA ----------- */
