@@ -1,0 +1,834 @@
+/* =========================================================================
+   Vorliq "vnext" design layer.
+   A self-contained visual system scoped under `.vnext`, built strictly from
+   the Vorliq logo palette. It defines its own tokens so it never disturbs the
+   existing production pages, and it responds to the same html[data-theme]
+   switch already used site-wide (see helpers/theme.js).
+   ========================================================================= */
+
+.vnext {
+  /* --- Exact logo palette --- */
+  --vn-teal: #00a896;          /* primary accent: links, fills, stats, gradient L */
+  --vn-blue: #1e6fd9;          /* royal blue: hovers, focus rings, gradient R */
+  --vn-green: #56c870;         /* success ONLY — never a primary accent */
+  --vn-gradient: linear-gradient(90deg, var(--vn-teal), var(--vn-blue));
+
+  /* --- Dark surfaces (default) --- */
+  --vn-bg: #080b14;            /* near-black deep navy page background */
+  --vn-card: #0d1628;          /* elevated card surface */
+  --vn-card-2: #111f38;        /* nested/secondary surface */
+  --vn-section: #0d1526;       /* full-width separator section */
+
+  /* --- Text on dark --- */
+  --vn-text: #ffffff;
+  --vn-text-2: rgba(255, 255, 255, 0.55);
+  --vn-text-3: rgba(255, 255, 255, 0.3);
+
+  /* --- Lines on dark --- */
+  --vn-border: rgba(255, 255, 255, 0.15);
+  --vn-border-strong: rgba(255, 255, 255, 0.2);
+  --vn-rule: rgba(255, 255, 255, 0.08);
+  --vn-row: rgba(255, 255, 255, 0.06);
+
+  /* --- Effects --- */
+  --vn-glow-teal: rgba(0, 168, 150, 0.35);
+  --vn-glow-blue: rgba(30, 111, 217, 0.28);
+  --vn-skeleton: rgba(255, 255, 255, 0.08);
+
+  /* --- Shape --- */
+  --vn-r-card: 14px;
+  --vn-r-sm: 8px;
+  --vn-r-pill: 9999px;
+  --vn-max: 1160px;
+  --vn-nav-h: 70px;
+
+  color: var(--vn-text);
+  background: var(--vn-bg);
+  font-family: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
+  /* Smooth theme cross-fade per spec (200ms). */
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+/* Light mode inversion — accents and gradient stay identical. */
+html[data-theme="light"] .vnext {
+  --vn-bg: #ffffff;
+  --vn-card: #f4f6fa;
+  --vn-card-2: #e8ebf0;
+  --vn-section: #f4f6fa;
+  --vn-text: #080b14;
+  --vn-text-2: rgba(8, 11, 20, 0.55);
+  --vn-text-3: rgba(8, 11, 20, 0.35);
+  --vn-border: rgba(0, 0, 0, 0.1);
+  --vn-border-strong: rgba(0, 0, 0, 0.16);
+  --vn-rule: rgba(0, 0, 0, 0.08);
+  --vn-row: rgba(0, 0, 0, 0.06);
+  --vn-skeleton: rgba(0, 0, 0, 0.06);
+}
+
+.vnext *,
+.vnext *::before,
+.vnext *::after {
+  box-sizing: border-box;
+}
+
+.vnext .vn-container {
+  width: min(var(--vn-max), calc(100% - 40px));
+  margin-inline: auto;
+}
+
+/* color/border transitions for theme switch on common elements */
+.vnext .vn-card,
+.vnext .vn-btn,
+.vnext .vn-pill,
+.vnext .vn-input,
+.vnext input,
+.vnext table,
+.vnext td,
+.vnext th {
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease,
+    box-shadow 150ms ease, transform 150ms ease;
+}
+
+/* ---------------------------------------------------------- Buttons ----- */
+.vnext .vn-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 12px 24px;
+  border-radius: var(--vn-r-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+.vnext .vn-btn--primary {
+  background: var(--vn-gradient);
+  color: #ffffff;
+  border: none;
+}
+.vnext .vn-btn--primary:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 8px 28px var(--vn-glow-teal);
+}
+
+.vnext .vn-btn--secondary {
+  background: transparent;
+  color: var(--vn-teal);
+  border: 1px solid var(--vn-teal);
+}
+.vnext .vn-btn--secondary:hover {
+  background: rgba(0, 168, 150, 0.1);
+  border-color: var(--vn-blue);
+}
+
+.vnext .vn-btn--lg {
+  padding: 15px 30px;
+  font-size: 1.02rem;
+}
+
+.vnext .vn-btn-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* ----------------------------------------------------------- Pills ------ */
+.vnext .vn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: var(--vn-r-pill);
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: var(--vn-card);
+  border: 1px solid rgba(0, 168, 150, 0.4);
+  color: var(--vn-teal);
+}
+.vnext .vn-pill__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--vn-green);
+  box-shadow: 0 0 8px var(--vn-green);
+}
+
+/* ----------------------------------------------------------- Cards ------ */
+.vnext .vn-card {
+  background: var(--vn-card);
+  border: 1px solid var(--vn-border);
+  border-radius: var(--vn-r-card);
+}
+.vnext .vn-card--pad {
+  padding: 24px;
+}
+.vnext .vn-card--nested {
+  background: var(--vn-card-2);
+  border-radius: var(--vn-r-sm);
+}
+
+/* --------------------------------------------------- Section headers ---- */
+.vnext .vn-section {
+  padding: 88px 0;
+}
+.vnext .vn-overline {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--vn-teal);
+}
+.vnext .vn-section-head {
+  text-align: center;
+  max-width: 640px;
+  margin-inline: auto;
+  margin-bottom: 56px;
+}
+.vnext .vn-section-head h2 {
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 800;
+  margin: 14px 0 0;
+  line-height: 1.12;
+}
+.vnext .vn-section-head p {
+  color: var(--vn-text-2);
+  font-size: 1.05rem;
+  margin: 14px 0 0;
+  line-height: 1.6;
+}
+.vnext .vn-underline {
+  display: inline-block;
+  width: 64px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--vn-gradient);
+  margin-top: 18px;
+}
+
+.vnext a.vn-link {
+  color: var(--vn-teal);
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.vnext a.vn-link:hover {
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------- Top nav -------- */
+.vnext .vn-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: var(--vn-nav-h);
+  display: flex;
+  align-items: center;
+  background: color-mix(in srgb, var(--vn-bg) 70%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--vn-rule);
+}
+.vnext .vn-nav__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 18px;
+}
+.vnext .vn-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--vn-text);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+.vnext .vn-brand img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+.vnext .vn-nav__links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.vnext .vn-nav__link {
+  color: var(--vn-text-2);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 8px 14px;
+  border-radius: var(--vn-r-pill);
+}
+.vnext .vn-nav__link:hover {
+  color: var(--vn-text);
+}
+.vnext .vn-nav__link.is-active {
+  color: var(--vn-text);
+  background: rgba(0, 168, 150, 0.12);
+}
+.vnext .vn-nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Theme toggle — icon only, no label, anywhere. */
+.vnext .vn-theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--vn-r-pill);
+  border: 1px solid var(--vn-border);
+  background: transparent;
+  color: var(--vn-text);
+  cursor: pointer;
+}
+.vnext .vn-theme-toggle:hover {
+  border-color: var(--vn-teal);
+  color: var(--vn-teal);
+}
+
+.vnext .vn-hamburger {
+  display: none;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: var(--vn-r-pill);
+  border: 1px solid var(--vn-border);
+  background: transparent;
+  color: var(--vn-text);
+  cursor: pointer;
+}
+
+/* Mobile drawer */
+.vnext .vn-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 1001;
+}
+.vnext .vn-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(86vw, 340px);
+  z-index: 1002;
+  background: var(--vn-card);
+  border-left: 1px solid var(--vn-border);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+.vnext .vn-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.vnext .vn-drawer .vn-nav__link {
+  font-size: 1.05rem;
+  padding: 14px 12px;
+}
+.vnext .vn-drawer__toggle {
+  display: grid;
+  place-items: center;
+  margin-top: 22px;
+}
+
+/* ------------------------------------------------------- Hero ---------- */
+.vnext .vn-hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: calc(var(--vn-nav-h) + 40px) 20px 60px;
+  overflow: hidden;
+}
+.vnext .vn-hero__blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(20px);
+  pointer-events: none;
+}
+.vnext .vn-hero__blob--teal {
+  width: 620px;
+  height: 620px;
+  left: 18%;
+  top: 22%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(0, 168, 150, 0.15), transparent 62%);
+}
+.vnext .vn-hero__blob--blue {
+  width: 760px;
+  height: 760px;
+  right: 12%;
+  top: 58%;
+  transform: translate(50%, -50%);
+  background: radial-gradient(circle, rgba(30, 111, 217, 0.14), transparent 64%);
+}
+.vnext .vn-hero__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.vnext .vn-hero__content {
+  position: relative;
+  z-index: 2;
+  max-width: 760px;
+}
+.vnext .vn-hero h1 {
+  font-size: clamp(40px, 7vw, 64px);
+  font-weight: 800;
+  line-height: 1.05;
+  margin: 22px 0 0;
+}
+.vnext .vn-hero__sub {
+  color: var(--vn-text-2);
+  font-size: 18px;
+  line-height: 1.6;
+  max-width: 520px;
+  margin: 20px auto 30px;
+}
+
+/* Hero stat counters */
+.vnext .vn-hero__stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  width: min(var(--vn-max), calc(100% - 40px));
+  margin-top: 64px;
+  position: relative;
+  z-index: 2;
+}
+.vnext .vn-stat {
+  text-align: center;
+}
+.vnext .vn-stat__num {
+  font-size: clamp(26px, 3.4vw, 38px);
+  font-weight: 800;
+  color: var(--vn-teal);
+  font-variant-numeric: tabular-nums;
+}
+.vnext .vn-stat__label {
+  display: block;
+  color: var(--vn-text-2);
+  font-size: 0.85rem;
+  margin-top: 6px;
+}
+
+/* ------------------------------------------------------ Ticker --------- */
+.vnext .vn-ticker {
+  border-top: 1px solid var(--vn-rule);
+  border-bottom: 1px solid var(--vn-rule);
+  background: var(--vn-card);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.vnext .vn-ticker__track {
+  display: inline-flex;
+  align-items: center;
+  padding: 14px 0;
+  animation: vn-ticker-scroll 38s linear infinite;
+  will-change: transform;
+}
+.vnext .vn-ticker__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 26px;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 0.9rem;
+}
+html[data-theme="light"] .vnext .vn-ticker__item {
+  border-right-color: rgba(0, 0, 0, 0.18);
+}
+.vnext .vn-ticker__label {
+  color: var(--vn-text-2);
+}
+.vnext .vn-ticker__value {
+  color: var(--vn-teal);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+@keyframes vn-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ------------------------------------------------ Feature blocks ------- */
+.vnext .vn-feature {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items: center;
+  margin-bottom: 72px;
+}
+.vnext .vn-feature:last-child {
+  margin-bottom: 0;
+}
+.vnext .vn-feature--reverse .vn-feature__text {
+  order: 2;
+}
+.vnext .vn-feature h3 {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 700;
+  margin: 12px 0 0;
+}
+.vnext .vn-feature p {
+  color: var(--vn-text-2);
+  line-height: 1.65;
+  margin: 14px 0 18px;
+}
+.vnext .vn-feature__visual {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+}
+
+/* small reusable visual bits */
+.vnext .vn-bar {
+  height: 8px;
+  border-radius: 6px;
+  background: var(--vn-card-2);
+  overflow: hidden;
+}
+.vnext .vn-bar__fill {
+  height: 100%;
+  background: var(--vn-gradient);
+  border-radius: 6px;
+}
+.vnext .vn-uptime {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 90px;
+}
+.vnext .vn-uptime span {
+  flex: 1;
+  background: var(--vn-gradient);
+  border-radius: 3px 3px 0 0;
+  opacity: 0.85;
+  min-height: 8%;
+}
+
+/* ------------------------------------------------- Live blocks feed ---- */
+.vnext .vn-feed-section {
+  background: var(--vn-section);
+  border-top: 1px solid var(--vn-rule);
+  border-bottom: 1px solid var(--vn-rule);
+}
+.vnext .vn-feed {
+  width: min(80%, var(--vn-max));
+  margin-inline: auto;
+}
+.vnext .vn-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.vnext .vn-table th {
+  text-align: left;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--vn-text-3);
+  padding: 10px 12px;
+  font-weight: 600;
+}
+.vnext .vn-table td {
+  padding: 13px 12px;
+  border-bottom: 1px solid var(--vn-row);
+  font-size: 0.9rem;
+}
+.vnext .vn-mono {
+  font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+  font-size: 0.85em;
+}
+.vnext .vn-block-num {
+  color: var(--vn-teal);
+  font-weight: 700;
+}
+.vnext .vn-row-enter {
+  animation: vn-fade-in 360ms ease both;
+}
+@keyframes vn-fade-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --------------------------------------------- Network stat cards ------ */
+.vnext .vn-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.vnext .vn-metric {
+  padding: 20px;
+}
+.vnext .vn-metric__icon {
+  color: var(--vn-teal);
+  margin-bottom: 14px;
+}
+.vnext .vn-metric__num {
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.vnext .vn-metric__label {
+  color: var(--vn-text-2);
+  font-size: 0.88rem;
+  margin-top: 4px;
+}
+.vnext .vn-spark {
+  margin-top: 14px;
+  width: 100%;
+  height: 36px;
+  display: block;
+}
+
+/* ------------------------------------------------------- Roadmap ------- */
+.vnext .vn-timeline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 28px;
+  position: relative;
+}
+.vnext .vn-milestone {
+  position: relative;
+  padding-top: 36px;
+}
+.vnext .vn-milestone__dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+.vnext .vn-milestone__dot--done {
+  background: var(--vn-gradient);
+}
+.vnext .vn-milestone__dot--active {
+  background: var(--vn-teal);
+  box-shadow: 0 0 0 0 var(--vn-glow-teal);
+  animation: vn-pulse 1.8s infinite;
+}
+.vnext .vn-milestone__dot--next {
+  background: transparent;
+  border: 2px dashed var(--vn-text-3);
+}
+@keyframes vn-pulse {
+  0% { box-shadow: 0 0 0 0 var(--vn-glow-teal); }
+  70% { box-shadow: 0 0 0 12px rgba(0, 168, 150, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 168, 150, 0); }
+}
+.vnext .vn-milestone h4 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.vnext .vn-milestone p {
+  color: var(--vn-text-2);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* --------------------------------------------------- Community --------- */
+.vnext .vn-socials {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 28px 0;
+}
+.vnext .vn-social {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--vn-r-sm);
+  border: 1px solid var(--vn-border-strong);
+  color: var(--vn-text);
+}
+.vnext .vn-social:hover {
+  background: rgba(0, 168, 150, 0.15);
+  border-color: var(--vn-teal);
+  color: var(--vn-teal);
+}
+.vnext .vn-social svg {
+  width: 20px;
+  height: 20px;
+}
+.vnext .vn-newsletter {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  max-width: 480px;
+  margin: 0 auto;
+}
+.vnext .vn-input {
+  flex: 1;
+  background: var(--vn-card);
+  border: 1px solid var(--vn-border);
+  border-radius: var(--vn-r-sm);
+  padding: 12px 16px;
+  color: var(--vn-text);
+  font-size: 0.95rem;
+  min-height: 44px;
+}
+.vnext .vn-input::placeholder {
+  color: var(--vn-text-3);
+}
+.vnext .vn-input:focus {
+  outline: none;
+  border-color: var(--vn-blue);
+  box-shadow: 0 0 0 3px rgba(30, 111, 217, 0.25);
+}
+.vnext .vn-form-msg {
+  text-align: center;
+  margin-top: 14px;
+  font-size: 0.9rem;
+  color: var(--vn-green);
+}
+
+/* ------------------------------------------------------- CTA ----------- */
+.vnext .vn-cta {
+  position: relative;
+  text-align: center;
+  padding: 96px 20px;
+  overflow: hidden;
+}
+.vnext .vn-cta__glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0, 168, 150, 0.2), transparent 55%),
+    radial-gradient(circle at center, rgba(30, 111, 217, 0.18), transparent 60%);
+  pointer-events: none;
+}
+.vnext .vn-cta__inner {
+  position: relative;
+  z-index: 2;
+  max-width: 620px;
+  margin-inline: auto;
+}
+.vnext .vn-cta h2 {
+  font-size: clamp(30px, 4.5vw, 46px);
+  font-weight: 800;
+  margin: 0;
+}
+.vnext .vn-cta p {
+  color: var(--vn-text-2);
+  font-size: 1.1rem;
+  margin: 18px 0 28px;
+}
+.vnext .vn-cta .vn-btn-row {
+  justify-content: center;
+}
+
+/* --------------------------------------------------- Skeleton / error -- */
+.vnext .vn-skel {
+  background: var(--vn-skeleton);
+  border-radius: 6px;
+  animation: vn-skel 1.3s ease-in-out infinite;
+}
+@keyframes vn-skel {
+  50% { opacity: 0.5; }
+}
+.vnext .vn-error {
+  border: 1px solid rgba(255, 93, 108, 0.5);
+  background: rgba(255, 93, 108, 0.1);
+  color: #ffd9de;
+  border-radius: var(--vn-r-sm);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 0.9rem;
+}
+.vnext .vn-error button {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  border-radius: var(--vn-r-sm);
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------- Responsive ---- */
+@media (max-width: 980px) {
+  .vnext .vn-feature {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .vnext .vn-feature--reverse .vn-feature__text {
+    order: 0;
+  }
+  .vnext .vn-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .vnext .vn-hero__stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px 18px;
+  }
+  .vnext .vn-feed {
+    width: calc(100% - 40px);
+  }
+}
+@media (max-width: 760px) {
+  .vnext .vn-nav__links,
+  .vnext .vn-nav__actions .vn-nav__desktop-only {
+    display: none;
+  }
+  .vnext .vn-hamburger {
+    display: grid;
+  }
+  .vnext .vn-section {
+    padding: 60px 0;
+  }
+  .vnext .vn-metrics {
+    grid-template-columns: 1fr;
+  }
+  .vnext .vn-newsletter {
+    flex-direction: column;
+  }
+  .vnext .vn-table th:nth-child(4),
+  .vnext .vn-table td:nth-child(4),
+  .vnext .vn-table th:nth-child(5),
+  .vnext .vn-table td:nth-child(5) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vnext .vn-ticker__track,
+  .vnext .vn-milestone__dot--active,
+  .vnext .vn-skel {
+    animation: none;
+  }
+}

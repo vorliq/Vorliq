@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -60,6 +60,8 @@ const Treasury = lazy(() => import("./pages/Treasury"));
 const VLQ = lazy(() => import("./pages/VLQ"));
 const Wallet = lazy(() => import("./pages/Wallet"));
 const Whitepaper = lazy(() => import("./pages/Whitepaper"));
+// New design layer (migrated page-by-page). Brings its own nav/footer.
+const Landing = lazy(() => import("./pages/vnext/Landing"));
 
 const primaryLinks = [
   { to: "/", label: "Home", end: true },
@@ -114,6 +116,11 @@ function App() {
 }
 
 function AppShell() {
+  const location = useLocation();
+  // The new design layer ("/preview/*") ships its own nav, footer, and
+  // background, so the global brand chrome is suppressed for those routes.
+  const standalone = location.pathname.startsWith("/preview");
+
   useEffect(() => {
     applyTheme(getStoredTheme());
     return initAnalytics();
@@ -121,13 +128,14 @@ function AppShell() {
 
   return (
     <div className="app-shell">
-      <BrandBackground />
-      <ProductNav />
-      <IncidentBanner />
+      {!standalone && <BrandBackground />}
+      {!standalone && <ProductNav />}
+      {!standalone && <IncidentBanner />}
       <AnalyticsRouteTracker />
       <main id="main-content" tabIndex="-1">
         <Suspense fallback={<div className="page"><BrandLoader label="Loading Vorliq" /></div>}>
         <Routes>
+          <Route path="/preview" element={<Landing />} />
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
@@ -186,7 +194,7 @@ function AppShell() {
         </Routes>
         </Suspense>
       </main>
-      <ProductFooter />
+      {!standalone && <ProductFooter />}
       <ToastContainer
         className="toast"
         position="top-right"
