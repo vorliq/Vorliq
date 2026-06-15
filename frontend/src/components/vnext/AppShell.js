@@ -2,7 +2,7 @@
 // that collapses to a 64px icon rail on tablet and to a bottom tab bar on
 // mobile (with a "More" drawer for overflow items). Styling lives in
 // styles/vnext.css and rides the shared theme tokens, so dark/light just work.
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Download,
@@ -21,8 +21,8 @@ import {
 
 import logo from "../../assets/logo.png";
 import { useAuth } from "../../context/AuthContext";
-import api from "../../helpers/api";
 import { formatVlq } from "../../helpers/publicApi";
+import useWalletBalance from "../../helpers/useWalletBalance";
 import ThemeToggle from "./ThemeToggle";
 
 // Single source of truth for the app navigation.
@@ -49,37 +49,9 @@ function truncateAddress(address) {
   return address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
 }
 
-// Live wallet balance for the connected wallet, fetched from the existing API.
-function useWalletBalance(address) {
-  const [balance, setBalance] = useState(undefined); // undefined = loading, null = unavailable
-  useEffect(() => {
-    if (!address) {
-      setBalance(null);
-      return undefined;
-    }
-    let active = true;
-    const controller = new AbortController();
-    setBalance(undefined);
-    api
-      .get("/wallet/balance", { params: { address }, signal: controller.signal })
-      .then((res) => {
-        if (active) setBalance(Number(res?.data?.balance));
-      })
-      .catch((err) => {
-        if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
-        if (active) setBalance(null);
-      });
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [address]);
-  return balance;
-}
-
 function WalletInfo() {
   const { wallet, isLoggedIn, logout } = useAuth();
-  const balance = useWalletBalance(wallet?.address);
+  const { balance } = useWalletBalance(wallet?.address);
 
   if (!isLoggedIn) {
     return (

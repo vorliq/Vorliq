@@ -1284,6 +1284,196 @@ html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
   font-variant-numeric: tabular-nums;
 }
 
+/* =========================================================================
+   Wallet / Send / Receive
+   ========================================================================= */
+.vnext .vn-empty-note {
+  color: var(--vn-text-2);
+  line-height: 1.6;
+}
+
+.vnext .vn-wallet-card {
+  text-align: center;
+  max-width: 560px;
+  margin: 0 auto;
+}
+.vnext .vn-wallet-card__addr {
+  margin: 12px 0 16px;
+  font-size: 0.92rem;
+  word-break: break-all;
+  color: var(--vn-text);
+}
+.vnext .vn-wallet-card__qr {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+}
+
+.vnext .vn-qr {
+  display: block;
+  border-radius: var(--vn-r-sm);
+}
+.vnext .vn-qr--empty {
+  display: grid;
+  place-items: center;
+  color: var(--vn-text-3);
+  font-size: 0.8rem;
+  border: 1px dashed var(--vn-border);
+}
+
+.vnext .vn-balance {
+  text-align: center;
+  margin: 30px 0;
+}
+.vnext .vn-balance__value {
+  font-size: clamp(34px, 6vw, 52px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+.vnext .vn-balance__label {
+  color: var(--vn-text-2);
+  font-size: 0.9rem;
+  margin-top: 6px;
+}
+
+.vnext .vn-wallet-actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.vnext .vn-wallet-actions .vn-btn {
+  min-width: 180px;
+}
+
+/* Modal */
+.vnext .vn-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.vnext .vn-modal {
+  width: min(420px, 100%);
+  background: var(--vn-card);
+  border: 1px solid var(--vn-border);
+  border-radius: var(--vn-r-card);
+  padding: 22px;
+}
+.vnext .vn-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+/* Receive contents (modal + standalone) */
+.vnext .vn-receive {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+}
+.vnext .vn-receive__addr {
+  font-size: 0.9rem;
+  word-break: break-all;
+  text-align: center;
+  color: var(--vn-text);
+}
+
+/* Send form */
+.vnext .vn-send-form {
+  display: grid;
+  gap: 16px;
+}
+.vnext .vn-field {
+  display: grid;
+  gap: 6px;
+}
+.vnext .vn-field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--vn-text-2);
+}
+.vnext .vn-field__hint {
+  font-size: 0.78rem;
+  color: var(--vn-text-2);
+  margin: 0;
+  line-height: 1.5;
+}
+.vnext .vn-field__hint--error {
+  color: #ff5d6c;
+}
+
+/* Send status panel */
+.vnext .vn-status__steps {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.vnext .vn-status__step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--vn-text-3);
+  font-weight: 600;
+}
+.vnext .vn-status__step.is-active {
+  color: var(--vn-text);
+}
+.vnext .vn-status__step.is-done {
+  color: var(--vn-green);
+}
+.vnext .vn-status__icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+}
+.vnext .vn-status__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  opacity: 0.5;
+}
+.vnext .vn-spin {
+  animation: vn-spin 0.9s linear infinite;
+  color: var(--vn-teal);
+}
+@keyframes vn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.vnext .vn-status__detail {
+  display: grid;
+  gap: 4px;
+  padding: 12px 0;
+  border-top: 1px solid var(--vn-row);
+}
+.vnext .vn-status__detail-label {
+  font-size: 0.78rem;
+  color: var(--vn-text-2);
+}
+.vnext .vn-status__hash {
+  word-break: break-all;
+  font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vnext .vn-spin {
+    animation: none;
+  }
+}
+
 @media (max-width: 1100px) {
   .vnext .vn-summary-grid {
     grid-template-columns: repeat(2, 1fr);

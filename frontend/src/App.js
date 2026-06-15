@@ -64,6 +64,9 @@ const Whitepaper = lazy(() => import("./pages/Whitepaper"));
 const Landing = lazy(() => import("./pages/vnext/Landing"));
 const AppShellDemo = lazy(() => import("./pages/vnext/AppShellDemo"));
 const VnextDashboard = lazy(() => import("./pages/vnext/Dashboard"));
+const VnextWallet = lazy(() => import("./pages/vnext/Wallet"));
+const VnextSend = lazy(() => import("./pages/vnext/Send"));
+const VnextReceive = lazy(() => import("./pages/vnext/Receive"));
 
 const primaryLinks = [
   { to: "/", label: "Home", end: true },
@@ -140,6 +143,9 @@ function AppShell() {
           <Route path="/preview" element={<Landing />} />
           <Route path="/preview/app" element={<AppShellDemo />} />
           <Route path="/preview/app/dashboard" element={<VnextDashboard />} />
+          <Route path="/preview/app/wallet" element={<VnextWallet />} />
+          <Route path="/preview/app/send" element={<VnextSend />} />
+          <Route path="/preview/app/receive" element={<VnextReceive />} />
           <Route path="/preview/app/:section" element={<AppShellDemo />} />
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />
