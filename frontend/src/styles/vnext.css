@@ -1024,6 +1024,280 @@ html[data-theme="light"] .vnext .vn-side__wallet {
   }
 }
 
+/* =========================================================================
+   Reusable data primitives: SummaryCard, DataTable, LineChart, network panel.
+   Used by Dashboard and reused across the app pages.
+   ========================================================================= */
+
+/* Page heading row */
+.vnext .vn-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.vnext .vn-page-head h1 {
+  font-size: clamp(24px, 3.5vw, 32px);
+  font-weight: 800;
+  margin: 0;
+}
+.vnext .vn-page-head__meta {
+  color: var(--vn-text-2);
+  font-size: 0.85rem;
+  text-align: right;
+}
+.vnext .vn-page-head__meta b {
+  color: var(--vn-teal);
+  font-weight: 700;
+}
+
+/* Summary card */
+.vnext .vn-sum {
+  padding: 18px 20px;
+}
+.vnext .vn-sum__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.vnext .vn-sum__label {
+  color: var(--vn-text-2);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.vnext .vn-sum__icon {
+  color: var(--vn-teal);
+}
+.vnext .vn-sum__value {
+  font-size: 1.7rem;
+  font-weight: 800;
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.vnext .vn-sum__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--vn-text-2);
+}
+.vnext .vn-sum__trend--up {
+  color: var(--vn-green);
+}
+.vnext .vn-sum__trend--down {
+  color: #ff5d6c;
+}
+
+.vnext .vn-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+/* Dashboard two-column split */
+.vnext .vn-dash-split {
+  display: grid;
+  grid-template-columns: 6fr 4fr;
+  gap: 20px;
+  align-items: start;
+  margin-top: 20px;
+}
+.vnext .vn-dash-right {
+  display: grid;
+  gap: 20px;
+}
+.vnext .vn-panel-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 14px;
+}
+
+/* DataTable */
+.vnext .vn-dt__scroll {
+  overflow-x: auto;
+}
+.vnext .vn-dt__empty {
+  text-align: center;
+  color: var(--vn-text-2);
+  padding: 26px 12px;
+}
+.vnext .vn-dt__row--clickable {
+  cursor: pointer;
+}
+.vnext .vn-dt__row--clickable:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
+  background: rgba(0, 0, 0, 0.03);
+}
+.vnext .vn-dt__chev .is-open {
+  transform: rotate(180deg);
+}
+.vnext .vn-dt__expanded td {
+  background: var(--vn-card-2);
+  padding: 16px;
+}
+.vnext .vn-dt__detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 24px;
+  font-size: 0.85rem;
+}
+.vnext .vn-dt__detail dt {
+  color: var(--vn-text-2);
+  margin-bottom: 2px;
+}
+.vnext .vn-dt__detail dd {
+  margin: 0 0 8px;
+  word-break: break-all;
+}
+.vnext .vn-dt__pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  margin-top: 4px;
+  border-top: 1px solid var(--vn-rule);
+}
+.vnext .vn-dt__count {
+  color: var(--vn-text-2);
+  font-size: 0.82rem;
+}
+.vnext .vn-dt__pager-btns {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.vnext .vn-dt__page {
+  font-size: 0.82rem;
+  color: var(--vn-text-2);
+  font-variant-numeric: tabular-nums;
+}
+.vnext .vn-dt__pager-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--vn-r-sm);
+  border: 1px solid var(--vn-border);
+  background: transparent;
+  color: var(--vn-text);
+  cursor: pointer;
+}
+.vnext .vn-dt__pager-btn:hover:not(:disabled) {
+  border-color: var(--vn-teal);
+  color: var(--vn-teal);
+}
+.vnext .vn-dt__pager-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Type cell (icon + label) for transaction rows */
+.vnext .vn-tx-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.vnext .vn-tx-type--in {
+  color: var(--vn-green);
+}
+.vnext .vn-tx-type--out {
+  color: var(--vn-text);
+}
+.vnext a.vn-block-link {
+  color: var(--vn-teal);
+  text-decoration: none;
+  font-weight: 600;
+}
+.vnext a.vn-block-link:hover {
+  text-decoration: underline;
+}
+
+/* LineChart */
+.vnext .vn-chart {
+  position: relative;
+  width: 100%;
+  color: var(--vn-text);
+}
+.vnext .vn-chart svg {
+  display: block;
+}
+.vnext .vn-chart__empty {
+  display: grid;
+  place-items: center;
+  color: var(--vn-text-2);
+  font-size: 0.88rem;
+  border: 1px dashed var(--vn-border);
+  border-radius: var(--vn-r-sm);
+}
+.vnext .vn-chart__tip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  background: var(--vn-card-2);
+  border: 1px solid var(--vn-border);
+  border-radius: var(--vn-r-sm);
+  padding: 6px 10px;
+  pointer-events: none;
+  display: grid;
+  gap: 2px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  z-index: 5;
+}
+.vnext .vn-chart__tip strong {
+  color: var(--vn-teal);
+}
+.vnext .vn-chart__tip span {
+  color: var(--vn-text-2);
+}
+
+/* Compact network status panel */
+.vnext .vn-netstat {
+  display: grid;
+  gap: 12px;
+}
+.vnext .vn-netstat__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--vn-row);
+}
+.vnext .vn-netstat__row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.vnext .vn-netstat__label {
+  color: var(--vn-text-2);
+}
+.vnext .vn-netstat__value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1100px) {
+  .vnext .vn-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .vnext .vn-dash-split {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .vnext .vn-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* --- Mobile: hide sidebar, show a bottom tab bar --- */
 .vnext .vn-tabbar {
   display: none;
