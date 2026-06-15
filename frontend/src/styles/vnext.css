@@ -1610,3 +1610,404 @@ html[data-theme="light"] .vnext .vn-code {
     color: var(--vn-teal);
   }
 }
+
+/* =========================================================================
+   Lending + Governance: vote split bar, badges, inline authority action.
+   ========================================================================= */
+.vnext .vn-vote {
+  margin-top: 14px;
+}
+.vnext .vn-vote-bar {
+  display: flex;
+  height: 10px;
+  border-radius: var(--vn-r-pill);
+  overflow: hidden;
+  background: var(--vn-card-2);
+}
+.vnext .vn-vote-bar__yes {
+  background: var(--vn-green);
+  min-width: 0;
+}
+.vnext .vn-vote-bar__no {
+  /* muted red — distinct from the success green, never an accent */
+  background: #b65563;
+  min-width: 0;
+}
+html[data-theme="light"] .vnext .vn-vote-bar__no {
+  background: #d27580;
+}
+.vnext .vn-vote-split {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--vn-text-2);
+  font-variant-numeric: tabular-nums;
+}
+.vnext .vn-vote-split b {
+  color: var(--vn-text);
+  font-weight: 700;
+}
+.vnext .vn-vote-split__yes b {
+  color: var(--vn-green);
+}
+
+/* Generic badges (vote cast, status) */
+.vnext .vn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--vn-r-pill);
+  font-size: 0.76rem;
+  font-weight: 600;
+  border: 1px solid var(--vn-border);
+  color: var(--vn-text-2);
+  white-space: nowrap;
+}
+.vnext .vn-badge--yes {
+  color: var(--vn-green);
+  border-color: rgba(86, 200, 112, 0.5);
+  background: rgba(86, 200, 112, 0.1);
+}
+.vnext .vn-badge--no {
+  color: #d27580;
+  border-color: rgba(210, 117, 128, 0.5);
+  background: rgba(210, 117, 128, 0.1);
+}
+.vnext .vn-badge--accent {
+  color: var(--vn-teal);
+  border-color: rgba(0, 168, 150, 0.45);
+  background: rgba(0, 168, 150, 0.1);
+}
+.vnext .vn-badge--muted {
+  opacity: 0.85;
+}
+
+/* Card grids for proposals / loans */
+.vnext .vn-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+.vnext .vn-prop {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vnext .vn-prop--closed {
+  opacity: 0.72;
+}
+.vnext .vn-prop__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.vnext .vn-prop__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.vnext .vn-prop__desc {
+  color: var(--vn-text-2);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  margin: 0;
+}
+.vnext .vn-prop__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 0.82rem;
+  color: var(--vn-text-2);
+}
+.vnext .vn-prop__meta b {
+  color: var(--vn-text);
+  font-weight: 600;
+}
+.vnext .vn-prop__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.vnext .vn-countdown {
+  font-variant-numeric: tabular-nums;
+  color: var(--vn-teal);
+  font-weight: 600;
+}
+.vnext .vn-countdown--ended {
+  color: var(--vn-text-2);
+}
+
+/* Inline authority action (wallet password + sign + submit) */
+.vnext .vn-auth {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 14px;
+  border: 1px solid var(--vn-border);
+  border-radius: var(--vn-r-sm);
+  background: var(--vn-card-2);
+}
+.vnext .vn-auth__note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--vn-text-2);
+  line-height: 1.5;
+}
+
+/* =========================================================================
+   Faucet: centered panel with logo, claim button, countdown, success.
+   ========================================================================= */
+.vnext .vn-faucet {
+  width: min(50%, 560px);
+  margin: 0 auto;
+  text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+.vnext .vn-faucet__logo {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  margin-bottom: 6px;
+}
+.vnext .vn-faucet h1 {
+  margin: 0;
+  font-size: clamp(26px, 4vw, 34px);
+  font-weight: 800;
+}
+.vnext .vn-faucet p {
+  color: var(--vn-text-2);
+  line-height: 1.6;
+  margin: 6px 0 0;
+}
+.vnext .vn-faucet__facts {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 20px 0 8px;
+  width: 100%;
+}
+.vnext .vn-faucet__fact {
+  flex: 1 1 160px;
+  padding: 14px 16px;
+}
+.vnext .vn-faucet__fact-num {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--vn-teal);
+  font-variant-numeric: tabular-nums;
+}
+.vnext .vn-faucet__fact-label {
+  color: var(--vn-text-2);
+  font-size: 0.82rem;
+  margin-top: 4px;
+}
+.vnext .vn-faucet__claim {
+  width: 100%;
+  margin-top: 18px;
+}
+.vnext .vn-faucet__claim .vn-btn {
+  width: 100%;
+}
+.vnext .vn-faucet__cooldown {
+  width: 100%;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--vn-border);
+  border-radius: var(--vn-r-sm);
+  background: var(--vn-card-2);
+}
+.vnext .vn-faucet__cooldown-time {
+  font-size: 1.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--vn-text);
+  margin-top: 6px;
+}
+.vnext .vn-faucet__success {
+  width: 100%;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid rgba(86, 200, 112, 0.5);
+  background: rgba(86, 200, 112, 0.1);
+  border-radius: var(--vn-r-sm);
+  text-align: left;
+  display: grid;
+  gap: 8px;
+}
+.vnext .vn-faucet__success-title {
+  color: var(--vn-green);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* coin-drop illustration (also used by the landing faucet visual) */
+.vnext .vn-coindrop {
+  position: relative;
+  height: 64px;
+  width: 100%;
+  overflow: hidden;
+}
+.vnext .vn-coindrop span {
+  position: absolute;
+  top: -16px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--vn-gradient);
+  box-shadow: 0 0 10px var(--vn-glow-teal);
+  animation: vn-coin-fall 2.2s linear infinite;
+}
+@keyframes vn-coin-fall {
+  0% { transform: translateY(-16px) scale(0.9); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(72px) scale(1); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vnext .vn-coindrop span { animation: none; }
+}
+
+/* =========================================================================
+   Settings: sectioned page, toggle switches, secure key reveal field.
+   ========================================================================= */
+.vnext .vn-settings {
+  max-width: 760px;
+}
+.vnext .vn-settings__section {
+  padding: 26px 0;
+  border-top: 1px solid var(--vn-rule);
+}
+.vnext .vn-settings__section:first-of-type {
+  border-top: none;
+  padding-top: 8px;
+}
+.vnext .vn-settings__section h2 {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.vnext .vn-settings__hint {
+  color: var(--vn-text-2);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin: 0 0 16px;
+}
+.vnext .vn-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--vn-row);
+}
+.vnext .vn-toggle-row:last-child {
+  border-bottom: none;
+}
+.vnext .vn-toggle-row__label strong {
+  display: block;
+  font-size: 0.92rem;
+}
+.vnext .vn-toggle-row__label span {
+  color: var(--vn-text-2);
+  font-size: 0.8rem;
+}
+.vnext .vn-switch {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 26px;
+  border-radius: var(--vn-r-pill);
+  border: 1px solid var(--vn-border);
+  background: var(--vn-card-2);
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: background-color 200ms ease, border-color 200ms ease;
+}
+.vnext .vn-switch.is-on {
+  background: var(--vn-gradient);
+  border-color: transparent;
+}
+.vnext .vn-switch__dot {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 200ms ease;
+}
+.vnext .vn-switch.is-on .vn-switch__dot {
+  transform: translateX(20px);
+}
+.vnext .vn-addr-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.vnext .vn-addr-field__value {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--vn-border);
+  border-radius: var(--vn-r-sm);
+  background: var(--vn-card-2);
+  word-break: break-all;
+  font-size: 0.85rem;
+}
+.vnext .vn-key-field {
+  position: relative;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--vn-border);
+  border-radius: var(--vn-r-sm);
+  background: var(--vn-card-2);
+  word-break: break-all;
+  font-size: 0.84rem;
+  min-height: 52px;
+}
+.vnext .vn-key-field--blurred .vn-key-field__value {
+  filter: blur(7px);
+  user-select: none;
+}
+.vnext .vn-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.vnext .vn-sync__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.vnext .vn-sync__dot--synced {
+  background: var(--vn-green);
+  box-shadow: 0 0 8px var(--vn-green);
+}
+.vnext .vn-sync__dot--syncing {
+  background: #e0a83a;
+  box-shadow: 0 0 8px rgba(224, 168, 58, 0.7);
+}
+
+@media (max-width: 760px) {
+  .vnext .vn-faucet {
+    width: 100%;
+  }
+  .vnext .vn-card-grid {
+    grid-template-columns: 1fr;
+  }
+}

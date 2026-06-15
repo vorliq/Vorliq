@@ -68,6 +68,10 @@ const VnextWallet = lazy(() => import("./pages/vnext/Wallet"));
 const VnextSend = lazy(() => import("./pages/vnext/Send"));
 const VnextReceive = lazy(() => import("./pages/vnext/Receive"));
 const VnextMining = lazy(() => import("./pages/vnext/Mining"));
+const VnextLending = lazy(() => import("./pages/vnext/Lending"));
+const VnextGovernance = lazy(() => import("./pages/vnext/Governance"));
+const VnextFaucet = lazy(() => import("./pages/vnext/Faucet"));
+const VnextSettings = lazy(() => import("./pages/vnext/Settings"));
 
 const primaryLinks = [
   { to: "/", label: "Home", end: true },
@@ -148,6 +152,10 @@ function AppShell() {
           <Route path="/preview/app/send" element={<VnextSend />} />
           <Route path="/preview/app/receive" element={<VnextReceive />} />
           <Route path="/preview/app/mining" element={<VnextMining />} />
+          <Route path="/preview/app/lending" element={<VnextLending />} />
+          <Route path="/preview/app/governance" element={<VnextGovernance />} />
+          <Route path="/preview/app/faucet" element={<VnextFaucet />} />
+          <Route path="/preview/app/settings" element={<VnextSettings />} />
           <Route path="/preview/app/:section" element={<AppShellDemo />} />
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />
