@@ -842,3 +842,229 @@ html[data-theme="light"] .vnext .vn-ticker__item {
     animation: none;
   }
 }
+
+/* =========================================================================
+   Authenticated app shell (sidebar + content + responsive tab bar).
+   Uses the same vnext tokens, so dark/light work with no extra logic.
+   ========================================================================= */
+.vnext.vn-app {
+  display: flex;
+  min-height: 100vh;
+  align-items: stretch;
+}
+
+/* --- Sidebar (desktop ~240px) --- */
+.vnext .vn-side {
+  flex: 0 0 240px;
+  width: 240px;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--vn-card);
+  border-right: 1px solid var(--vn-border);
+}
+.vnext .vn-side__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 20px;
+  color: var(--vn-text);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+.vnext .vn-side__brand img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.vnext .vn-side__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  overflow-y: auto;
+  flex: 1;
+}
+.vnext .vn-side__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: var(--vn-r-sm);
+  color: var(--vn-text-2);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+  min-height: 44px;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+.vnext .vn-side__item:hover {
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.05);
+}
+html[data-theme="light"] .vnext .vn-side__item:hover {
+  color: rgba(8, 11, 20, 0.85);
+  background: rgba(0, 0, 0, 0.04);
+}
+.vnext .vn-side__item.is-active {
+  color: var(--vn-text);
+  background: linear-gradient(90deg, rgba(0, 168, 150, 0.15), rgba(30, 111, 217, 0.15));
+}
+/* 2px gradient left accent at full opacity for the active item */
+.vnext .vn-side__item.is-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--vn-gradient);
+}
+.vnext .vn-side__icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: inherit;
+}
+
+/* --- Wallet info block --- */
+.vnext .vn-side__wallet {
+  margin: 0 12px 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+html[data-theme="light"] .vnext .vn-side__wallet {
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+.vnext .vn-side__addr {
+  font-family: "SFMono-Regular", "Consolas", monospace;
+  font-size: 0.8rem;
+  color: var(--vn-text-2);
+}
+.vnext .vn-side__bal {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 6px 0 10px;
+  font-variant-numeric: tabular-nums;
+}
+.vnext .vn-side__disconnect {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--vn-text-2);
+  background: transparent;
+  border: 1px solid var(--vn-border);
+  border-radius: var(--vn-r-sm);
+  padding: 7px 12px;
+  cursor: pointer;
+}
+.vnext .vn-side__disconnect:hover {
+  color: var(--vn-text);
+  border-color: var(--vn-teal);
+}
+
+/* --- Main content --- */
+.vnext .vn-app__main {
+  flex: 1;
+  min-width: 0;
+  padding: 28px 32px 60px;
+}
+
+/* --- Tablet: collapse to a 64px icon-only rail with tooltips --- */
+@media (max-width: 1100px) and (min-width: 761px) {
+  .vnext .vn-side {
+    flex-basis: 64px;
+    width: 64px;
+  }
+  .vnext .vn-side__brand {
+    justify-content: center;
+    padding: 22px 0;
+  }
+  .vnext .vn-side__brand span,
+  .vnext .vn-side__item span.vn-side__label,
+  .vnext .vn-side__wallet {
+    display: none;
+  }
+  .vnext .vn-side__nav {
+    padding: 8px;
+    align-items: center;
+  }
+  .vnext .vn-side__item {
+    justify-content: center;
+    padding: 11px;
+    width: 44px;
+  }
+  /* hover tooltip from the label stored on data-tooltip */
+  .vnext .vn-side__item[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    background: var(--vn-card-2);
+    color: var(--vn-text);
+    border: 1px solid var(--vn-border);
+    padding: 6px 10px;
+    border-radius: var(--vn-r-sm);
+    font-size: 0.8rem;
+    z-index: 30;
+    pointer-events: none;
+  }
+  .vnext .vn-app__main {
+    padding: 24px 22px 60px;
+  }
+}
+
+/* --- Mobile: hide sidebar, show a bottom tab bar --- */
+.vnext .vn-tabbar {
+  display: none;
+}
+@media (max-width: 760px) {
+  .vnext .vn-side {
+    display: none;
+  }
+  .vnext .vn-app__main {
+    padding: 20px 16px calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+  .vnext .vn-tabbar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: color-mix(in srgb, var(--vn-card) 92%, transparent);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--vn-border);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .vnext .vn-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 9px 0;
+    min-height: 56px;
+    color: var(--vn-text-2);
+    text-decoration: none;
+    font-size: 0.66rem;
+    font-weight: 600;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .vnext .vn-tab.is-active {
+    color: var(--vn-teal);
+  }
+}

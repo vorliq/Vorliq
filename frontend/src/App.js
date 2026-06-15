@@ -62,6 +62,7 @@ const Wallet = lazy(() => import("./pages/Wallet"));
 const Whitepaper = lazy(() => import("./pages/Whitepaper"));
 // New design layer (migrated page-by-page). Brings its own nav/footer.
 const Landing = lazy(() => import("./pages/vnext/Landing"));
+const AppShellDemo = lazy(() => import("./pages/vnext/AppShellDemo"));
 
 const primaryLinks = [
   { to: "/", label: "Home", end: true },
@@ -136,6 +137,8 @@ function AppShell() {
         <Suspense fallback={<div className="page"><BrandLoader label="Loading Vorliq" /></div>}>
         <Routes>
           <Route path="/preview" element={<Landing />} />
+          <Route path="/preview/app" element={<AppShellDemo />} />
+          <Route path="/preview/app/:section" element={<AppShellDemo />} />
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
