@@ -1098,6 +1098,9 @@ html[data-theme="light"] .vnext .vn-side__wallet {
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
 }
+.vnext .vn-summary-grid--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
 
 /* Dashboard two-column split */
 .vnext .vn-dash-split {
@@ -1474,8 +1477,82 @@ html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
   }
 }
 
+/* Code block (node setup commands) */
+.vnext .vn-code {
+  position: relative;
+  background: #020817;
+  border: 1px solid var(--vn-border);
+  border-radius: var(--vn-r-sm);
+  overflow: hidden;
+}
+html[data-theme="light"] .vnext .vn-code {
+  background: #0d1628;
+}
+.vnext .vn-code__copy {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #c7d2e4;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--vn-r-sm);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.vnext .vn-code__copy:hover {
+  color: #fff;
+  border-color: var(--vn-teal);
+}
+.vnext .vn-code__pre {
+  margin: 0;
+  padding: 18px 16px;
+  overflow-x: auto;
+  font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+  font-size: 0.84rem;
+  line-height: 1.7;
+  color: #e7f1ff;
+  white-space: pre;
+}
+.vnext .vn-code__comment {
+  color: #6b7a93;
+}
+.vnext .vn-code__cmd {
+  color: #1fe6d6;
+}
+.vnext .vn-code__flag {
+  color: #6fb3ff;
+}
+
+/* Mining empty state */
+.vnext .vn-mining-empty {
+  text-align: center;
+  padding: 32px 16px;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+.vnext .vn-mining-empty h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.vnext .vn-mining-empty p {
+  margin: 0 0 8px;
+  color: var(--vn-text-2);
+  max-width: 420px;
+  line-height: 1.6;
+}
+
 @media (max-width: 1100px) {
   .vnext .vn-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .vnext .vn-summary-grid--3 {
     grid-template-columns: repeat(2, 1fr);
   }
   .vnext .vn-dash-split {
@@ -1483,7 +1560,8 @@ html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
   }
 }
 @media (max-width: 560px) {
-  .vnext .vn-summary-grid {
+  .vnext .vn-summary-grid,
+  .vnext .vn-summary-grid--3 {
     grid-template-columns: 1fr;
   }
 }
