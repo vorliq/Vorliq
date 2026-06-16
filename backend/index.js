@@ -46,7 +46,13 @@ const { sendWeeklyReport } = require("./reports");
 const { corsMiddleware, helmetMiddleware, isAllowedOrigin, securityStatus } = require("./middleware/security");
 const { apiV1Alias, requestMetadata } = require("./middleware/requestMetadata");
 const { validateBody } = require("./middleware/validation");
-const { requireSignedAuthorityWrite } = require("./middleware/signedAuthorization");
+const crypto = require("crypto");
+const {
+  requireSignedAuthorityWrite,
+  addressFromPublicKey,
+  authorizationMessage,
+  bodyHash,
+} = require("./middleware/signedAuthorization");
 const {
   apiSlowDown,
   chatLimiter,
@@ -78,6 +84,10 @@ const port = process.env.PORT || 5000;
 const host = process.env.HOST || "127.0.0.1";
 const socketAddresses = new Map();
 const socketMessageTimes = new Map();
+// Per-connection single-use challenge nonces for the signed chat-join handshake.
+// A socket only appears in socketAddresses AFTER it proves control of the wallet
+// it claims, so presence in socketAddresses == a verified identity.
+const socketJoinNonces = new Map();
 const chatHistory = [];
 let chatMessageSequence = 0;
 
@@ -102,22 +112,109 @@ function emitUserCount() {
   io.emit("user_count", io.sockets.sockets.size);
 }
 
+// Signed chat-join handshake. Reuses the exact Vorliq signed-authority scheme
+// (canonical message + secp256k1 verify + address-from-public-key) so that
+// claiming a wallet address in chat requires proving control of it, closing the
+// impersonation hole where anyone could previously type a known address. The
+// nonce is server-issued per connection and single-use to prevent replay.
+const CHAT_JOIN_ACTION = "chat.join";
+const CHAT_JOIN_MAX_AGE_SECONDS = 300;
+const CHAT_JOIN_FUTURE_SKEW_SECONDS = 30;
+const CHAT_JOIN_EMPTY_BODY_HASH = bodyHash({});
+
+function verifyChatJoin(payload, expectedNonce) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error("Join requires a signed wallet handshake.");
+  }
+  const wallet = String(payload.wallet || "").trim();
+  const publicKey = String(payload.public_key || payload.publicKey || "");
+  const signature = String(payload.signature || "").trim();
+  const message = String(payload.message || "");
+  const nonce = String(payload.nonce || "").trim();
+  const timestamp = Number(payload.timestamp);
+
+  if (!wallet || !publicKey || !signature || !message || !nonce) {
+    throw new Error("Join request is missing required signed fields.");
+  }
+  if (!expectedNonce || nonce !== expectedNonce) {
+    throw new Error("Join challenge is missing, expired, or already used. Reconnect and try again.");
+  }
+  if (!Number.isInteger(timestamp)) {
+    throw new Error("Join timestamp is invalid.");
+  }
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (timestamp < nowSeconds - CHAT_JOIN_MAX_AGE_SECONDS || timestamp > nowSeconds + CHAT_JOIN_FUTURE_SKEW_SECONDS) {
+    throw new Error("Join request has expired. Reconnect and try again.");
+  }
+  if (publicKey.length > 2000 || signature.length > 512 || message.length > 2000) {
+    throw new Error("Join request exceeds safe field limits.");
+  }
+  if (!/^[a-fA-F0-9]+$/.test(signature)) {
+    throw new Error("Join signature is malformed.");
+  }
+  const expectedMessage = authorizationMessage({
+    action: CHAT_JOIN_ACTION,
+    body_hash: CHAT_JOIN_EMPTY_BODY_HASH,
+    nonce,
+    timestamp,
+    wallet,
+  });
+  if (message !== expectedMessage) {
+    throw new Error("Join message is not canonical.");
+  }
+  if (addressFromPublicKey(publicKey) !== wallet) {
+    throw new Error("Join wallet does not match the supplied public key.");
+  }
+  let signatureValid = false;
+  try {
+    signatureValid = crypto.verify(
+      "sha256",
+      Buffer.from(expectedMessage, "utf8"),
+      publicKey,
+      Buffer.from(signature, "hex")
+    );
+  } catch (_error) {
+    signatureValid = false;
+  }
+  if (!signatureValid) {
+    throw new Error("Join signature could not be verified for this wallet.");
+  }
+  return wallet;
+}
+
 io.on("connection", (socket) => {
   logInfo(`Chat socket connected: ${socket.id}`);
   socket.emit("welcome", { message: "welcome to Vorliq community chat" });
   socket.emit("history", chatHistory);
+  // Issue a single-use challenge nonce this connection must sign to join.
+  const joinNonce = `chat-${crypto.randomBytes(16).toString("hex")}`;
+  socketJoinNonces.set(socket.id, joinNonce);
+  socket.emit("join_challenge", { nonce: joinNonce, action: CHAT_JOIN_ACTION });
   emitUserCount();
 
-  socket.on("join", (walletAddress) => {
-    if (typeof walletAddress === "string" && walletAddress.trim()) {
-      socketAddresses.set(socket.id, walletAddress.trim());
-      logInfo(`Chat socket ${socket.id} joined as ${walletAddress.trim()}`);
+  socket.on("join", (payload) => {
+    try {
+      const wallet = verifyChatJoin(payload, socketJoinNonces.get(socket.id));
+      socketJoinNonces.delete(socket.id); // consume the challenge
+      socketAddresses.set(socket.id, wallet); // verified identity for this socket
+      logInfo(`Chat socket ${socket.id} verified-joined as ${wallet}`);
+      socket.emit("join_ok", { wallet });
       emitUserCount();
+    } catch (error) {
+      logError(`Chat join rejected for socket ${socket.id}: ${error.message}`);
+      socket.emit("chat_error", { message: error.message || "Could not verify your wallet for chat." });
     }
   });
 
   socket.on("message", (message) => {
-    const senderAddress = safeChatText(message?.sender_address || message?.senderAddress).slice(0, 160);
+    // The sender is the verified identity bound to this socket at join time;
+    // any client-supplied sender_address is ignored entirely. A socket that has
+    // not completed the signed join cannot send.
+    const sender = socketAddresses.get(socket.id);
+    if (!sender) {
+      socket.emit("chat_error", { message: "Join chat with a verified wallet before sending messages." });
+      return;
+    }
     const text = safeChatText(message?.text);
     const timestamp = Number(message?.timestamp) || Date.now();
     const now = Date.now();
@@ -140,7 +237,7 @@ io.on("connection", (socket) => {
     socketMessageTimes.set(socket.id, recentMessages);
     const chatMessage = {
       message_id: `chat_${now}_${chatMessageSequence += 1}`,
-      sender_address: senderAddress || socketAddresses.get(socket.id) || "Unknown",
+      sender_address: sender,
       text,
       timestamp,
       moderation_status: "visible",
@@ -166,6 +263,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     socketAddresses.delete(socket.id);
     socketMessageTimes.delete(socket.id);
+    socketJoinNonces.delete(socket.id);
     logInfo(`Chat socket disconnected: ${socket.id}`);
     emitUserCount();
   });

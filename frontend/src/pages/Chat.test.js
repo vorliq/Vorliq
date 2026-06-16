@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import { AuthContext } from "../context/AuthContext";
@@ -53,4 +53,30 @@ test("Chat reflects real socket history without fabricating any messages", () =>
   // With no server history delivered, the empty state stays; nothing is invented.
   expect(typeof mockSocketHandlers.history).toBe("function");
   expect(screen.getByText(/no messages yet/i)).toBeInTheDocument();
+});
+
+test("logged-out users can read chat but cannot send and see no free-text address field", () => {
+  renderChat();
+
+  // No spoofable free-text wallet-address input exists anymore.
+  expect(screen.queryByPlaceholderText(/your vlq wallet address/i)).not.toBeInTheDocument();
+  // Read access is open; sending is gated behind signing in.
+  expect(screen.getByText(/sign in to your wallet/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/chat message/i)).toBeDisabled();
+  expect(screen.getByRole("button", { name: /^send$/i })).toBeDisabled();
+});
+
+test("logged-in users must verify their wallet (signed join) before the composer unlocks", () => {
+  renderChat({ wallet: { address: "VLQ1234567890abcdef", public_key: "PUB" }, isLoggedIn: true });
+
+  // Prompted to prove control of the connected address; composer still locked.
+  expect(screen.getByText(/verify wallet to chat as/i)).toBeInTheDocument();
+  expect(screen.getByPlaceholderText(/wallet password/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/chat message/i)).toBeDisabled();
+
+  // Once the server confirms the signed join, the composer unlocks.
+  act(() => {
+    mockSocketHandlers.join_ok?.({ wallet: "VLQ1234567890abcdef" });
+  });
+  expect(screen.getByLabelText(/chat message/i)).not.toBeDisabled();
 });
