@@ -395,6 +395,7 @@ export default function Landing() {
     <div className="vnext">
       <TopNav />
 
+      <main id="main-content" tabIndex="-1">
       {/* ---------------------------------------------------------- Hero --- */}
       <section className="vn-hero">
         <span className="vn-hero__blob vn-hero__blob--teal" aria-hidden="true" />
@@ -578,6 +579,7 @@ export default function Landing() {
           </div>
         </div>
       </section>
+      </main>
 
       <ProductFooter />
     </div>

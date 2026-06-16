@@ -13,7 +13,6 @@ import { initAnalytics } from "./helpers/analytics";
 import { applyTheme, getStoredTheme } from "./helpers/theme";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
-import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Features from "./pages/Features";
@@ -27,17 +26,12 @@ const Blockchain = lazy(() => import("./pages/Blockchain"));
 const BlockDetail = lazy(() => import("./pages/BlockDetail"));
 const Bootstrap = lazy(() => import("./pages/Bootstrap"));
 const Chat = lazy(() => import("./pages/Chat"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Exchange = lazy(() => import("./pages/Exchange"));
-const Faucet = lazy(() => import("./pages/Faucet"));
 const Forum = lazy(() => import("./pages/Forum"));
-const Governance = lazy(() => import("./pages/Governance"));
 const Growth = lazy(() => import("./pages/Growth"));
 const Health = lazy(() => import("./pages/Health"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
-const Lending = lazy(() => import("./pages/Lending"));
 const MigrationReadiness = lazy(() => import("./pages/MigrationReadiness"));
-const Mine = lazy(() => import("./pages/Mine"));
 const Network = lazy(() => import("./pages/Network"));
 const NodeSync = lazy(() => import("./pages/NodeSync"));
 const Notifications = lazy(() => import("./pages/Notifications"));
@@ -48,8 +42,6 @@ const Readiness = lazy(() => import("./pages/Readiness"));
 const Registry = lazy(() => import("./pages/Registry"));
 const Releases = lazy(() => import("./pages/Releases"));
 const Roadmap = lazy(() => import("./pages/Roadmap"));
-const Settings = lazy(() => import("./pages/Settings"));
-const Send = lazy(() => import("./pages/Send"));
 const Snapshot = lazy(() => import("./pages/Snapshot"));
 const SnapshotArchive = lazy(() => import("./pages/SnapshotArchive"));
 const Stats = lazy(() => import("./pages/Stats"));
@@ -58,7 +50,6 @@ const TransactionDetail = lazy(() => import("./pages/TransactionDetail"));
 const Transparency = lazy(() => import("./pages/Transparency"));
 const Treasury = lazy(() => import("./pages/Treasury"));
 const VLQ = lazy(() => import("./pages/VLQ"));
-const Wallet = lazy(() => import("./pages/Wallet"));
 const Whitepaper = lazy(() => import("./pages/Whitepaper"));
 // New design layer (migrated page-by-page). Brings its own nav/footer.
 const Landing = lazy(() => import("./pages/vnext/Landing"));
@@ -113,6 +104,35 @@ const navSections = [
   },
 ];
 
+// Primary routes now served by the new design layer (vnext). These pages bring
+// their own nav (landing TopNav) or app shell (sidebar/tab bar) and theme-aware
+// background, so the global brand chrome is suppressed for them — exactly as it
+// already was for the /preview/* staging routes.
+const VNEXT_PRIMARY_ROUTES = new Set([
+  "/",
+  "/dashboard",
+  "/wallet",
+  "/send",
+  "/receive",
+  "/mine",
+  "/lending",
+  "/governance",
+  "/faucet",
+  "/settings",
+]);
+
+// Standalone vnext routes render their own <main id="main-content"> (inside the
+// landing layout or the app shell), with nav/footer kept outside it. Other
+// routes are wrapped in the shared main landmark here.
+function MainRegion({ standalone, children }) {
+  if (standalone) return children;
+  return (
+    <main id="main-content" tabIndex="-1">
+      {children}
+    </main>
+  );
+}
+
 function App() {
   return (
     <NotificationProvider>
@@ -127,9 +147,11 @@ function App() {
 
 function AppShell() {
   const location = useLocation();
-  // The new design layer ("/preview/*") ships its own nav, footer, and
-  // background, so the global brand chrome is suppressed for those routes.
-  const standalone = location.pathname.startsWith("/preview");
+  // The new design layer ships its own nav, footer, and background, so the
+  // global brand chrome is suppressed for the /preview/* staging routes and for
+  // the flipped primary vnext routes.
+  const standalone =
+    location.pathname.startsWith("/preview") || VNEXT_PRIMARY_ROUTES.has(location.pathname);
 
   useEffect(() => {
     applyTheme(getStoredTheme());
@@ -138,11 +160,21 @@ function AppShell() {
 
   return (
     <div className="app-shell">
+      {/* The global ProductNav carries the skip link; standalone (vnext) routes
+          suppress it, so provide an equivalent skip link for keyboard users. */}
+      {standalone && (
+        <a
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[1200] focus:rounded-lg focus:bg-vorliq-accent focus:px-4 focus:py-3 focus:font-black focus:text-[#06101c]"
+          href="#main-content"
+        >
+          Skip to main content
+        </a>
+      )}
       {!standalone && <BrandBackground />}
       {!standalone && <ProductNav />}
       {!standalone && <IncidentBanner />}
       <AnalyticsRouteTracker />
-      <main id="main-content" tabIndex="-1">
+      <MainRegion standalone={standalone}>
         <Suspense fallback={<div className="page"><BrandLoader label="Loading Vorliq" /></div>}>
         <Routes>
           <Route path="/preview" element={<Landing />} />
@@ -157,25 +189,26 @@ function AppShell() {
           <Route path="/preview/app/faucet" element={<VnextFaucet />} />
           <Route path="/preview/app/settings" element={<VnextSettings />} />
           <Route path="/preview/app/:section" element={<AppShellDemo />} />
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Landing />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={<VnextDashboard />} />
           <Route path="/features" element={<Features />} />
           <Route path="/vlq" element={<VLQ />} />
-          <Route path="/wallet" element={<Wallet />} />
-          <Route path="/send" element={<Send />} />
+          <Route path="/wallet" element={<VnextWallet />} />
+          <Route path="/send" element={<VnextSend />} />
+          <Route path="/receive" element={<VnextReceive />} />
           <Route path="/blockchain" element={<Blockchain />} />
           <Route path="/tx/:txId" element={<TransactionDetail />} />
           <Route path="/block/:blockId" element={<BlockDetail />} />
-          <Route path="/mine" element={<Mine />} />
+          <Route path="/mine" element={<VnextMining />} />
           <Route path="/whitepaper" element={<Whitepaper />} />
           <Route path="/network" element={<Network />} />
-          <Route path="/lending" element={<Lending />} />
+          <Route path="/lending" element={<VnextLending />} />
           <Route path="/exchange" element={<Exchange />} />
-          <Route path="/governance" element={<Governance />} />
+          <Route path="/governance" element={<VnextGovernance />} />
           <Route path="/treasury" element={<Treasury />} />
-          <Route path="/faucet" element={<Faucet />} />
+          <Route path="/faucet" element={<VnextFaucet />} />
           <Route path="/price" element={<Price />} />
           <Route path="/forum" element={<Forum />} />
           <Route path="/chat" element={<Chat />} />
@@ -190,7 +223,7 @@ function AppShell() {
           <Route path="/health" element={<Health />} />
           <Route path="/growth" element={<Growth />} />
           <Route path="/roadmap" element={<Roadmap />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/settings" element={<VnextSettings />} />
           <Route path="/releases" element={<Releases />} />
           <Route path="/readiness" element={<Readiness />} />
           <Route path="/migration-readiness" element={<MigrationReadiness />} />
@@ -214,7 +247,7 @@ function AppShell() {
           />
         </Routes>
         </Suspense>
-      </main>
+      </MainRegion>
       {!standalone && <ProductFooter />}
       <ToastContainer
         className="toast"

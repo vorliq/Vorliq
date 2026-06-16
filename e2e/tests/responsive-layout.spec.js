@@ -39,33 +39,33 @@ test.describe("responsive layout and visual guardrails", () => {
     await prepareReadOnlyPage(page);
     await safeGoto(page, "/");
 
-    const hamburger = page.locator('button[aria-controls="mobile-product-navigation"]');
+    const hamburger = page.locator('button[aria-controls="vn-mobile-navigation"]');
     await expect(hamburger).toHaveAttribute("aria-expanded", "false");
     await hamburger.evaluate((button) => button.click());
     await expect(hamburger).toHaveAttribute("aria-expanded", "true");
 
-    const drawer = page.locator("#mobile-product-navigation");
+    const drawer = page.locator("#vn-mobile-navigation");
     await expect(drawer).toBeVisible();
     await expect(drawer).toHaveAttribute("aria-modal", "true");
 
     const drawerBox = await drawer.boundingBox();
     expect(drawerBox).toBeTruthy();
-    const topElementClass = await page.evaluate(({ x, y }) => {
+    const topElementId = await page.evaluate(({ x, y }) => {
       const element = document.elementFromPoint(x, y);
-      return element?.closest("#mobile-product-navigation")?.id || "";
+      return element?.closest("#vn-mobile-navigation")?.id || "";
     }, { x: drawerBox.x + 24, y: drawerBox.y + 24 });
-    expect(topElementClass).toBe("mobile-product-navigation");
+    expect(topElementId).toBe("vn-mobile-navigation");
 
     await drawer.getByRole("link", { name: /^Features$/i }).evaluate((link) => link.click());
     await expect(hamburger).toHaveAttribute("aria-expanded", "false");
   });
 
-  test("desktop rebuilt navigation exposes primary links without old More menu", async ({ page }) => {
+  test("desktop navigation exposes primary links without an old More menu", async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await prepareReadOnlyPage(page);
-    await safeGoto(page, "/mine");
+    await safeGoto(page, "/");
 
-    const navbar = page.locator(".navbar");
+    const navbar = page.locator(".vn-nav");
     await expect(navbar).toBeVisible();
     await expect(navbar.getByRole("link", { name: "Features" })).toBeVisible();
     await expect(navbar.getByRole("link", { name: "Create Account" })).toBeVisible();
@@ -73,7 +73,7 @@ test.describe("responsive layout and visual guardrails", () => {
     await expect(page.locator("#more-navigation")).toHaveCount(0);
   });
 
-  test("footer social links render once with SVG icon buttons", async ({ page }) => {
+  test("footer social links render once as the official allowlist", async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await prepareReadOnlyPage(page);
     await safeGoto(page, "/");
@@ -81,19 +81,20 @@ test.describe("responsive layout and visual guardrails", () => {
     const footer = page.locator("footer.site-footer");
     await expect(footer).toBeVisible();
     await expect(footer.locator(".social-links")).toHaveCount(1);
-    await expect(footer.locator(".social-links a")).toHaveCount(5);
-    await expect(footer.locator(".social-links a svg")).toHaveCount(5);
-    await expect(footer.locator(".social-links a.reddit")).toHaveAttribute("href", "https://www.reddit.com/r/VorliqOfficial/");
-    await expect(footer.locator(".social-links a.facebook")).toHaveAttribute("href", "https://www.facebook.com/people/Vorliq/61590708960405/");
-    await expect(footer.locator(".social-links a.github")).toHaveCount(0);
+    await expect(footer.locator(".social-links a")).toHaveCount(3);
+    await expect(footer.locator(".social-links a svg")).toHaveCount(3);
+    await expect(footer.locator(".social-links a.x")).toHaveAttribute("href", "https://x.com/Vorliq");
+    await expect(footer.locator(".social-links a.github")).toHaveAttribute("href", "https://github.com/vorliq/Vorliq");
+    await expect(footer.locator(".social-links a.reddit")).toHaveCount(0);
+    await expect(footer.locator(".social-links a.facebook")).toHaveCount(0);
   });
 
-  test("top logo is visible and dashboard does not repeat a giant middle logo", async ({ page }) => {
+  test("top logo is visible and the landing does not repeat a giant middle logo", async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await prepareReadOnlyPage(page);
     await safeGoto(page, "/");
 
-    const navLogo = page.locator(".navbar .brand-logo");
+    const navLogo = page.locator(".vn-nav .vn-brand img");
     await expect(navLogo).toBeVisible();
     const logoBox = await navLogo.boundingBox();
     expect(logoBox.width).toBeGreaterThanOrEqual(30);

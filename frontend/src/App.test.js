@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, configure, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -39,10 +39,18 @@ import Readiness from "./pages/Readiness";
 import MigrationReadiness from "./pages/MigrationReadiness";
 
 jest.setTimeout(15000);
+// The flipped primary routes are lazy-loaded; the first dynamic import can take
+// longer than the default 1s findBy timeout, so give async queries more room.
+configure({ asyncUtilTimeout: 5000 });
 
 jest.mock("./helpers/api", () => ({
+  __esModule: true,
+  default: { get: jest.fn(), post: jest.fn(), defaults: { baseURL: "/api" } },
   get: jest.fn(),
   post: jest.fn(),
+  getNodeUrl: jest.fn(() => "/api"),
+  getDefaultNodeUrl: jest.fn(() => "/api"),
+  setNodeUrl: jest.fn((url) => url || "/api"),
 }));
 
 jest.mock("./helpers/signedAuthority", () => ({
@@ -1156,24 +1164,23 @@ afterEach(() => {
 test("App renders without crashing inside its providers", async () => {
   render(<App />);
 
-  expect(
-    await screen.findByRole("heading", {
-      level: 1,
-      name: /your community's bank\. your rules\./i,
-    })
-  ).toBeInTheDocument();
-  expect(screen.getByRole("navigation")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /^create your account$/i })).toHaveAttribute("href", "/register");
+  // Locked headline, rendered across two lines via <br>.
+  const heading = await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
+  expect(heading).toBeInTheDocument();
+  expect(heading).toHaveTextContent(/your rules\./i);
+  expect(screen.getAllByRole("navigation").length).toBeGreaterThan(0);
+  expect(screen.getAllByRole("link", { name: /create your wallet/i })[0]).toHaveAttribute("href", "/register");
   expect(screen.getByText(/Vorliq is a community savings bank built on its own blockchain with the VLQ coin/i)).toBeInTheDocument();
 });
 
-test("Production shell is dark only and no longer exposes the old theme toggle", async () => {
+test("Production shell defaults to dark and exposes the new theme toggle", async () => {
   render(<App />);
 
   await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
   expect(document.documentElement).toHaveAttribute("data-theme", "dark");
-  expect(screen.queryByRole("button", { name: /switch to light theme/i })).not.toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: /switch to dark theme/i })).not.toBeInTheDocument();
+  // The redesign ships a single icon theme toggle (no label). Dark active shows
+  // the "switch to light mode" control.
+  expect(screen.getByRole("button", { name: /switch to light mode/i })).toBeInTheDocument();
 });
 
 test("Production homepage replaces the legacy onboarding modal", async () => {
@@ -1194,20 +1201,21 @@ test("App exposes a keyboard skip link to the main content", async () => {
   expect(document.querySelector("main#main-content")).toBeInTheDocument();
 });
 
-test("Homepage navigation exposes current product routes", async () => {
+test("Homepage navigation exposes the new brand routes", async () => {
   render(<App />);
 
   await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
-  const nav = screen.getByRole("navigation");
+  const nav = screen.getByRole("navigation", { name: /primary/i });
 
-  expect(within(nav).getByRole("link", { name: /^product$/i })).toHaveAttribute("href", "/features");
-  expect(within(nav).getByRole("link", { name: /how it works/i })).toHaveAttribute("href", "/#how-it-works");
+  expect(within(nav).getByRole("link", { name: /^features$/i })).toHaveAttribute("href", "/features");
   expect(within(nav).getByRole("link", { name: /^blockchain$/i })).toHaveAttribute("href", "/blockchain");
-  expect(within(nav).getByRole("link", { name: /^community$/i })).toHaveAttribute("href", "/#community");
-  expect(within(nav).getByRole("link", { name: /^learn$/i })).toHaveAttribute("href", "/#learn");
-  expect(within(nav).getByRole("link", { name: /^transparency$/i })).toHaveAttribute("href", "/transparency");
-  expect(within(nav).getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
-  expect(within(nav).getByRole("link", { name: /^create account$/i })).toHaveAttribute("href", "/register");
+  expect(within(nav).getByRole("link", { name: /^community$/i })).toHaveAttribute("href", "/forum");
+  expect(within(nav).getByRole("link", { name: /^whitepaper$/i })).toHaveAttribute("href", "/whitepaper");
+  expect(within(nav).getByRole("link", { name: /^roadmap$/i })).toHaveAttribute("href", "/roadmap");
+  // Action buttons live in the header banner alongside the primary nav.
+  const banner = screen.getByRole("banner");
+  expect(within(banner).getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
+  expect(within(banner).getByRole("link", { name: /^create account$/i })).toHaveAttribute("href", "/register");
 });
 
 test("Settings theme toggle applies the light theme and persists across routes", async () => {
@@ -1217,7 +1225,8 @@ test("Settings theme toggle applies the light theme and persists across routes",
   expect(await screen.findByRole("heading", { level: 1, name: /^settings$/i })).toBeInTheDocument();
   expect(document.documentElement).toHaveAttribute("data-theme", "dark");
 
-  await userEvent.click(screen.getByRole("button", { name: /use light theme/i }));
+  // The app shell exposes the single icon theme toggle (dark active → switch to light).
+  await userEvent.click(screen.getByRole("button", { name: /switch to light mode/i }));
   expect(document.documentElement).toHaveAttribute("data-theme", "light");
   expect(window.localStorage.getItem("vorliq_theme")).toBe("light");
 
@@ -1234,7 +1243,7 @@ test("Settings theme toggle applies the light theme and persists across routes",
   document.documentElement.setAttribute("data-theme", "dark");
   window.history.pushState({}, "", "/dashboard");
   render(<App />);
-  await screen.findByRole("heading", { level: 1, name: /^vorliq dashboard$/i });
+  await screen.findByRole("heading", { level: 1, name: /good (morning|afternoon|evening)/i });
   expect(document.documentElement).toHaveAttribute("data-theme", "light");
 });
 
@@ -1243,7 +1252,7 @@ test("Settings analytics opt-out toggle disables analytics and persists", async 
   render(<App />);
 
   await screen.findByRole("heading", { level: 1, name: /^settings$/i });
-  const toggle = screen.getByRole("switch", { name: /share anonymous usage analytics/i });
+  const toggle = screen.getByRole("switch", { name: /anonymous usage analytics/i });
   expect(toggle).toHaveAttribute("aria-checked", "true");
 
   await userEvent.click(toggle);
@@ -1256,34 +1265,35 @@ test("Settings in-app notification toggle persists and is honest about delivery"
   render(<App />);
 
   await screen.findByRole("heading", { level: 1, name: /^settings$/i });
-  // Honest: in-app only, no email or push.
-  expect(screen.getByText(/does not send email or push notifications/i)).toBeInTheDocument();
+  // Honest: in-app only, no email or browser push.
+  expect(screen.getByText(/does not send email or .*push notifications/i)).toBeInTheDocument();
 
-  const toggle = screen.getByRole("switch", { name: /show in-app notices/i });
+  const toggle = screen.getByRole("switch", { name: /in-app notices/i });
   expect(toggle).toHaveAttribute("aria-checked", "true");
   await userEvent.click(toggle);
   expect(toggle).toHaveAttribute("aria-checked", "false");
   expect(window.localStorage.getItem("vorliq_notifications_enabled")).toBe("false");
 });
 
-test("Settings shows the connected wallet state and the security data section", async () => {
+test("Settings shows the three sections and honest account/network state", async () => {
   window.history.pushState({}, "", "/settings");
   render(<App />);
 
   await screen.findByRole("heading", { level: 1, name: /^settings$/i });
 
-  // No wallet on this device: honest state, no fabricated balance.
-  expect(screen.getByRole("heading", { name: /no wallet on this device/i })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /restore a wallet/i })).toHaveAttribute("href", "/login");
+  // Three sectioned blocks.
+  expect(screen.getByRole("heading", { name: /^account$/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /^notifications$/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /^network$/i })).toBeInTheDocument();
 
-  // Security and data section is honest about what is and is not stored.
-  expect(screen.getByRole("heading", { name: /what vorliq stores, and what stays yours/i })).toBeInTheDocument();
-  expect(screen.getByText(/your private key or seed phrase in readable form/i)).toBeInTheDocument();
-  expect(screen.getByText(/your wallet password \(it never leaves this device\)/i)).toBeInTheDocument();
+  // No wallet on this device: honest state, no fabricated balance/key.
+  expect(screen.getByText(/to manage your wallet account/i)).toBeInTheDocument();
   expect(screen.queryByText(/insured/i)).not.toBeInTheDocument();
+  // Honest self-custody reminder.
+  expect(screen.getByText(/cannot reset it or recover your wallet/i)).toBeInTheDocument();
 });
 
-test("Settings security section renders under both dark and light themes", async () => {
+test("Settings sections render under both dark and light themes", async () => {
   for (const theme of ["dark", "light"]) {
     window.localStorage.setItem("vorliq_theme", theme);
     window.history.pushState({}, "", "/settings");
@@ -1291,7 +1301,7 @@ test("Settings security section renders under both dark and light themes", async
 
     await screen.findByRole("heading", { level: 1, name: /^settings$/i });
     expect(document.documentElement).toHaveAttribute("data-theme", theme);
-    expect(screen.getByRole("heading", { name: /what vorliq stores, and what stays yours/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /^network$/i })).toBeInTheDocument();
     cleanup();
     document.documentElement.setAttribute("data-theme", "dark");
   }
@@ -1407,9 +1417,9 @@ test("Account shows real wallet state and clean empty states when there is no ac
   expect(screen.getByText(/no loans yet/i)).toBeInTheDocument();
 });
 
-test("Header is authentication-aware based on the existing stored wallet", async () => {
-  // A valid encrypted wallet backup means the visitor already has an account, so
-  // the header must drop Sign In / Create Account and surface account actions.
+test("Landing marketing nav offers sign-in and account creation", async () => {
+  // The redesigned marketing landing always offers Sign In + Create Account; the
+  // authenticated, wallet-aware navigation now lives in the app shell sidebar.
   window.localStorage.setItem(
     "vorliq_wallet",
     JSON.stringify({
@@ -1428,13 +1438,10 @@ test("Header is authentication-aware based on the existing stored wallet", async
   render(<App />);
 
   await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
-  const nav = screen.getByRole("navigation");
 
-  expect(within(nav).getByRole("link", { name: /dashboard/i })).toHaveAttribute("href", "/dashboard");
-  expect(within(nav).getByRole("link", { name: /^wallet$/i })).toHaveAttribute("href", "/wallet");
-  expect(within(nav).getByRole("button", { name: /sign out/i })).toBeInTheDocument();
-  expect(within(nav).queryByRole("link", { name: /sign in/i })).not.toBeInTheDocument();
-  expect(within(nav).queryByRole("link", { name: /^create account$/i })).not.toBeInTheDocument();
+  const banner = screen.getByRole("banner");
+  expect(within(banner).getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
+  expect(within(banner).getByRole("link", { name: /^create account$/i })).toHaveAttribute("href", "/register");
 });
 
 test("Homepage has responsible product wording and no external wallet integration copy", async () => {
@@ -1443,7 +1450,7 @@ test("Homepage has responsible product wording and no external wallet integratio
   await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
 
   expect(screen.getByText(/Vorliq is a community savings bank built on its own blockchain with the VLQ coin/i)).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: /one place to save, move, and verify/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /one community, one transparent system/i })).toBeInTheDocument();
   expect(screen.queryByText(/MetaMask/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/WalletConnect/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/wallet-connect|connect wallet/i)).not.toBeInTheDocument();
@@ -1561,7 +1568,7 @@ test("mobile hamburger announces expanded state when opened", async () => {
   expect(hamburger).toHaveAttribute("aria-expanded", "false");
   await userEvent.click(hamburger);
   expect(hamburger).toHaveAttribute("aria-expanded", "true");
-  expect(hamburger).toHaveAttribute("aria-controls", "mobile-product-navigation");
+  expect(hamburger).toHaveAttribute("aria-controls", "vn-mobile-navigation");
 });
 
 test("mobile drawer traps focus and closes from outside click", async () => {
@@ -1575,7 +1582,7 @@ test("mobile drawer traps focus and closes from outside click", async () => {
   expect(drawer).toHaveAttribute("aria-modal", "true");
   expect(drawer.closest("nav")).toBeNull();
   expect(drawer.closest("header")).toBeNull();
-  expect(within(drawer).getByRole("link", { name: /^product$/i })).toHaveAttribute("href", "/features");
+  expect(within(drawer).getByRole("link", { name: /^features$/i })).toHaveAttribute("href", "/features");
   expect(within(drawer).getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
 
   const focusTargets = drawer.querySelectorAll("a, button");
@@ -1589,7 +1596,7 @@ test("mobile drawer traps focus and closes from outside click", async () => {
 
   fireEvent.keyDown(document, { key: "Escape" });
   expect(hamburger).toHaveAttribute("aria-expanded", "false");
-  expect(document.body).not.toHaveClass("mobile-nav-open");
+  expect(document.body).not.toHaveClass("vn-nav-open");
 });
 
 test("mobile drawer content is hidden when closed and drawer links close cleanly", async () => {
@@ -1602,23 +1609,18 @@ test("mobile drawer content is hidden when closed and drawer links close cleanly
   await userEvent.click(hamburger);
 
   let drawer = screen.getByRole("dialog", { name: /navigation menu/i });
-  expect(drawer.querySelectorAll(".brand")).toHaveLength(1);
-  expect(within(drawer).getByRole("button", { name: /close navigation menu/i }).closest("#mobile-product-navigation")).toBe(drawer);
+  expect(drawer.querySelectorAll(".vn-brand")).toHaveLength(1);
+  expect(within(drawer).getByRole("button", { name: /close navigation menu/i }).closest("#vn-mobile-navigation")).toBe(drawer);
 
-  await userEvent.click(within(drawer).getByRole("link", { name: /^product$/i }));
+  await userEvent.click(within(drawer).getByRole("link", { name: /^features$/i }));
   await waitFor(() => expect(window.location.pathname).toBe("/features"));
   expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
-  expect(document.body).not.toHaveClass("mobile-nav-open");
+  expect(document.body).not.toHaveClass("vn-nav-open");
 
   await userEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
   drawer = await screen.findByRole("dialog", { name: /navigation menu/i });
   await userEvent.click(within(drawer).getByRole("link", { name: /create account/i }));
   await waitFor(() => expect(window.location.pathname).toBe("/register"));
-  expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
-
-  await userEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
-  drawer = await screen.findByRole("dialog", { name: /navigation menu/i });
-  await userEvent.click(within(drawer).getByRole("link", { name: /create account/i }));
   expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
 });
 
@@ -1629,36 +1631,19 @@ test("mobile drawer backdrop closes without leaving hidden overlay content", asy
   await userEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
 
   expect(screen.getByRole("dialog", { name: /navigation menu/i })).toBeInTheDocument();
-  const backdrop = document.querySelector(".mobile-drawer-backdrop");
+  const backdrop = document.querySelector(".vn-drawer-backdrop");
   expect(backdrop).toBeInTheDocument();
   fireEvent.click(backdrop);
 
   expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
-  expect(document.body).not.toHaveClass("mobile-nav-open");
-});
-
-test("mobile drawer hash link closes and scrolls to the target section", async () => {
-  const scrollIntoView = jest.fn();
-  Element.prototype.scrollIntoView = scrollIntoView;
-
-  render(<App />);
-
-  await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
-  await userEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
-
-  const drawer = screen.getByRole("dialog", { name: /navigation menu/i });
-  await userEvent.click(within(drawer).getByRole("link", { name: /how it works/i }));
-
-  await waitFor(() => expect(window.location.hash).toBe("#how-it-works"));
-  expect(screen.queryByRole("dialog", { name: /navigation menu/i })).not.toBeInTheDocument();
-  await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+  expect(document.body).not.toHaveClass("vn-nav-open");
 });
 
 test("primary CTAs navigate with one click to their route targets", async () => {
   render(<App />);
 
   await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
-  await userEvent.click(screen.getByRole("link", { name: /create your account/i }));
+  await userEvent.click(screen.getAllByRole("link", { name: /create your wallet/i })[0]);
   await waitFor(() => expect(window.location.pathname).toBe("/register"));
 
   cleanup();
@@ -1670,9 +1655,10 @@ test("primary CTAs navigate with one click to their route targets", async () => 
   cleanup();
   window.history.pushState({}, "", "/dashboard");
   render(<App />);
-  await screen.findByRole("heading", { name: /vorliq dashboard/i });
-  await userEvent.click(screen.getAllByRole("link", { name: /get starter vlq/i })[0]);
-  await waitFor(() => expect(window.location.pathname).toBe("/faucet"));
+  // The redesigned dashboard greets the member and offers a sign-in path.
+  await screen.findByRole("heading", { name: /good (morning|afternoon|evening)/i });
+  await userEvent.click(screen.getAllByRole("link", { name: /^sign in$/i })[0]);
+  await waitFor(() => expect(window.location.pathname).toBe("/login"));
 });
 
 test("New product shell removes old More menu and notification bell controls", async () => {
@@ -1752,18 +1738,19 @@ test("Register route renders safe account creation without private key collectio
   expect(screen.queryByText(/MetaMask|WalletConnect|wallet-connect|connect wallet/i)).not.toBeInTheDocument();
 });
 
-test("Dashboard route still renders the existing real dashboard", async () => {
+test("Dashboard route renders the new app-shell dashboard", async () => {
   window.history.pushState({}, "", "/dashboard");
 
   render(<App />);
 
-  expect(await screen.findByRole("heading", { level: 1, name: /^vorliq dashboard$/i })).toBeInTheDocument();
-  expect(await screen.findByRole("heading", { name: /get started with vorliq/i })).toBeInTheDocument();
-  expect(await screen.findByText(/block production/i)).toBeInTheDocument();
-  expect(screen.getAllByRole("link", { name: /^profiles$/i }).some((link) => link.getAttribute("href") === "/profiles")).toBe(true);
-  expect(screen.getByRole("link", { name: /health check readiness/i })).toHaveAttribute("href", "/health");
-  expect(screen.getByRole("link", { name: /network view public node/i })).toHaveAttribute("href", "/network");
-  expect(screen.getByRole("link", { name: /readiness review production gate/i })).toHaveAttribute("href", "/readiness");
+  // The redesigned dashboard lives in the app shell: a time-of-day greeting, the
+  // app sidebar nav, and (logged out) an honest sign-in prompt rather than data.
+  expect(await screen.findByRole("heading", { level: 1, name: /good (morning|afternoon|evening)/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /transaction history/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /network status/i })).toBeInTheDocument();
+  expect(
+    screen.getByText(/to load your VLQ balance, transaction history, and lending position/i)
+  ).toBeInTheDocument();
 });
 
 test("Profiles route aliases the public profile page", async () => {

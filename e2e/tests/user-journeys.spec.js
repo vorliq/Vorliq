@@ -9,18 +9,14 @@ const {
 } = require("./helpers");
 
 test.describe("read-only user journeys", () => {
-  test("first-time onboarding opens and can be skipped", async ({ page }) => {
+  test("landing hero renders the brand headline without a blocking modal", async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await disableMotion(page);
-    await page.addInitScript(() => {
-      window.localStorage.removeItem("vorliq_onboarding_complete");
-    });
     await safeGoto(page, "/");
 
-    const dialog = page.getByRole("dialog", { name: /welcome to vorliq/i });
-    await expect(dialog).toBeVisible();
-    await dialog.getByRole("button", { name: /^Skip$/i }).evaluate((button) => button.click());
-    await expect(dialog).toBeHidden();
+    await expectMainContent(page, /Your Community's Bank/i);
+    await expect(page.getByRole("dialog", { name: /welcome to vorliq/i })).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
   });
 
   test("theme toggle switches between readable theme states", async ({ page }) => {
@@ -28,10 +24,10 @@ test.describe("read-only user journeys", () => {
     await prepareReadOnlyPage(page);
     await safeGoto(page, "/");
 
-    const toggle = page.getByRole("button", { name: /switch to light theme/i }).first();
+    const toggle = page.getByRole("button", { name: /switch to light mode/i }).first();
     await toggle.evaluate((button) => button.click());
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    await expect(page.getByRole("button", { name: /switch to dark theme/i }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /switch to dark mode/i }).first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 
@@ -43,12 +39,13 @@ test.describe("read-only user journeys", () => {
     await expectNoCrashText(page);
   });
 
-  test("wallet page shows self-custody safety guidance", async ({ page }) => {
+  test("wallet page renders address/balance or a sign-in prompt", async ({ page }) => {
     await prepareReadOnlyPage(page);
     await safeGoto(page, "/wallet");
 
     await expectMainContent(page, /Wallet/i);
-    await expect(page.locator("main")).toContainText(/private key|Wallet Safety|self-custody/i);
+    // Read-only (logged out) shows the sign-in prompt; logged in shows address/balance.
+    await expect(page.locator("main#main-content")).toContainText(/sign in|address|balance/i);
     await expectNoHorizontalOverflow(page);
   });
 
@@ -57,7 +54,7 @@ test.describe("read-only user journeys", () => {
     await safeGoto(page, "/faucet");
 
     await expectMainContent(page, /Faucet|Starter VLQ/i);
-    await expect(page.locator("main")).toContainText(/treasury|rate-limited|pending transaction/i);
+    await expect(page.locator("main#main-content")).toContainText(/treasury|cooldown|claim|starter/i);
     await expectNoCrashText(page);
   });
 
@@ -65,8 +62,8 @@ test.describe("read-only user journeys", () => {
     await prepareReadOnlyPage(page);
     await safeGoto(page, "/mine");
 
-    await expectMainContent(page, /Mining Status/i);
-    await expect(page.locator("main")).toContainText(/difficulty|reward|cooldown|Can mine/i);
+    await expectMainContent(page, /Mining/i);
+    await expect(page.locator("main#main-content")).toContainText(/difficulty|reward|mining history|node/i);
   });
 
   test("invalid transaction and block details fail gracefully", async ({ page }) => {

@@ -41,8 +41,20 @@ export const APP_NAV = [
 // Five primary destinations for the mobile tab bar; the rest live under "More".
 const PRIMARY_TABS = ["dashboard", "wallet", "send", "mining"];
 
-const APP_BASE = "/preview/app";
-const hrefFor = (key) => `${APP_BASE}/${key}`;
+// Primary app routes. The nav item key is not always the URL slug (e.g. the
+// "mining" item lives at /mine), so map each key to its real route.
+const ROUTE_FOR = {
+  dashboard: "/dashboard",
+  wallet: "/wallet",
+  send: "/send",
+  receive: "/receive",
+  mining: "/mine",
+  lending: "/lending",
+  governance: "/governance",
+  faucet: "/faucet",
+  settings: "/settings",
+};
+const hrefFor = (key) => ROUTE_FOR[key] || `/${key}`;
 
 function truncateAddress(address) {
   if (!address) return null;
@@ -82,7 +94,7 @@ function WalletInfo() {
 function Sidebar({ active }) {
   return (
     <aside className="vn-side" aria-label="App navigation">
-      <Link className="vn-side__brand" to="/preview">
+      <Link className="vn-side__brand" to="/">
         <img src={logo} alt="Vorliq logo" width="32" height="32" />
         <span>Vorliq</span>
       </Link>
@@ -194,7 +206,9 @@ export default function AppShell({ active, children }) {
   return (
     <div className="vnext vn-app">
       <Sidebar active={derived} />
-      <main className="vn-app__main" id="main-content">
+      {/* The sidebar/tab bar are navigation; the content region is the single
+          main landmark (App.js does not wrap standalone routes in a <main>). */}
+      <main className="vn-app__main" id="main-content" tabIndex="-1">
         {children}
       </main>
       <BottomTabBar active={derived} />
