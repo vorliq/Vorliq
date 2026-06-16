@@ -93,7 +93,10 @@ for (const theme of ["dark", "light"]) {
       window.localStorage.setItem("vorliq_theme", t);
     }, theme);
     await safeGoto(page, "/settings"); // an app-shell route, so a .vnext element exists
-    await page.waitForTimeout(900);
+    // The app shell is lazy-loaded; wait for it to render before reading tokens
+    // (under live latency a fixed timeout is not enough).
+    await page.waitForSelector(".vnext", { timeout: 15_000 });
+    await page.waitForTimeout(300);
 
     const resolved = await page.evaluate(() => {
       const vn = document.querySelector(".vnext");
