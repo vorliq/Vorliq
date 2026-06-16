@@ -129,8 +129,8 @@ export function ProductNav() {
       <header
         className={`navbar sticky top-0 z-[1000] border-b transition duration-300 ${
           scrolled
-            ? "border-white/10 bg-[#0A0E1A]/82 shadow-panel backdrop-blur-xl"
-            : "border-transparent bg-[#0A0E1A]/55 backdrop-blur-md"
+            ? "border-white/10 bg-[#080B14]/82 shadow-panel backdrop-blur-xl"
+            : "border-transparent bg-[#080B14]/55 backdrop-blur-md"
         }`}
       >
         <a
@@ -172,7 +172,7 @@ export function ProductNav() {
           <aside
             ref={menuRef}
             id="mobile-product-navigation"
-            className="mobile-drawer nav-open fixed bottom-0 right-0 top-0 z-[1002] w-[min(90vw,390px)] overflow-y-auto border-l border-vorliq-border bg-[#0A0E1A] p-5 shadow-panel transition-transform duration-300 lg:hidden"
+            className="mobile-drawer nav-open fixed bottom-0 right-0 top-0 z-[1002] w-[min(90vw,390px)] overflow-y-auto border-l border-vorliq-border bg-[#080B14] p-5 shadow-panel transition-transform duration-300 lg:hidden"
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
@@ -302,7 +302,7 @@ export function BrandLockup({ compact = false, onClick }) {
 
 export function ProductFooter() {
   return (
-    <footer className="site-footer relative z-10 border-t border-vorliq-border bg-[#070B15]">
+    <footer className="site-footer relative z-10 border-t border-vorliq-border bg-[#080B14]">
       <div className="footer-inner mx-auto grid w-[min(1180px,calc(100%_-_32px))] gap-10 py-12 lg:grid-cols-[1.1fr_1.9fr]">
         <div className="footer-brand grid content-start gap-5">
           <BrandLockup compact />
