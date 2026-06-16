@@ -34,20 +34,23 @@ test.describe("responsive layout and visual guardrails", () => {
     }
   }
 
-  test("mobile drawer sits above page content and closes on link click", async ({ page }) => {
+  test("mobile drawer is a focus-managed dialog that closes via Escape, backdrop, and link", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await prepareReadOnlyPage(page);
     await safeGoto(page, "/");
 
     const hamburger = page.locator('button[aria-controls="vn-mobile-navigation"]');
-    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
-    await hamburger.evaluate((button) => button.click());
-    await expect(hamburger).toHaveAttribute("aria-expanded", "true");
-
     const drawer = page.locator("#vn-mobile-navigation");
+    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
+
+    // Open: it is a modal dialog and focus moves into it (to the close button).
+    await hamburger.click();
+    await expect(hamburger).toHaveAttribute("aria-expanded", "true");
     await expect(drawer).toBeVisible();
     await expect(drawer).toHaveAttribute("aria-modal", "true");
+    await expect(drawer.getByRole("button", { name: /close navigation menu/i })).toBeFocused();
 
+    // Drawer sits above page content.
     const drawerBox = await drawer.boundingBox();
     expect(drawerBox).toBeTruthy();
     const topElementId = await page.evaluate(({ x, y }) => {
@@ -56,8 +59,22 @@ test.describe("responsive layout and visual guardrails", () => {
     }, { x: drawerBox.x + 24, y: drawerBox.y + 24 });
     expect(topElementId).toBe("vn-mobile-navigation");
 
-    await drawer.getByRole("link", { name: /^Features$/i }).evaluate((link) => link.click());
+    // Escape closes it.
+    await page.keyboard.press("Escape");
+    await expect(drawer).toHaveCount(0);
     await expect(hamburger).toHaveAttribute("aria-expanded", "false");
+
+    // Backdrop click closes it.
+    await hamburger.click();
+    await expect(drawer).toBeVisible();
+    await page.locator(".vn-drawer-backdrop").click({ position: { x: 12, y: 12 } });
+    await expect(drawer).toHaveCount(0);
+
+    // A drawer link navigates (into a marketing page) and dismisses the drawer.
+    await hamburger.click();
+    await drawer.getByRole("link", { name: /^Features$/i }).click();
+    await expect(page).toHaveURL(/\/features$/);
+    await expect(drawer).toHaveCount(0);
   });
 
   test("desktop navigation exposes primary links without an old More menu", async ({ page }) => {
