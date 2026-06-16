@@ -71,3 +71,53 @@ for (const theme of ["dark", "light"]) {
     }
   });
 }
+
+// The vnext design layer expresses secondary text as the primary colour at an
+// opacity (spec: 55%). The probe above reads computed color which DROPS alpha,
+// so it cannot judge a translucent token honestly. This composites the token's
+// real alpha over the vnext background and checks the actual ratio — the case
+// where the literal opacity rule and the accessibility gate disagree (light
+// secondary text at 55% is ~4.36:1, below AA), and the gate must win.
+function parseRgba(value) {
+  const nums = value.match(/-?\d+(?:\.\d+)?/g).map(Number);
+  return { rgb: [nums[0], nums[1], nums[2]], a: nums.length > 3 ? nums[3] : 1 };
+}
+function composite(fg, bgRgb) {
+  return fg.rgb.map((c, i) => Math.round(c * fg.a + bgRgb[i] * (1 - fg.a)));
+}
+
+for (const theme of ["dark", "light"]) {
+  test(`vnext secondary text meets WCAG AA over the design-layer background (${theme} theme)`, async ({ page }) => {
+    await prepareReadOnlyPage(page);
+    await page.addInitScript((t) => {
+      window.localStorage.setItem("vorliq_theme", t);
+    }, theme);
+    await safeGoto(page, "/settings"); // an app-shell route, so a .vnext element exists
+    await page.waitForTimeout(900);
+
+    const resolved = await page.evaluate(() => {
+      const vn = document.querySelector(".vnext");
+      if (!vn) return null;
+      // Resolve each token by letting the browser compute `color: var(--token)`
+      // on a fresh element inside the .vnext scope, then reading the rgb()/rgba().
+      const paint = (token) => {
+        const p = document.createElement("span");
+        p.style.color = `var(${token})`;
+        vn.appendChild(p);
+        const c = getComputedStyle(p).color;
+        p.remove();
+        return c;
+      };
+      return { bg: paint("--vn-bg"), text2: paint("--vn-text-2") };
+    });
+
+    expect(resolved, "a .vnext element should exist on /settings").not.toBeNull();
+    const bgRgb = parseRgba(resolved.bg).rgb;
+    const text2 = parseRgba(resolved.text2);
+    const ratio = contrastRatio(composite(text2, bgRgb), bgRgb);
+    expect(
+      ratio,
+      `--vn-text-2 composited over --vn-bg in ${theme} = ${ratio.toFixed(2)}:1 (needs >= 4.5:1)`
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+}

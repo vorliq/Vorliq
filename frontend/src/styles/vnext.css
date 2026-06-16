@@ -56,7 +56,10 @@ html[data-theme="light"] .vnext {
   --vn-card-2: #e8ebf0;
   --vn-section: #f4f6fa;
   --vn-text: #080b14;
-  --vn-text-2: rgba(8, 11, 20, 0.55);
+  /* The spec's 55% secondary tone resolves to ~4.36:1 on white (below AA). The
+     accessibility gate wins over the literal opacity rule, so light secondary
+     text is opacity-bumped to clear 4.5:1 (~6:1). Dark stays 55% (6.24:1). */
+  --vn-text-2: rgba(8, 11, 20, 0.64);
   --vn-text-3: rgba(8, 11, 20, 0.35);
   --vn-border: rgba(0, 0, 0, 0.1);
   --vn-border-strong: rgba(0, 0, 0, 0.16);
