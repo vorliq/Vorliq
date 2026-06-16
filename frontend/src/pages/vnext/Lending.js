@@ -40,6 +40,16 @@ function voteFor(loan, address) {
   return typeof record === "string" ? record : record.vote || "yes";
 }
 
+// The borrower may repay an active/overdue loan that has not been repaid yet.
+function canRepay(loan, address) {
+  return Boolean(
+    address &&
+      loan.requester_address === address &&
+      ["active", "overdue"].includes(loan.status) &&
+      !loan.repayment_tx_id
+  );
+}
+
 function useLending(address) {
   const [state, setState] = useState({ loading: true, error: "", summary: null, loans: [], mine: null });
 
@@ -79,8 +89,10 @@ function useLending(address) {
   return { ...state, reload: () => load() };
 }
 
-function LoanCard({ loan, address, isLoggedIn, onVote, busyId, feedback }) {
+function LoanCard({ loan, address, isLoggedIn, onVote, onRepay, busyId, feedback }) {
   const [pending, setPending] = useState(null); // "yes" | "no" | null
+  const [repayOpen, setRepayOpen] = useState(false);
+  const repayable = canRepay(loan, address);
   const alreadyVoted = voteFor(loan, address);
   const isOpen = loan.status === PENDING_VOTE;
   const fb = feedback[loan.loan_id];
@@ -135,6 +147,26 @@ function LoanCard({ loan, address, isLoggedIn, onVote, busyId, feedback }) {
             busy={busyId === loan.loan_id}
             submitLabel={`Sign and submit ${pending} vote`}
             onSubmit={(password) => onVote(loan, pending, password).then(() => setPending(null))}
+          />
+        ))}
+
+      {/* Repay (borrower only, active/overdue, not yet repaid). Same signed
+          authority pattern as vote/request. Repayment submits VLQ movement to
+          the pending pool and still needs mining confirmation. */}
+      {repayable &&
+        (!repayOpen ? (
+          <div className="vn-prop__actions">
+            <Button variant="primary" onClick={() => setRepayOpen(true)}>
+              <Coins size={16} aria-hidden="true" /> Repay {formatVlq(loan.repayment_amount)}
+            </Button>
+          </div>
+        ) : (
+          <AuthorityAction
+            isLoggedIn={isLoggedIn}
+            busy={busyId === loan.loan_id}
+            submitLabel="Sign and submit repayment"
+            note="Repayment is signed locally and submitted to the pending pool; it stays pending until mined."
+            onSubmit={(password) => onRepay(loan, password).then(() => setRepayOpen(false))}
           />
         ))}
 
@@ -296,6 +328,24 @@ export default function Lending() {
     }
   }
 
+  async function repayLoan(loan, password) {
+    setBusyId(loan.loan_id);
+    setFeedback((f) => ({ ...f, [loan.loan_id]: "" }));
+    try {
+      await postSignedAuthority({
+        action: "lending.repay",
+        walletPassword: password,
+        body: { loan_id: loan.loan_id },
+      });
+      await reload();
+    } catch (err) {
+      setFeedback((f) => ({ ...f, [loan.loan_id]: authorityErrorMessage(err, "Unable to repay loan.") }));
+      throw err;
+    } finally {
+      setBusyId("");
+    }
+  }
+
   return (
     <AppShell active="lending">
       <div className="vn-page-head">
@@ -349,6 +399,7 @@ export default function Lending() {
                 address={address}
                 isLoggedIn={isLoggedIn}
                 onVote={castVote}
+                onRepay={repayLoan}
                 busyId={busyId}
                 feedback={feedback}
               />

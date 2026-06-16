@@ -9,7 +9,7 @@
 // a Closed badge. Every vote is signed locally with the wallet password.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, CheckCircle2, FileText, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Ban, Check, CheckCircle2, FileText, ThumbsDown, ThumbsUp } from "lucide-react";
 
 import "../../styles/vnext.css";
 import AppShell from "../../components/vnext/AppShell";
@@ -28,6 +28,34 @@ function voteFor(proposal, address) {
   if (!record) return null;
   return typeof record === "string" ? record : record.vote || "yes";
 }
+
+// The proposer may cancel their own active proposal before any votes are cast.
+function canCancel(proposal, address) {
+  return Boolean(
+    address &&
+      proposal.status === "active" &&
+      proposal.proposer_address === address &&
+      Object.keys(proposal.votes || {}).length === 0
+  );
+}
+
+// Governable settings (carried forward from the existing Governance page).
+const CATEGORIES = [
+  ["mining_reward", "Mining Reward"],
+  ["difficulty", "Block Difficulty"],
+  ["loan_limit", "Maximum Loan Amount"],
+  ["loan_interest", "Loan Interest Rate"],
+  ["exchange_limit", "Community Request Limit"],
+  ["general", "General Proposal"],
+];
+const CATEGORY_GUIDANCE = {
+  mining_reward: "Mining reward must be greater than 0 and no more than 1000 VLQ.",
+  difficulty: "Difficulty must be an integer between 2 and 8.",
+  loan_limit: "Loan limit must be greater than 0 and no more than 1,000,000 VLQ.",
+  loan_interest: "Loan interest must be between 0 and 100 percent.",
+  exchange_limit: "Community request limit must be between 1 and 1000.",
+  general: "General proposals are advisory — they can pass but do not automatically execute a setting.",
+};
 
 // Live countdown to a unix-seconds deadline; ticks every second, cleared on unmount.
 function Countdown({ deadline }) {
@@ -86,8 +114,10 @@ function useGovernance(address) {
   return { ...state, reload: () => load() };
 }
 
-function ProposalCard({ proposal, address, isLoggedIn, closed, onVote, busyId, feedback }) {
+function ProposalCard({ proposal, address, isLoggedIn, closed, onVote, onCancel, busyId, feedback }) {
   const [pending, setPending] = useState(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const cancellable = !closed && canCancel(proposal, address);
   const voted = voteFor(proposal, address);
   const fb = feedback[proposal.proposal_id];
   const description = proposal.description || "No description provided.";
@@ -151,10 +181,126 @@ function ProposalCard({ proposal, address, isLoggedIn, closed, onVote, busyId, f
           />
         ))}
 
+      {/* Cancel (proposer only, active, no votes yet). Same signed pattern. */}
+      {cancellable &&
+        (!cancelOpen ? (
+          <div className="vn-prop__actions">
+            <Button variant="secondary" onClick={() => setCancelOpen(true)}>
+              <Ban size={16} aria-hidden="true" /> Cancel proposal
+            </Button>
+          </div>
+        ) : (
+          <AuthorityAction
+            isLoggedIn={isLoggedIn}
+            busy={busyId === proposal.proposal_id}
+            submitLabel="Sign and submit cancellation"
+            note="Cancelling is signed locally. It is only possible before any votes are cast."
+            onSubmit={(password) => onCancel(proposal, password).then(() => setCancelOpen(false))}
+          />
+        ))}
+
       {closed && proposal.rule_change_id && (
         <span className="vn-badge vn-badge--accent">
           <CheckCircle2 size={14} aria-hidden="true" /> Executed
         </span>
+      )}
+    </Card>
+  );
+}
+
+// Create-proposal form, mirroring the Lending request form's signed-authority
+// pattern. Real categories + validation from the existing Governance page.
+function ProposeForm({ isLoggedIn, onSubmitted }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("mining_reward");
+  const [parameter, setParameter] = useState("");
+  const [description, setDescription] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  if (!isLoggedIn) {
+    return (
+      <Card style={{ marginTop: 20 }}>
+        <p className="vn-empty-note" style={{ margin: 0 }}>
+          <Link className="vn-block-link" to="/login">Sign in</Link> to propose a rule change.
+        </p>
+      </Card>
+    );
+  }
+
+  async function submit(password) {
+    setError("");
+    if (!title.trim()) {
+      setError("Add a proposal title.");
+      return;
+    }
+    if (!String(parameter).trim()) {
+      setError("Enter a proposed value.");
+      return;
+    }
+    if (description.trim().length < 50) {
+      setError("The description must be at least 50 characters.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await postSignedAuthority({
+        action: "governance.propose",
+        walletPassword: password,
+        body: { title: title.trim(), description: description.trim(), category, parameter },
+      });
+      setTitle("");
+      setParameter("");
+      setDescription("");
+      setOpen(false);
+      await onSubmitted();
+    } catch (err) {
+      setError(authorityErrorMessage(err, "Unable to create proposal."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card style={{ marginTop: 20 }}>
+      <div className="vn-prop__head">
+        <h2 className="vn-panel-title" style={{ margin: 0 }}>Propose a rule change</h2>
+        <Button variant="secondary" onClick={() => setOpen((v) => !v)}>
+          {open ? "Cancel" : "New proposal"}
+        </Button>
+      </div>
+      {open && (
+        <div className="vn-send-form" style={{ marginTop: 16 }}>
+          {error && <InlineError message={error} />}
+          <div className="vn-field">
+            <label htmlFor="vn-gov-title">Title</label>
+            <input id="vn-gov-title" className="vn-input" type="text" maxLength={160}
+              value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short, specific title" />
+          </div>
+          <div className="vn-field">
+            <label htmlFor="vn-gov-category">Category</label>
+            <select id="vn-gov-category" className="vn-input" value={category} onChange={(e) => setCategory(e.target.value)}>
+              {CATEGORIES.map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="vn-field">
+            <label htmlFor="vn-gov-parameter">Proposed value</label>
+            <input id="vn-gov-parameter" className="vn-input"
+              type={category === "general" ? "text" : "number"}
+              value={parameter} onChange={(e) => setParameter(e.target.value)} placeholder="Proposed value" />
+            <p className="vn-field__hint">{CATEGORY_GUIDANCE[category]}</p>
+          </div>
+          <div className="vn-field">
+            <label htmlFor="vn-gov-description">Description</label>
+            <input id="vn-gov-description" className="vn-input" type="text"
+              value={description} onChange={(e) => setDescription(e.target.value)}
+              placeholder="At least 50 characters explaining the change" />
+          </div>
+          <AuthorityAction isLoggedIn={isLoggedIn} busy={busy} submitLabel="Sign and submit proposal" onSubmit={submit} />
+        </div>
       )}
     </Card>
   );
@@ -194,6 +340,24 @@ export default function Governance() {
     }
   }
 
+  async function cancelProposal(proposal, password) {
+    setBusyId(proposal.proposal_id);
+    setFeedback((f) => ({ ...f, [proposal.proposal_id]: "" }));
+    try {
+      await postSignedAuthority({
+        action: "governance.cancel",
+        walletPassword: password,
+        body: { proposal_id: proposal.proposal_id },
+      });
+      await reload();
+    } catch (err) {
+      setFeedback((f) => ({ ...f, [proposal.proposal_id]: authorityErrorMessage(err, "Unable to cancel proposal.") }));
+      throw err;
+    } finally {
+      setBusyId("");
+    }
+  }
+
   return (
     <AppShell active="governance">
       <div className="vn-page-head">
@@ -226,6 +390,7 @@ export default function Governance() {
                 address={address}
                 isLoggedIn={isLoggedIn}
                 onVote={castVote}
+                onCancel={cancelProposal}
                 busyId={busyId}
                 feedback={feedback}
               />
@@ -233,6 +398,8 @@ export default function Governance() {
           </div>
         )}
       </Card>
+
+      <ProposeForm isLoggedIn={isLoggedIn} onSubmitted={reload} />
 
       {!loading && closed.length > 0 && (
         <Card style={{ marginTop: 20 }}>
