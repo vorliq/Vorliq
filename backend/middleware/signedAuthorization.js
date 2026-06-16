@@ -44,6 +44,12 @@ const AUTHORITY_ROUTES = new Map([
   // the claimed author to prove control of the address with a signature.
   ["/api/forum/post", { action: "forum.post", actorFields: ["author_address", "authorAddress"] }],
   ["/api/forum/reply", { action: "forum.reply", actorFields: ["author_address", "authorAddress"] }],
+  // Feature votes amplify: 5 of them flip a post into the default Featured view.
+  // Signing proves control of the voter; a VLQ-balance floor (enforced in the
+  // forum route) stops the amplification being multiplied with free throwaway
+  // wallets. Upvote is intentionally NOT here — it only reorders the non-default
+  // All Posts tab and has no visibility-flipping threshold.
+  ["/api/forum/feature", { action: "forum.feature", actorFields: ["voter_address", "voterAddress"] }],
 ]);
 const usedNonces = new Map();
 const UNSIGNED_AUTHORITY_WRITE_PATHS = new Set(AUTHORITY_ROUTES.keys());

@@ -73,7 +73,7 @@ function Forum() {
   const [postForm, setPostForm] = useState(initialPostForm);
   const [replyForm, setReplyForm] = useState(initialReplyForm);
   const [upvoteAddress, setUpvoteAddress] = useState("");
-  const [featureVoterAddress, setFeatureVoterAddress] = useState("");
+  const [featurePassword, setFeaturePassword] = useState("");
   const [activeTab, setActiveTab] = useState("featured");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -294,25 +294,33 @@ function Forum() {
   }
 
   async function featurePost(postId) {
-    if (!postId || !featureVoterAddress.trim()) {
-      toast.error("Enter your wallet address before featuring a post.");
+    if (!postId) return;
+    if (!isLoggedIn || !address) {
+      toast.error("Sign in to your wallet to feature a post.");
+      return;
+    }
+    if (!featurePassword) {
+      toast.error("Enter your wallet password to sign your feature vote locally.");
       return;
     }
 
     try {
-      await api.post("/forum/feature", {
-        post_id: postId,
-        voter_address: featureVoterAddress.trim(),
+      // Feature votes are signed (proving control) and the server requires the
+      // voter to hold VLQ, so featuring can't be amplified with throwaway wallets.
+      await postSignedAuthority({
+        action: "forum.feature",
+        walletPassword: featurePassword,
+        body: { post_id: postId },
       });
       toast.success("Your feature vote was recorded.");
-      setFeatureVoterAddress("");
+      setFeaturePassword("");
       if (selectedPostId === postId) {
         await loadPost(postId);
       }
       await loadPosts({ quiet: true });
       await loadFeaturedPosts({ quiet: true });
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to record your feature vote.");
+      const message = authorityErrorMessage(error, apiErrorMessage(error, "Unable to record your feature vote."));
       setErrorMessage(message);
       toast.error(message);
     }
@@ -348,7 +356,7 @@ function Forum() {
           </article>
           <article className="lifecycle-step">
             <h3>Wallet context</h3>
-            <p>Posting and replying are signed locally with your wallet so authorship is verified and cannot be impersonated. Upvoting, featuring, and reporting use public wallet addresses.</p>
+            <p>Posting, replying, and featuring are signed locally with your wallet; authorship is verified and cannot be impersonated, and featuring also requires holding VLQ so it can't be inflated. Upvoting and reporting use public wallet addresses.</p>
           </article>
           <article className="lifecycle-step">
             <h3>Moderation</h3>
@@ -417,14 +425,22 @@ function Forum() {
               ))}
             </select>
           </div>
-          <input
-            className="input"
-            type="text"
-            aria-label="Wallet address for feature votes"
-            placeholder="Wallet address for feature votes"
-            value={featureVoterAddress}
-            onChange={(event) => setFeatureVoterAddress(event.target.value)}
-          />
+          {isLoggedIn ? (
+            <input
+              className="input"
+              type="password"
+              autoComplete="current-password"
+              aria-label="Wallet password to sign feature votes"
+              placeholder="Wallet password to feature posts"
+              value={featurePassword}
+              onChange={(event) => setFeaturePassword(event.target.value)}
+            />
+          ) : (
+            <p className="help-text">
+              <Link className="text-button" to="/login">Sign in</Link> to feature posts. Featuring is signed with your
+              wallet and requires holding VLQ, so it can&apos;t be inflated with throwaway wallets.
+            </p>
+          )}
           {loadingPosts ? (
             <Spinner label="Loading forum posts..." />
           ) : displayedPosts.length === 0 ? (
