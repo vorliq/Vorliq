@@ -83,6 +83,47 @@ export function authorityMessage({ action, bodyHash, nonce, timestamp, wallet })
   });
 }
 
+// Vetted translations of specific, known backend eligibility errors into clear,
+// friendly guidance. We deliberately match only messages we have reviewed here;
+// any other upstream text still collapses to the page's neutral fallback, so a
+// raw backend object or unexpected server string is never shown to a person.
+// This turns "you tried something you aren't eligible for yet" from an opaque
+// dead-end ("Unable to create proposal.") into an accurate, actionable reason.
+const KNOWN_ELIGIBILITY_MESSAGES = [
+  [
+    /only vlq holders can create governance proposals/i,
+    "You need to hold some VLQ before you can create a governance proposal. Receive or earn VLQ first, then try again.",
+  ],
+  [
+    /proposer cannot have more than three active proposals/i,
+    "You already have three active proposals, which is the most allowed at once. Wait for one to close before creating another.",
+  ],
+  [
+    /requester already has an active loan lifecycle/i,
+    "You already have a loan in progress. You can request a new one once your current loan is fully repaid.",
+  ],
+  [
+    /loan amount cannot be greater than/i,
+    "That amount is above the maximum loan size (10,000 VLQ). Enter a smaller amount.",
+  ],
+  [
+    /loan amount must be greater than zero/i,
+    "Enter a loan amount greater than zero.",
+  ],
+  [
+    /only vlq holders with a positive balance can vote/i,
+    "You need to hold some VLQ before your vote can carry weight. Receive or earn VLQ first, then vote.",
+  ],
+  [
+    /(voter|requester|proposer|repayer) has already voted|already voted on this/i,
+    "You have already voted on this.",
+  ],
+];
+
+function upstreamMessage(error) {
+  return error?.response?.data?.error?.message || error?.response?.data?.message || "";
+}
+
 export function authorityErrorMessage(error, fallback) {
   const code = error?.response?.data?.error?.code || error?.response?.data?.code;
   if (AUTHORIZATION_ERROR_CODES.has(code)) {
@@ -92,6 +133,12 @@ export function authorityErrorMessage(error, fallback) {
   }
   if (error?.message === "Incorrect password or corrupted saved wallet." || error?.message === "No saved Vorliq wallet found.") {
     return error.message;
+  }
+  const upstream = upstreamMessage(error);
+  for (const [matcher, friendly] of KNOWN_ELIGIBILITY_MESSAGES) {
+    if (matcher.test(upstream)) {
+      return friendly;
+    }
   }
   return fallback;
 }

@@ -21,6 +21,7 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../helpers/api";
 import { authorityErrorMessage, postSignedAuthority } from "../../helpers/signedAuthority";
 import { formatHash, formatNumber } from "../../helpers/publicApi";
+import useWalletBalance from "../../helpers/useWalletBalance";
 
 function voteFor(proposal, address) {
   if (!address) return null;
@@ -210,7 +211,7 @@ function ProposalCard({ proposal, address, isLoggedIn, closed, onVote, onCancel,
 
 // Create-proposal form, mirroring the Lending request form's signed-authority
 // pattern. Real categories + validation from the existing Governance page.
-function ProposeForm({ isLoggedIn, onSubmitted }) {
+function ProposeForm({ isLoggedIn, walletBalance, onSubmitted }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("mining_reward");
@@ -228,6 +229,12 @@ function ProposeForm({ isLoggedIn, onSubmitted }) {
       </Card>
     );
   }
+
+  // Creating a proposal requires holding VLQ (the core gates this server-side).
+  // Tell the user up front rather than letting them fill out the form and hit a
+  // rejection — and the submit path still translates the backend reason if the
+  // balance changes between this check and submission.
+  const noVlq = walletBalance != null && walletBalance <= 0;
 
   async function submit(password) {
     setError("");
@@ -266,11 +273,17 @@ function ProposeForm({ isLoggedIn, onSubmitted }) {
     <Card style={{ marginTop: 20 }}>
       <div className="vn-prop__head">
         <h2 className="vn-panel-title" style={{ margin: 0 }}>Propose a rule change</h2>
-        <Button variant="secondary" onClick={() => setOpen((v) => !v)}>
+        <Button variant="secondary" disabled={noVlq} onClick={() => setOpen((v) => !v)}>
           {open ? "Cancel" : "New proposal"}
         </Button>
       </div>
-      {open && (
+      {noVlq && (
+        <p className="vn-empty-note" style={{ marginTop: 12, marginBottom: 0 }}>
+          You need to hold some VLQ before you can create a governance proposal. Receive or earn VLQ first, then you
+          can propose a rule change.
+        </p>
+      )}
+      {open && !noVlq && (
         <div className="vn-send-form" style={{ marginTop: 16 }}>
           {error && <InlineError message={error} />}
           <div className="vn-field">
@@ -310,6 +323,9 @@ export default function Governance() {
   const { isLoggedIn, wallet } = useAuth();
   const address = wallet?.address;
   const { loading, error, active, closed, summary, reload } = useGovernance(address);
+  // Total (pending-inclusive) balance — the propose gate the core enforces uses
+  // this figure, so it drives the proactive "you need VLQ to propose" guidance.
+  const { total: walletBalance } = useWalletBalance(address);
   const [busyId, setBusyId] = useState("");
   const [feedback, setFeedback] = useState({});
 
@@ -399,7 +415,7 @@ export default function Governance() {
         )}
       </Card>
 
-      <ProposeForm isLoggedIn={isLoggedIn} onSubmitted={reload} />
+      <ProposeForm isLoggedIn={isLoggedIn} walletBalance={walletBalance} onSubmitted={reload} />
 
       {!loading && closed.length > 0 && (
         <Card style={{ marginTop: 20 }}>

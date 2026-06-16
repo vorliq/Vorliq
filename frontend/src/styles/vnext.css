@@ -108,6 +108,12 @@ html[data-theme="light"] .vnext {
   min-height: 44px;
   white-space: nowrap;
 }
+.vnext .vn-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+  box-shadow: none;
+}
 
 .vnext .vn-btn--primary {
   background: var(--vn-gradient);
@@ -1351,6 +1357,26 @@ html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
   color: var(--vn-text-2);
   font-size: 0.9rem;
   margin-top: 6px;
+}
+.vnext .vn-balance__pending {
+  list-style: none;
+  margin: 14px auto 0;
+  padding: 0;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.vnext .vn-balance__pending-in {
+  color: var(--success-ink);
+}
+.vnext .vn-balance__pending-out {
+  color: var(--in-progress);
+}
+.vnext .vn-balance__total {
+  color: var(--vn-text-2);
+  margin-top: 2px;
 }
 
 .vnext .vn-wallet-actions {

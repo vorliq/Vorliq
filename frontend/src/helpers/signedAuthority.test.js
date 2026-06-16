@@ -169,3 +169,26 @@ test("signed authorization errors are mapped to safe user-facing text", () => {
   ).toBe("Signed wallet authorization was rejected. Check your saved wallet and try again.");
   expect(authorityErrorMessage(new Error("unexpected internal detail"), "Unable to submit.")).toBe("Unable to submit.");
 });
+
+test("known backend eligibility reasons become friendly guidance, unknown ones fall back", () => {
+  // Specific, reviewed backend reasons are translated to actionable guidance...
+  expect(
+    authorityErrorMessage(
+      { response: { data: { error: { code: "UPSTREAM_ERROR", message: "only VLQ holders can create governance proposals" } } } },
+      "Unable to create proposal."
+    )
+  ).toMatch(/need to hold some VLQ/i);
+  expect(
+    authorityErrorMessage(
+      { response: { data: { error: { code: "UPSTREAM_ERROR", message: "requester already has an active loan lifecycle" } } } },
+      "Unable to submit loan request."
+    )
+  ).toMatch(/already have a loan in progress/i);
+  // ...while an unrecognized upstream string never leaks raw — it falls back.
+  expect(
+    authorityErrorMessage(
+      { response: { data: { error: { code: "UPSTREAM_ERROR", message: "some unexpected internal stack trace detail" } } } },
+      "Unable to create proposal."
+    )
+  ).toBe("Unable to create proposal.");
+});

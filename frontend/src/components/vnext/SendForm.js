@@ -24,7 +24,10 @@ const POLL_LIMIT = 60; // ~5 minutes of polling, then stop quietly
 export default function SendForm() {
   const { isLoggedIn, wallet } = useAuth();
   const address = wallet?.address;
-  const { balance } = useWalletBalance(address);
+  // `available` is the spendable figure the core will actually accept (total
+  // minus unconfirmed incoming); `pendingIncoming` is shown so a user with VLQ
+  // arriving understands why their spendable amount is lower than their total.
+  const { available, pendingIncoming } = useWalletBalance(address);
 
   const [recipient, setRecipient] = useState("");
   const [recipientTouched, setRecipientTouched] = useState(false);
@@ -96,7 +99,7 @@ export default function SendForm() {
       senderAddress: address,
       receiverAddress: recipient,
       amount,
-      balance,
+      balance: available,
     });
     if (!review.canSubmit) {
       setFormError(review.errors[0] || "Check the recipient and amount before sending.");
@@ -151,7 +154,7 @@ export default function SendForm() {
 
   const amountNum = Number(amount);
   const overBalance =
-    Number.isFinite(amountNum) && balance != null && Number.isFinite(balance) && amountNum > balance;
+    Number.isFinite(amountNum) && available != null && Number.isFinite(available) && amountNum > available;
 
   return (
     <form className="vn-send-form" onSubmit={handleSubmit}>
@@ -194,11 +197,16 @@ export default function SendForm() {
         />
         <p className="vn-field__hint">
           Estimated network fee: <strong>0 VLQ</strong> — Vorliq does not charge a separate network fee.
-          {balance != null && Number.isFinite(balance) && (
-            <> Confirmed balance: {formatVlq(balance)}.</>
+          {available != null && Number.isFinite(available) && (
+            <> Available to send: {formatVlq(available)}.</>
+          )}
+          {pendingIncoming > 0 && (
+            <> {formatVlq(pendingIncoming)} more is incoming but can't be sent until it confirms.</>
           )}
         </p>
-        {overBalance && <p className="vn-field__hint vn-field__hint--error">Amount exceeds your confirmed balance.</p>}
+        {overBalance && (
+          <p className="vn-field__hint vn-field__hint--error">Amount exceeds the VLQ you have available to send right now.</p>
+        )}
       </div>
 
       <div className="vn-field">

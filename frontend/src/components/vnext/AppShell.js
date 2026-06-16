@@ -63,7 +63,9 @@ function truncateAddress(address) {
 
 function WalletInfo() {
   const { wallet, isLoggedIn, logout } = useAuth();
-  const { balance } = useWalletBalance(wallet?.address);
+  // Show the spendable figure (available), matching the Wallet/Send pages, so
+  // the sidebar never implies more is usable than the chain will actually allow.
+  const { available: balance } = useWalletBalance(wallet?.address);
 
   if (!isLoggedIn) {
     return (

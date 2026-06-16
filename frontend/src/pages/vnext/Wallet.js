@@ -29,7 +29,7 @@ function ReceiveContents({ address, qrSize }) {
 export default function Wallet() {
   const { isLoggedIn, wallet } = useAuth();
   const address = wallet?.address;
-  const { balance, loading, error, reload } = useWalletBalance(address);
+  const { available, total, pendingIncoming, pendingOutgoing, loading, error, reload } = useWalletBalance(address);
 
   const [showSend, setShowSend] = useState(false);
   const [showReceive, setShowReceive] = useState(false);
@@ -68,16 +68,37 @@ export default function Wallet() {
         </div>
       </Card>
 
-      {/* Big balance */}
+      {/* Big balance — shows what can actually be sent now (available), with any
+          unconfirmed incoming/outgoing VLQ called out separately so the headline
+          figure never overstates spendable funds. */}
       <div className="vn-balance">
         {error ? (
           <InlineError message={error} onRetry={reload} />
         ) : loading ? (
           <Skeleton height={56} width="280px" style={{ margin: "0 auto" }} />
         ) : (
-          <div className="vn-balance__value">{balance == null ? "Unavailable" : formatVlq(balance)}</div>
+          <>
+            <div className="vn-balance__value">{available == null ? "Unavailable" : formatVlq(available)}</div>
+            <div className="vn-balance__label">Available to send</div>
+            {(pendingIncoming > 0 || pendingOutgoing > 0) && (
+              <ul className="vn-balance__pending">
+                {pendingIncoming > 0 && (
+                  <li className="vn-balance__pending-in">
+                    +{formatVlq(pendingIncoming)} incoming · awaiting confirmation
+                  </li>
+                )}
+                {pendingOutgoing > 0 && (
+                  <li className="vn-balance__pending-out">
+                    −{formatVlq(pendingOutgoing)} sending · awaiting confirmation
+                  </li>
+                )}
+                {total != null && (
+                  <li className="vn-balance__total">Total balance {formatVlq(total)}</li>
+                )}
+              </ul>
+            )}
+          </>
         )}
-        <div className="vn-balance__label">Confirmed balance</div>
       </div>
 
       {/* Actions */}
