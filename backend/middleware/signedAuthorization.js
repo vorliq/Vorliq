@@ -50,6 +50,13 @@ const AUTHORITY_ROUTES = new Map([
   // wallets. Upvote is intentionally NOT here — it only reorders the non-default
   // All Posts tab and has no visibility-flipping threshold.
   ["/api/forum/feature", { action: "forum.feature", actorFields: ["voter_address", "voterAddress"] }],
+  // Profile updates: the verify flow (challenge/submit) is sound and unchanged,
+  // but profile create/update was unsigned and address-from-body, so anyone could
+  // overwrite the display name, avatar, and links rendered next to a wallet's
+  // "Wallet Verified" badge — hijacking a genuinely-verified identity. Bind edits
+  // to the wallet that controls the address. (The server-side auto-create on first
+  // verification is an internal call and not affected.)
+  ["/api/profiles/profile", { action: "profile.update", actorFields: ["wallet_address", "walletAddress"] }],
 ]);
 const usedNonces = new Map();
 const UNSIGNED_AUTHORITY_WRITE_PATHS = new Set(AUTHORITY_ROUTES.keys());

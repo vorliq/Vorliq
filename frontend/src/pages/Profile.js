@@ -12,6 +12,7 @@ import TrustLabels from "../components/TrustLabels";
 import { useAuth } from "../context/AuthContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
+import { authorityErrorMessage, postSignedAuthority } from "../helpers/signedAuthority";
 import { signMessage } from "../helpers/signer";
 import { loadWallet } from "../helpers/storage";
 
@@ -38,6 +39,7 @@ function Profile() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(Boolean(initialAddress));
   const [saving, setSaving] = useState(false);
+  const [savePassword, setSavePassword] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verificationPassword, setVerificationPassword] = useState("");
   const [manualVerification, setManualVerification] = useState({ message: "", publicKey: "", signature: "" });
@@ -142,19 +144,29 @@ function Profile() {
       setErrorMessage(validation);
       return;
     }
+    if (!savePassword) {
+      setErrorMessage("Enter your wallet password to sign this profile update locally.");
+      return;
+    }
 
     setSaving(true);
     try {
-      const response = await api.post("/profiles/profile", {
-        wallet_address: wallet.address,
-        ...form,
+      // Profile edits are signed locally so only the wallet that controls this
+      // address can change the name, avatar, and links rendered next to its
+      // verified badge. The wallet_address actor is injected from the saved
+      // wallet by postSignedAuthority; the password never leaves the browser.
+      const response = await postSignedAuthority({
+        action: "profile.update",
+        walletPassword: savePassword,
+        body: { ...form },
       });
       setProfile(response.data.profile);
       setForm(profileToForm(response.data.profile));
+      setSavePassword("");
       setErrorMessage("");
       toast.success("Profile saved.");
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to save profile.");
+      const message = authorityErrorMessage(error, apiErrorMessage(error, "Unable to save profile."));
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -405,6 +417,19 @@ function Profile() {
                 <div className="field">
                   <label htmlFor="profile-discord">Discord Name</label>
                   <input id="profile-discord" className="input" value={form.discord_name} maxLength={80} onChange={(event) => updateForm("discord_name", event.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="profile-save-password">Wallet Password</label>
+                  <input
+                    id="profile-save-password"
+                    className="input"
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="To sign this profile update locally"
+                    value={savePassword}
+                    onChange={(event) => setSavePassword(event.target.value)}
+                  />
+                  <small className="help-text">Edits are signed in this browser so only you can change your profile. Your key is never sent.</small>
                 </div>
                 <button className="button" type="submit" disabled={saving}>
                   {saving ? "Saving..." : "Save Profile"}

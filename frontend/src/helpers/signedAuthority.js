@@ -17,6 +17,7 @@ const AUTHORITY_ACTIONS = Object.freeze({
   "forum.post": { path: "/forum/post", actorField: "author_address" },
   "forum.reply": { path: "/forum/reply", actorField: "author_address" },
   "forum.feature": { path: "/forum/feature", actorField: "voter_address" },
+  "profile.update": { path: "/profiles/profile", actorField: "wallet_address" },
 });
 
 const FORBIDDEN_BODY_FIELDS = new Set([
