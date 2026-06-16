@@ -977,6 +977,16 @@ html[data-theme="light"] .vnext .vn-side__wallet {
   min-width: 0;
   padding: 28px 32px 60px;
 }
+/* The global sticky-footer rule `#main-content { flex: 1 0 auto }` (index.css) is
+   meant for the column app-shell layout and, by ID specificity, overrides the
+   class rule above. Inside the ROW-flex app shell that makes the content column
+   grow to its content width and never shrink, so long text overflows the column
+   and is clipped (no page scroll). Restore shrink-to-fit and clamp the width. */
+.vnext .vn-app__main#main-content {
+  flex: 1 1 0%;
+  min-width: 0;
+  max-width: 100%;
+}
 
 /* --- Tablet: collapse to a 64px icon-only rail with tooltips --- */
 @media (max-width: 1100px) and (min-width: 761px) {
@@ -1979,6 +1989,7 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
 }
 .vnext .vn-key-field--blurred .vn-key-field__value {
   filter: blur(7px);
+  -webkit-user-select: none;
   user-select: none;
 }
 .vnext .vn-sync {
