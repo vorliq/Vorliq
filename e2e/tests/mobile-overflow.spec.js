@@ -28,8 +28,11 @@ test.describe("app-shell content has no clipped text at 375px (signed out)", () 
       await page.setViewportSize({ width: 375, height: 812 });
       await prepareReadOnlyPage(page);
       await safeGoto(page, route);
-      // Let any skeletons/error states settle into their final layout.
-      await page.waitForTimeout(800);
+      // Wait for the content column and for data to settle so the measurement is
+      // taken against the final layout, not a mid-load reflow.
+      await expect(page.locator("main#main-content")).toBeVisible();
+      await page.waitForLoadState("networkidle", { timeout: 12_000 }).catch(() => {});
+      await page.waitForTimeout(700);
 
       const findings = await page.evaluate(() => {
         const vw = window.innerWidth;
