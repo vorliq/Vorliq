@@ -208,6 +208,12 @@ function NetworkSection() {
         The node connection is where this app reads public chain data. You can point it at a different
         Vorliq node on this device.
       </p>
+      <p className="vn-settings__warn">
+        Only point this at a node you run or fully trust. A node you connect to can show false balances and
+        transaction confirmations, and can see which addresses you look up. It cannot move your funds — every
+        transaction is still signed on your device — but it can mislead you. Nodes listed in the public registry
+        are self-reported and not verified by Vorliq.
+      </p>
 
       <div className="vn-toggle-row">
         <div className="vn-toggle-row__label">

@@ -1385,6 +1385,18 @@ html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
   justify-content: center;
   flex-wrap: wrap;
 }
+
+/* Security warning callout (e.g. the node-connection trust notice in Settings). */
+.vnext .vn-settings__warn {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: var(--vn-r-sm);
+  border: 1px solid rgba(214, 158, 46, 0.45);
+  background: rgba(214, 158, 46, 0.1);
+  color: var(--vn-text);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
 .vnext .vn-wallet-actions .vn-btn {
   min-width: 180px;
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
-import AddressIdentity from "../components/AddressIdentity";
+import { shortAddress } from "../components/AddressIdentity";
 import ErrorMessage from "../components/ErrorMessage";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
@@ -80,8 +80,8 @@ function NodeCard({ node, onAdd, onInspect }) {
 
       {node.operator_wallet_address && (
         <div>
-          <span className="meta-label">Operator</span>
-          <AddressIdentity address={node.operator_wallet_address} />
+          <span className="meta-label">Operator (self-claimed, unverified)</span>
+          <span className="meta-value hash-text">{shortAddress(node.operator_wallet_address)}</span>
         </div>
       )}
 
@@ -220,6 +220,16 @@ function Registry() {
           View public Vorliq nodes, health history, sync status, and operator signals before adding a peer to your network.
         </p>
       </section>
+
+      <div className="risk-box">
+        <strong>These figures are self-reported by each node</strong>
+        <p>
+          Reliability, uptime, sync status, chain height, and the operator address are reported by each node
+          itself and are not independently verified by Vorliq. Treat this list as unverified claims, not a trust
+          ranking. Before pointing your wallet at any node in Settings, only use nodes you operate or fully
+          trust — a node you connect to can show false balances and confirmations and can see your activity.
+        </p>
+      </div>
 
       <ErrorMessage message={errorMessage} />
 
