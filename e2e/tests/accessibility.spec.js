@@ -124,3 +124,54 @@ for (const theme of ["dark", "light"]) {
     ).toBeGreaterThanOrEqual(4.5);
   });
 }
+
+// Status / state colours sit on small badges and pills — exactly the elements
+// the alpha-blind probe used to miss. Each fill is checked against the text that
+// actually sits on it, and each text-only "ink" against the page background, in
+// BOTH themes. The brand-new tokens (in-progress, category-buy, category-sell)
+// have no track record, so they are gated explicitly here too.
+const STATUS_TOKENS = [
+  "--success", "--in-progress", "--category-buy", "--category-sell",
+  "--warning", "--danger", "--on-light-fill", "--on-sell", "--on-status",
+  "--success-ink", "--warning-ink", "--danger-ink", "--bg-deep",
+];
+// [fill, text-on-fill] pairs.
+const STATUS_FILL_PAIRS = [
+  ["--success", "--on-light-fill"],
+  ["--in-progress", "--on-light-fill"],
+  ["--category-buy", "--on-light-fill"],
+  ["--category-sell", "--on-sell"],
+  ["--warning", "--on-status"],
+  ["--danger", "--on-status"],
+];
+// text-only inks read against the page background.
+const STATUS_INKS = ["--success-ink", "--warning-ink", "--danger-ink"];
+
+for (const theme of ["dark", "light"]) {
+  test(`status colours meet WCAG AA (badges + ink) (${theme} theme)`, async ({ page }) => {
+    await prepareReadOnlyPage(page);
+    await page.addInitScript((t) => {
+      window.localStorage.setItem("vorliq_theme", t);
+    }, theme);
+    await safeGoto(page, "/readiness"); // renders status badges / readiness scores
+
+    const tokens = await readTokens(page, STATUS_TOKENS);
+    for (const name of STATUS_TOKENS) {
+      expect(tokens[name], `${name} should resolve in ${theme}`).not.toBeNull();
+    }
+    for (const [fill, text] of STATUS_FILL_PAIRS) {
+      const ratio = contrastRatio(tokens[text], tokens[fill]);
+      expect(
+        ratio,
+        `${text} on ${fill} in ${theme} = ${ratio.toFixed(2)}:1 (needs >= 4.5:1)`
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+    for (const ink of STATUS_INKS) {
+      const ratio = contrastRatio(tokens[ink], tokens["--bg-deep"]);
+      expect(
+        ratio,
+        `${ink} on --bg-deep in ${theme} = ${ratio.toFixed(2)}:1 (needs >= 4.5:1)`
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+}
