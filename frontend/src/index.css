@@ -3356,6 +3356,18 @@ a:focus-visible {
   --brand-link-glow: rgba(24, 119, 242, 0.26);
 }
 
+/* X and GitHub use white / near-white marks tuned for the dark footer. In light
+   mode the footer surface is light (var(--surface-glass-solid)), so those marks
+   become invisible — use dark equivalents there. (Discord blurple reads on both.) */
+html[data-theme="light"] .social-brand-link.x {
+  --brand-link-color: #0f1419;
+  --brand-link-glow: rgba(15, 20, 25, 0.2);
+}
+html[data-theme="light"] .social-brand-link.github {
+  --brand-link-color: #1b1f24;
+  --brand-link-glow: rgba(27, 31, 36, 0.2);
+}
+
 .brand-social-links .social-brand-link:hover,
 .brand-social-links .social-brand-link:focus-visible {
   border-color: rgba(160, 174, 192, 0.55);
