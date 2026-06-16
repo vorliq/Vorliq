@@ -53,7 +53,6 @@ const VLQ = lazy(() => import("./pages/VLQ"));
 const Whitepaper = lazy(() => import("./pages/Whitepaper"));
 // New design layer (migrated page-by-page). Brings its own nav/footer.
 const Landing = lazy(() => import("./pages/vnext/Landing"));
-const AppShellDemo = lazy(() => import("./pages/vnext/AppShellDemo"));
 const VnextDashboard = lazy(() => import("./pages/vnext/Dashboard"));
 const VnextWallet = lazy(() => import("./pages/vnext/Wallet"));
 const VnextSend = lazy(() => import("./pages/vnext/Send"));
@@ -148,10 +147,8 @@ function App() {
 function AppShell() {
   const location = useLocation();
   // The new design layer ships its own nav, footer, and background, so the
-  // global brand chrome is suppressed for the /preview/* staging routes and for
-  // the flipped primary vnext routes.
-  const standalone =
-    location.pathname.startsWith("/preview") || VNEXT_PRIMARY_ROUTES.has(location.pathname);
+  // global brand chrome is suppressed for the flipped primary vnext routes.
+  const standalone = VNEXT_PRIMARY_ROUTES.has(location.pathname);
 
   useEffect(() => {
     applyTheme(getStoredTheme());
@@ -177,18 +174,6 @@ function AppShell() {
       <MainRegion standalone={standalone}>
         <Suspense fallback={<div className="page"><BrandLoader label="Loading Vorliq" /></div>}>
         <Routes>
-          <Route path="/preview" element={<Landing />} />
-          <Route path="/preview/app" element={<AppShellDemo />} />
-          <Route path="/preview/app/dashboard" element={<VnextDashboard />} />
-          <Route path="/preview/app/wallet" element={<VnextWallet />} />
-          <Route path="/preview/app/send" element={<VnextSend />} />
-          <Route path="/preview/app/receive" element={<VnextReceive />} />
-          <Route path="/preview/app/mining" element={<VnextMining />} />
-          <Route path="/preview/app/lending" element={<VnextLending />} />
-          <Route path="/preview/app/governance" element={<VnextGovernance />} />
-          <Route path="/preview/app/faucet" element={<VnextFaucet />} />
-          <Route path="/preview/app/settings" element={<VnextSettings />} />
-          <Route path="/preview/app/:section" element={<AppShellDemo />} />
           <Route path="/" element={<Landing />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
