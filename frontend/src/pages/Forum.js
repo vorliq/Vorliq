@@ -9,19 +9,21 @@ import ReportButton from "../components/ReportButton";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
+import { useAuth } from "../context/AuthContext";
+import { authorityErrorMessage, postSignedAuthority } from "../helpers/signedAuthority";
 
 const initialPostForm = {
-  authorAddress: "",
   category: "general",
   title: "",
   body: "",
   imageData: "",
+  password: "",
 };
 
 const initialReplyForm = {
-  authorAddress: "",
   body: "",
   imageData: "",
+  password: "",
 };
 
 const forumCategories = [
@@ -62,6 +64,8 @@ function readImageFile(file, onLoad) {
 }
 
 function Forum() {
+  const { wallet, isLoggedIn } = useAuth();
+  const address = wallet?.address;
   const [posts, setPosts] = useState([]);
   const [featuredPosts, setFeaturedPosts] = useState([]);
   const [selectedPostId, setSelectedPostId] = useState("");
@@ -181,19 +185,32 @@ function Forum() {
 
   async function createPost(event) {
     event.preventDefault();
-    if (!postForm.authorAddress.trim() || !postForm.title.trim() || !postForm.body.trim()) {
-      toast.error("Fill in your wallet address, title, and message.");
+    if (!isLoggedIn || !address) {
+      toast.error("Sign in to your wallet to post.");
+      return;
+    }
+    if (!postForm.title.trim() || !postForm.body.trim()) {
+      toast.error("Fill in a title and message.");
+      return;
+    }
+    if (!postForm.password) {
+      toast.error("Enter your wallet password to sign this post locally.");
       return;
     }
 
     setSubmitting(true);
     try {
-      const response = await api.post("/forum/post", {
-        author_address: postForm.authorAddress.trim(),
-        category: postForm.category,
-        title: postForm.title.trim(),
-        body: postForm.body.trim(),
-        image_data: postForm.imageData,
+      // Authorship is signed locally so the author address cannot be spoofed;
+      // the server binds the post to the wallet that proved control of it.
+      const response = await postSignedAuthority({
+        action: "forum.post",
+        walletPassword: postForm.password,
+        body: {
+          category: postForm.category,
+          title: postForm.title.trim(),
+          body: postForm.body.trim(),
+          image_data: postForm.imageData,
+        },
       });
       toast.success("Forum post created.");
       setPostForm(initialPostForm);
@@ -201,7 +218,7 @@ function Forum() {
       await loadFeaturedPosts({ quiet: true });
       await loadPost(response.data.post_id);
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to create forum post.");
+      const message = authorityErrorMessage(error, apiErrorMessage(error, "Unable to create forum post."));
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -211,8 +228,16 @@ function Forum() {
 
   async function addReply(event) {
     event.preventDefault();
-    if (!selectedPostId || !replyForm.authorAddress.trim() || !replyForm.body.trim()) {
-      toast.error("Enter your wallet address and reply.");
+    if (!isLoggedIn || !address) {
+      toast.error("Sign in to your wallet to reply.");
+      return;
+    }
+    if (!selectedPostId || !replyForm.body.trim()) {
+      toast.error("Enter a reply.");
+      return;
+    }
+    if (!replyForm.password) {
+      toast.error("Enter your wallet password to sign this reply locally.");
       return;
     }
     if (selectedPost?.moderation_status === "locked") {
@@ -222,11 +247,14 @@ function Forum() {
 
     setSubmitting(true);
     try {
-      await api.post("/forum/reply", {
-        post_id: selectedPostId,
-        author_address: replyForm.authorAddress.trim(),
-        body: replyForm.body.trim(),
-        image_data: replyForm.imageData,
+      await postSignedAuthority({
+        action: "forum.reply",
+        walletPassword: replyForm.password,
+        body: {
+          post_id: selectedPostId,
+          body: replyForm.body.trim(),
+          image_data: replyForm.imageData,
+        },
       });
       toast.success("Reply posted.");
       setReplyForm(initialReplyForm);
@@ -234,7 +262,7 @@ function Forum() {
       await loadPosts({ quiet: true });
       await loadFeaturedPosts({ quiet: true });
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to post reply.");
+      const message = authorityErrorMessage(error, apiErrorMessage(error, "Unable to post reply."));
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -320,7 +348,7 @@ function Forum() {
           </article>
           <article className="lifecycle-step">
             <h3>Wallet context</h3>
-            <p>Posting, replying, upvoting, featuring, and reporting use public wallet addresses. They do not require private keys.</p>
+            <p>Posting and replying are signed locally with your wallet so authorship is verified and cannot be impersonated. Upvoting, featuring, and reporting use public wallet addresses.</p>
           </article>
           <article className="lifecycle-step">
             <h3>Moderation</h3>
@@ -478,18 +506,16 @@ function Forum() {
 
           <div className="forum-create">
             <h2>Create a New Post</h2>
+            {!isLoggedIn ? (
+              <div className="risk-box">
+                <Link className="text-button" to="/login">Sign in to your wallet</Link> to post. Authorship is signed
+                locally so a post can only be published under the wallet that proves it controls the address.
+              </div>
+            ) : (
             <form className="form" onSubmit={createPost}>
               <div className="field">
-                <label htmlFor="forum-author">Wallet Address</label>
-                <input
-                  id="forum-author"
-                  className="input"
-                  type="text"
-                  value={postForm.authorAddress}
-                  onChange={(event) =>
-                    setPostForm((current) => ({ ...current, authorAddress: event.target.value }))
-                  }
-                />
+                <label>Posting as</label>
+                <span className="meta-value"><AddressIdentity address={address} compact /></span>
               </div>
               <div className="field">
                 <label htmlFor="forum-title">Title</label>
@@ -548,10 +574,26 @@ function Forum() {
                 />
                 {postForm.imageData && <img className="forum-preview" src={postForm.imageData} alt="Selected upload preview" />}
               </div>
+              <div className="field">
+                <label htmlFor="forum-password">Wallet Password</label>
+                <input
+                  id="forum-password"
+                  className="input"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="To sign this post locally"
+                  value={postForm.password}
+                  onChange={(event) =>
+                    setPostForm((current) => ({ ...current, password: event.target.value }))
+                  }
+                />
+                <small className="help-text">Your key is decrypted in this browser only to sign authorship. It is never sent.</small>
+              </div>
               <button className="button" type="submit" disabled={submitting}>
                 {submitting ? "Posting..." : "Post Message"}
               </button>
             </form>
+            )}
           </div>
         </div>
 
@@ -631,20 +673,17 @@ function Forum() {
 
               {selectedPost.moderation_status === "locked" ? (
                 <div className="empty-state">Replies are closed because this post is locked by moderation.</div>
+              ) : !isLoggedIn ? (
+                <div className="risk-box">
+                  <Link className="text-button" to="/login">Sign in to your wallet</Link> to reply. Replies are signed
+                  locally so authorship is verified.
+                </div>
               ) : (
               <form className="form" onSubmit={addReply}>
                 <h2>Reply</h2>
                 <div className="field">
-                  <label htmlFor="reply-author">Wallet Address</label>
-                  <input
-                    id="reply-author"
-                    className="input"
-                    type="text"
-                    value={replyForm.authorAddress}
-                    onChange={(event) =>
-                      setReplyForm((current) => ({ ...current, authorAddress: event.target.value }))
-                    }
-                  />
+                  <label>Replying as</label>
+                  <span className="meta-value"><AddressIdentity address={address} compact /></span>
                 </div>
                 <div className="field">
                   <label htmlFor="reply-body">Reply</label>
@@ -671,6 +710,20 @@ function Forum() {
                     }
                   />
                   {replyForm.imageData && <img className="forum-preview" src={replyForm.imageData} alt="Selected reply upload preview" />}
+                </div>
+                <div className="field">
+                  <label htmlFor="reply-password">Wallet Password</label>
+                  <input
+                    id="reply-password"
+                    className="input"
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="To sign this reply locally"
+                    value={replyForm.password}
+                    onChange={(event) =>
+                      setReplyForm((current) => ({ ...current, password: event.target.value }))
+                    }
+                  />
                 </div>
                 <button className="button" type="submit" disabled={submitting}>
                   {submitting ? "Posting..." : "Post Reply"}

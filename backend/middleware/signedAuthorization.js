@@ -37,6 +37,13 @@ const AUTHORITY_ROUTES = new Map([
   ["/api/lending/request", { action: "lending.request", actorFields: ["requester_address", "requesterAddress"] }],
   ["/api/lending/vote", { action: "lending.vote", actorFields: ["voter_address", "voterAddress"] }],
   ["/api/lending/repay", { action: "lending.repay", actorFields: ["repayer_address", "repayerAddress"] }],
+  // Forum authorship: posts/replies render the author's profile name, avatar, and
+  // "Wallet Verified" badge, so an unproven author_address let anyone publish a
+  // persistent post wearing a real verified member's identity. Enforced here at
+  // the Node gateway (the core binds to localhost behind this backend), requiring
+  // the claimed author to prove control of the address with a signature.
+  ["/api/forum/post", { action: "forum.post", actorFields: ["author_address", "authorAddress"] }],
+  ["/api/forum/reply", { action: "forum.reply", actorFields: ["author_address", "authorAddress"] }],
 ]);
 const usedNonces = new Map();
 const UNSIGNED_AUTHORITY_WRITE_PATHS = new Set(AUTHORITY_ROUTES.keys());

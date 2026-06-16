@@ -32,6 +32,8 @@ describe("signed authority write containment", () => {
     "/api/lending/request": { requester_address: validWallet, amount: 10, reason: "Community work" },
     "/api/lending/vote": { loan_id: "loan-1", voter_address: validWallet, vote: "yes" },
     "/api/lending/repay": { loan_id: "loan-1", repayer_address: validWallet },
+    "/api/forum/post": { author_address: validWallet, title: "Community update", body: "A forum post body for authorization testing.", category: "general" },
+    "/api/forum/reply": { post_id: "post-1", author_address: validWallet, body: "A forum reply body for authorization testing." },
   };
 
   test.each(Array.from(UNSIGNED_AUTHORITY_WRITE_PATHS))("blocks unsigned authority write %s", async (path) => {

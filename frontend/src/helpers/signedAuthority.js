@@ -14,6 +14,8 @@ const AUTHORITY_ACTIONS = Object.freeze({
   "lending.request": { path: "/lending/request", actorField: "requester_address" },
   "lending.vote": { path: "/lending/vote", actorField: "voter_address" },
   "lending.repay": { path: "/lending/repay", actorField: "repayer_address" },
+  "forum.post": { path: "/forum/post", actorField: "author_address" },
+  "forum.reply": { path: "/forum/reply", actorField: "author_address" },
 });
 
 const FORBIDDEN_BODY_FIELDS = new Set([
