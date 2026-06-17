@@ -301,6 +301,20 @@ async function postLifecycleAction(action, req, res) {
   }
 }
 
+router.post("/api/admin/registry/probe-sweep", adminAuth, async (req, res) => {
+  try {
+    const response = await axios.post(
+      `${flaskUrl}/registry/admin/probe-sweep`,
+      {},
+      { headers: { Authorization: req.get("authorization") || "" } }
+    );
+    failIfUnsafe(response.data);
+    return res.status(response.status).json(response.data);
+  } catch (error) {
+    return handleRouteError(res, error, "POST /api/admin/registry/probe-sweep", "Unable to run registry probe sweep.");
+  }
+});
+
 router.post("/api/admin/registry/archive", adminAuth, async (req, res) => postLifecycleAction("archive", req, res));
 router.post("/api/admin/registry/restore", adminAuth, async (req, res) => postLifecycleAction("restore", req, res));
 router.post("/api/admin/registry/retire", adminAuth, async (req, res) => postLifecycleAction("retire", req, res));

@@ -18,6 +18,7 @@ from logger import vorliq_logger
 from mining_flag import mining_enabled
 from network import Network
 from node import Node
+import node_prober
 from peer_propagation import PeerEventLog, PeerPropagation
 from price import PriceDiscovery
 from profiles import Profiles
@@ -1942,6 +1943,46 @@ def admin_retire_registry_node():
         return jsonify({"success": True, "node": retired_node})
     except Exception as exc:
         vorliq_logger.error("Registry retire endpoint failed: %s", exc)
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.post("/registry/admin/probe-sweep")
+def admin_probe_sweep_registry():
+    unauthorized = _require_admin_request()
+    if unauthorized:
+        return unauthorized
+    try:
+        reference_height = node.blockchain.get_block_height()
+        summary = {
+            "probed": 0,
+            "verified": 0,
+            "claim_mismatch": 0,
+            "unreachable": 0,
+            "blocked": 0,
+            "inconclusive": 0,
+        }
+        mismatches = []
+        for entry in node_registry.get_all_nodes(include_archived=False):
+            node_url = entry.get("node_url")
+            if not node_url:
+                continue
+            probe = node_prober.probe_node(node_url)
+            status, reason = node_prober.compare_probe_to_claim(
+                probe,
+                claimed_height=entry.get("last_chain_height"),
+                claimed_hash=entry.get("last_block_hash"),
+                reference_height=reference_height,
+            )
+            node_registry.apply_probe_result(node_url, probe, status, reason)
+            summary["probed"] += 1
+            if status in summary:
+                summary[status] += 1
+            if status == "claim_mismatch":
+                mismatches.append({"node_url": node_url, "reason": reason})
+        storage.save_registry(node_registry)
+        return jsonify({"success": True, "summary": summary, "mismatches": mismatches, "checked_at": time.time()})
+    except Exception as exc:
+        vorliq_logger.error("Registry probe-sweep endpoint failed: %s", exc)
         return jsonify({"success": False, "message": str(exc)}), 400
 
 

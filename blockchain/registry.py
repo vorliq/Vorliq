@@ -385,6 +385,57 @@ class NodeRegistry:
         self.registered_nodes[normalized_url] = node
         return self._public_node(node)
 
+    def apply_probe_result(
+        self,
+        node_url: str,
+        probe_result: dict[str, Any],
+        compare_status: str,
+        compare_reason: str = "",
+        now: float | None = None,
+    ) -> dict[str, Any] | None:
+        """Record the outcome of an independent probe against a registered node.
+
+        Unlike heartbeat data (which the node reports about itself), this is what
+        the registry observed by fetching the node's own endpoint, so it can
+        contradict the node's claims. An unreachable, blocked, or mismatching
+        probe lowers the node's uptime/reliability through status history.
+        """
+        normalized_url = self._normalize_node_url(node_url)
+        stored = self.registered_nodes.get(normalized_url)
+        if not stored:
+            return None
+        node = self._normalize_node(stored, normalized_url)
+        now = float(now if now is not None else time.time())
+        reachable = bool(probe_result.get("reachable"))
+        node["reachable"] = reachable
+        node["last_probe_at"] = now
+        node["last_probe_status"] = self._optional_text(compare_status, "last_probe_status", 32)
+        node["last_probe_reason"] = self._optional_text(compare_reason, "last_probe_reason", 300)
+        node["probe_served_height"] = self._optional_int(probe_result.get("served_height"))
+        node["probe_served_hash"] = self._optional_text(probe_result.get("served_hash"), "probe_served_hash", 160)
+
+        if compare_status in {"unreachable", "blocked"}:
+            history_status = "offline"
+        elif compare_status == "claim_mismatch":
+            history_status = "mismatch"
+        else:
+            history_status = "online"
+        self._append_history(
+            node,
+            {
+                "timestamp": now,
+                "status": history_status,
+                "chain_height": self._optional_int(probe_result.get("served_height")),
+                "last_block_hash": self._optional_text(probe_result.get("served_hash"), "last_block_hash", 160),
+                "response_time_ms": self._optional_int(probe_result.get("response_time_ms")),
+                "message": self._optional_text(compare_reason, "message", 160),
+            },
+        )
+        self._recalculate_scores(node)
+        self.registered_nodes[normalized_url] = node
+        vorliq_logger.info("Registry probe applied to %s: %s", normalized_url, history_status)
+        return self.get_node(normalized_url) or self._public_node(node)
+
     def _normalize_node(self, node: dict[str, Any], node_url: str) -> dict[str, Any]:
         now = time.time()
         normalized = dict(node or {})
@@ -415,6 +466,12 @@ class NodeRegistry:
             "last_diagnostics_status",
             32,
         )
+        normalized["reachable"] = normalized.get("reachable") if isinstance(normalized.get("reachable"), bool) else None
+        normalized["last_probe_at"] = float(normalized.get("last_probe_at") or 0)
+        normalized["last_probe_status"] = self._optional_text(normalized.get("last_probe_status"), "last_probe_status", 32)
+        normalized["last_probe_reason"] = self._optional_text(normalized.get("last_probe_reason"), "last_probe_reason", 300)
+        normalized["probe_served_height"] = self._optional_int(normalized.get("probe_served_height"))
+        normalized["probe_served_hash"] = self._optional_text(normalized.get("probe_served_hash"), "probe_served_hash", 160)
         normalized["uptime_score"] = int(normalized.get("uptime_score") or 0)
         normalized["reliability_score"] = int(normalized.get("reliability_score") or 0)
         normalized["sync_status"] = self._optional_text(normalized.get("sync_status") or "unknown", "sync_status", 32)
@@ -464,6 +521,12 @@ class NodeRegistry:
             "snapshot_hash": normalized["snapshot_hash"],
             "snapshot_signature_verified": normalized["snapshot_signature_verified"],
             "last_diagnostics_status": normalized["last_diagnostics_status"],
+            "reachable": normalized["reachable"],
+            "last_probe_at": normalized["last_probe_at"],
+            "last_probe_status": normalized["last_probe_status"],
+            "last_probe_reason": normalized["last_probe_reason"],
+            "probe_served_height": normalized["probe_served_height"],
+            "probe_served_hash": normalized["probe_served_hash"],
             "uptime_score": normalized["uptime_score"],
             "reliability_score": normalized["reliability_score"],
             "sync_status": normalized["sync_status"],

@@ -151,6 +151,37 @@ jobs:
               '[Install]' \
               'WantedBy=timers.target' \
               > /etc/systemd/system/vorliq-heartbeat.timer
+            printf '%s\n' \
+              '[Unit]' \
+              'Description=Vorliq Registry Node Probe Sweep Once' \
+              'After=network-online.target vorliq-blockchain.service vorliq-backend.service' \
+              'Wants=network-online.target' \
+              'Requires=vorliq-blockchain.service vorliq-backend.service' \
+              '' \
+              '[Service]' \
+              'Type=oneshot' \
+              'User=vorliq' \
+              'Group=vorliq' \
+              'WorkingDirectory=/home/vorliq/app/backend' \
+              'Environment=NODE_ENV=production' \
+              'Environment=PROBE_API_URL=http://127.0.0.1:5000' \
+              'EnvironmentFile=-/etc/vorliq/backend.env' \
+              'ExecStart=/usr/bin/node probeSweep.js' \
+              > /etc/systemd/system/vorliq-node-probe-once.service
+            printf '%s\n' \
+              '[Unit]' \
+              'Description=Run Vorliq registry node probe sweep every ten minutes' \
+              '' \
+              '[Timer]' \
+              'OnBootSec=4min' \
+              'OnUnitActiveSec=10min' \
+              'AccuracySec=30s' \
+              'Persistent=true' \
+              'Unit=vorliq-node-probe-once.service' \
+              '' \
+              '[Install]' \
+              'WantedBy=timers.target' \
+              > /etc/systemd/system/vorliq-node-probe.timer
             systemctl daemon-reload
             systemctl stop vorliq-miner.service >/dev/null 2>&1 || true
             if [ ! -f /etc/systemd/system/vorliq-miner.service ]; then
@@ -273,6 +304,7 @@ jobs:
             systemctl restart vorliq-heartbeat
             systemctl is-active --quiet vorliq-heartbeat
             systemctl enable --now vorliq-heartbeat.timer
+            systemctl enable --now vorliq-node-probe.timer
             systemctl stop vorliq-miner.service >/dev/null 2>&1 || true
             sudo -u vorliq -H env \
               NODE_ENV=production \

@@ -139,6 +139,39 @@ Unit=vorliq-heartbeat-once.service
 WantedBy=timers.target
 SERVICE
 
+cat >/etc/systemd/system/vorliq-node-probe-once.service <<SERVICE
+[Unit]
+Description=Vorliq Registry Node Probe Sweep Once
+After=network-online.target vorliq-blockchain.service vorliq-backend.service
+Wants=network-online.target
+Requires=vorliq-blockchain.service vorliq-backend.service
+
+[Service]
+Type=oneshot
+User=vorliq
+Group=vorliq
+WorkingDirectory=/home/vorliq/app/backend
+Environment=NODE_ENV=production
+Environment=PROBE_API_URL=http://127.0.0.1:5000
+EnvironmentFile=-/etc/vorliq/backend.env
+ExecStart=/usr/bin/node probeSweep.js
+SERVICE
+
+cat >/etc/systemd/system/vorliq-node-probe.timer <<SERVICE
+[Unit]
+Description=Run Vorliq registry node probe sweep every ten minutes
+
+[Timer]
+OnBootSec=4min
+OnUnitActiveSec=10min
+AccuracySec=30s
+Persistent=true
+Unit=vorliq-node-probe-once.service
+
+[Install]
+WantedBy=timers.target
+SERVICE
+
 cat >/etc/systemd/system/vorliq-miner.service <<SERVICE
 [Unit]
 Description=Vorliq Controlled Public Node Miner
@@ -164,7 +197,7 @@ WantedBy=multi-user.target
 SERVICE
 
 systemctl daemon-reload
-systemctl enable vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat.service vorliq-heartbeat.timer
+systemctl enable vorliq-blockchain.service vorliq-backend.service vorliq-heartbeat.service vorliq-heartbeat.timer vorliq-node-probe.timer
 if [[ "${VORLIQ_PUBLIC_MINER_ENABLED:-false}" == "true" && -n "${VORLIQ_PUBLIC_MINER_ADDRESS:-}" ]]; then
   systemctl enable vorliq-miner.service
 else
@@ -182,6 +215,7 @@ bash -lc 'set -a; . /etc/vorliq/backend.env 2>/dev/null || true; . /etc/vorliq/s
 systemctl restart vorliq-heartbeat.service
 systemctl start vorliq-heartbeat-once.service || true
 systemctl restart vorliq-heartbeat.timer
+systemctl restart vorliq-node-probe.timer
 if [[ "${VORLIQ_PUBLIC_MINER_ENABLED:-false}" == "true" && -n "${VORLIQ_PUBLIC_MINER_ADDRESS:-}" ]]; then
   systemctl restart vorliq-miner.service
 fi
