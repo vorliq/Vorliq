@@ -42,6 +42,20 @@
   --vn-max: 1160px;
   --vn-nav-h: 70px;
 
+  /* --- Spacing scale (canonical; values carried over from the legacy scale,
+     which was the part that worked — only the radius/shape needed converging) --- */
+  --vn-space-1: 4px;
+  --vn-space-2: 8px;
+  --vn-space-3: 12px;
+  --vn-space-4: 16px;
+  --vn-space-5: 24px;
+  --vn-space-6: 32px;
+  --vn-space-7: 48px;
+
+  /* --- Elevation (canonical; dark values carried from the legacy scale) --- */
+  --vn-shadow: 0 26px 90px rgba(0, 0, 0, 0.34);
+  --vn-shadow-soft: 0 18px 58px rgba(0, 0, 0, 0.24);
+
   color: var(--vn-text);
   background: var(--vn-bg);
   font-family: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
@@ -66,6 +80,9 @@ html[data-theme="light"] .vnext {
   --vn-rule: rgba(0, 0, 0, 0.08);
   --vn-row: rgba(0, 0, 0, 0.06);
   --vn-skeleton: rgba(0, 0, 0, 0.06);
+  /* Elevation, light values carried from the legacy light scale. */
+  --vn-shadow: 0 18px 54px rgba(36, 75, 110, 0.16);
+  --vn-shadow-soft: 0 12px 38px rgba(36, 75, 110, 0.12);
 }
 
 .vnext *,

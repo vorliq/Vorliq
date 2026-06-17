@@ -60,10 +60,13 @@ html[data-theme="light"] {
   --glow-blue: rgba(30, 111, 217, 0.22);
   /* vnext brand gradient: teal -> royal blue, left to right (no green stop). */
   --gradient-brand: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
-  --radius-sm: 10px;
+  /* Radius converged to the canonical vnext geometry (--vn-r-sm 8 / --vn-r-card
+     14 / --vn-r-pill 9999). --radius-lg was legacy's 22px card radius; vnext's
+     card radius is 14px, which is the convergence target (no distinct tier). */
+  --radius-sm: 8px;
   --radius-md: 14px;
-  --radius-lg: 22px;
-  --radius-pill: 999px;
+  --radius-lg: 14px;
+  --radius-pill: 9999px;
   --page-max: 1160px;
   --nav-height: 70px;
   --input-bg: var(--surface-field);
@@ -1036,7 +1039,7 @@ select.input {
   min-height: 48px;
   width: 100%;
   border: 1px solid rgba(0, 168, 150, 0.22);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: var(--surface-field);
   color: var(--text-primary);
   outline: none;
@@ -1066,7 +1069,7 @@ select.input {
   align-items: center;
   justify-content: center;
   min-height: 48px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
   background: var(--gradient-brand);
   color: #ffffff;
@@ -3115,7 +3118,7 @@ h3 {
 .button.primary {
   min-height: 42px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(90deg, var(--accent-green), var(--accent-cyan), var(--accent-blue));
   color: #03101b;
   font-size: 0.95rem;
