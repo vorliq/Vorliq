@@ -34,6 +34,7 @@ Type=simple
 User=vorliq
 Group=vorliq
 WorkingDirectory=/home/vorliq/app/blockchain
+EnvironmentFile=-/etc/vorliq/backend.env
 Environment=VORLIQ_HOST=127.0.0.1
 Environment=VORLIQ_PORT=5001
 Environment=VORLIQ_DATA_DIR=/home/vorliq/app/blockchain/data

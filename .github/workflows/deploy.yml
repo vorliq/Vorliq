@@ -88,6 +88,10 @@ jobs:
               sed -i '/^EnvironmentFile=-\/etc\/vorliq\/backend.env/a EnvironmentFile=-/etc/vorliq/snapshot-signing.env' /etc/systemd/system/vorliq-backend.service
               systemctl daemon-reload
             fi
+            if ! grep -q '^EnvironmentFile=-/etc/vorliq/backend.env' /etc/systemd/system/vorliq-blockchain.service; then
+              sed -i '/WorkingDirectory=\/home\/vorliq\/app\/blockchain/a EnvironmentFile=-/etc/vorliq/backend.env' /etc/systemd/system/vorliq-blockchain.service
+              systemctl daemon-reload
+            fi
             printf '%s\n' \
               '[Unit]' \
               'Description=Vorliq Public Registry Heartbeat' \
