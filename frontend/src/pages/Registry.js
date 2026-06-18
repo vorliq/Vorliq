@@ -7,8 +7,9 @@ import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 import { authorityErrorMessage, postSignedAuthority } from "../helpers/signedAuthority";
+import { useAuth } from "../context/AuthContext";
 
-const tabs = ["Active Nodes", "All Nodes", "Register Node", "Node Details"];
+const tabs = ["Active Nodes", "All Nodes", "Register Node", "Verify Operator", "Node Details"];
 
 function timeAgo(timestamp) {
   if (!timestamp) return "unknown";
@@ -35,6 +36,15 @@ function operatorLabel(node) {
   if (node.operator_probe_match === false) return "Operator (signed claim — probe mismatch, not verified)";
   if (node.is_verified_operator === true) return "Operator (signed claim — awaiting probe confirmation)";
   return "Operator (self-claimed, unverified)";
+}
+
+// Plain-language status of a node's operator claim, for the Verify Operator panel.
+function operatorStatusText(node) {
+  if (!node.operator_wallet_address) return "No operator claim yet — this node can be claimed.";
+  if (node.operator_verified === true) return "Verified operator — signed claim confirmed by an independent probe of the node.";
+  if (node.operator_probe_match === false) return "Signed claim present, but the node advertises a different wallet — not verified.";
+  if (node.is_verified_operator === true) return "Signed claim recorded — awaiting a probe that confirms the node advertises this wallet.";
+  return "Self-reported only — no signed claim.";
 }
 
 function statusClass(status) {
@@ -130,40 +140,74 @@ function Registry() {
   const [submitting, setSubmitting] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [operatorForm, setOperatorForm] = useState({ node_url: "", password: "", release: false });
+  const { wallet, isLoggedIn } = useAuth();
+  const [operatorForm, setOperatorForm] = useState({ node_url: "", password: "" });
+  const [operatorStatus, setOperatorStatus] = useState(null);
+  const [operatorStatusLoading, setOperatorStatusLoading] = useState(false);
   const [operatorSubmitting, setOperatorSubmitting] = useState(false);
   const [operatorError, setOperatorError] = useState("");
 
-  async function submitOperatorClaim(event) {
-    event.preventDefault();
+  async function checkOperatorStatus(event) {
+    if (event) event.preventDefault();
     setOperatorError("");
-    if (!operatorForm.node_url.trim()) {
-      setOperatorError("Enter the node URL you operate.");
+    const url = operatorForm.node_url.trim();
+    if (!url) {
+      setOperatorError("Enter the node URL you want to check or claim.");
+      return;
+    }
+    setOperatorStatusLoading(true);
+    try {
+      const response = await api.get("/registry/node", { params: { node_url: url } });
+      setOperatorStatus(response.data.node || null);
+      if (!response.data.node) {
+        setOperatorError("That node is not registered yet. Register it on the Register Node tab first, then claim it here.");
+      }
+    } catch (error) {
+      setOperatorStatus(null);
+      setOperatorError(apiErrorMessage(error, "Unable to load this node's operator status."));
+    } finally {
+      setOperatorStatusLoading(false);
+    }
+  }
+
+  async function submitOperatorClaim(release) {
+    setOperatorError("");
+    const url = operatorForm.node_url.trim();
+    if (!url) {
+      setOperatorError("Enter the node URL.");
+      return;
+    }
+    if (!isLoggedIn) {
+      setOperatorError("Log in to your wallet first — claims are signed locally by your connected wallet.");
       return;
     }
     if (!operatorForm.password) {
-      setOperatorError("Enter your wallet password to sign this claim locally.");
+      setOperatorError("Enter your wallet password to sign this action locally.");
       return;
     }
     setOperatorSubmitting(true);
     try {
       // Mirrors Send/Vote: the wallet signs locally; the signer becomes the
-      // operator_wallet_address actor. The node must also advertise this same
-      // wallet in its diagnostics before the probe will confirm the badge.
+      // operator_wallet_address actor. Nothing but the signed envelope leaves the
+      // browser. The node must also advertise this same wallet in its diagnostics
+      // before the probe will confirm the verified badge.
       await postSignedAuthority({
         action: "registry.verify_operator",
-        body: { node_url: operatorForm.node_url.trim(), release: operatorForm.release },
+        body: { node_url: url, release },
         walletPassword: operatorForm.password,
       });
       toast.success(
-        operatorForm.release
-          ? "Operator claim released."
+        release
+          ? "Operator claim released. This node is now free for another wallet to claim."
           : "Operator claim signed. It becomes a verified badge once a probe confirms your node advertises this wallet."
       );
-      setOperatorForm({ node_url: "", password: "", release: false });
+      setOperatorForm((current) => ({ ...current, password: "" }));
+      await checkOperatorStatus();
       await loadRegistry({ quiet: true });
     } catch (error) {
-      setOperatorError(authorityErrorMessage(error, "Unable to verify node operator."));
+      setOperatorError(
+        authorityErrorMessage(error, release ? "Unable to release the operator claim." : "Unable to claim node operator.")
+      );
     } finally {
       setOperatorSubmitting(false);
     }
@@ -514,19 +558,48 @@ function Registry() {
             </button>
           </form>
 
-          <form className="stack" onSubmit={submitOperatorClaim}>
-            <div className="section-title">
-              <h3>Verify operator</h3>
-              <span className="eyebrow">Signed claim from the wallet that runs the node</span>
+        </section>
+      )}
+
+      {activeTab === "Verify Operator" && (
+        <section className="card card-pad stack">
+          <div className="section-title">
+            <h2>Verify Operator</h2>
+            <span className="eyebrow">Prove the wallet that runs a node — and earn the verified badge</span>
+          </div>
+
+          <p className="meta-value">
+            An operator claim is a signed statement that the wallet you control runs a specific node. You sign
+            it locally with your wallet password — your private key never leaves your device, only the signed
+            statement is sent. The claim becomes a <strong>Verified operator</strong> badge only after the
+            registry independently probes your node and confirms it advertises this same wallet. Once verified,
+            only the holding wallet can release or change the claim.
+          </p>
+
+          <div className="meta-grid">
+            <div>
+              <span className="meta-label">Connected wallet</span>
+              <span className="meta-value hash-text">
+                {isLoggedIn ? wallet.address : "Not connected — log in to sign a claim"}
+              </span>
             </div>
-            <p className="meta-value">
-              Prove a wallet you control operates a registered node. You sign this claim locally with your
-              wallet password — the key never leaves your device. A signed claim is only recorded as a
-              self-attestation; it earns the verified badge once the registry independently probes your node
-              and confirms it advertises this same wallet (set <code>VORLIQ_OPERATOR_WALLET</code> on your
-              node). Once verified, only this wallet can change or release the claim.
-            </p>
-            {operatorError && <ErrorMessage message={operatorError} />}
+          </div>
+
+          <div className="stack">
+            <h3>Before you start</h3>
+            <ol>
+              <li>Log in here with the wallet that runs the node (the box above should show its address).</li>
+              <li>Register the node on the <strong>Register Node</strong> tab if it isn&apos;t already listed.</li>
+              <li>
+                On your server, set <code>VORLIQ_OPERATOR_WALLET</code> to this wallet&apos;s address and restart
+                the node, so its diagnostics advertise the same wallet the probe will check.
+              </li>
+            </ol>
+          </div>
+
+          {operatorError && <ErrorMessage message={operatorError} />}
+
+          <form className="inline-form" onSubmit={checkOperatorStatus}>
             <div className="field">
               <label htmlFor="operator-node-url">Node URL</label>
               <input
@@ -538,30 +611,85 @@ function Registry() {
                 placeholder="https://node.example.org"
               />
             </div>
-            <div className="field">
-              <label htmlFor="operator-password">Wallet password</label>
-              <input
-                id="operator-password"
-                className="input"
-                type="password"
-                autoComplete="off"
-                value={operatorForm.password}
-                onChange={(event) => setOperatorForm((current) => ({ ...current, password: event.target.value }))}
-                placeholder="Unlocks your saved wallet to sign locally"
-              />
-            </div>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={operatorForm.release}
-                onChange={(event) => setOperatorForm((current) => ({ ...current, release: event.target.checked }))}
-              />
-              <span>Release my existing claim instead (frees the node for a different wallet)</span>
-            </label>
-            <button className="button" type="submit" disabled={operatorSubmitting}>
-              {operatorSubmitting ? "Signing..." : operatorForm.release ? "Release operator claim" : "Sign operator claim"}
+            <button className="button secondary" type="submit" disabled={operatorStatusLoading}>
+              {operatorStatusLoading ? "Checking..." : "Check claim status"}
             </button>
           </form>
+
+          {operatorStatus && (() => {
+            const holder = operatorStatus.operator_wallet_address || "";
+            const connected = isLoggedIn ? wallet.address : "";
+            const claimedByMe = Boolean(holder) && Boolean(connected) && holder === connected;
+            const claimedByOther = Boolean(holder) && holder !== connected;
+            return (
+              <div className="card card-pad stack">
+                <div className="section-title">
+                  <h3>{operatorStatus.display_name || "Node"}</h3>
+                  {operatorStatus.operator_verified === true && (
+                    <span className="status-badge confirmed">Verified operator</span>
+                  )}
+                </div>
+                <div className="meta-grid">
+                  <div>
+                    <span className="meta-label">Current operator claim</span>
+                    <span className="meta-value hash-text">{holder ? shortAddress(holder) : "None yet"}</span>
+                  </div>
+                  <div>
+                    <span className="meta-label">Status</span>
+                    <span className="meta-value">{operatorStatusText(operatorStatus)}</span>
+                  </div>
+                </div>
+
+                {claimedByOther ? (
+                  <p className="meta-value">
+                    This node is already claimed by a different wallet and is locked to it (first-verified-locks).
+                    Only that wallet can release the claim. If it is yours, connect that wallet to release it.
+                  </p>
+                ) : (
+                  <>
+                    <div className="field">
+                      <label htmlFor="operator-password">Wallet password</label>
+                      <input
+                        id="operator-password"
+                        className="input"
+                        type="password"
+                        autoComplete="off"
+                        value={operatorForm.password}
+                        onChange={(event) => setOperatorForm((current) => ({ ...current, password: event.target.value }))}
+                        placeholder="Unlocks your saved wallet to sign locally"
+                      />
+                    </div>
+                    <div className="button-row">
+                      {claimedByMe ? (
+                        <button
+                          className="button"
+                          type="button"
+                          disabled={operatorSubmitting || !isLoggedIn}
+                          onClick={() => submitOperatorClaim(true)}
+                        >
+                          {operatorSubmitting ? "Signing..." : "Release my claim"}
+                        </button>
+                      ) : (
+                        <button
+                          className="button"
+                          type="button"
+                          disabled={operatorSubmitting || !isLoggedIn}
+                          onClick={() => submitOperatorClaim(false)}
+                        >
+                          {operatorSubmitting ? "Signing..." : "Claim this node"}
+                        </button>
+                      )}
+                    </div>
+                    <p className="help-text">
+                      {claimedByMe
+                        ? "Releasing signs a statement from your connected wallet that frees this node, so a different wallet can claim it. Use this when rotating to a new wallet."
+                        : "Claiming signs a statement from your connected wallet that it operates this node. It records the claim now; the verified badge appears after the next probe confirms your node advertises this wallet."}
+                    </p>
+                  </>
+                )}
+              </div>
+            );
+          })()}
         </section>
       )}
 
