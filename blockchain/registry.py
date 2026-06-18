@@ -44,7 +44,7 @@ class NodeRegistry:
                 "description": self._optional_text(description, "description", self.description_limit),
                 "region": self._optional_text(region, "region", self.location_limit),
                 "country": self._optional_text(country, "country", self.location_limit),
-                "operator_wallet_address": self._optional_text(operator_wallet_address, "operator_wallet_address", 160),
+                "operator_wallet_address": self._operator_wallet_for_unsigned_write(existing, operator_wallet_address),
                 "software_version": self._optional_text(software_version, "software_version", 80),
                 "registered_at": float(existing.get("registered_at") or now),
                 "last_seen": float(existing.get("last_seen") or now),
@@ -81,7 +81,9 @@ class NodeRegistry:
             node["display_name"] = self._require_text(display_name, "display_name", self.display_name_limit)
         if software_version is not None:
             node["software_version"] = self._optional_text(software_version, "software_version", 80)
-        if operator_wallet_address is not None:
+        if operator_wallet_address is not None and not bool(node.get("is_verified_operator")):
+            # First-verified-locks: once a node carries a signed operator claim,
+            # its unsigned heartbeat self-report can no longer move the wallet.
             node["operator_wallet_address"] = self._optional_text(operator_wallet_address, "operator_wallet_address", 160)
         if region is not None:
             node["region"] = self._optional_text(region, "region", self.location_limit)
@@ -244,6 +246,83 @@ class NodeRegistry:
                 summary["visible_public_count"] += 1
         return summary
 
+    def _operator_wallet_for_unsigned_write(self, existing: dict[str, Any], incoming: Any) -> str:
+        """Decide the operator wallet an UNSIGNED register/heartbeat may set.
+
+        A signed operator claim locks the wallet (first-verified-locks): once a
+        node is verified, its own unsigned self-reports can no longer overwrite
+        the recorded operator. Until verification, the self-reported value is
+        kept only as an unproven hint (is_verified_operator stays False).
+        """
+        if bool(existing.get("is_verified_operator")):
+            return self._optional_text(existing.get("operator_wallet_address"), "operator_wallet_address", 160)
+        return self._optional_text(incoming, "operator_wallet_address", 160)
+
+    def verify_operator_claim(
+        self,
+        node_url: str,
+        operator_wallet_address: str,
+        release: bool = False,
+    ) -> dict[str, Any]:
+        """Record (or release) a cryptographically signed operator claim.
+
+        The signature is verified UPSTREAM by the signed-authority layer (the
+        route is in AUTHORITY_ROUTES), so by the time control reaches here the
+        caller has already proven control of `operator_wallet_address`. This
+        method enforces the registry-side conflict policy: FIRST VERIFIED LOCKS.
+        Once a wallet holds a node's verified claim, only that same wallet can
+        change or release it; a different wallet is rejected outright. This is the
+        node-identity analogue of the profile-hijack lesson -- latest-wins is the
+        same unsafe shape relocated, so we refuse it.
+
+        A signed claim alone only proves the signer controls the wallet and is
+        willing to vouch for the URL; it does NOT prove the node running there is
+        theirs. That binding is completed by the independent probe comparing the
+        node's self-advertised operator wallet against this recorded claim. So a
+        successful claim records the wallet and sets is_verified_operator, but
+        does not by itself earn the public verified badge (see operator_verified
+        in _public_node): the badge also requires a probe-confirmed match.
+        """
+        normalized_url = self._normalize_node_url(node_url)
+        stored = self.registered_nodes.get(normalized_url)
+        if not stored:
+            raise ValueError("Node is not registered.")
+        node = self._normalize_node(stored, normalized_url)
+        wallet = self._optional_text(operator_wallet_address, "operator_wallet_address", 160)
+        if not wallet:
+            raise ValueError("operator_wallet_address is required.")
+
+        current_wallet = node.get("operator_wallet_address") or ""
+        if bool(node.get("is_verified_operator")) and current_wallet and current_wallet != wallet:
+            raise ValueError(
+                "This node already has a verified operator. Only the wallet that holds "
+                "the claim can change or release it."
+            )
+
+        now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        if release:
+            node["operator_wallet_address"] = ""
+            node["is_verified_operator"] = False
+            node["operator_verified_at"] = ""
+            node["operator_probe_match"] = None
+            node["operator_probe_reason"] = ""
+        else:
+            node["operator_wallet_address"] = wallet
+            node["is_verified_operator"] = True
+            node["operator_verified_at"] = now_iso
+            # Re-evaluated on the next probe sweep; until then the node/claim
+            # binding is unconfirmed, so the public badge stays off.
+            node["operator_probe_match"] = None
+            node["operator_probe_reason"] = "Awaiting independent probe confirmation of the node's advertised operator."
+        self.registered_nodes[normalized_url] = self._normalize_node(node, normalized_url)
+        vorliq_logger.info(
+            "Registry operator claim %s for %s by %s",
+            "released" if release else "recorded",
+            normalized_url,
+            wallet,
+        )
+        return self.get_node(normalized_url) or self._public_node(node)
+
     def archive_node(
         self,
         node_url: str,
@@ -391,6 +470,8 @@ class NodeRegistry:
         probe_result: dict[str, Any],
         compare_status: str,
         compare_reason: str = "",
+        operator_match: bool | None = None,
+        operator_reason: str = "",
         now: float | None = None,
     ) -> dict[str, Any] | None:
         """Record the outcome of an independent probe against a registered node.
@@ -413,10 +494,18 @@ class NodeRegistry:
         node["last_probe_reason"] = self._optional_text(compare_reason, "last_probe_reason", 300)
         node["probe_served_height"] = self._optional_int(probe_result.get("served_height"))
         node["probe_served_hash"] = self._optional_text(probe_result.get("served_hash"), "probe_served_hash", 160)
+        # Independent operator-claim check. Only meaningful for a verified node;
+        # for unverified nodes the sweep passes operator_match=None and we record
+        # nothing, leaving the field at its normalized default.
+        if bool(node.get("is_verified_operator")):
+            node["operator_probe_match"] = operator_match if isinstance(operator_match, bool) else None
+            node["operator_probe_reason"] = self._optional_text(operator_reason, "operator_probe_reason", 300)
 
         if compare_status in {"unreachable", "blocked"}:
             history_status = "offline"
-        elif compare_status == "claim_mismatch":
+        elif compare_status == "claim_mismatch" or operator_match is False:
+            # A node advertising a different operator than its signed claim is a
+            # mismatch surfaced the same way a chain-state lie is.
             history_status = "mismatch"
         else:
             history_status = "online"
@@ -477,6 +566,11 @@ class NodeRegistry:
         normalized["sync_status"] = self._optional_text(normalized.get("sync_status") or "unknown", "sync_status", 32)
         normalized["is_public"] = bool(normalized.get("is_public", True))
         normalized["is_verified_operator"] = bool(normalized.get("is_verified_operator", False))
+        normalized["operator_verified_at"] = self._optional_text(normalized.get("operator_verified_at"), "operator_verified_at", 80)
+        normalized["operator_probe_match"] = (
+            normalized.get("operator_probe_match") if isinstance(normalized.get("operator_probe_match"), bool) else None
+        )
+        normalized["operator_probe_reason"] = self._optional_text(normalized.get("operator_probe_reason"), "operator_probe_reason", 300)
         normalized["lifecycle_status"] = (
             self._normalize_lifecycle_status(normalized.get("lifecycle_status"))
             if self._normalize_lifecycle_status(normalized.get("lifecycle_status")) in self.explicit_lifecycle_statuses
@@ -532,6 +626,14 @@ class NodeRegistry:
             "sync_status": normalized["sync_status"],
             "is_public": normalized["is_public"],
             "is_verified_operator": normalized["is_verified_operator"],
+            "operator_verified_at": normalized["operator_verified_at"],
+            "operator_probe_match": normalized["operator_probe_match"],
+            "operator_probe_reason": normalized["operator_probe_reason"],
+            # The EARNED badge: a signed claim is recorded AND the independent
+            # probe confirmed the running node advertises that same wallet. A
+            # signed claim alone (is_verified_operator) is not enough -- it only
+            # proves someone vouched for the URL, not that the node is theirs.
+            "operator_verified": bool(normalized["is_verified_operator"]) and normalized["operator_probe_match"] is True,
             "active": lifecycle["lifecycle_status"] == "active",
             "lifecycle_status": lifecycle["lifecycle_status"],
             "lifecycle_reason": lifecycle["lifecycle_reason"],

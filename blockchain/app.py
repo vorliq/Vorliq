@@ -844,6 +844,14 @@ def get_diagnostics():
             "block_time_minimum": node.blockchain.BLOCK_TIME_MINIMUM,
             "last_block_hash": latest_block.hash,
             "last_block_timestamp": latest_block.timestamp,
+            # The node self-advertises which wallet operates it, set locally by the
+            # operator on their own server. The registry's independent prober reads
+            # this and compares it against the wallet that signed the operator claim
+            # -- a match is what binds the signed claim to the running node. It is
+            # self-reported (untrusted on its own), never a credential.
+            "operator_wallet_address": os.environ.get("VORLIQ_NODE_OPERATOR_WALLET")
+            or os.environ.get("VORLIQ_OPERATOR_WALLET")
+            or "",
         }
     )
 
@@ -1946,6 +1954,31 @@ def admin_retire_registry_node():
         return jsonify({"success": False, "message": str(exc)}), 400
 
 
+@app.post("/registry/verify-operator")
+def registry_verify_operator():
+    # Signature already verified by the before_request signed-authority gate
+    # (this route is in AUTHORITY_ROUTES), so the operator wallet here is proven
+    # to control its key. No admin token: this is an operator self-service action,
+    # not an administrator action.
+    try:
+        data = _json_body()
+        node_url = _require_registry_url(data.get("node_url") or data.get("nodeUrl"), "node URL")
+        operator_wallet = data.get("operator_wallet_address") or data.get("operatorWalletAddress")
+        release = bool(data.get("release", False))
+        node_entry = node_registry.verify_operator_claim(
+            node_url=node_url,
+            operator_wallet_address=operator_wallet,
+            release=release,
+        )
+        storage.save_registry(node_registry)
+        return jsonify({"success": True, "node": node_entry})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:
+        vorliq_logger.error("Registry verify-operator endpoint failed: %s", exc)
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
 @app.post("/registry/admin/probe-sweep")
 def admin_probe_sweep_registry():
     unauthorized = _require_admin_request()
@@ -1960,6 +1993,7 @@ def admin_probe_sweep_registry():
             "unreachable": 0,
             "blocked": 0,
             "inconclusive": 0,
+            "operator_mismatch": 0,
         }
         mismatches = []
         for entry in node_registry.get_all_nodes(include_archived=False):
@@ -1973,12 +2007,24 @@ def admin_probe_sweep_registry():
                 claimed_hash=entry.get("last_block_hash"),
                 reference_height=reference_height,
             )
-            node_registry.apply_probe_result(node_url, probe, status, reason)
+            # Only verified nodes carry a signed operator claim worth confirming.
+            operator_match, operator_reason = (None, "")
+            if entry.get("is_verified_operator"):
+                operator_match, operator_reason = node_prober.compare_operator_claim(
+                    probe,
+                    claimed_operator=entry.get("operator_wallet_address"),
+                )
+            node_registry.apply_probe_result(
+                node_url, probe, status, reason, operator_match=operator_match, operator_reason=operator_reason
+            )
             summary["probed"] += 1
             if status in summary:
                 summary[status] += 1
             if status == "claim_mismatch":
                 mismatches.append({"node_url": node_url, "reason": reason})
+            if operator_match is False:
+                summary["operator_mismatch"] += 1
+                mismatches.append({"node_url": node_url, "reason": operator_reason})
         storage.save_registry(node_registry)
         return jsonify({"success": True, "summary": summary, "mismatches": mismatches, "checked_at": time.time()})
     except Exception as exc:

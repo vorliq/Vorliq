@@ -193,6 +193,7 @@ class SignedAuthorizationTests(unittest.TestCase):
             "/lending/request": ("lending.request", "requester_address", {"amount": 10, "reason": "Useful work"}),
             "/lending/vote": ("lending.vote", "voter_address", {"loan_id": "loan-1", "vote": "yes"}),
             "/lending/repay": ("lending.repay", "repayer_address", {"loan_id": "loan-1"}),
+            "/registry/verify-operator": ("registry.verify_operator", "operator_wallet_address", {"node_url": "https://node.example.org"}),
         }
         self.assertEqual(set(payloads), set(AUTHORITY_ROUTES))
         verifier_storage = Storage(tempfile.mkdtemp())

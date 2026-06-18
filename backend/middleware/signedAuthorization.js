@@ -57,6 +57,12 @@ const AUTHORITY_ROUTES = new Map([
   // to the wallet that controls the address. (The server-side auto-create on first
   // verification is an internal call and not affected.)
   ["/api/profiles/profile", { action: "profile.update", actorFields: ["wallet_address", "walletAddress"] }],
+  // Operator verification: a node operator signs a claim that the wallet they
+  // control operates a registered node URL. Enforced here at the gateway (and
+  // again in the Flask core) so the registry only records a claim from a wallet
+  // that proved control of its key. The signed claim alone does not earn a badge;
+  // the independent probe must also confirm the node advertises that same wallet.
+  ["/api/registry/verify-operator", { action: "registry.verify_operator", actorFields: ["operator_wallet_address", "operatorWalletAddress"] }],
 ]);
 const usedNonces = new Map();
 const UNSIGNED_AUTHORITY_WRITE_PATHS = new Set(AUTHORITY_ROUTES.keys());

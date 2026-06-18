@@ -45,6 +45,10 @@ AUTHORITY_ROUTES = {
     "/lending/request": ("lending.request", ("requester_address", "requesterAddress")),
     "/lending/vote": ("lending.vote", ("voter_address", "voterAddress")),
     "/lending/repay": ("lending.repay", ("repayer_address", "repayerAddress")),
+    # A node operator proves control of a wallet and claims a registered node URL.
+    # The signed actor is the operator wallet itself; the registry then enforces
+    # first-verified-locks and the prober binds the claim to the running node.
+    "/registry/verify-operator": ("registry.verify_operator", ("operator_wallet_address", "operatorWalletAddress")),
 }
 
 

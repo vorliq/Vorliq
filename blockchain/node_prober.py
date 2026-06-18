@@ -198,6 +198,10 @@ def _fetch_one(target: str, sess: Any, timeout: float, max_bytes: int) -> dict[s
         "block_height": data.get("block_height"),
         "last_block_hash": data.get("last_block_hash"),
         "chain_valid": data.get("chain_valid"),
+        # The node self-advertises which wallet operates it. This is attacker-
+        # influenced (it is just what the endpoint chose to return), so it is only
+        # ever compared against a signed registry claim, never trusted on its own.
+        "operator_wallet": data.get("operator_wallet_address"),
         "response_time_ms": elapsed_ms,
     }
 
@@ -211,6 +215,7 @@ def _unreachable_result(status: str, exc: ProbeError) -> dict[str, Any]:
         "served_height": None,
         "served_hash": None,
         "served_valid": None,
+        "served_operator_wallet": None,
         "response_time_ms": None,
     }
 
@@ -243,6 +248,7 @@ def probe_node(
         "served_height": served["block_height"],
         "served_hash": served["last_block_hash"],
         "served_valid": served["chain_valid"],
+        "served_operator_wallet": served.get("operator_wallet"),
         "response_time_ms": served["response_time_ms"],
     }
 
@@ -283,3 +289,33 @@ def compare_probe_to_claim(
     if served_height is None or not served_hash:
         return "inconclusive", "Node responded but did not expose comparable diagnostics."
     return "verified", "Independent probe matches the node's reported chain state."
+
+
+def compare_operator_claim(
+    probe: dict[str, Any],
+    *,
+    claimed_operator: str | None = None,
+) -> tuple[bool | None, str]:
+    """Bind a SIGNED operator claim to the node actually running at the URL.
+
+    A signed claim proves a wallet vouched for a URL; it does not prove the node
+    there belongs to that wallet. This compares what the node self-advertises as
+    its operator (from its probed diagnostics) against the wallet recorded in the
+    registry's signed claim. Returns (match, reason):
+
+      None  - no signed claim to confirm, or the probe could not read an
+              advertised operator (unreachable / field absent) -> badge stays off
+      False - the node advertises a DIFFERENT wallet than the signed claim
+              (operator_mismatch, surfaced like claim_mismatch) -> badge off
+      True  - the node advertises exactly the signed-claim wallet -> binding holds
+    """
+    if not claimed_operator:
+        return None, ""
+    if not probe.get("reachable"):
+        return None, "Node did not respond to an independent probe; signed operator claim is unconfirmed."
+    advertised = probe.get("served_operator_wallet")
+    if not advertised:
+        return None, "Node does not advertise an operator wallet; signed claim cannot be probe-confirmed."
+    if str(advertised).strip() != str(claimed_operator).strip():
+        return False, "Node advertises a different operator wallet than its signed registry claim."
+    return True, "Independent probe confirms the node advertises the claimed operator wallet."

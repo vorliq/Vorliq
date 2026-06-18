@@ -319,6 +319,21 @@ router.post("/api/admin/registry/archive", adminAuth, async (req, res) => postLi
 router.post("/api/admin/registry/restore", adminAuth, async (req, res) => postLifecycleAction("restore", req, res));
 router.post("/api/admin/registry/retire", adminAuth, async (req, res) => postLifecycleAction("retire", req, res));
 
+// Operator self-service verification. NOT admin-gated: it is the operator, not an
+// administrator, who proves control of their wallet. The signed-authority gateway
+// middleware (requireSignedAuthorityWrite) has already verified the envelope by the
+// time we get here, so we forward the body (including the authorization envelope)
+// intact to the Flask core, which verifies it again and enforces first-verified-locks.
+router.post("/api/registry/verify-operator", async (req, res) => {
+  try {
+    const response = await axios.post(`${flaskUrl}/registry/verify-operator`, req.body);
+    failIfUnsafe(response.data);
+    return res.status(response.status).json(response.data);
+  } catch (error) {
+    return handleRouteError(res, error, "POST /api/registry/verify-operator", "Unable to verify node operator.");
+  }
+});
+
 router.get("/api/nodes/compare", async (req, res) => {
   try {
     return res.json(await buildNodeComparison());

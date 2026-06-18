@@ -3,6 +3,7 @@ const { hasForbiddenPublicMarker } = require("./nodeCompare");
 const MONITOR_STATUSES = new Set(["ok", "warning", "critical"]);
 const INCIDENT_CRITICAL_CODES = new Set([
   "node_probe_claim_mismatch",
+  "node_operator_claim_mismatch",
   "active_forked_node",
   "trusted_public_node_forked",
   "trusted_public_node_unreachable",
@@ -159,6 +160,19 @@ function buildNetworkMonitor(comparison = {}, options = {}) {
           "An independent probe of this node's own endpoint returned a chain state that does not match what the node reported in its heartbeat. The node's self-reported status cannot be trusted.",
           node,
           "Do not sync from this node. Verify against signed snapshots and audit exports, and treat its heartbeat as unreliable."
+        )
+      );
+      continue;
+    }
+    if (node.operator_probe_match === false) {
+      alerts.push(
+        alert(
+          "critical",
+          "node_operator_claim_mismatch",
+          "Node advertises a different operator than its signed claim",
+          "This node carries a cryptographically signed operator claim, but an independent probe found its own endpoint advertises a different operator wallet. The signed claim and the running node disagree about who operates it, so the verified-operator binding cannot be trusted.",
+          node,
+          "Do not treat this node as operator-verified. Confirm the operator wallet directly and re-run the operator claim from the controlling wallet."
         )
       );
       continue;
