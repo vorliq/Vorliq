@@ -3,8 +3,16 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
+import { configure } from "@testing-library/react";
 import { TextDecoder, TextEncoder } from "util";
 import { webcrypto } from "crypto";
+
+// The first cold render of the full <App /> in a heavy suite can exceed the
+// testing-library default findBy/waitFor timeout (1000ms) on slower CI runners,
+// which made the home-render smoke test flaky. Raise the async timeout suite-wide
+// so cold renders are not mistaken for failures; queries still resolve as soon as
+// the element appears, so passing tests stay fast.
+configure({ asyncUtilTimeout: 5000 });
 
 if (!global.TextEncoder) {
   global.TextEncoder = TextEncoder;

@@ -2,6 +2,17 @@ import { render, screen } from "@testing-library/react";
 
 import Registry from "./Registry";
 import api from "../helpers/api";
+import { AuthProvider } from "../context/AuthContext";
+
+// Registry reads the connected wallet (for the Verify Operator flow) via useAuth,
+// so it must render inside an AuthProvider.
+function renderRegistry() {
+  return render(
+    <AuthProvider>
+      <Registry />
+    </AuthProvider>
+  );
+}
 
 jest.mock("../helpers/api", () => ({
   get: jest.fn(),
@@ -45,7 +56,7 @@ beforeEach(() => {
 });
 
 test("Registry lifecycle filters and badges render", async () => {
-  render(<Registry />);
+  renderRegistry();
 
   await screen.findByRole("heading", { name: /run your own node/i });
   expect(screen.getByRole("button", { name: /all nodes/i })).toBeInTheDocument();
@@ -61,7 +72,7 @@ test("Registry lifecycle filters and badges render", async () => {
 });
 
 test("Registry page shows Run Your Own Node section", async () => {
-  render(<Registry />);
+  renderRegistry();
 
   expect(await screen.findByRole("heading", { name: /run your own node/i })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /node guide/i })).toHaveAttribute("href", "/docs/run-your-own-node.html");
