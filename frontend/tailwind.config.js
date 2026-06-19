@@ -23,8 +23,10 @@ module.exports = {
         mono: ['"JetBrains Mono"', '"Fira Code"', "ui-monospace", "monospace"],
       },
       boxShadow: {
-        glow: "0 0 34px rgba(0, 168, 150, 0.24)",
-        panel: "0 22px 80px rgba(0, 0, 0, 0.32)",
+        // Resolve from the CSS token registry (index.css :root) so the shadow
+        // geometry has a single canonical source rather than living here too.
+        glow: "var(--shadow-glow-accent)",
+        panel: "var(--shadow-panel)",
       },
     },
   },

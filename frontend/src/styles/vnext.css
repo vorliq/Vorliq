@@ -38,6 +38,12 @@
   /* --- Shape --- */
   --vn-r-card: 14px;
   --vn-r-sm: 8px;
+  /* Micro radii for small decorative elements (underline, bars, skeletons,
+     accent rules). Exact legacy values preserved; ladder 3xs 2 < 2xs 4 < xs 6
+     < sm 8 < card 14 < pill. */
+  --vn-r-xs: 6px;
+  --vn-r-2xs: 4px;
+  --vn-r-3xs: 2px;
   --vn-r-pill: 9999px;
   --vn-max: 1160px;
   --vn-nav-h: 70px;
@@ -55,6 +61,14 @@
   /* --- Elevation (canonical; dark values carried from the legacy scale) --- */
   --vn-shadow: 0 26px 90px rgba(0, 0, 0, 0.34);
   --vn-shadow-soft: 0 18px 58px rgba(0, 0, 0, 0.24);
+  /* Rings and glows — each lifts an inline vnext shadow into the registry
+     verbatim so no rule carries a shadow literal. Theme-independent (the legacy
+     values were identical in both themes). */
+  --vn-ring-focus: 0 0 0 3px rgba(30, 111, 217, 0.25);
+  --vn-glow-teal-drop: 0 8px 28px var(--vn-glow-teal);
+  --vn-glow-teal-sm: 0 0 10px var(--vn-glow-teal);
+  --vn-glow-green-sm: 0 0 8px var(--vn-green);
+  --vn-glow-gold: 0 0 8px rgba(224, 168, 58, 0.7);
 
   color: var(--vn-text);
   background: var(--vn-bg);
@@ -139,7 +153,7 @@ html[data-theme="light"] .vnext {
 }
 .vnext .vn-btn--primary:hover {
   filter: brightness(1.1);
-  box-shadow: 0 8px 28px var(--vn-glow-teal);
+  box-shadow: var(--vn-glow-teal-drop);
 }
 
 .vnext .vn-btn--secondary {
@@ -181,7 +195,7 @@ html[data-theme="light"] .vnext {
   height: 7px;
   border-radius: 50%;
   background: var(--vn-green);
-  box-shadow: 0 0 8px var(--vn-green);
+  box-shadow: var(--vn-glow-green-sm);
 }
 
 /* ----------------------------------------------------------- Cards ------ */
@@ -201,6 +215,11 @@ html[data-theme="light"] .vnext {
 /* --------------------------------------------------- Section headers ---- */
 .vnext .vn-section {
   padding: 88px 0;
+}
+/* Sections that are deep-link targets (#how-it-works, #learn, #community) clear
+   the fixed top nav when scrolled to, so their heading is not tucked under it. */
+.vnext .vn-section[id] {
+  scroll-margin-top: calc(var(--vn-nav-h) + 16px);
 }
 .vnext .vn-overline {
   display: block;
@@ -232,7 +251,7 @@ html[data-theme="light"] .vnext {
   display: inline-block;
   width: 64px;
   height: 4px;
-  border-radius: 4px;
+  border-radius: var(--vn-r-2xs);
   background: var(--vn-gradient);
   margin-top: 18px;
 }
@@ -540,14 +559,14 @@ html[data-theme="light"] .vnext .vn-ticker__item {
 /* small reusable visual bits */
 .vnext .vn-bar {
   height: 8px;
-  border-radius: 6px;
+  border-radius: var(--vn-r-xs);
   background: var(--vn-card-2);
   overflow: hidden;
 }
 .vnext .vn-bar__fill {
   height: 100%;
   background: var(--vn-gradient);
-  border-radius: 6px;
+  border-radius: var(--vn-r-xs);
 }
 .vnext .vn-uptime {
   display: flex;
@@ -733,7 +752,7 @@ html[data-theme="light"] .vnext .vn-ticker__item {
 .vnext .vn-input:focus {
   outline: none;
   border-color: var(--vn-blue);
-  box-shadow: 0 0 0 3px rgba(30, 111, 217, 0.25);
+  box-shadow: var(--vn-ring-focus);
 }
 .vnext .vn-form-msg {
   text-align: center;
@@ -788,7 +807,7 @@ html[data-theme="light"] .vnext .vn-ticker__item {
 /* --------------------------------------------------- Skeleton / error -- */
 .vnext .vn-skel {
   background: var(--vn-skeleton);
-  border-radius: 6px;
+  border-radius: var(--vn-r-xs);
   animation: vn-skel 1.3s ease-in-out infinite;
 }
 @keyframes vn-skel {
@@ -949,7 +968,7 @@ html[data-theme="light"] .vnext .vn-side__item:hover {
   top: 6px;
   bottom: 6px;
   width: 2px;
-  border-radius: 2px;
+  border-radius: var(--vn-r-3xs);
   background: var(--vn-gradient);
 }
 .vnext .vn-side__icon {
@@ -1932,7 +1951,7 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
   height: 18px;
   border-radius: 50%;
   background: var(--vn-gradient);
-  box-shadow: 0 0 10px var(--vn-glow-teal);
+  box-shadow: var(--vn-glow-teal-sm);
   animation: vn-coin-fall 2.2s linear infinite;
 }
 @keyframes vn-coin-fall {
@@ -2065,11 +2084,11 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
 }
 .vnext .vn-sync__dot--synced {
   background: var(--vn-green);
-  box-shadow: 0 0 8px var(--vn-green);
+  box-shadow: var(--vn-glow-green-sm);
 }
 .vnext .vn-sync__dot--syncing {
   background: #e0a83a;
-  box-shadow: 0 0 8px rgba(224, 168, 58, 0.7);
+  box-shadow: var(--vn-glow-gold);
 }
 
 @media (max-width: 760px) {

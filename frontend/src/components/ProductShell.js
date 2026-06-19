@@ -291,7 +291,7 @@ export function BrandLockup({ compact = false, onClick }) {
   return (
     <Link className="brand inline-flex min-w-0 items-center gap-3 text-white" to="/" onClick={onClick}>
       <img
-        className={`brand-logo ${compact ? "h-8 w-8" : "h-10 w-10"} rounded-full object-contain drop-shadow-[0_0_16px_rgba(0,198,167,0.32)]`}
+        className={`brand-logo ${compact ? "h-8 w-8" : "h-10 w-10"} rounded-full object-contain drop-shadow-[var(--brand-logo-glow)]`}
         src={logo}
         alt="Vorliq logo"
       />

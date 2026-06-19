@@ -55,6 +55,46 @@ html[data-theme="light"] {
   --primary-soft: rgba(0, 168, 150, 0.14);
   --shadow: 0 26px 90px rgba(0, 0, 0, 0.34);
   --shadow-soft: 0 18px 58px rgba(0, 0, 0, 0.24);
+  /* Component elevation tokens — each lifts a previously inline box-shadow into
+     the registry verbatim (no value change) so no raw shadow literal remains in
+     a rule. Named by the surface they raise. --shadow-raised-light is only
+     applied inside the light theme (where those cards carry a soft lift). */
+  --shadow-navbar: 0 18px 54px rgba(0, 0, 0, 0.18);
+  --shadow-overlay: 0 30px 110px rgba(0, 0, 0, 0.64), 0 0 46px rgba(0, 168, 150, 0.16);
+  --shadow-badge-hover: 0 20px 58px rgba(0, 0, 0, 0.22), 0 0 40px rgba(0, 168, 150, 0.12);
+  --shadow-brand-raised: 0 16px 44px rgba(0, 168, 150, 0.16);
+  --shadow-brand-hover: 0 20px 56px rgba(0, 168, 150, 0.22);
+  --shadow-avatar-glow: 0 0 28px rgba(0, 168, 150, 0.18);
+  --shadow-focus-accent: 0 0 0 4px rgba(0, 168, 150, 0.16);
+  --shadow-raised-light: 0 10px 30px rgba(36, 75, 110, 0.08);
+  /* Rings, glows, and composite shadows — each lifts an inline declaration into
+     the registry verbatim so no rule owns a shadow literal. Colours still come
+     from the colour tokens; the registry now owns the geometry too. */
+  --ring-focus: 0 0 0 3px var(--focus-ring);
+  --ring-focus-lg: 0 0 0 6px var(--focus-ring);
+  --ring-subtle: 0 0 0 4px var(--light-ring);
+  --glow-dot: 0 0 18px var(--accent-cyan);
+  --glow-hero: 0 -20px 64px var(--glow-blue), 0 -8px 30px var(--glow-cyan);
+  --glow-cyan-drop: 0 10px 28px var(--glow-cyan);
+  --glow-link: 0 0 24px var(--brand-link-glow);
+  --shadow-soft-glow: var(--shadow-soft), 0 0 36px rgba(0, 168, 150, 0.08);
+  --shadow-strong-glow: var(--shadow), 0 0 42px rgba(0, 168, 150, 0.14);
+  --shadow-card: 0 14px 46px color-mix(in srgb, var(--bg-deep) 28%, transparent);
+  --shadow-card-hover: 0 24px 80px color-mix(in srgb, var(--bg-deep) 62%, transparent), 0 0 34px var(--glow-cyan);
+  --shadow-card-soft: 0 10px 34px color-mix(in srgb, var(--bg-deep) 22%, transparent);
+  --shadow-tab-active: inset 0 -2px 0 var(--status-success);
+  --shadow-warning-raised: var(--elev-2), 0 0 0 1px rgba(245, 166, 35, 0.14), 0 8px 30px rgba(245, 166, 35, 0.1);
+  /* Backing values for the Tailwind shadow utilities (shadow-glow / shadow-panel)
+     used by the shared nav/footer chrome, so those utilities resolve from the
+     same registry rather than carrying their own literals in the JS config. */
+  --shadow-glow-accent: 0 0 34px rgba(0, 168, 150, 0.24);
+  --shadow-panel: 0 22px 80px rgba(0, 0, 0, 0.32);
+  /* Brand logo drop-shadow glow (referenced from a Tailwind arbitrary value on
+     the lockup so the geometry lives in the registry, not inline in JSX). */
+  --brand-logo-glow: 0 0 16px rgba(0, 168, 150, 0.32);
+  /* Drop-shadow filter for the in-page brand mark (.brand-logo). Lifted so the
+     filter's geometry lives in the registry; colour still tracks --glow-cyan. */
+  --brand-logo-filter: drop-shadow(0 0 12px var(--glow-cyan));
   --glow-cyan: rgba(0, 168, 150, 0.2);
   --glow-green: rgba(0, 168, 150, 0.18);
   --glow-blue: rgba(30, 111, 217, 0.22);
@@ -67,6 +107,15 @@ html[data-theme="light"] {
   --radius-md: 14px;
   --radius-lg: 14px;
   --radius-pill: 9999px;
+  /* Off-scale radii kept as named tokens so the registry — not the rule — owns
+     every geometry value. Values preserved exactly (no visual change). Ladder:
+     sm 8 < control 12 < md 14 < panel 16 < overlay 18 < pill. --radius-control
+     is interactive rows / value boxes / nav links; --radius-panel is raised
+     content cards and chat bubbles; --radius-overlay is floating popovers and
+     drawers. */
+  --radius-control: 12px;
+  --radius-panel: 16px;
+  --radius-overlay: 18px;
   --page-max: 1160px;
   --nav-height: 70px;
   --input-bg: var(--surface-field);
@@ -184,7 +233,7 @@ article,
 :focus-visible {
   outline: 2px solid var(--accent-cyan);
   outline-offset: 3px;
-  box-shadow: 0 0 0 6px var(--focus-ring);
+  box-shadow: var(--ring-focus-lg);
 }
 
 h1,
@@ -295,7 +344,7 @@ strong {
   position: absolute;
   width: min(52rem, 78vw);
   height: min(52rem, 78vw);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   filter: blur(60px);
   opacity: 0.24;
   transform: translate3d(0, 0, 0);
@@ -331,9 +380,9 @@ strong {
   position: absolute;
   width: 4px;
   height: 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent-cyan);
-  box-shadow: 0 0 18px var(--accent-cyan);
+  box-shadow: var(--glow-dot);
   opacity: 0.48;
   animation: particleFloat 12s ease-in-out infinite;
 }
@@ -398,7 +447,7 @@ strong {
   inset: 0;
   border-top: 2px solid rgba(0, 168, 150, 0.4);
   border-radius: 50% 50% 0 0;
-  box-shadow: 0 -20px 64px var(--glow-blue), 0 -8px 30px var(--glow-cyan);
+  box-shadow: var(--glow-hero);
 }
 
 .horizon-grid {
@@ -457,7 +506,7 @@ html[data-glow="reduced"] .brand-network {
   background: rgba(var(--deep-rgb), 0.78);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
-  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow-navbar);
 }
 
 .navbar-inner {
@@ -490,8 +539,8 @@ html[data-glow="reduced"] .brand-network {
 .connection-dot {
   width: 9px;
   height: 9px;
-  border-radius: 999px;
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--ring-subtle);
 }
 
 .connection-dot.online {
@@ -570,11 +619,11 @@ html[data-glow="reduced"] .brand-network {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
   border: 1px solid var(--border-strong);
-  border-radius: 18px;
+  border-radius: var(--radius-overlay);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
     rgba(var(--deep-rgb), 0.98);
-  box-shadow: 0 30px 110px rgba(0, 0, 0, 0.64), 0 0 46px rgba(0, 168, 150, 0.16);
+  box-shadow: var(--shadow-overlay);
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
   padding: 12px;
@@ -604,7 +653,7 @@ html[data-glow="reduced"] .brand-network {
   align-items: center;
   min-height: 44px;
   border: 1px solid rgba(0, 168, 150, 0.14);
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   background: rgba(255, 255, 255, 0.035);
   color: var(--text-secondary);
   font-weight: 800;
@@ -635,7 +684,7 @@ html[data-glow="reduced"] .brand-network {
   display: block;
   width: 100%;
   height: 2px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: currentColor;
   transition: transform 160ms ease, opacity 160ms ease;
 }
@@ -828,7 +877,7 @@ html[data-glow="reduced"] .brand-network {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
     var(--surface-glass);
-  box-shadow: var(--shadow-soft), 0 0 36px rgba(0, 168, 150, 0.08);
+  box-shadow: var(--shadow-soft-glow);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
 }
@@ -953,7 +1002,7 @@ html[data-glow="reduced"] .brand-network {
 .reply-card:hover,
 .achievement-badge:hover {
   border-color: var(--border-strong);
-  box-shadow: 0 20px 58px rgba(0, 0, 0, 0.22), 0 0 40px rgba(0, 168, 150, 0.12);
+  box-shadow: var(--shadow-badge-hover);
 }
 
 .step-pill,
@@ -1057,7 +1106,7 @@ select.input {
 .input:focus,
 .textarea:focus {
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 4px rgba(0, 168, 150, 0.16);
+  box-shadow: var(--shadow-focus-accent);
   background: rgba(var(--deep-rgb), 0.88);
 }
 
@@ -1076,14 +1125,14 @@ select.input {
   cursor: pointer;
   font-weight: 900;
   padding: 12px 18px;
-  box-shadow: 0 16px 44px rgba(0, 168, 150, 0.16);
+  box-shadow: var(--shadow-brand-raised);
   text-align: center;
   transition: transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
 .button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 20px 56px rgba(0, 168, 150, 0.22);
+  box-shadow: var(--shadow-brand-hover);
 }
 
 .button:disabled {
@@ -1126,7 +1175,7 @@ select.input {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
   border: 1px solid rgba(0, 168, 150, 0.18);
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   background: rgba(var(--deep-rgb), 0.58);
   color: var(--text-secondary);
   padding: 14px;
@@ -1637,7 +1686,7 @@ html[data-theme="light"] .vote-no {
   align-items: center;
   background: var(--surface-glass);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--text);
   display: flex;
   font-weight: 700;
@@ -1650,7 +1699,7 @@ html[data-theme="light"] .vote-no {
 .admin-moderation-card {
   align-items: center;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   background: var(--surface-glass);
   display: grid;
   gap: 8px;
@@ -1985,7 +2034,7 @@ html[data-theme="light"] .vote-no {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
   background: rgba(var(--deep-rgb), 0.98);
-  box-shadow: var(--shadow), 0 0 42px rgba(0, 168, 150, 0.14);
+  box-shadow: var(--shadow-strong-glow);
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
   padding: clamp(22px, 5vw, 34px);
@@ -2252,7 +2301,7 @@ html[data-theme="light"] .vote-no {
   max-width: min(620px, 85%);
   align-self: flex-start;
   border: 1px solid rgba(0, 168, 150, 0.18);
-  border-radius: 16px;
+  border-radius: var(--radius-panel);
   background: rgba(255, 255, 255, 0.055);
   padding: 12px 14px;
 }
@@ -2343,9 +2392,9 @@ html[data-theme="light"] .vote-no {
     overflow-y: auto;
     overscroll-behavior: contain;
     border: 1px solid var(--border-strong);
-    border-radius: 18px;
+    border-radius: var(--radius-overlay);
     background: rgba(var(--deep-rgb), 0.98);
-    box-shadow: 0 30px 110px rgba(0, 0, 0, 0.64), 0 0 46px rgba(0, 168, 150, 0.16);
+    box-shadow: var(--shadow-overlay);
     -webkit-backdrop-filter: blur(24px);
     backdrop-filter: blur(24px);
     padding: 14px;  }
@@ -2376,7 +2425,7 @@ html[data-theme="light"] .vote-no {
     width: 100%;
     min-height: 46px;
     border-color: rgba(0, 168, 150, 0.14);
-    border-radius: 12px;
+    border-radius: var(--radius-control);
     background: rgba(255, 255, 255, 0.04);
     padding: 12px 13px;
   }
@@ -2558,8 +2607,8 @@ html[data-theme="light"] .vote-no {
 .profile-avatar {
   align-items: center;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 999px;
-  box-shadow: 0 0 28px rgba(0, 168, 150, 0.18);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-avatar-glow);
   color: #fff;
   display: inline-flex;
   flex: 0 0 auto;
@@ -2658,7 +2707,7 @@ html[data-theme="light"] .vote-no {
 
 .profile-badge {
   border: 1px solid rgba(0, 168, 150, 0.28);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(0, 168, 150, 0.1);
   color: var(--text-primary);
   display: inline-flex;
@@ -2869,7 +2918,7 @@ html[data-theme="light"] .brand-horizon {
   z-index: 1000;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface-glass-solid) 72%, transparent);
-  box-shadow: 0 14px 46px color-mix(in srgb, var(--bg-deep) 28%, transparent);
+  box-shadow: var(--shadow-card);
 }
 
 .navbar-inner {
@@ -2886,7 +2935,7 @@ html[data-theme="light"] .brand-horizon {
 .brand-logo {
   width: 38px;
   height: 38px;
-  filter: drop-shadow(0 0 12px var(--glow-cyan));
+  filter: var(--brand-logo-filter);
 }
 
 .connection-dot {
@@ -2898,7 +2947,7 @@ html[data-theme="light"] .brand-horizon {
 .more-trigger,
 .wallet-chip {
   min-height: 38px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.88rem;
   font-weight: 800;
   padding: 8px 12px;
@@ -2920,7 +2969,7 @@ html[data-theme="light"] .brand-horizon {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012)),
     var(--menu-bg);
-  box-shadow: 0 24px 80px color-mix(in srgb, var(--bg-deep) 62%, transparent), 0 0 34px var(--glow-cyan);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .more-dropdown::before {
@@ -3011,7 +3060,7 @@ h3 {
 .brand-pill {
   width: fit-content;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--surface-glass-strong) 74%, transparent);
   color: var(--accent-cyan);
   font-size: 0.76rem;
@@ -3041,11 +3090,11 @@ h3 {
 .account-profile-section,
 .stat-card {
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--radius-panel);
   background:
     linear-gradient(180deg, color-mix(in srgb, #ffffff 5%, transparent), color-mix(in srgb, #ffffff 1.5%, transparent)),
     var(--surface-glass);
-  box-shadow: 0 10px 34px color-mix(in srgb, var(--bg-deep) 22%, transparent);
+  box-shadow: var(--shadow-card-soft);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
@@ -3124,7 +3173,7 @@ h3 {
   font-size: 0.95rem;
   font-weight: 900;
   padding: 10px 16px;
-  box-shadow: 0 10px 28px var(--glow-cyan);
+  box-shadow: var(--glow-cyan-drop);
 }
 
 .button.secondary,
@@ -3253,7 +3302,7 @@ a:focus-visible {
 .release-item {
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.04);
   padding: 16px;
 }
@@ -3278,7 +3327,7 @@ a:focus-visible {
 .readiness-score {
   align-items: baseline;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   display: flex;
   gap: 0.25rem;
   min-width: 120px;
@@ -3322,7 +3371,7 @@ a:focus-visible {
 .social-links a {
   min-height: 40px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-glass);
   color: var(--text-primary);
   font-size: 0.9rem;
@@ -3429,7 +3478,7 @@ html[data-theme="light"] .social-brand-link.github {
   border-color: rgba(160, 174, 192, 0.55);
   background: rgba(255, 255, 255, 0.06);
   background: color-mix(in srgb, var(--brand-link-color) 14%, transparent);
-  box-shadow: 0 0 24px var(--brand-link-glow);
+  box-shadow: var(--glow-link);
   color: var(--brand-link-color);
 }
 
@@ -3642,7 +3691,7 @@ html[data-theme="light"] .profile-search-section,
 html[data-theme="light"] .account-profile-section,
 html[data-theme="light"] .stat-card {
   background: rgba(255, 255, 255, 0.24);
-  box-shadow: 0 10px 30px rgba(36, 75, 110, 0.08);
+  box-shadow: var(--shadow-raised-light);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
@@ -3664,7 +3713,7 @@ html[data-theme="light"] .empty-state,
 html[data-theme="light"] .meta-item {
   background: rgba(255, 255, 255, 0.32);
   border-color: var(--border);
-  box-shadow: 0 10px 30px rgba(36, 75, 110, 0.08);
+  box-shadow: var(--shadow-raised-light);
 }
 
 html[data-theme="light"] .glass-section::before,
@@ -3713,7 +3762,7 @@ html[data-theme="light"] .community-links-card.glass-section {
   margin-top: 12px;
   padding: 14px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.05);
 }
 
@@ -3899,7 +3948,7 @@ html[data-theme="dark"] {
 .textarea:focus-visible,
 a:focus-visible {
   outline: 2px solid transparent;
-  box-shadow: 0 0 0 3px var(--focus-ring);
+  box-shadow: var(--ring-focus);
 }
 
 .status-badge {
@@ -3911,7 +3960,7 @@ a:focus-visible {
 .navbar .nav-item-active {
   color: #ffffff;
   background: rgba(0, 168, 150, 0.12);
-  box-shadow: inset 0 -2px 0 var(--status-success);
+  box-shadow: var(--shadow-tab-active);
 }
 
 /* --- reveal-on-scroll for marketing sections --- */
@@ -3948,7 +3997,7 @@ a:focus-visible {
 .authority-write-notice {
   background: var(--surface-2);
   border: 1px solid rgba(245, 166, 35, 0.5);
-  box-shadow: var(--elev-2), 0 0 0 1px rgba(245, 166, 35, 0.14), 0 8px 30px rgba(245, 166, 35, 0.1);
+  box-shadow: var(--shadow-warning-raised);
   position: relative;
   z-index: 1;
 }
@@ -3967,7 +4016,7 @@ a:focus-visible {
   place-items: center;
   width: 84px;
   height: 84px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .brand-loader.compact .brand-loader-ring {
@@ -3979,7 +4028,7 @@ a:focus-visible {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 2px solid transparent;
   border-top-color: var(--accent-cyan);
   border-right-color: var(--accent-green);
@@ -4089,7 +4138,7 @@ html[data-theme="light"] .mobile-drawer button {
 
 .vq-bar-track {
   height: 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-field);
   overflow: hidden;
 }
@@ -4097,7 +4146,7 @@ html[data-theme="light"] .mobile-drawer button {
 .vq-bar-fill {
   display: block;
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--gradient-brand);
 }
 
