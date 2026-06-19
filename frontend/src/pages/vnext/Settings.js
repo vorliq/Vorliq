@@ -12,7 +12,7 @@
 // reveal action is blocked until it matches), and the key auto-hides after 60s.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, KeyRound, ShieldAlert } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Lock, ShieldAlert } from "lucide-react";
 
 import "../../styles/vnext.css";
 import AppShell from "../../components/vnext/AppShell";
@@ -22,7 +22,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
 import { isAnalyticsEnabled, setAnalyticsEnabled } from "../../helpers/analytics";
 import api, { getNodeUrl, setNodeUrl } from "../../helpers/api";
-import { loadWallet } from "../../helpers/storage";
+import { loadWallet, saveWallet } from "../../helpers/storage";
 
 const CONFIRM_PHRASE = "REVEAL MY PRIVATE KEY";
 const REVEAL_TIMEOUT_MS = 60000;
@@ -152,6 +152,126 @@ function RevealKeyModal({ onClose }) {
   );
 }
 
+/* ------------------------------------------------ Change password --------- */
+// Re-encrypts the EXISTING key under a new password, entirely on this device.
+// The project previously only offered "create new wallet" (a fresh keypair) or
+// "import backup" (keeps the old password) -- there was no way to re-wrap the
+// same key under a new password. This fills that gap. The raw private key is
+// decrypted and re-encrypted locally via WebCrypto and never sent anywhere.
+function ChangePasswordModal({ onClose }) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function submit(event) {
+    event.preventDefault();
+    setError("");
+    if (!current) {
+      setError("Enter your current password.");
+      return;
+    }
+    if (!next) {
+      setError("Choose a new password.");
+      return;
+    }
+    if (next !== confirm) {
+      setError("New passwords do not match.");
+      return;
+    }
+    if (next === current) {
+      setError("Choose a new password different from the current one.");
+      return;
+    }
+    setBusy(true);
+    try {
+      // Local only: decrypt with the current password, then re-encrypt the SAME
+      // keypair under the new password and store it. No network, no raw key leaves
+      // the browser, and the address/balance are unchanged.
+      const unlocked = await loadWallet(current);
+      await saveWallet(
+        { address: unlocked.address, public_key: unlocked.public_key, private_key: unlocked.private_key },
+        next
+      );
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+      setDone(true);
+    } catch {
+      setError("Unable to change password. Check that your current password is correct.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal title="Change wallet password" onClose={onClose}>
+      {done ? (
+        <div className="vn-send-form">
+          <p className="vn-settings__hint" style={{ margin: 0 }}>
+            Your wallet is now re-encrypted under the new password on this device. The key itself is
+            unchanged, so your address and balance stay the same. Any older backup files still use the old
+            password — create a fresh encrypted backup if the old password may be exposed.
+          </p>
+          <div className="vn-btn-row">
+            <Button variant="primary" onClick={onClose}>Done</Button>
+          </div>
+        </div>
+      ) : (
+        <form className="vn-send-form" onSubmit={submit}>
+          <div className="vn-error" role="note" style={{ alignItems: "flex-start" }}>
+            <span>
+              This re-wraps your existing key under a new password, entirely on this device. Your private key
+              is never sent anywhere and does not change — only the password protecting it. A new password
+              does not undo an already-exposed key; if the key itself may be compromised, create a new wallet
+              instead.
+            </span>
+          </div>
+          {error && <InlineError message={error} />}
+          <div className="vn-field">
+            <label htmlFor="vn-cp-current">Current password</label>
+            <input
+              id="vn-cp-current"
+              className="vn-input"
+              type="password"
+              autoComplete="current-password"
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+            />
+          </div>
+          <div className="vn-field">
+            <label htmlFor="vn-cp-new">New password</label>
+            <input
+              id="vn-cp-new"
+              className="vn-input"
+              type="password"
+              autoComplete="new-password"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+            />
+          </div>
+          <div className="vn-field">
+            <label htmlFor="vn-cp-confirm">Confirm new password</label>
+            <input
+              id="vn-cp-confirm"
+              className="vn-input"
+              type="password"
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+          </div>
+          <Button variant="primary" type="submit" disabled={busy}>
+            {busy ? "Updating…" : "Change password"}
+          </Button>
+        </form>
+      )}
+    </Modal>
+  );
+}
+
 /* ---------------------------------------------------------- Network ------- */
 function NetworkSection() {
   const [status, setStatus] = useState("checking"); // checking | synced | unreachable
@@ -265,6 +385,7 @@ export default function Settings() {
   const { notificationsEnabled, setNotificationsEnabled } = useNotifications();
   const [analyticsOn, setAnalyticsOn] = useState(isAnalyticsEnabled());
   const [revealOpen, setRevealOpen] = useState(false);
+  const [changePwOpen, setChangePwOpen] = useState(false);
 
   function toggleAnalytics(next) {
     setAnalyticsEnabled(next);
@@ -297,6 +418,9 @@ export default function Settings() {
               <div className="vn-btn-row" style={{ marginTop: 16 }}>
                 <Button variant="secondary" onClick={() => setRevealOpen(true)}>
                   <KeyRound size={16} aria-hidden="true" /> Export private key
+                </Button>
+                <Button variant="secondary" onClick={() => setChangePwOpen(true)}>
+                  <Lock size={16} aria-hidden="true" /> Change password
                 </Button>
               </div>
             </>
@@ -340,6 +464,7 @@ export default function Settings() {
       </p>
 
       {revealOpen && <RevealKeyModal onClose={() => setRevealOpen(false)} />}
+      {changePwOpen && <ChangePasswordModal onClose={() => setChangePwOpen(false)} />}
     </AppShell>
   );
 }

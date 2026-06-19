@@ -32,6 +32,23 @@ test("saveWallet, loadWallet, hasWallet, and clearWallet preserve encrypted wall
   await expect(loadWallet("strong-password")).rejects.toThrow(/no saved vorliq wallet found/i);
 });
 
+test("re-encrypting under a new password rewraps the same key and retires the old password", async () => {
+  // This is exactly what the Settings "Change password" flow does: load with the
+  // current password, then save the same keypair under a new one.
+  await saveWallet(wallet, "old-password");
+
+  const unlocked = await loadWallet("old-password");
+  await saveWallet(
+    { address: unlocked.address, public_key: unlocked.public_key, private_key: unlocked.private_key },
+    "new-password"
+  );
+
+  // Same key recoverable under the new password...
+  expect(await loadWallet("new-password")).toEqual(wallet);
+  // ...and the old password no longer decrypts the stored wallet.
+  await expect(loadWallet("old-password")).rejects.toThrow(/incorrect password or corrupted/i);
+});
+
 test("wallet backup export never contains the plaintext private key", async () => {
   await saveWallet(wallet, "strong-password");
 
