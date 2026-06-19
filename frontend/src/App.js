@@ -16,6 +16,7 @@ import { NotificationProvider } from "./context/NotificationContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Features from "./pages/Features";
+import NotFound from "./pages/NotFound";
 const Account = lazy(() => import("./pages/Account"));
 const Achievements = lazy(() => import("./pages/Achievements"));
 const Admin = lazy(() => import("./pages/Admin"));
@@ -230,6 +231,7 @@ function AppShell() {
               </ProtectedRoute>
             }
           />
+          <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
       </MainRegion>

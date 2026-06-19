@@ -6,6 +6,7 @@
 // social links come from the existing allowlist, the logo is used only as the
 // brand mark, and the copy avoids regulated-banking / guaranteed-return framing.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Activity, ArrowRight, Boxes, Coins, Gauge, Layers, Send, Droplets } from "lucide-react";
 
 import "../../styles/vnext.css";
@@ -284,6 +285,54 @@ export default function Landing() {
     loadAll();
   }, [loadAll]);
 
+  // The global product nav/footer link into the landing marketing sections via
+  // hash anchors (/#how-it-works, /#community, /#learn). The nav's own
+  // scroll-to-hash handler is suppressed on this standalone route, so resolve
+  // the hash here. The live data sections (feed, metrics, roadmap) hydrate
+  // asynchronously and shift the layout for up to a second or so, so a single
+  // scroll fired on mount lands short. Re-align on a short interval until the
+  // target's position stops moving, then stop so we never fight the user's own
+  // scrolling. Instant positioning avoids stranding a smooth animation when the
+  // layout changes mid-flight.
+  const location = useLocation();
+  useEffect(() => {
+    if (!location.hash) return undefined;
+    const id = decodeURIComponent(location.hash.slice(1));
+    // Re-align to the target on a short interval for a bounded window. The live
+    // sections hydrate over ~1s and grow the page, so a one-shot scroll lands
+    // short; holding the anchor across the window guarantees the section is
+    // correctly positioned once the layout settles, regardless of exactly when
+    // that happens. A timer (not requestAnimationFrame) is used deliberately so
+    // the re-alignment still fires if the tab is backgrounded while the page
+    // loads. Genuine user input (wheel/touch/keys) releases immediately so we
+    // never fight someone who starts scrolling.
+    const HOLD_MS = 1300;
+    const start = Date.now();
+    let released = false;
+    const release = () => {
+      released = true;
+    };
+    window.addEventListener("wheel", release, { passive: true });
+    window.addEventListener("touchstart", release, { passive: true });
+    window.addEventListener("keydown", release);
+    const tick = () => {
+      if (released) {
+        window.clearInterval(timer);
+        return;
+      }
+      document.getElementById(id)?.scrollIntoView({ block: "start" });
+      if (Date.now() - start >= HOLD_MS) window.clearInterval(timer);
+    };
+    const timer = window.setInterval(tick, 60);
+    tick();
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("wheel", release);
+      window.removeEventListener("touchstart", release);
+      window.removeEventListener("keydown", release);
+    };
+  }, [location.hash, loading]);
+
   const summary = useMemo(() => snapshot?.summary || {}, [snapshot]);
   const econ = useMemo(() => economics || {}, [economics]);
 
@@ -438,7 +487,7 @@ export default function Landing() {
       )}
 
       {/* ------------------------------------------------------ Features --- */}
-      <section className="vn-section">
+      <section className="vn-section" id="how-it-works">
         <div className="vn-container">
           <SectionHead
             overline="The platform"
@@ -451,9 +500,9 @@ export default function Landing() {
                 <span className="vn-overline">{f.overline}</span>
                 <h3>{f.title}</h3>
                 <p>{f.body}</p>
-                <a className="vn-link" href={f.link.to}>
+                <Link className="vn-link" to={f.link.to}>
                   {f.link.label} <ArrowRight size={16} aria-hidden="true" />
-                </a>
+                </Link>
               </div>
               <FeatureVisual kind={f.visual} snapshot={snapshot} />
             </div>
@@ -474,7 +523,7 @@ export default function Landing() {
       </section>
 
       {/* ------------------------------------------------------- Metrics --- */}
-      <section className="vn-section">
+      <section className="vn-section" id="learn">
         <div className="vn-container">
           <SectionHead overline="Network stats" title="Measured, not estimated" />
           <div className="vn-metrics">
@@ -517,7 +566,7 @@ export default function Landing() {
       )}
 
       {/* ---------------------------------------------------- Community ---- */}
-      <section className="vn-section">
+      <section className="vn-section" id="community">
         <div className="vn-container">
           <SectionHead
             overline="Community"
