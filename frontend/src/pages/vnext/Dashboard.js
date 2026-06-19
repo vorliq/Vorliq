@@ -14,6 +14,7 @@ import SummaryCard from "../../components/vnext/SummaryCard";
 import { Card, InlineError } from "../../components/vnext/primitives";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../helpers/api";
+import useWalletBalance from "../../helpers/useWalletBalance";
 import { formatNumber, formatRelativeTime, formatVlq } from "../../helpers/publicApi";
 
 const TX_PAGE = 200;
@@ -44,30 +45,31 @@ function greetingFor(date) {
 }
 
 /* ----------------------------------------------- Wallet summary + chart -- */
+// History + lending overview for the dashboard. The spendable balance itself
+// comes from the shared useWalletBalance hook (same source as the sidebar,
+// Wallet, Send and Faucet) so every surface shows one consistent figure rather
+// than a separate, divergent fetch.
 function useWalletData(address) {
-  const [state, setState] = useState({ loading: true, error: "", balance: null, history: null, lending: null });
+  const [state, setState] = useState({ loading: true, error: "", history: null, lending: null });
 
   const load = useCallback(
     async (signal) => {
       if (!address) {
-        setState({ loading: false, error: "", balance: null, history: null, lending: null });
+        setState({ loading: false, error: "", history: null, lending: null });
         return;
       }
       setState((s) => ({ ...s, loading: true, error: "" }));
-      const [balanceRes, historyRes, lendingRes] = await Promise.allSettled([
-        api.get("/wallet/balance", { params: { address }, signal }),
+      const [historyRes, lendingRes] = await Promise.allSettled([
         api.get("/wallet/history", { params: { address }, signal }),
         api.get("/lending/my", { params: { address }, signal }),
       ]);
       if (signal?.aborted) return;
 
-      const everythingFailed =
-        balanceRes.status === "rejected" && historyRes.status === "rejected" && lendingRes.status === "rejected";
+      const everythingFailed = historyRes.status === "rejected" && lendingRes.status === "rejected";
 
       setState({
         loading: false,
         error: everythingFailed ? "We couldn't load your wallet overview." : "",
-        balance: balanceRes.status === "fulfilled" ? balanceRes.value.data : null,
         history: historyRes.status === "fulfilled" ? historyRes.value.data : null,
         lending: lendingRes.status === "fulfilled" ? lendingRes.value.data : null,
       });
@@ -153,7 +155,8 @@ function NetworkStatusPanel() {
       setError("");
       setData({
         height: summary.block_height ?? diag.block_height,
-        difficulty: latest?.difficulty,
+        difficulty: latest?.difficulty ?? summary.current_difficulty,
+        totalTransactions: summary.total_transactions,
         uptime: diag.uptime_seconds,
       });
     } catch (err) {
@@ -177,7 +180,10 @@ function NetworkStatusPanel() {
   const rows = [
     { label: "Block height", value: data?.height != null ? `#${formatNumber(data.height)}` : "Unavailable" },
     { label: "Difficulty", value: data?.difficulty != null ? formatNumber(data.difficulty) : "Unavailable" },
-    { label: "Hash rate", value: "Unavailable" },
+    {
+      label: "Total transactions",
+      value: data?.totalTransactions != null ? formatNumber(data.totalTransactions) : "Unavailable",
+    },
     { label: "Node uptime", value: formatUptime(data?.uptime) || "Unavailable" },
   ];
 
@@ -289,6 +295,7 @@ export default function Dashboard() {
   const address = wallet?.address;
 
   const walletData = useWalletData(address);
+  const balance = useWalletBalance(address);
   const { rows: txRows, error: txError, reload: reloadTx } = useTransactions(address);
   const [now, setNow] = useState(() => new Date());
   const [latestHeight, setLatestHeight] = useState(null);
@@ -310,8 +317,7 @@ export default function Dashboard() {
   }, []);
 
   const history = walletData.history;
-  const balanceNum = Number(walletData.balance?.balance);
-  const hasBalance = Number.isFinite(balanceNum);
+  const hasBalance = Number.isFinite(Number(balance.available));
 
   const chartData = useMemo(() => {
     const points = history?.balance_history || [];
@@ -338,30 +344,42 @@ export default function Dashboard() {
   }, [walletData.lending]);
 
   const summaryLoading = walletData.loading;
+  // Headline balance is the spendable (available) figure — the same number the
+  // sidebar, Wallet, Send and Faucet show — so no two surfaces disagree. Any
+  // unconfirmed incoming credit (e.g. a fresh mining reward) is surfaced as the
+  // trend so the figure is never silently understated.
+  const balanceTrendOrPending =
+    balance.pendingIncoming > 0
+      ? { direction: "up", label: `+${formatVlq(balance.pendingIncoming)} pending` }
+      : balanceTrend;
   const cards = [
     {
-      label: "Current VLQ Balance",
-      value: hasBalance ? formatVlq(balanceNum) : null,
-      trend: balanceTrend,
+      label: "Available Balance",
+      value: hasBalance ? formatVlq(balance.available) : null,
+      trend: balanceTrendOrPending,
       icon: Wallet,
+      loading: balance.loading,
     },
     {
       label: "Total Sent",
       value: history ? formatVlq(history.total_sent) : null,
       trend: { direction: "flat", label: "lifetime" },
       icon: ArrowUpRight,
+      loading: summaryLoading,
     },
     {
       label: "Total Received",
       value: history ? formatVlq(history.total_received) : null,
       trend: { direction: "flat", label: "lifetime" },
       icon: Coins,
+      loading: summaryLoading,
     },
     {
       label: "Active Lending Position",
       value: activeLending ? formatVlq(activeLending.total) : null,
       trend: activeLending ? { direction: "flat", label: `${activeLending.count} active` } : null,
       icon: Landmark,
+      loading: summaryLoading,
     },
   ];
 
@@ -391,22 +409,21 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {walletData.error ? (
+      {walletData.error && (
         <InlineError message={walletData.error} onRetry={walletData.reload} />
-      ) : (
-        <div className="vn-summary-grid">
-          {cards.map((c) => (
-            <SummaryCard
-              key={c.label}
-              label={c.label}
-              value={c.value}
-              trend={c.trend}
-              icon={c.icon}
-              loading={summaryLoading && isLoggedIn}
-            />
-          ))}
-        </div>
       )}
+      <div className="vn-summary-grid">
+        {cards.map((c) => (
+          <SummaryCard
+            key={c.label}
+            label={c.label}
+            value={c.value}
+            trend={c.trend}
+            icon={c.icon}
+            loading={c.loading && isLoggedIn}
+          />
+        ))}
+      </div>
 
       <div className="vn-dash-split">
         {/* Left: full transaction history */}

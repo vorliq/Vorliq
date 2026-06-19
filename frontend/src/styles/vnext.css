@@ -12,6 +12,12 @@
   --vn-blue: #1e6fd9;          /* royal blue: hovers, focus rings, gradient R */
   --vn-green: #56c870;         /* success ONLY — never a primary accent */
   --vn-gradient: linear-gradient(90deg, var(--vn-teal), var(--vn-blue));
+  /* Text-on-surface variants of the brand accents. On dark they equal the bright
+     accents (which already clear AA on the near-black surfaces); the light theme
+     darkens them so teal/green TEXT clears 4.5:1 on white and the #f4f6fa card.
+     Fills, borders, icons-as-decoration and the gradient keep the bright accent. */
+  --vn-teal-text: var(--vn-teal);
+  --vn-green-text: var(--vn-green);
 
   /* --- Dark surfaces (default) --- */
   --vn-bg: #080b14;            /* near-black deep navy page background */
@@ -89,6 +95,10 @@ html[data-theme="light"] .vnext {
      text is opacity-bumped to clear 4.5:1 (~6:1). Dark stays 55% (6.24:1). */
   --vn-text-2: rgba(8, 11, 20, 0.64);
   --vn-text-3: rgba(8, 11, 20, 0.35);
+  /* Darkened accent text for AA on light surfaces (teal 4.9:1, green 4.7:1 on
+     the card; both higher on white). Brand fills/borders stay bright. */
+  --vn-teal-text: #00796b;
+  --vn-green-text: #2e7d32;
   --vn-border: rgba(0, 0, 0, 0.1);
   --vn-border-strong: rgba(0, 0, 0, 0.16);
   --vn-rule: rgba(0, 0, 0, 0.08);
@@ -158,7 +168,7 @@ html[data-theme="light"] .vnext {
 
 .vnext .vn-btn--secondary {
   background: transparent;
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
   border: 1px solid var(--vn-teal);
 }
 .vnext .vn-btn--secondary:hover {
@@ -188,7 +198,7 @@ html[data-theme="light"] .vnext {
   font-weight: 500;
   background: var(--vn-card);
   border: 1px solid rgba(0, 168, 150, 0.4);
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
 }
 .vnext .vn-pill__dot {
   width: 7px;
@@ -227,7 +237,7 @@ html[data-theme="light"] .vnext {
   letter-spacing: 0.16em;
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
 }
 .vnext .vn-section-head {
   text-align: center;
@@ -257,7 +267,7 @@ html[data-theme="light"] .vnext {
 }
 
 .vnext a.vn-link {
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
   font-weight: 600;
   text-decoration: none;
   display: inline-flex;
@@ -344,7 +354,7 @@ html[data-theme="light"] .vnext {
 }
 .vnext .vn-theme-toggle:hover {
   border-color: var(--vn-teal);
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
 }
 
 .vnext .vn-hamburger {
@@ -475,7 +485,7 @@ html[data-theme="light"] .vnext {
 .vnext .vn-stat__num {
   font-size: clamp(26px, 3.4vw, 38px);
   font-weight: 800;
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
   font-variant-numeric: tabular-nums;
 }
 .vnext .vn-stat__label {
@@ -515,7 +525,7 @@ html[data-theme="light"] .vnext .vn-ticker__item {
   color: var(--vn-text-2);
 }
 .vnext .vn-ticker__value {
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -601,7 +611,10 @@ html[data-theme="light"] .vnext .vn-ticker__item {
   text-transform: uppercase;
   font-size: 0.68rem;
   letter-spacing: 0.08em;
-  color: var(--vn-text-3);
+  /* --vn-text-3 (0.3 alpha) only reaches ~2.7:1 on the card surface, which
+     fails AA for this small header text; --vn-text-2 keeps the de-emphasised
+     look while clearing 4.5:1 in both themes. */
+  color: var(--vn-text-2);
   padding: 10px 12px;
   font-weight: 600;
 }
@@ -615,7 +628,7 @@ html[data-theme="light"] .vnext .vn-ticker__item {
   font-size: 0.85em;
 }
 .vnext .vn-block-num {
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
   font-weight: 700;
 }
 .vnext .vn-row-enter {
@@ -636,7 +649,7 @@ html[data-theme="light"] .vnext .vn-ticker__item {
   padding: 20px;
 }
 .vnext .vn-metric__icon {
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
   margin-bottom: 14px;
 }
 .vnext .vn-metric__num {
@@ -723,7 +736,7 @@ html[data-theme="light"] .vnext .vn-ticker__item {
 .vnext .vn-social:hover {
   background: rgba(0, 168, 150, 0.15);
   border-color: var(--vn-teal);
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
 }
 .vnext .vn-social svg {
   width: 20px;
@@ -761,10 +774,10 @@ html[data-theme="light"] .vnext .vn-ticker__item {
   color: var(--vn-text-2);
 }
 .vnext .vn-form-msg--success {
-  color: var(--vn-green);
+  color: var(--vn-green-text);
 }
 .vnext .vn-form-msg--info {
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
 }
 .vnext .vn-form-msg--error {
   color: #ff5d6c;
@@ -1104,7 +1117,7 @@ html[data-theme="light"] .vnext .vn-side__wallet {
   text-align: right;
 }
 .vnext .vn-page-head__meta b {
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
   font-weight: 700;
 }
 
@@ -1123,7 +1136,7 @@ html[data-theme="light"] .vnext .vn-side__wallet {
   font-weight: 500;
 }
 .vnext .vn-sum__icon {
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
 }
 .vnext .vn-sum__value {
   font-size: 1.7rem;
@@ -1142,7 +1155,7 @@ html[data-theme="light"] .vnext .vn-side__wallet {
   color: var(--vn-text-2);
 }
 .vnext .vn-sum__trend--up {
-  color: var(--vn-green);
+  color: var(--vn-green-text);
 }
 .vnext .vn-sum__trend--down {
   color: #ff5d6c;
@@ -1250,7 +1263,7 @@ html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
 }
 .vnext .vn-dt__pager-btn:hover:not(:disabled) {
   border-color: var(--vn-teal);
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
 }
 .vnext .vn-dt__pager-btn:disabled {
   opacity: 0.4;
@@ -1265,13 +1278,13 @@ html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
   font-weight: 600;
 }
 .vnext .vn-tx-type--in {
-  color: var(--vn-green);
+  color: var(--vn-green-text);
 }
 .vnext .vn-tx-type--out {
   color: var(--vn-text);
 }
 .vnext a.vn-block-link {
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
   text-decoration: none;
   font-weight: 600;
 }
@@ -1311,7 +1324,7 @@ html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
   z-index: 5;
 }
 .vnext .vn-chart__tip strong {
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
 }
 .vnext .vn-chart__tip span {
   color: var(--vn-text-2);
@@ -1519,7 +1532,7 @@ html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
   color: var(--vn-text);
 }
 .vnext .vn-status__step.is-done {
-  color: var(--vn-green);
+  color: var(--vn-green-text);
 }
 .vnext .vn-status__icon {
   display: grid;
@@ -1536,7 +1549,7 @@ html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
 }
 .vnext .vn-spin {
   animation: vn-spin 0.9s linear infinite;
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
 }
 @keyframes vn-spin {
   to {
@@ -1694,7 +1707,7 @@ html[data-theme="light"] .vnext .vn-code {
     cursor: pointer;
   }
   .vnext .vn-tab.is-active {
-    color: var(--vn-teal);
+    color: var(--vn-teal-text);
   }
 }
 
@@ -1736,7 +1749,7 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
   font-weight: 700;
 }
 .vnext .vn-vote-split__yes b {
-  color: var(--vn-green);
+  color: var(--vn-green-text);
 }
 
 /* Generic badges (vote cast, status) */
@@ -1753,7 +1766,7 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
   white-space: nowrap;
 }
 .vnext .vn-badge--yes {
-  color: var(--vn-green);
+  color: var(--vn-green-text);
   border-color: rgba(86, 200, 112, 0.5);
   background: rgba(86, 200, 112, 0.1);
 }
@@ -1763,7 +1776,7 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
   background: rgba(210, 117, 128, 0.1);
 }
 .vnext .vn-badge--accent {
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
   border-color: rgba(0, 168, 150, 0.45);
   background: rgba(0, 168, 150, 0.1);
 }
@@ -1822,7 +1835,7 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
 }
 .vnext .vn-countdown {
   font-variant-numeric: tabular-nums;
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
   font-weight: 600;
 }
 .vnext .vn-countdown--ended {
@@ -1888,7 +1901,7 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
 .vnext .vn-faucet__fact-num {
   font-size: 1.4rem;
   font-weight: 800;
-  color: var(--vn-teal);
+  color: var(--vn-teal-text);
   font-variant-numeric: tabular-nums;
 }
 .vnext .vn-faucet__fact-label {
@@ -1930,7 +1943,7 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
   gap: 8px;
 }
 .vnext .vn-faucet__success-title {
-  color: var(--vn-green);
+  color: var(--vn-green-text);
   font-weight: 700;
   display: flex;
   align-items: center;
