@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 import AnalyticsRouteTracker from "./components/AnalyticsRouteTracker";
 import BrandBackground from "./components/BrandBackground";
+import ErrorBoundary from "./components/ErrorBoundary";
 import BrandLoader from "./components/BrandLoader";
 import IncidentBanner from "./components/IncidentBanner";
 import { ProductFooter, ProductNav } from "./components/ProductShell";
@@ -136,15 +137,17 @@ function MainRegion({ standalone, children }) {
 
 function App() {
   return (
-    <NotificationProvider>
-      <AuthProvider>
-        <WalletBalanceProvider>
-          <BrowserRouter>
-            <AppShell />
-          </BrowserRouter>
-        </WalletBalanceProvider>
-      </AuthProvider>
-    </NotificationProvider>
+    <ErrorBoundary>
+      <NotificationProvider>
+        <AuthProvider>
+          <WalletBalanceProvider>
+            <BrowserRouter>
+              <AppShell />
+            </BrowserRouter>
+          </WalletBalanceProvider>
+        </AuthProvider>
+      </NotificationProvider>
+    </ErrorBoundary>
   );
 }
 

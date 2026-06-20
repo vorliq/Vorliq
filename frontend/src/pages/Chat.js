@@ -45,7 +45,13 @@ function Chat() {
     });
     socketRef.current = socket;
 
-    socket.on("connect", () => setConnected(true));
+    socket.on("connect", () => {
+      setConnected(true);
+      // Re-sync history on every (re)connect, not just the first one. socket.io
+      // reconnects automatically after a drop; without this the message list
+      // would stay frozen at whatever it held when the connection went down.
+      socket.emit("history");
+    });
     socket.on("disconnect", () => {
       setConnected(false);
       // Identity binding lives on the server socket; a reconnect must re-prove it.
@@ -72,8 +78,6 @@ function Chat() {
       setJoinError((prev) => (joinedRef.current ? prev : payload?.message || "Could not verify your wallet for chat."));
       toast.error(payload?.message || "Chat error.");
     });
-    socket.emit("history");
-
     return () => {
       socket.disconnect();
     };

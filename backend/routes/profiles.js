@@ -15,12 +15,23 @@ function reject(res, message) {
   return res.status(400).json({ success: false, message });
 }
 
+// Local validation failures carry a 400 status so the route catch can tell them
+// apart from a genuine upstream failure (which has either an axios `.response`
+// or, for a connection drop, neither status nor response). Without this, a
+// `!error.response` guard would catch a connection failure to Flask and leak
+// the raw "connect ECONNREFUSED host:port" string to the client at HTTP 400.
+function badRequest(message) {
+  const error = new Error(message);
+  error.status = 400;
+  return error;
+}
+
 function safeText(value, field, max, required = false) {
   const normalized = text(value);
-  if (required && !normalized) throw new Error(`${field} is required.`);
-  if (normalized.length > max) throw new Error(`${field} must be ${max} characters or fewer.`);
+  if (required && !normalized) throw badRequest(`${field} is required.`);
+  if (normalized.length > max) throw badRequest(`${field} must be ${max} characters or fewer.`);
   if (/[<>]/.test(normalized) || /javascript:/i.test(normalized) || /data:/i.test(normalized)) {
-    throw new Error(`${field} contains unsafe markup.`);
+    throw badRequest(`${field} contains unsafe markup.`);
   }
   return normalized;
 }
@@ -32,10 +43,10 @@ function safeUrl(value, field) {
   try {
     parsed = new URL(normalized);
   } catch (error) {
-    throw new Error(`${field} must be a safe http or https URL.`);
+    throw badRequest(`${field} must be a safe http or https URL.`);
   }
   if (!["http:", "https:"].includes(parsed.protocol)) {
-    throw new Error(`${field} must be a safe http or https URL.`);
+    throw badRequest(`${field} must be a safe http or https URL.`);
   }
   return normalized;
 }
@@ -82,7 +93,7 @@ router.get("/api/profiles/profile", async (req, res) => {
     const response = await axios.get(`${flaskUrl}/profiles/profile`, { params: { address } });
     return res.status(response.status).json(response.data);
   } catch (error) {
-    if (!error.response) return reject(res, error.message);
+    if (error.status && !error.response) return reject(res, error.message);
     return handleRouteError(res, error, "GET /api/profiles/profile", "Unable to load profile.");
   }
 });
@@ -105,7 +116,7 @@ router.get("/api/profiles/search", async (req, res) => {
     });
     return res.status(response.status).json(response.data);
   } catch (error) {
-    if (!error.response) return reject(res, error.message);
+    if (error.status && !error.response) return reject(res, error.message);
     return handleRouteError(res, error, "GET /api/profiles/search", "Unable to search profiles.");
   }
 });
@@ -129,7 +140,7 @@ router.post("/api/profiles/verify/challenge", async (req, res) => {
     const response = await axios.post(`${flaskUrl}/profiles/verify/challenge`, { address });
     return res.status(response.status).json(response.data);
   } catch (error) {
-    if (!error.response) return reject(res, error.message);
+    if (error.status && !error.response) return reject(res, error.message);
     return handleRouteError(res, error, "POST /api/profiles/verify/challenge", "Unable to create verification challenge.");
   }
 });
@@ -146,7 +157,7 @@ router.post("/api/profiles/verify/submit", async (req, res) => {
     const response = await axios.post(`${flaskUrl}/profiles/verify/submit`, payload);
     return res.status(response.status).json(response.data);
   } catch (error) {
-    if (!error.response) return reject(res, error.message);
+    if (error.status && !error.response) return reject(res, error.message);
     return handleRouteError(res, error, "POST /api/profiles/verify/submit", "Unable to verify profile ownership.");
   }
 });

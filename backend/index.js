@@ -1,8 +1,11 @@
 const express = require("express");
 const http = require("http");
+const axios = require("axios");
 const { Server } = require("socket.io");
 const cron = require("node-cron");
 require("dotenv").config();
+
+const FLASK_URL = process.env.FLASK_URL || "http://localhost:5001";
 
 const chainRoutes = require("./routes/chain");
 const walletRoutes = require("./routes/wallet");
@@ -59,6 +62,7 @@ const {
   faucetLimiter,
   generalLimiter,
   miningLimiter,
+  newsletterLimiter,
   proposalLimiter,
   registryLimiter,
   reportLimiter,
@@ -320,14 +324,47 @@ app.use(["/api/governance/propose", "/api/treasury/propose"], proposalLimiter);
 app.use("/api/faucet/claim", faucetLimiter);
 app.use(["/api/registry/register", "/api/registry/heartbeat", "/api/peers/add", "/api/peers/announce"], registryLimiter);
 app.use(["/api/reports", "/api/reports/weekly"], reportLimiter);
+app.use("/api/newsletter/subscribe", newsletterLimiter);
 app.use(validateBody);
 app.use(requireSignedAuthorityWrite);
 
+// Liveness probe: 200 as long as the Node process is up. Deliberately does NOT
+// depend on Flask — a load balancer must not kill this node during a Flask
+// outage, it must keep it alive so it can serve the degraded-state UI.
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,
     message: "Vorliq backend is running",
   });
+});
+
+// Dependency/readiness probe: reports whether the Node layer can reach the Flask
+// blockchain service. Machine-readable for a load balancer or uptime monitor:
+// 200 + status:"healthy" when Flask answers, 503 + status:"degraded" when it
+// does not. The dependency check is bounded by a short timeout so the probe
+// itself never hangs.
+app.get("/api/health/ready", async (req, res) => {
+  const startedAt = Date.now();
+  try {
+    const response = await axios.get(`${FLASK_URL}/health`, { timeout: 3000 });
+    const upstreamOk = response.status === 200 && (response.data?.status === "ok" || response.data?.coin);
+    return res.status(upstreamOk ? 200 : 503).json({
+      success: upstreamOk,
+      status: upstreamOk ? "healthy" : "degraded",
+      node: "up",
+      flask: upstreamOk ? "up" : "down",
+      latency_ms: Date.now() - startedAt,
+    });
+  } catch (error) {
+    logError(`Health readiness: Flask unreachable: ${error.message}`);
+    return res.status(503).json({
+      success: false,
+      status: "degraded",
+      node: "up",
+      flask: "down",
+      latency_ms: Date.now() - startedAt,
+    });
+  }
 });
 
 app.get("/api/security/status", (req, res) => {

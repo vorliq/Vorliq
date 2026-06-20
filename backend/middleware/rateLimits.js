@@ -102,6 +102,14 @@ const chatLimiter = createLimiter({
   message: "Chat messages are rate limited. Please slow down.",
 });
 
+// Public unauthenticated sign-up write. A handful of legitimate retries are
+// fine; a flood from one IP is abuse. Sits on top of the global generalLimiter.
+const newsletterLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: "Too many sign-up attempts from this connection. Please try again later.",
+});
+
 const analyticsLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 80,
@@ -124,6 +132,7 @@ module.exports = {
   faucetLimiter,
   generalLimiter,
   miningLimiter,
+  newsletterLimiter,
   proposalLimiter,
   registryLimiter,
   reportLimiter,

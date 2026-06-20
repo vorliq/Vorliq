@@ -74,4 +74,15 @@ describe("newsletter routes", () => {
     expect(response.body.error.code).toBe("VALIDATION_ERROR");
     expect(fs.existsSync(newsletterFile)).toBe(false);
   });
+
+  test("a flood of sign-ups from one connection is rate limited with a clear message", async () => {
+    const responses = [];
+    for (let i = 0; i < 16; i += 1) {
+      responses.push(await request(app).post("/api/newsletter/subscribe").send({ email: `flood${i}@example.com` }));
+    }
+    const limited = responses.find((r) => r.status === 429);
+    expect(limited).toBeDefined();
+    expect(limited.body.success).toBe(false);
+    expect(limited.body.message).toMatch(/too many sign-up attempts/i);
+  });
 });

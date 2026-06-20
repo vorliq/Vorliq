@@ -108,6 +108,43 @@ describe("profile routes", () => {
     });
   });
 
+  // Regression: a local validation failure and a genuine upstream failure must
+  // return distinct, correct messages. The bug was a bare `!error.response`
+  // guard that caught a Flask connection drop and leaked the raw
+  // "connect ECONNREFUSED host:port" string at HTTP 400.
+  test("returns a 400 with the field message on local validation failure", async () => {
+    const response = await request(app).get("/api/profiles/profile"); // missing ?address
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(response.body.message).toMatch(/address is required/i);
+    expect(axios.get).not.toHaveBeenCalled();
+  });
+
+  test("returns a friendly 503 (not the raw error) when Flask is unreachable", async () => {
+    const connError = new Error("connect ECONNREFUSED 127.0.0.1:5001");
+    connError.code = "ECONNREFUSED"; // axios connection failure: no `.response`
+    axios.get.mockRejectedValue(connError);
+
+    const response = await request(app).get("/api/profiles/profile?address=VLQ_PRESENT");
+
+    expect(response.status).toBe(503);
+    expect(response.body.error.code).toBe("UPSTREAM_ERROR");
+    expect(response.body.error.message).toMatch(/blockchain service is currently unavailable/i);
+    // The raw connection string must never reach the client.
+    expect(JSON.stringify(response.body)).not.toMatch(/ECONNREFUSED/);
+  });
+
+  test("surfaces the real upstream message on an upstream HTTP error", async () => {
+    axios.get.mockRejectedValue({
+      response: { status: 404, data: { message: "Profile not found." } },
+    });
+
+    const response = await request(app).get("/api/profiles/profile?address=VLQ_MISSING");
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.message).toBe("Profile not found.");
+  });
+
   test("forwards top profiles route with bounded limit", async () => {
     axios.get.mockResolvedValue({
       status: 200,
