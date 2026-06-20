@@ -411,6 +411,20 @@ html[data-theme="light"] .vnext {
   place-items: center;
   margin-top: 22px;
 }
+/* Account block at the foot of the mobile More drawer: the connected address
+   and a full-width, touch-sized sign-out control. */
+.vnext .vn-drawer__account {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid var(--vn-rule);
+  display: grid;
+  gap: 10px;
+}
+.vnext .vn-drawer__account .vn-side__disconnect {
+  justify-content: center;
+  min-height: 44px;
+  font-size: 0.92rem;
+}
 
 /* ------------------------------------------------------- Hero ---------- */
 .vnext .vn-hero {

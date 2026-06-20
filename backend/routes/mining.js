@@ -21,7 +21,7 @@ router.get("/api/mining/history", async (req, res) => {
     const response = await axios.get(`${flaskUrl}/mining/history`, { params });
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     return handleRouteError(res, error, "GET /api/mining/history", "Unable to load mining history.");

@@ -18,7 +18,7 @@ import AppShell from "../../components/vnext/AppShell";
 import AuthorityAction from "../../components/vnext/AuthorityAction";
 import SummaryCard from "../../components/vnext/SummaryCard";
 import VoteBar from "../../components/vnext/VoteBar";
-import { Button, Card, InlineError } from "../../components/vnext/primitives";
+import { Button, Card, CardSkeleton, InlineError } from "../../components/vnext/primitives";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../helpers/api";
 import { authorityErrorMessage, postSignedAuthority } from "../../helpers/signedAuthority";
@@ -367,7 +367,10 @@ export default function Lending() {
       <Card style={{ marginTop: 20 }}>
         <h2 className="vn-panel-title">Active loan requests</h2>
         {loading ? (
-          <p className="vn-empty-note" style={{ margin: 0 }}>Loading loan requests…</p>
+          <div className="vn-card-grid">
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
         ) : openLoans.length === 0 ? (
           <p className="vn-empty-note" style={{ margin: 0 }}>No loans are open for voting right now.</p>
         ) : (

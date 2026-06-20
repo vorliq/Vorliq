@@ -46,7 +46,7 @@ router.get("/api/chain/blocks", async (req, res) => {
     const response = await axios.get(`${flaskUrl}/chain/blocks`, { params });
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     return handleRouteError(res, error, "GET /api/chain/blocks", "Unable to load paginated blocks.");
@@ -82,7 +82,7 @@ router.get("/api/chain/address", async (req, res) => {
     const response = await axios.get(`${flaskUrl}/chain/address`, { params });
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     return handleRouteError(res, error, "GET /api/chain/address", "Unable to load address transactions.");
@@ -95,7 +95,7 @@ router.get("/api/chain/block/:index_or_hash", async (req, res) => {
     const response = await axios.get(`${flaskUrl}/chain/block/${encodeURIComponent(blockId)}`);
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     return handleRouteError(res, error, "GET /api/chain/block/:index_or_hash", "Unable to load block detail.");
@@ -121,7 +121,7 @@ router.get("/api/leaderboard", async (req, res) => {
       return { status: response.status, data: response.data };
     });
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     return handleRouteError(res, error, "GET /api/leaderboard", "Unable to load leaderboard.");

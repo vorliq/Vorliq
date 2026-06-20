@@ -112,9 +112,11 @@ export default function Faucet() {
     } catch (err) {
       const claim = err.response?.data?.claim;
       if (claim) setClaimResult(claim);
+      // Refresh the cooldown/summary FIRST — load() clears the error banner on
+      // entry, so setting the failure message before it would be wiped out
+      // immediately, which is why a refused claim used to show nothing.
+      await load();
       setError(apiErrorMessage(err, "Unable to submit faucet claim."));
-      // refresh so the cooldown reflects server state on rate-limit
-      load();
     } finally {
       setClaiming(false);
     }
@@ -122,6 +124,12 @@ export default function Faucet() {
 
   const starter = summary?.starter_amount ?? 1;
   const treasury = summary?.treasury_balance;
+  // A refused claim is most often the treasury floor: the faucet only sends a
+  // starter amount while the community treasury holds enough to cover it, and
+  // the treasury refills as members mine blocks. Detect that case so the page
+  // can explain what happened and what to do instead of showing a bare error.
+  const treasuryTooLow =
+    claimResult?.status === "treasury_empty" || /treasury/i.test(error || "");
 
   return (
     <AppShell active="faucet">
@@ -153,7 +161,27 @@ export default function Faucet() {
           </Card>
         </div>
 
-        {error && <InlineError message={error} onRetry={() => load()} />}
+        <p className="vn-field__hint vn-faucet__explainer">
+          The cooldown means each wallet can claim once every 24 hours, so the starter pool is shared
+          fairly. The treasury floor means the faucet only sends VLQ while the community treasury holds
+          enough to cover a starter amount; the treasury refills as members mine blocks. If the treasury
+          is below that floor your claim is refused until it refills.
+        </p>
+
+        {error && (
+          treasuryTooLow ? (
+            <div className="vn-error" role="status" style={{ textAlign: "left" }}>
+              <span>
+                The community treasury is currently below the minimum needed to send a starter amount, so
+                the faucet can't dispense right now. The treasury refills as members mine blocks, so check
+                back a little later. You can also receive VLQ directly from another member, or run a node
+                to mine and help refill it.
+              </span>
+            </div>
+          ) : (
+            <InlineError message={error} onRetry={() => load()} />
+          )
+        )}
 
         {!isLoggedIn || !address ? (
           <div className="vn-faucet__claim">

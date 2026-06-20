@@ -11,8 +11,8 @@
 // phrase AND their wallet password. The phrase gate cannot be bypassed (the
 // reveal action is blocked until it matches), and the key auto-hides after 60s.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { Eye, EyeOff, KeyRound, Lock, ShieldAlert } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff, KeyRound, Lock, LogOut, ShieldAlert } from "lucide-react";
 
 import "../../styles/vnext.css";
 import AppShell from "../../components/vnext/AppShell";
@@ -380,7 +380,12 @@ function NetworkSection() {
 
 /* ------------------------------------------------------------ Page -------- */
 export default function Settings() {
-  const { isLoggedIn, wallet } = useAuth();
+  const { isLoggedIn, wallet, logout } = useAuth();
+  const navigate = useNavigate();
+  function handleSignOut() {
+    logout();
+    navigate("/");
+  }
   const address = wallet?.address;
   const { notificationsEnabled, setNotificationsEnabled } = useNotifications();
   const [analyticsOn, setAnalyticsOn] = useState(isAnalyticsEnabled());
@@ -421,6 +426,9 @@ export default function Settings() {
                 </Button>
                 <Button variant="secondary" onClick={() => setChangePwOpen(true)}>
                   <Lock size={16} aria-hidden="true" /> Change password
+                </Button>
+                <Button variant="secondary" onClick={handleSignOut}>
+                  <LogOut size={16} aria-hidden="true" /> Sign out
                 </Button>
               </div>
             </>

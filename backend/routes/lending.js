@@ -61,7 +61,7 @@ router.get("/api/lending/loans", async (req, res, next) => {
     const response = await axios.get(`${flaskUrl}/lending/loans`, { params: lendingListParams(req) });
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     return handleRouteError(res, error, "GET /api/lending/loans", "Unable to load loan requests.");
@@ -76,7 +76,7 @@ router.get("/api/lending/loan", async (req, res, next) => {
     });
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     return handleRouteError(res, error, "GET /api/lending/loan", "Unable to load loan details.");
@@ -89,7 +89,7 @@ router.get("/api/lending/my", async (req, res, next) => {
     const response = await axios.get(`${flaskUrl}/lending/my`, { params: { address } });
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     return handleRouteError(res, error, "GET /api/lending/my", "Unable to load member loans.");

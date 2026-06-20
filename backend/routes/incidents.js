@@ -39,7 +39,7 @@ router.get("/api/incidents", (req, res) => {
   try {
     res.json({ success: true, ...pageIncidents(listIncidents(), paginationParams(req)) });
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     logError(`GET /api/incidents failed: ${error.message}`);
@@ -51,7 +51,7 @@ router.get("/api/incidents/active", (req, res) => {
   try {
     res.json({ success: true, ...pageIncidents(listActiveIncidents(), paginationParams(req)) });
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     logError(`GET /api/incidents/active failed: ${error.message}`);

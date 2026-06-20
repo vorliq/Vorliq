@@ -50,7 +50,7 @@ function governanceListParams(req) {
 }
 
 function handleValidationError(res, error) {
-  if (error.status) {
+  if (error.status && !error.response) {
     res.status(error.status).json({ success: false, message: error.message });
     return true;
   }

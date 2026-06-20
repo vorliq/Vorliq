@@ -36,46 +36,49 @@ export default function useWalletBalance(address) {
         return;
       }
       setState((s) => ({ ...s, loading: true, error: "" }));
-      try {
-        const res = await api.get("/wallet/balance", { params: { address }, signal });
-        const n = Number(res?.data?.balance);
-        const total = Number.isFinite(n) ? n : null;
+      // The balance and the pending split are independent reads, so fire them in
+      // parallel rather than waiting for the balance before starting pending —
+      // one fewer round-trip on the critical path (noticeable on mobile).
+      const [balRes, pendRes] = await Promise.allSettled([
+        api.get("/wallet/balance", { params: { address }, signal }),
+        api.get("/transactions/pending", { params: { address, limit: 100, offset: 0 }, signal }),
+      ]);
+      if (signal?.aborted) return;
 
-        // Split the pending-inclusive total using the address's pending txs. If
-        // this secondary call fails we degrade gracefully: available falls back
-        // to total (never overstating once the primary balance itself loaded).
-        let pendingIncoming = 0;
-        let pendingOutgoing = 0;
-        try {
-          const p = await api.get("/transactions/pending", {
-            params: { address, limit: 100, offset: 0 },
-            signal,
-          });
-          const txs = Array.isArray(p?.data?.transactions) ? p.data.transactions : [];
-          for (const t of txs) {
-            const amt = Number(t.amount) || 0;
-            if (t.receiver_address === address) pendingIncoming += amt;
-            if (t.sender_address === address) pendingOutgoing += amt;
-          }
-        } catch (pendingErr) {
-          if (pendingErr?.name === "CanceledError" || pendingErr?.code === "ERR_CANCELED") return;
-          // leave pending at 0 → available falls back to total
-        }
-
-        const available = total == null ? null : Math.max(0, total - pendingIncoming);
-        setState({
-          balance: total,
-          total,
-          available,
-          pendingIncoming,
-          pendingOutgoing,
-          loading: false,
-          error: "",
-        });
-      } catch (err) {
+      if (balRes.status === "rejected") {
+        const err = balRes.reason;
         if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
         setState({ ...EMPTY, loading: false, error: "We couldn't load your balance." });
+        return;
       }
+
+      const n = Number(balRes.value?.data?.balance);
+      const total = Number.isFinite(n) ? n : null;
+
+      // Split the pending-inclusive total using the address's pending txs. If
+      // the pending call failed we degrade gracefully: available falls back to
+      // total (never overstating once the primary balance itself loaded).
+      let pendingIncoming = 0;
+      let pendingOutgoing = 0;
+      if (pendRes.status === "fulfilled") {
+        const txs = Array.isArray(pendRes.value?.data?.transactions) ? pendRes.value.data.transactions : [];
+        for (const t of txs) {
+          const amt = Number(t.amount) || 0;
+          if (t.receiver_address === address) pendingIncoming += amt;
+          if (t.sender_address === address) pendingOutgoing += amt;
+        }
+      }
+
+      const available = total == null ? null : Math.max(0, total - pendingIncoming);
+      setState({
+        balance: total,
+        total,
+        available,
+        pendingIncoming,
+        pendingOutgoing,
+        loading: false,
+        error: "",
+      });
     },
     [address]
   );

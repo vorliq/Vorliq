@@ -16,7 +16,7 @@ import AppShell from "../../components/vnext/AppShell";
 import AuthorityAction from "../../components/vnext/AuthorityAction";
 import SummaryCard from "../../components/vnext/SummaryCard";
 import VoteBar from "../../components/vnext/VoteBar";
-import { Button, Card, InlineError } from "../../components/vnext/primitives";
+import { Button, Card, CardSkeleton, InlineError } from "../../components/vnext/primitives";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../helpers/api";
 import { authorityErrorMessage, postSignedAuthority } from "../../helpers/signedAuthority";
@@ -394,7 +394,10 @@ export default function Governance() {
       <Card style={{ marginTop: 20 }}>
         <h2 className="vn-panel-title">Active proposals</h2>
         {loading ? (
-          <p className="vn-empty-note" style={{ margin: 0 }}>Loading proposals…</p>
+          <div className="vn-card-grid">
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
         ) : active.length === 0 ? (
           <p className="vn-empty-note" style={{ margin: 0 }}>No active proposals are open for voting.</p>
         ) : (

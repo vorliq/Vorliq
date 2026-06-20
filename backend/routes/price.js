@@ -20,7 +20,7 @@ router.get("/api/price/signals", async (req, res) => {
     const response = await axios.get(`${flaskUrl}/price/signals`, { params: paginationParams(req) });
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     return handleRouteError(res, error, "GET /api/price/signals", "Unable to load price signals.");

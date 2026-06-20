@@ -29,7 +29,7 @@ router.get("/api/forum/posts", async (req, res) => {
     const response = await axios.get(`${flaskUrl}/forum/posts`, { params: paginationParams(req) });
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     return handleRouteError(res, error, "GET /api/forum/posts", "Unable to load forum posts.");
@@ -41,7 +41,7 @@ router.get("/api/forum/featured", async (req, res) => {
     const response = await axios.get(`${flaskUrl}/forum/featured`, { params: paginationParams(req) });
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     return handleRouteError(res, error, "GET /api/forum/featured", "Unable to load featured forum posts.");
@@ -66,7 +66,7 @@ router.get("/api/forum/search", async (req, res) => {
     });
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) {
+    if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     return handleRouteError(res, error, "GET /api/forum/search", "Unable to search forum posts.");

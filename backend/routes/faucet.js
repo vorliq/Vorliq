@@ -45,7 +45,7 @@ function requestFingerprint(req) {
 }
 
 function handleValidationError(req, res, error) {
-  if (!error.status) return false;
+  if (!error.status || error.response) return false;
   if (error.abuseCode) {
     logError(`Faucet ${error.abuseCode}: ${error.message}`);
   }

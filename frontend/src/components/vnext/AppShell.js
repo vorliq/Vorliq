@@ -3,7 +3,7 @@
 // mobile (with a "More" drawer for overflow items). Styling lives in
 // styles/vnext.css and rides the shared theme tokens, so dark/light just work.
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Download,
   Droplets,
@@ -61,8 +61,21 @@ function truncateAddress(address) {
   return address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
 }
 
+// Sign the wallet out and return to the landing page. logout() locks the
+// session and clears the in-memory wallet; navigating home means no app-shell
+// page is left rendering a half-empty authenticated view after sign out.
+function useLogout() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  return () => {
+    logout();
+    navigate("/");
+  };
+}
+
 function WalletInfo() {
-  const { wallet, isLoggedIn, logout } = useAuth();
+  const { wallet, isLoggedIn } = useAuth();
+  const handleLogout = useLogout();
   // Show the spendable figure (available), matching the Wallet/Send pages, so
   // the sidebar never implies more is usable than the chain will actually allow.
   const { available: balance } = useSharedWalletBalance();
@@ -86,7 +99,7 @@ function WalletInfo() {
       <div className="vn-side__bal">
         {balance === undefined ? "…" : balance == null || Number.isNaN(balance) ? "Unavailable" : formatVlq(balance)}
       </div>
-      <button type="button" className="vn-side__disconnect" onClick={logout}>
+      <button type="button" className="vn-side__disconnect" onClick={handleLogout}>
         <LogOut size={14} aria-hidden="true" /> Disconnect
       </button>
     </div>
@@ -130,6 +143,8 @@ function Sidebar({ active }) {
 
 function MoreDrawer({ active, onClose }) {
   const overflow = APP_NAV.filter((item) => !PRIMARY_TABS.includes(item.key));
+  const { wallet, isLoggedIn } = useAuth();
+  const handleLogout = useLogout();
   return (
     <>
       <div className="vn-drawer-backdrop" onClick={onClose} aria-hidden="true" />
@@ -156,6 +171,32 @@ function MoreDrawer({ active, onClose }) {
         })}
         <div className="vn-drawer__toggle">
           <ThemeToggle />
+        </div>
+        {/* Wallet identity + sign out — the desktop sidebar carries these, but
+            the sidebar is hidden on mobile, so without this there was no way to
+            log out on a phone. */}
+        <div className="vn-drawer__account">
+          {isLoggedIn ? (
+            <>
+              <div className="vn-side__addr" title={wallet?.address}>
+                {truncateAddress(wallet?.address)}
+              </div>
+              <button
+                type="button"
+                className="vn-side__disconnect"
+                onClick={() => {
+                  onClose();
+                  handleLogout();
+                }}
+              >
+                <LogOut size={16} aria-hidden="true" /> Disconnect
+              </button>
+            </>
+          ) : (
+            <Link className="vn-side__disconnect" to="/login" onClick={onClose}>
+              <LogOut size={16} aria-hidden="true" /> Sign in
+            </Link>
+          )}
         </div>
       </aside>
     </>

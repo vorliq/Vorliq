@@ -4,14 +4,14 @@
 // own inline error + retry; nothing is ever estimated.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Coins, Landmark, Wallet } from "lucide-react";
+import { ArrowUpRight, Coins, Droplets, Landmark, Wallet } from "lucide-react";
 
 import "../../styles/vnext.css";
 import AppShell from "../../components/vnext/AppShell";
 import LineChart from "../../components/vnext/LineChart";
 import SummaryCard from "../../components/vnext/SummaryCard";
 import TransactionHistory, { useTransactions } from "../../components/vnext/TransactionHistory";
-import { Card, InlineError } from "../../components/vnext/primitives";
+import { Button, Card, InlineError } from "../../components/vnext/primitives";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../helpers/api";
 import { useSharedWalletBalance } from "../../context/WalletBalanceContext";
@@ -78,7 +78,7 @@ function useWalletData(address) {
 }
 
 /* ------------------------------------------------- Network status panel -- */
-function NetworkStatusPanel() {
+function NetworkStatusPanel({ onHeight }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
@@ -98,17 +98,21 @@ function NetworkStatusPanel() {
       const latest = blockRes.status === "fulfilled" ? blockRes.value.data?.blocks?.[0] : null;
       const diag = diagRes.status === "fulfilled" ? diagRes.value.data || {} : {};
       setError("");
+      const height = summary.block_height ?? diag.block_height;
       setData({
-        height: summary.block_height ?? diag.block_height,
+        height,
         difficulty: latest?.difficulty ?? summary.current_difficulty,
         totalTransactions: summary.total_transactions,
         uptime: diag.uptime_seconds,
       });
+      // Share the height with the page header so it does not fetch the same
+      // chain summary a second time.
+      if (height != null && onHeight) onHeight(height);
     } catch (err) {
       if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
       setError("Network status is unavailable.");
     }
-  }, []);
+  }, [onHeight]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -168,15 +172,8 @@ export default function Dashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  // Latest block height for the header meta.
-  useEffect(() => {
-    const controller = new AbortController();
-    api
-      .get("/chain/summary", { signal: controller.signal })
-      .then((res) => setLatestHeight(res.data?.summary?.block_height))
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
+  // The header's "Block #N" comes from the network panel's chain-summary fetch
+  // (via onHeight) rather than a second identical request.
 
   const history = walletData.history;
   const hasBalance = Number.isFinite(Number(balance.available));
@@ -271,6 +268,22 @@ export default function Dashboard() {
         </Card>
       )}
 
+      {/* New-member nudge: a logged-in wallet with no VLQ at all (none confirmed,
+          none pending) is almost always someone who just created their wallet,
+          so point them at the Faucet — the fastest way to a first balance. */}
+      {isLoggedIn && balance.total === 0 && (
+        <Card style={{ marginBottom: 18 }}>
+          <h2 className="vn-panel-title" style={{ marginTop: 0 }}>Welcome to Vorliq</h2>
+          <p style={{ color: "var(--vn-text-2)", margin: "0 0 16px" }}>
+            Your wallet is ready but empty. Claim your first VLQ from the community Faucet to start
+            saving, sending, and voting — no mining required.
+          </p>
+          <Button variant="primary" to="/faucet">
+            <Droplets size={18} aria-hidden="true" /> Get your first VLQ
+          </Button>
+        </Card>
+      )}
+
       {walletData.error && (
         <InlineError message={walletData.error} onRetry={walletData.reload} />
       )}
@@ -309,7 +322,7 @@ export default function Dashboard() {
               ariaLabel="Wallet balance over time"
             />
           </Card>
-          <NetworkStatusPanel />
+          <NetworkStatusPanel onHeight={setLatestHeight} />
         </div>
       </div>
     </AppShell>

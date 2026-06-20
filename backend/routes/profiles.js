@@ -92,7 +92,7 @@ router.get("/api/profiles", async (req, res) => {
     const response = await axios.get(`${flaskUrl}/profiles`, { params: paginationParams(req) });
     return res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) return reject(res, error.message);
+    if (error.status && !error.response) return reject(res, error.message);
     return handleRouteError(res, error, "GET /api/profiles", "Unable to load profiles.");
   }
 });

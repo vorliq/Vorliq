@@ -52,7 +52,7 @@ router.get("/api/transactions/pending", async (req, res) => {
     const response = await axios.get(`${flaskUrl}/transactions/pending`, { params });
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) return res.status(error.status).json({ success: false, message: error.message });
+    if (error.status && !error.response) return res.status(error.status).json({ success: false, message: error.message });
     return handleRouteError(res, error, "GET /api/transactions/pending", "Unable to load pending transactions.");
   }
 });
@@ -72,7 +72,7 @@ router.get("/api/transactions", async (req, res) => {
     const response = await axios.get(`${flaskUrl}/transactions`, { params });
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) return res.status(error.status).json({ success: false, message: error.message });
+    if (error.status && !error.response) return res.status(error.status).json({ success: false, message: error.message });
     return handleRouteError(res, error, "GET /api/transactions", "Unable to load transactions.");
   }
 });
@@ -84,7 +84,7 @@ router.get("/api/transactions/:tx_id", async (req, res) => {
     const response = await axios.get(`${flaskUrl}/transactions/${encodeURIComponent(txId)}`);
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) return res.status(error.status).json({ success: false, message: error.message });
+    if (error.status && !error.response) return res.status(error.status).json({ success: false, message: error.message });
     return handleRouteError(res, error, "GET /api/transactions/:tx_id", "Unable to load transaction.");
   }
 });

@@ -115,7 +115,7 @@ router.get("/api/peers/propagation/events", async (req, res) => {
     const response = await axios.get(`${flaskUrl}/peers/propagation/events`, { params: eventParams(req.query) });
     res.status(response.status).json(response.data);
   } catch (error) {
-    if (error.status) return res.status(error.status).json({ success: false, message: error.message });
+    if (error.status && !error.response) return res.status(error.status).json({ success: false, message: error.message });
     return handleRouteError(res, error, "GET /api/peers/propagation/events", "Unable to load peer propagation events.");
   }
 });
