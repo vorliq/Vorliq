@@ -59,7 +59,7 @@ function AddressIdentity({ address, compact = false, className = "", profile: pr
       to={`/profile?address=${encodeURIComponent(address || "")}`}
       onClick={(event) => event.stopPropagation()}
     >
-      {profile && <ProfileAvatar profile={profile} address={address} size={compact ? "small" : "medium"} />}
+      {address && <ProfileAvatar profile={profile} address={address} size={compact ? "small" : "medium"} />}
       <span>
         <strong>{label}</strong>
         {!compact && profile && <small>{shortAddress(address)}</small>}

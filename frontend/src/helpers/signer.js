@@ -16,7 +16,7 @@ function pemToBytes(pem) {
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
-function extractSecp256k1PrivateScalar(privateKeyPem) {
+export function extractSecp256k1PrivateScalar(privateKeyPem) {
   const bytes = pemToBytes(privateKeyPem);
 
   for (let i = 0; i < bytes.length - 34; i += 1) {

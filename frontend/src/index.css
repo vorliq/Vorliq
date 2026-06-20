@@ -2635,6 +2635,14 @@ html[data-theme="light"] .vote-no {
   width: 82px;
 }
 
+/* Uploaded avatar image variant: fill the circular frame and crop to cover. */
+.profile-avatar.avatar-image {
+  object-fit: cover;
+  overflow: hidden;
+  padding: 0;
+  background: var(--surface-2, #0d1b2e);
+}
+
 .avatar-gradient {
   background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan), var(--accent-blue));
 }

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import logo from "../../assets/logo.png";
+import ProfileAvatar from "../ProfileAvatar";
 import { useAuth } from "../../context/AuthContext";
 import { formatVlq } from "../../helpers/publicApi";
 import { useSharedWalletBalance } from "../../context/WalletBalanceContext";
@@ -93,8 +94,11 @@ function WalletInfo() {
 
   return (
     <div className="vn-side__wallet">
-      <div className="vn-side__addr" title={wallet?.address}>
-        {truncateAddress(wallet?.address)}
+      <div className="vn-side__identity">
+        <ProfileAvatar address={wallet?.address} size="small" />
+        <div className="vn-side__addr" title={wallet?.address}>
+          {truncateAddress(wallet?.address)}
+        </div>
       </div>
       <div className="vn-side__bal">
         {balance === undefined ? "…" : balance == null || Number.isNaN(balance) ? "Unavailable" : formatVlq(balance)}

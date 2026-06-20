@@ -40,6 +40,7 @@ const bootstrapRoutes = require("./routes/bootstrap");
 const migrationRoutes = require("./routes/migration");
 const newsletterRoutes = require("./routes/newsletter");
 const walletHistoryRoutes = require("./routes/walletHistory");
+const avatarRoutes = require("./routes/avatar");
 const adminAuth = require("./middleware/adminAuth");
 const { sendError } = require("./utils/apiResponse");
 const { pruneAnalytics } = require("./analytics");
@@ -278,6 +279,9 @@ app.use(corsMiddleware());
 app.use(requestMetadata);
 app.use(apiV1Alias);
 app.use("/api/forum", express.json({ limit: "2.5mb" }));
+// Avatar uploads carry a base64 image; allow a larger body here (the route still
+// enforces a hard 2MB cap on the decoded image bytes).
+app.use("/api/profiles/avatar", express.json({ limit: "3mb" }));
 app.use(express.json({ limit: "100kb" }));
 app.use((req, res, next) => {
   logInfo(`[${req.requestId}] ${req.method} ${req.originalUrl}`);
@@ -320,6 +324,9 @@ app.use(
   ],
   writeLimiter
 );
+// Avatar: rate-limit only the POST upload. The GET that serves avatar images is
+// hit on every surface that shows a member and must not consume a write budget.
+app.post("/api/profiles/avatar", writeLimiter);
 app.use(["/api/governance/propose", "/api/treasury/propose"], proposalLimiter);
 app.use("/api/faucet/claim", faucetLimiter);
 app.use(["/api/registry/register", "/api/registry/heartbeat", "/api/peers/add", "/api/peers/announce"], registryLimiter);
@@ -420,6 +427,7 @@ app.use(governanceRoutes);
 app.use(treasuryRoutes);
 app.use(faucetRoutes);
 app.use(priceRoutes);
+app.use(avatarRoutes);
 app.use(profilesRoutes);
 app.use(achievementsRoutes);
 app.use(backupRoutes);

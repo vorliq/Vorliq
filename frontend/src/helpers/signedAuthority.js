@@ -18,6 +18,7 @@ const AUTHORITY_ACTIONS = Object.freeze({
   "forum.reply": { path: "/forum/reply", actorField: "author_address" },
   "forum.feature": { path: "/forum/feature", actorField: "voter_address" },
   "profile.update": { path: "/profiles/profile", actorField: "wallet_address" },
+  "profile.avatar": { path: "/profiles/avatar", actorField: "wallet_address" },
   "registry.verify_operator": { path: "/registry/verify-operator", actorField: "operator_wallet_address" },
 });
 

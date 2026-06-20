@@ -12,17 +12,24 @@
 // reveal action is blocked until it matches), and the key auto-hides after 60s.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, KeyRound, Lock, LogOut, ShieldAlert } from "lucide-react";
+import { Eye, EyeOff, ImageUp, KeyRound, Lock, LogOut, ShieldAlert } from "lucide-react";
+import { toast } from "react-toastify";
 
 import "../../styles/vnext.css";
 import AppShell from "../../components/vnext/AppShell";
 import Modal from "../../components/vnext/Modal";
+import ProfileAvatar from "../../components/ProfileAvatar";
 import { Button, Card, CopyButton, InlineError } from "../../components/vnext/primitives";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
 import { isAnalyticsEnabled, setAnalyticsEnabled } from "../../helpers/analytics";
 import api, { getNodeUrl, setNodeUrl } from "../../helpers/api";
+import { bumpAvatarVersion } from "../../helpers/avatarStore";
+import { resizeImageToDataUrl } from "../../helpers/resizeImage";
+import { authorityErrorMessage, postSignedAuthority } from "../../helpers/signedAuthority";
 import { loadWallet, saveWallet } from "../../helpers/storage";
+
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
 const CONFIRM_PHRASE = "REVEAL MY PRIVATE KEY";
 const REVEAL_TIMEOUT_MS = 60000;
@@ -379,6 +386,114 @@ function NetworkSection() {
 }
 
 /* ------------------------------------------------------------ Page -------- */
+/* ------------------------------------------------ Profile image ----------- */
+// Upload a profile image / logo. The file is resized to a 256x256 PNG in the
+// browser, then signed with the wallet password and posted through the existing
+// signed-authority layer so only the wallet owner can set their own avatar.
+function AvatarSection({ address }) {
+  const [preview, setPreview] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
+  const fileRef = useRef(null);
+
+  async function handlePick(event) {
+    setError("");
+    setDone(false);
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_AVATAR_BYTES) {
+      setError("Image must be 2MB or smaller.");
+      return;
+    }
+    try {
+      setPreview(await resizeImageToDataUrl(file, 256));
+    } catch (err) {
+      setPreview("");
+      setError(err.message || "Could not read that image.");
+    }
+  }
+
+  async function handleUpload(event) {
+    event.preventDefault();
+    if (!preview) {
+      setError("Choose an image first.");
+      return;
+    }
+    if (!password) {
+      setError("Enter your wallet password to sign this upload.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await postSignedAuthority({ action: "profile.avatar", body: { image: preview }, walletPassword: password });
+      bumpAvatarVersion(address); // refresh the avatar everywhere it is shown
+      setPreview("");
+      setPassword("");
+      setDone(true);
+      if (fileRef.current) fileRef.current.value = "";
+      toast.success("Profile image updated.");
+    } catch (err) {
+      const message = authorityErrorMessage(err, "Could not upload your image. Try a different file.");
+      setError(message);
+      toast.error(message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="vn-settings__section">
+      <h2>Profile image</h2>
+      <p className="vn-settings__hint">
+        Upload a profile image or logo (PNG or JPEG, up to 2MB). It appears on your profile, your
+        forum posts, governance proposals, lending requests, and in the sidebar.
+      </p>
+      <div className="vn-avatar-upload">
+        <div className="vn-avatar-upload__preview">
+          <ProfileAvatar address={address} size="large" />
+          {preview && (
+            <img className="profile-avatar large avatar-image" src={preview} alt="Selected new avatar preview" style={{ objectFit: "cover" }} />
+          )}
+        </div>
+        <form className="vn-send-form vn-avatar-upload__controls" onSubmit={handleUpload}>
+          <div className="vn-field">
+            <label htmlFor="vn-avatar-file">Choose image</label>
+            <input
+              id="vn-avatar-file"
+              ref={fileRef}
+              className="vn-input"
+              type="file"
+              accept="image/png,image/jpeg"
+              onChange={handlePick}
+            />
+          </div>
+          <div className="vn-field">
+            <label htmlFor="vn-avatar-pw">Wallet password</label>
+            <input
+              id="vn-avatar-pw"
+              className="vn-input"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>
+          <InlineError message={error} />
+          {done && <p className="vn-settings__hint" style={{ margin: 0 }}>Your new profile image is live.</p>}
+          <div className="vn-btn-row">
+            <Button variant="primary" type="submit" disabled={!preview || !password || busy}>
+              <ImageUp size={16} aria-hidden="true" /> {busy ? "Uploading..." : "Upload image"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </section>
+  );
+}
+
 export default function Settings() {
   const { isLoggedIn, wallet, logout } = useAuth();
   const navigate = useNavigate();
@@ -438,6 +553,9 @@ export default function Settings() {
             </p>
           )}
         </section>
+
+        {/* Profile image */}
+        {isLoggedIn && address && <AvatarSection address={address} />}
 
         {/* Notifications */}
         <section className="vn-settings__section">

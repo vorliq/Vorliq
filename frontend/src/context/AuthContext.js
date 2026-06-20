@@ -1,7 +1,7 @@
 import { createContext, useContext, useState } from "react";
 
 import api from "../helpers/api";
-import { clearWallet, loadStoredWalletPublicInfo, loadWallet, saveWallet } from "../helpers/storage";
+import { clearWallet, loadStoredWalletPublicInfo, loadWallet, persistEncryptedWallet, saveWallet } from "../helpers/storage";
 
 export const AuthContext = createContext(null);
 const WALLET_SESSION_LOCKED_KEY = "vorliq_wallet_session_locked";
@@ -58,6 +58,15 @@ export function AuthProvider({ children }) {
     return newWallet;
   }
 
+  // Adopt a wallet imported by private key. The caller has already derived the
+  // wallet locally and produced the encrypted backup envelope; we only persist
+  // that envelope and start the session. The raw private key never reaches here.
+  function adoptImportedWallet(encryptedBackup, publicInfo) {
+    persistEncryptedWallet(encryptedBackup);
+    unlockStoredWalletSession();
+    setWallet({ address: publicInfo.address, public_key: publicInfo.public_key });
+  }
+
   const value = {
     wallet,
     isLoggedIn: Boolean(wallet),
@@ -65,6 +74,7 @@ export function AuthProvider({ children }) {
     logout,
     clearLocalWallet,
     createAndSaveWallet,
+    adoptImportedWallet,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -57,6 +57,10 @@ const AUTHORITY_ROUTES = new Map([
   // to the wallet that controls the address. (The server-side auto-create on first
   // verification is an internal call and not affected.)
   ["/api/profiles/profile", { action: "profile.update", actorFields: ["wallet_address", "walletAddress"] }],
+  // Avatar upload: the image is written to a path derived from the wallet
+  // address, so without proof of control anyone could overwrite another member's
+  // avatar by passing their address. Bind the upload to the wallet that signs it.
+  ["/api/profiles/avatar", { action: "profile.avatar", actorFields: ["wallet_address", "walletAddress"] }],
   // Operator verification: a node operator signs a claim that the wallet they
   // control operates a registered node URL. Enforced here at the gateway (and
   // again in the Flask core) so the registry only records a claim from a wallet

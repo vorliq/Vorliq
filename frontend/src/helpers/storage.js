@@ -215,6 +215,15 @@ export async function importEncryptedWalletBackup(backup, password) {
   return true;
 }
 
+// Persist an already-encrypted wallet backup (e.g. one produced locally during
+// private-key import). The plaintext key is never seen here — only the encrypted
+// envelope is written, exactly like saveWallet/importEncryptedWalletBackup.
+export function persistEncryptedWallet(storedWallet) {
+  validateStoredWallet(storedWallet);
+  window.localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(storedWallet));
+  return true;
+}
+
 export function hasWallet() {
   return Boolean(window.localStorage.getItem(WALLET_STORAGE_KEY));
 }

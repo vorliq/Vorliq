@@ -18,6 +18,7 @@ import AppShell from "../../components/vnext/AppShell";
 import AuthorityAction from "../../components/vnext/AuthorityAction";
 import SummaryCard from "../../components/vnext/SummaryCard";
 import VoteBar from "../../components/vnext/VoteBar";
+import ProfileAvatar from "../../components/ProfileAvatar";
 import { Button, Card, CardSkeleton, InlineError } from "../../components/vnext/primitives";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../helpers/api";
@@ -105,7 +106,8 @@ function LoanCard({ loan, address, isLoggedIn, onVote, onRepay, busyId, feedback
       </div>
       {loan.reason && <p className="vn-prop__desc">{loan.reason}</p>}
       <div className="vn-prop__meta">
-        <span>
+        <span className="vn-prop__author">
+          <ProfileAvatar address={loan.requester_address} size="small" />
           Borrower <b className="vn-mono" title={loan.requester_address}>{formatHash(loan.requester_address, 6, 4)}</b>
         </span>
         <span>

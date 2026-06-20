@@ -1785,9 +1785,13 @@ test("Login page shows wallet creation when no wallet is stored", () => {
   expect(screen.getByRole("heading", { level: 1, name: /create or restore your vorliq wallet/i })).toBeInTheDocument();
   expect(screen.getAllByText(/create your vorliq wallet/i).length).toBeGreaterThan(0);
   expect(screen.getByRole("button", { name: /create wallet and set password/i })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: /import encrypted wallet backup/i })).toBeInTheDocument();
-  expect(screen.getByText(/restore it on this browser or another device/i)).toBeInTheDocument();
-  expect(screen.getByText(/vorliq does not send them to the server/i)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /import a wallet/i })).toBeInTheDocument();
+  expect(screen.getByText(/sign in by pasting your private key/i)).toBeInTheDocument();
+  expect(screen.getByText(/nothing is sent to vorliq/i)).toBeInTheDocument();
+  // The import method is a tab/toggle on the same page, not a separate route.
+  expect(screen.getByRole("tab", { name: /private key/i })).toBeInTheDocument();
+  expect(screen.getByRole("tab", { name: /backup file/i })).toBeInTheDocument();
+  // The key paste field is masked (password type), so it is never a plain textbox.
   expect(screen.queryByRole("textbox", { name: /private key/i })).not.toBeInTheDocument();
 });
 
@@ -1800,8 +1804,8 @@ test("Login page makes saved wallet unlock the primary path and gates clear save
 
   expect(screen.getByRole("heading", { level: 1, name: /unlock saved wallet/i })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /unlock saved wallet/i })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: /import encrypted wallet backup/i })).toBeInTheDocument();
-  expect(screen.getByText(/restoring your wallet on this browser or another device/i)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: /import a wallet/i })).toBeInTheDocument();
+  expect(screen.getByText(/used locally to decrypt the backup/i)).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: /create new wallet or clear saved wallet/i })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /clear saved wallet/i })).toBeDisabled();
   expect(screen.queryByRole("textbox", { name: /private key/i })).not.toBeInTheDocument();
@@ -2885,7 +2889,7 @@ test("Account protected route redirects to login behavior when no wallet is load
     "/account"
   );
 
-  expect(await screen.findByRole("heading", { name: /import encrypted wallet backup/i })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /import a wallet/i })).toBeInTheDocument();
   expect(screen.getAllByText(/create your vorliq wallet/i).length).toBeGreaterThan(0);
 });
 

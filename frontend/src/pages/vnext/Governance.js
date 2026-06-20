@@ -16,6 +16,7 @@ import AppShell from "../../components/vnext/AppShell";
 import AuthorityAction from "../../components/vnext/AuthorityAction";
 import SummaryCard from "../../components/vnext/SummaryCard";
 import VoteBar from "../../components/vnext/VoteBar";
+import ProfileAvatar from "../../components/ProfileAvatar";
 import { Button, Card, CardSkeleton, InlineError } from "../../components/vnext/primitives";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../helpers/api";
@@ -136,7 +137,8 @@ function ProposalCard({ proposal, address, isLoggedIn, closed, onVote, onCancel,
       </div>
       <p className="vn-prop__desc">{shortDesc}</p>
       <div className="vn-prop__meta">
-        <span>
+        <span className="vn-prop__author">
+          <ProfileAvatar address={proposal.proposer_address} size="small" />
           Proposer{" "}
           <b className="vn-mono" title={proposal.proposer_address}>{formatHash(proposal.proposer_address, 6, 4)}</b>
         </span>

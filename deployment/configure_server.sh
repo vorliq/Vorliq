@@ -52,8 +52,12 @@ cat >/etc/systemd/system/vorliq-backend.service <<'SERVICE'
 [Unit]
 Description=Vorliq Backend API
 After=network-online.target vorliq-blockchain.service
-Wants=network-online.target
-Requires=vorliq-blockchain.service
+# Order after Flask, but only *want* it — not *require* it. Requires= would tear
+# the Node service down whenever Flask stops or crashes (and would not bring it
+# back when Flask restarts). The Node layer tolerates a missing Flask at startup
+# and its /api/health/ready endpoint reports the degraded state, so it should
+# stay up and keep serving through a Flask blip rather than being killed with it.
+Wants=network-online.target vorliq-blockchain.service
 
 [Service]
 Type=simple

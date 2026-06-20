@@ -2131,3 +2131,36 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Avatars in the app shell, proposal/loan cards, and Settings upload ---- */
+.vn-side__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.vn-side__identity .vn-side__addr {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vn-prop__author {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.vn-avatar-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px;
+}
+.vn-avatar-upload__preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.vn-avatar-upload__controls {
+  flex: 1 1 260px;
+  min-width: 0;
+}
