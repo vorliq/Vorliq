@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import ipaddress
 import os
 import time
@@ -174,7 +175,9 @@ def _require_admin_request():
     admin_token = os.environ.get("ADMIN_TOKEN", "")
     authorization = request.headers.get("Authorization", "")
     provided_token = authorization.removeprefix("Bearer ").strip() if authorization.startswith("Bearer ") else ""
-    if not admin_token or not provided_token or provided_token != admin_token:
+    # Constant-time comparison so a network timing side-channel cannot be used to
+    # recover the admin token byte by byte. The empty-value checks fail closed.
+    if not admin_token or not provided_token or not hmac.compare_digest(provided_token, admin_token):
         return jsonify({"success": False, "message": "Unauthorized"}), 401
     return None
 

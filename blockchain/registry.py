@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 import re
+import threading
 import time
 from typing import Any, Callable
 from urllib.parse import urlparse, urlunparse
 
 from logger import vorliq_logger
+
+# Process-wide lock serialising operator-claim read-check-write. The Flask dev
+# server runs threaded, so without this two different wallets claiming the same
+# node nearly simultaneously could both read "unverified", both pass the
+# first-verified-locks conflict check, and both write (last-wins). Holding this
+# across the check and the write makes the second claimant observe the first's
+# recorded claim and be rejected with a conflict.
+_operator_claim_lock = threading.Lock()
 
 
 class NodeRegistry:
@@ -284,37 +293,42 @@ class NodeRegistry:
         in _public_node): the badge also requires a probe-confirmed match.
         """
         normalized_url = self._normalize_node_url(node_url)
-        stored = self.registered_nodes.get(normalized_url)
-        if not stored:
-            raise ValueError("Node is not registered.")
-        node = self._normalize_node(stored, normalized_url)
         wallet = self._optional_text(operator_wallet_address, "operator_wallet_address", 160)
         if not wallet:
             raise ValueError("operator_wallet_address is required.")
 
-        current_wallet = node.get("operator_wallet_address") or ""
-        if bool(node.get("is_verified_operator")) and current_wallet and current_wallet != wallet:
-            raise ValueError(
-                "This node already has a verified operator. Only the wallet that holds "
-                "the claim can change or release it."
-            )
+        # Atomic read-check-write: a competing claim cannot slip between the
+        # conflict check and the write, so first-verified-locks holds under
+        # concurrent claims for the same node.
+        with _operator_claim_lock:
+            stored = self.registered_nodes.get(normalized_url)
+            if not stored:
+                raise ValueError("Node is not registered.")
+            node = self._normalize_node(stored, normalized_url)
 
-        now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        if release:
-            node["operator_wallet_address"] = ""
-            node["is_verified_operator"] = False
-            node["operator_verified_at"] = ""
-            node["operator_probe_match"] = None
-            node["operator_probe_reason"] = ""
-        else:
-            node["operator_wallet_address"] = wallet
-            node["is_verified_operator"] = True
-            node["operator_verified_at"] = now_iso
-            # Re-evaluated on the next probe sweep; until then the node/claim
-            # binding is unconfirmed, so the public badge stays off.
-            node["operator_probe_match"] = None
-            node["operator_probe_reason"] = "Awaiting independent probe confirmation of the node's advertised operator."
-        self.registered_nodes[normalized_url] = self._normalize_node(node, normalized_url)
+            current_wallet = node.get("operator_wallet_address") or ""
+            if bool(node.get("is_verified_operator")) and current_wallet and current_wallet != wallet:
+                raise ValueError(
+                    "This node already has a verified operator. Only the wallet that holds "
+                    "the claim can change or release it."
+                )
+
+            now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            if release:
+                node["operator_wallet_address"] = ""
+                node["is_verified_operator"] = False
+                node["operator_verified_at"] = ""
+                node["operator_probe_match"] = None
+                node["operator_probe_reason"] = ""
+            else:
+                node["operator_wallet_address"] = wallet
+                node["is_verified_operator"] = True
+                node["operator_verified_at"] = now_iso
+                # Re-evaluated on the next probe sweep; until then the node/claim
+                # binding is unconfirmed, so the public badge stays off.
+                node["operator_probe_match"] = None
+                node["operator_probe_reason"] = "Awaiting independent probe confirmation of the node's advertised operator."
+            self.registered_nodes[normalized_url] = self._normalize_node(node, normalized_url)
         vorliq_logger.info(
             "Registry operator claim %s for %s by %s",
             "released" if release else "recorded",

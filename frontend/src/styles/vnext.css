@@ -18,6 +18,7 @@
      Fills, borders, icons-as-decoration and the gradient keep the bright accent. */
   --vn-teal-text: var(--vn-teal);
   --vn-green-text: var(--vn-green);
+  --vn-red-text: #ff5d6c; /* danger/error/negative text — bright reads on dark */
 
   /* --- Dark surfaces (default) --- */
   --vn-bg: #080b14;            /* near-black deep navy page background */
@@ -95,10 +96,12 @@ html[data-theme="light"] .vnext {
      text is opacity-bumped to clear 4.5:1 (~6:1). Dark stays 55% (6.24:1). */
   --vn-text-2: rgba(8, 11, 20, 0.64);
   --vn-text-3: rgba(8, 11, 20, 0.35);
-  /* Darkened accent text for AA on light surfaces (teal 4.9:1, green 4.7:1 on
-     the card; both higher on white). Brand fills/borders stay bright. */
-  --vn-teal-text: #00796b;
-  --vn-green-text: #2e7d32;
+  /* Darkened accent text for AA on light surfaces. Values clear 4.5:1 even on
+     the 10%-tinted badge backgrounds (teal 4.8:1, green 5.0:1) and read higher
+     on the plain card and white. Brand fills/borders stay bright. */
+  --vn-teal-text: #00736a;
+  --vn-green-text: #2a7330;
+  --vn-red-text: #b83b48; /* darkened danger red — 5.2:1 on the light card */
   --vn-border: rgba(0, 0, 0, 0.1);
   --vn-border-strong: rgba(0, 0, 0, 0.16);
   --vn-rule: rgba(0, 0, 0, 0.08);
@@ -780,7 +783,7 @@ html[data-theme="light"] .vnext .vn-ticker__item {
   color: var(--vn-teal-text);
 }
 .vnext .vn-form-msg--error {
-  color: #ff5d6c;
+  color: var(--vn-red-text);
 }
 
 /* ------------------------------------------------------- CTA ----------- */
@@ -829,7 +832,7 @@ html[data-theme="light"] .vnext .vn-ticker__item {
 .vnext .vn-error {
   border: 1px solid rgba(255, 93, 108, 0.5);
   background: rgba(255, 93, 108, 0.1);
-  color: #ffd9de;
+  color: var(--vn-red-text);
   border-radius: var(--vn-r-sm);
   padding: 14px 16px;
   display: flex;
@@ -1158,7 +1161,7 @@ html[data-theme="light"] .vnext .vn-side__wallet {
   color: var(--vn-green-text);
 }
 .vnext .vn-sum__trend--down {
-  color: #ff5d6c;
+  color: var(--vn-red-text);
 }
 
 .vnext .vn-summary-grid {
@@ -1510,7 +1513,7 @@ html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
   line-height: 1.5;
 }
 .vnext .vn-field__hint--error {
-  color: #ff5d6c;
+  color: var(--vn-red-text);
 }
 
 /* Send status panel */
@@ -1619,7 +1622,9 @@ html[data-theme="light"] .vnext .vn-code {
   white-space: pre;
 }
 .vnext .vn-code__comment {
-  color: #6b7a93;
+  /* Brightened from #6b7a93 (4.16:1 on the lighter light-theme code bg) so the
+     comment line clears AA on both code backgrounds. */
+  color: #828fa8;
 }
 .vnext .vn-code__cmd {
   color: #1fe6d6;
@@ -1771,7 +1776,7 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
   background: rgba(86, 200, 112, 0.1);
 }
 .vnext .vn-badge--no {
-  color: #d27580;
+  color: var(--vn-red-text);
   border-color: rgba(210, 117, 128, 0.5);
   background: rgba(210, 117, 128, 0.1);
 }

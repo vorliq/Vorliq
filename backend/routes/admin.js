@@ -460,7 +460,11 @@ router.post("/api/admin/moderation/forum/pin", async (req, res) => {
     return res.status(response.status).json(response.data);
   } catch (error) {
     const status = error.status || error.response?.status || 400;
-    return res.status(status).json({ success: false, message: error.response?.data?.error || error.message });
+    // Use the upstream message when present, but never fall back to the raw
+    // error string (a connection failure would expose the internal Flask
+    // host:port). Log the real cause server-side instead.
+    if (!error.response) logError(`admin moderation upstream error: ${error.message}`);
+    return res.status(status).json({ success: false, message: error.response?.data?.error || "Unable to complete this moderation action." });
   }
 });
 
@@ -473,7 +477,11 @@ router.post("/api/admin/moderation/forum/feature", async (req, res) => {
     return res.status(response.status).json(response.data);
   } catch (error) {
     const status = error.status || error.response?.status || 400;
-    return res.status(status).json({ success: false, message: error.response?.data?.error || error.message });
+    // Use the upstream message when present, but never fall back to the raw
+    // error string (a connection failure would expose the internal Flask
+    // host:port). Log the real cause server-side instead.
+    if (!error.response) logError(`admin moderation upstream error: ${error.message}`);
+    return res.status(status).json({ success: false, message: error.response?.data?.error || "Unable to complete this moderation action." });
   }
 });
 
@@ -489,7 +497,11 @@ router.post("/api/admin/moderation/forum/moderate", async (req, res) => {
     return res.status(response.status).json(response.data);
   } catch (error) {
     const status = error.status || error.response?.status || 400;
-    return res.status(status).json({ success: false, message: error.response?.data?.error || error.message });
+    // Use the upstream message when present, but never fall back to the raw
+    // error string (a connection failure would expose the internal Flask
+    // host:port). Log the real cause server-side instead.
+    if (!error.response) logError(`admin moderation upstream error: ${error.message}`);
+    return res.status(status).json({ success: false, message: error.response?.data?.error || "Unable to complete this moderation action." });
   }
 });
 

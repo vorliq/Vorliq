@@ -10,11 +10,12 @@ import "../../styles/vnext.css";
 import AppShell from "../../components/vnext/AppShell";
 import Modal from "../../components/vnext/Modal";
 import SendForm from "../../components/vnext/SendForm";
+import TransactionHistory from "../../components/vnext/TransactionHistory";
 import WalletQR from "../../components/vnext/WalletQR";
 import { Button, Card, CopyButton, InlineError, Skeleton } from "../../components/vnext/primitives";
 import { useAuth } from "../../context/AuthContext";
 import { formatVlq } from "../../helpers/publicApi";
-import useWalletBalance from "../../helpers/useWalletBalance";
+import { useSharedWalletBalance } from "../../context/WalletBalanceContext";
 
 function ReceiveContents({ address, qrSize }) {
   return (
@@ -29,7 +30,7 @@ function ReceiveContents({ address, qrSize }) {
 export default function Wallet() {
   const { isLoggedIn, wallet } = useAuth();
   const address = wallet?.address;
-  const { available, total, pendingIncoming, pendingOutgoing, loading, error, reload } = useWalletBalance(address);
+  const { available, total, pendingIncoming, pendingOutgoing, loading, error, reload } = useSharedWalletBalance();
 
   const [showSend, setShowSend] = useState(false);
   const [showReceive, setShowReceive] = useState(false);
@@ -132,6 +133,11 @@ export default function Wallet() {
           <ReceiveContents address={address} qrSize={240} />
         </Modal>
       )}
+
+      {/* Transaction history — same shared component the Dashboard uses */}
+      <div style={{ marginTop: 18 }}>
+        <TransactionHistory address={address} isLoggedIn={isLoggedIn} />
+      </div>
     </AppShell>
   );
 }

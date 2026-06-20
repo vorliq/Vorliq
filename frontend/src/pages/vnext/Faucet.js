@@ -19,7 +19,7 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../helpers/api";
 import { apiErrorMessage } from "../../helpers/errors";
 import { formatHash, formatVlq } from "../../helpers/publicApi";
-import useWalletBalance from "../../helpers/useWalletBalance";
+import { useSharedWalletBalance } from "../../context/WalletBalanceContext";
 
 const COOLDOWN_SECONDS = 24 * 60 * 60;
 
@@ -45,7 +45,7 @@ function formatCountdown(ms) {
 export default function Faucet() {
   const { isLoggedIn, wallet } = useAuth();
   const address = wallet?.address;
-  const { balance, reload: reloadBalance } = useWalletBalance(address);
+  const { balance, reload: reloadBalance } = useSharedWalletBalance();
 
   const [summary, setSummary] = useState(null);
   const [nextAvailable, setNextAvailable] = useState(null); // ms epoch or null

@@ -1,12 +1,14 @@
 // Mining page inside the new app shell (/preview/app/mining). Carries forward
 // the existing Mine page's real data sources: /mining/status for the header
 // figures and /mining/history for mined blocks (filtered to the connected
-// wallet). Estimated hash rate has no real basis in the current app, so it is
-// shown as Unavailable rather than guessed. Node-setup commands and the doc
-// link are taken verbatim from the project's run-your-own-node guide.
+// wallet). The header cards show real mining parameters — block reward,
+// difficulty, block-time target — not a fabricated hash rate (block production
+// here is floor-gated by a minimum block time, not hashing power). Node-setup
+// commands and the doc link are taken verbatim from the project's
+// run-your-own-node guide.
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Coins, Gauge, Activity } from "lucide-react";
+import { Coins, Gauge, Timer } from "lucide-react";
 
 import "../../styles/vnext.css";
 import AppShell from "../../components/vnext/AppShell";
@@ -169,12 +171,16 @@ export default function Mining() {
   const treasuryShare = num(status?.treasury_reward_per_block);
   const blockReward = minerShare != null ? minerShare + (treasuryShare || 0) : undefined;
   const difficulty = num(status?.current_difficulty);
+  const blockTimeTarget = num(status?.block_time_target);
 
+  // No honest network hash rate exists on this chain: block production is gated
+  // by a minimum block time, not by hashing power, and per-block mining
+  // durations are not recorded, so a difficulty-over-time figure would only
+  // reflect the cadence floor. Show the real block-time target instead.
   const cards = [
     { label: "Current block reward", value: blockReward != null ? formatVlq(blockReward) : null, icon: Coins },
     { label: "Network difficulty", value: difficulty != null ? formatNumber(difficulty) : null, icon: Gauge },
-    // No real basis for an estimated hash rate in the current app — honest Unavailable.
-    { label: "Estimated hash rate", value: null, icon: Activity },
+    { label: "Block time target", value: blockTimeTarget != null ? `${formatNumber(blockTimeTarget)}s` : null, icon: Timer },
   ];
 
   const historyLoading = rows == null && isLoggedIn;

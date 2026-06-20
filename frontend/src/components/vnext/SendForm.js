@@ -14,7 +14,7 @@ import { validateAddress, validateTransactionReview } from "../../helpers/addres
 import { apiErrorMessage } from "../../helpers/errors";
 import { signTransaction } from "../../helpers/signer";
 import { loadWallet } from "../../helpers/storage";
-import useWalletBalance from "../../helpers/useWalletBalance";
+import { useSharedWalletBalance } from "../../context/WalletBalanceContext";
 import { formatNumber, formatVlq } from "../../helpers/publicApi";
 import { Button, InlineError } from "./primitives";
 
@@ -27,7 +27,7 @@ export default function SendForm() {
   // `available` is the spendable figure the core will actually accept (total
   // minus unconfirmed incoming); `pendingIncoming` is shown so a user with VLQ
   // arriving understands why their spendable amount is lower than their total.
-  const { available, pendingIncoming } = useWalletBalance(address);
+  const { available, pendingIncoming } = useSharedWalletBalance();
 
   const [recipient, setRecipient] = useState("");
   const [recipientTouched, setRecipientTouched] = useState(false);

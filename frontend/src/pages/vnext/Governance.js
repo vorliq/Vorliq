@@ -21,7 +21,7 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../helpers/api";
 import { authorityErrorMessage, postSignedAuthority } from "../../helpers/signedAuthority";
 import { formatHash, formatNumber } from "../../helpers/publicApi";
-import useWalletBalance from "../../helpers/useWalletBalance";
+import { useSharedWalletBalance } from "../../context/WalletBalanceContext";
 
 function voteFor(proposal, address) {
   if (!address) return null;
@@ -325,7 +325,7 @@ export default function Governance() {
   const { loading, error, active, closed, summary, reload } = useGovernance(address);
   // Total (pending-inclusive) balance — the propose gate the core enforces uses
   // this figure, so it drives the proactive "you need VLQ to propose" guidance.
-  const { total: walletBalance } = useWalletBalance(address);
+  const { total: walletBalance } = useSharedWalletBalance();
   const [busyId, setBusyId] = useState("");
   const [feedback, setFeedback] = useState({});
 

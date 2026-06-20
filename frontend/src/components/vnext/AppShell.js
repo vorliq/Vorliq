@@ -22,7 +22,7 @@ import {
 import logo from "../../assets/logo.png";
 import { useAuth } from "../../context/AuthContext";
 import { formatVlq } from "../../helpers/publicApi";
-import useWalletBalance from "../../helpers/useWalletBalance";
+import { useSharedWalletBalance } from "../../context/WalletBalanceContext";
 import ThemeToggle from "./ThemeToggle";
 
 // Single source of truth for the app navigation.
@@ -65,7 +65,7 @@ function WalletInfo() {
   const { wallet, isLoggedIn, logout } = useAuth();
   // Show the spendable figure (available), matching the Wallet/Send pages, so
   // the sidebar never implies more is usable than the chain will actually allow.
-  const { available: balance } = useWalletBalance(wallet?.address);
+  const { available: balance } = useSharedWalletBalance();
 
   if (!isLoggedIn) {
     return (

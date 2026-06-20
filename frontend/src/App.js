@@ -13,6 +13,7 @@ import { initAnalytics } from "./helpers/analytics";
 import { applyTheme, getStoredTheme } from "./helpers/theme";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { WalletBalanceProvider } from "./context/WalletBalanceContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Features from "./pages/Features";
@@ -137,9 +138,11 @@ function App() {
   return (
     <NotificationProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <AppShell />
-        </BrowserRouter>
+        <WalletBalanceProvider>
+          <BrowserRouter>
+            <AppShell />
+          </BrowserRouter>
+        </WalletBalanceProvider>
       </AuthProvider>
     </NotificationProvider>
   );
