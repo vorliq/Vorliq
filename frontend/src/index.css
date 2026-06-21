@@ -1257,6 +1257,29 @@ summary {
   flex: 0 0 auto;
 }
 
+/* Email-notification opt-in toggles. Reset the default fieldset chrome so the
+   group reads as a normal form section, and stack the per-event rows. */
+.notification-events {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notification-events legend {
+  padding: 0;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.notification-events .checkbox-row {
+  font-weight: 600;
+}
+
 .social-links {
   display: flex;
   flex-wrap: wrap;

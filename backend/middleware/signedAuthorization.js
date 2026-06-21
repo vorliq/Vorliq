@@ -67,6 +67,25 @@ const AUTHORITY_ROUTES = new Map([
   // that proved control of its key. The signed claim alone does not earn a badge;
   // the independent probe must also confirm the node advertises that same wallet.
   ["/api/registry/verify-operator", { action: "registry.verify_operator", actorFields: ["operator_wallet_address", "operatorWalletAddress"] }],
+  // Exchange coordination writes. Every offer carries an address that the UI then
+  // renders with the member's verified identity, and every lifecycle action
+  // (accept, cancel, record the VLQ tx, confirm completion, dispute) moves a
+  // shared coordination record and is attributed to a wallet. Unsigned, any of
+  // these could be posted "as" another member — creating offers in their name,
+  // accepting on their behalf, cancelling their open request, or recording a
+  // false VLQ transaction against their trade. Bind each write to the wallet that
+  // signs it (the actor field below), exactly like governance/lending/forum.
+  ["/api/exchange/offer", { action: "exchange.offer", actorFields: ["creator_address", "creatorAddress"] }],
+  ["/api/exchange/accept", { action: "exchange.accept", actorFields: ["acceptor_address", "acceptorAddress"] }],
+  ["/api/exchange/complete", { action: "exchange.complete", actorFields: ["caller_address", "callerAddress"] }],
+  ["/api/exchange/confirm-complete", { action: "exchange.confirm_complete", actorFields: ["caller_address", "callerAddress"] }],
+  ["/api/exchange/record-vlq-tx", { action: "exchange.record_vlq_tx", actorFields: ["caller_address", "callerAddress"] }],
+  ["/api/exchange/dispute", { action: "exchange.dispute", actorFields: ["caller_address", "callerAddress"] }],
+  ["/api/exchange/cancel", { action: "exchange.cancel", actorFields: ["caller_address", "callerAddress"] }],
+  // Email notification preferences store the member's own email keyed by wallet.
+  // Sign the write so nobody can set or overwrite another member's email (and so
+  // redirect their opt-in mail). The proven wallet is the storage key.
+  ["/api/notifications/preferences", { action: "notifications.preferences", actorFields: ["wallet_address", "walletAddress"] }],
 ]);
 const usedNonces = new Map();
 const UNSIGNED_AUTHORITY_WRITE_PATHS = new Set(AUTHORITY_ROUTES.keys());

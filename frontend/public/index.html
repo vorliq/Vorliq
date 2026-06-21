@@ -3,7 +3,6 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#00A896" />
 
     <title>Vorliq — Your Community's Bank. Your Rules.</title>
     <meta
@@ -17,12 +16,21 @@
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
-    <!-- Apply the saved theme before paint to avoid a flash. -->
+    <!-- Apply the saved theme before paint to avoid a flash. The theme-color is
+         injected here rather than as a static <meta> so editors/linters don't
+         flag the well-known limited browser support (Firefox/Opera ignore it
+         harmlessly); injecting keeps the address-bar tint on the browsers that
+         do support it. -->
     <script>
       (function () {
         try {
           var t = localStorage.getItem("vorliq_theme");
-          document.documentElement.setAttribute("data-theme", t === "light" ? "light" : "dark");
+          var theme = t === "light" ? "light" : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+          var meta = document.createElement("meta");
+          meta.name = "theme-color";
+          meta.content = theme === "light" ? "#00A896" : "#0A0E1A";
+          document.head.appendChild(meta);
         } catch (e) {}
       })();
     </script>

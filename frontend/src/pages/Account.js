@@ -12,7 +12,15 @@ import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
+import { authorityErrorMessage, postSignedAuthority } from "../helpers/signedAuthority";
 import { exportEncryptedWalletBackup, getLastWalletBackupAt, loadWallet } from "../helpers/storage";
+
+const NOTIFICATION_EVENTS = [
+  ["vlq_received", "When I receive VLQ"],
+  ["loan_funded", "When my loan request is funded"],
+  ["loan_repaid", "When a loan I helped fund is repaid"],
+  ["governance_concluded", "When a proposal I voted on concludes"],
+];
 
 function Account() {
   const navigate = useNavigate();
@@ -522,6 +530,8 @@ function Account() {
         </div>
       </section>
 
+      <EmailNotificationSettings address={wallet.address} />
+
       <section className="card card-pad account-section">
         <div className="section-title">
           <h2>My Transaction History</h2>
@@ -801,6 +811,178 @@ function Account() {
         )}
       </section>
     </div>
+  );
+}
+
+function EmailNotificationSettings({ address }) {
+  const [maskedEmail, setMaskedEmail] = useState("");
+  const [configured, setConfigured] = useState(false);
+  const [email, setEmail] = useState("");
+  const [events, setEvents] = useState({
+    vlq_received: false,
+    loan_funded: false,
+    loan_repaid: false,
+    governance_concluded: false,
+  });
+  const [password, setPassword] = useState("");
+  const [loadingPrefs, setLoadingPrefs] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    api
+      .get("/notifications/preferences", { params: { address } })
+      .then((response) => {
+        if (!mounted) return;
+        const prefs = response.data.preferences || {};
+        setConfigured(Boolean(prefs.configured));
+        setMaskedEmail(prefs.email_masked || "");
+        setEvents((current) => ({ ...current, ...(prefs.events || {}) }));
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (mounted) setLoadingPrefs(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [address]);
+
+  function toggleEvent(eventKey) {
+    setEvents((current) => ({ ...current, [eventKey]: !current[eventKey] }));
+  }
+
+  async function savePreferences(submitEvent) {
+    submitEvent.preventDefault();
+    if (!password) {
+      toast.error("Enter your wallet password to sign this change locally.");
+      return;
+    }
+    const typedEmail = email.trim();
+    if (!configured && !typedEmail) {
+      toast.error("Enter the email address where you'd like to receive notifications.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Omit the email field entirely when keeping the saved address (the UI only
+      // ever sees it masked) so toggles can be changed without re-typing it.
+      const body = { events };
+      if (typedEmail || !configured) {
+        body.email = typedEmail;
+      }
+      const response = await postSignedAuthority({
+        action: "notifications.preferences",
+        walletPassword: password,
+        body,
+      });
+      const prefs = response.data.preferences || {};
+      setConfigured(Boolean(prefs.configured));
+      setMaskedEmail(prefs.email_masked || "");
+      setEvents((current) => ({ ...current, ...(prefs.events || {}) }));
+      setEmail("");
+      setPassword("");
+      toast.success(prefs.configured ? "Notification preferences saved." : "Email notifications turned off.");
+    } catch (error) {
+      toast.error(authorityErrorMessage(error, "Unable to save notification preferences."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function turnOff() {
+    if (!password) {
+      toast.error("Enter your wallet password to sign this change locally.");
+      return;
+    }
+    setSaving(true);
+    try {
+      // An explicit empty email clears the saved address and disables everything.
+      await postSignedAuthority({
+        action: "notifications.preferences",
+        walletPassword: password,
+        body: { email: "", events: { vlq_received: false, loan_funded: false, loan_repaid: false, governance_concluded: false } },
+      });
+      setConfigured(false);
+      setMaskedEmail("");
+      setEvents({ vlq_received: false, loan_funded: false, loan_repaid: false, governance_concluded: false });
+      setEmail("");
+      setPassword("");
+      toast.success("Email notifications turned off and your address was removed.");
+    } catch (error) {
+      toast.error(authorityErrorMessage(error, "Unable to turn off notifications."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="card card-pad account-section">
+      <div className="section-title">
+        <div>
+          <span className="eyebrow">Email Notifications</span>
+          <h2>Email Preferences</h2>
+        </div>
+      </div>
+      <p className="help-text">
+        Opt in to an email when something happens that involves you. Notifications are off until you
+        add an address and choose events. Your email is stored against your wallet only after you sign
+        this change locally, and it is never shown to other members.
+      </p>
+      {loadingPrefs ? (
+        <Spinner label="Loading notification preferences..." />
+      ) : (
+        <form className="form" onSubmit={savePreferences}>
+          <div className="field">
+            <label htmlFor="notification-email">Email address</label>
+            <input
+              id="notification-email"
+              className="input"
+              type="email"
+              autoComplete="email"
+              placeholder={configured ? `Current: ${maskedEmail} — type a new address to change it` : "you@example.com"}
+              value={email}
+              onChange={(formEvent) => setEmail(formEvent.target.value)}
+            />
+            {configured && (
+              <small className="help-text">Leave blank to keep {maskedEmail} and only change which events email you.</small>
+            )}
+          </div>
+          <fieldset className="field notification-events">
+            <legend>Email me…</legend>
+            {NOTIFICATION_EVENTS.map(([key, label]) => (
+              <label className="checkbox-row" key={key}>
+                <input type="checkbox" checked={Boolean(events[key])} onChange={() => toggleEvent(key)} />
+                <span>{label}</span>
+              </label>
+            ))}
+          </fieldset>
+          <div className="field">
+            <label htmlFor="notification-password">Wallet password</label>
+            <input
+              id="notification-password"
+              className="input"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Signs this change locally"
+              value={password}
+              onChange={(formEvent) => setPassword(formEvent.target.value)}
+            />
+          </div>
+          <div className="button-row">
+            <button className="button" type="submit" disabled={saving}>
+              {saving ? "Saving..." : "Save Preferences"}
+            </button>
+            {configured && (
+              <button className="button secondary small-button" type="button" disabled={saving} onClick={turnOff}>
+                Turn Off &amp; Remove Email
+              </button>
+            )}
+          </div>
+        </form>
+      )}
+    </section>
   );
 }
 

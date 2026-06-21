@@ -2268,7 +2268,11 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
 }
 .vnext .vn-bell__item-time {
   font-size: 0.72rem;
-  color: var(--vn-text-3, #7d92ad);
+  /* This timestamp is small readable metadata, so it follows the same rule as
+     the table headers above: --vn-text-3 (0.3 alpha) only reaches ~2.7:1 and
+     fails AA at this size, while --vn-text-2 keeps the de-emphasised look and
+     clears 4.5:1 in both themes. */
+  color: var(--vn-text-2);
 }
 
 /* ---- Transaction history filter + search ---- */

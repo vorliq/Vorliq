@@ -49,6 +49,23 @@ AUTHORITY_ROUTES = {
     # The signed actor is the operator wallet itself; the registry then enforces
     # first-verified-locks and the prober binds the claim to the running node.
     "/registry/verify-operator": ("registry.verify_operator", ("operator_wallet_address", "operatorWalletAddress")),
+    # Exchange coordination writes — re-verified here at the core (the Node gateway
+    # signs first). Each lifecycle action is attributed to a wallet on a shared
+    # coordination record, so without a signature anyone could post, accept,
+    # cancel, record a VLQ tx for, confirm, or dispute a trade "as" another member.
+    "/exchange/offer": ("exchange.offer", ("creator_address", "creatorAddress")),
+    "/exchange/accept": ("exchange.accept", ("acceptor_address", "acceptorAddress")),
+    "/exchange/complete": ("exchange.complete", ("caller_address", "callerAddress")),
+    "/exchange/confirm-complete": ("exchange.confirm_complete", ("caller_address", "callerAddress")),
+    "/exchange/record-vlq-tx": ("exchange.record_vlq_tx", ("caller_address", "callerAddress")),
+    "/exchange/dispute": ("exchange.dispute", ("caller_address", "callerAddress")),
+    "/exchange/cancel": ("exchange.cancel", ("caller_address", "callerAddress")),
+    # Email notification preferences are keyed by wallet and store the member's
+    # own email address. Without a signature, anyone could set or overwrite
+    # another member's email (and so redirect or read their opt-in mail). Bind the
+    # write to the wallet that signs it; the proven wallet — not a body field — is
+    # used as the storage key.
+    "/notifications/preferences": ("notifications.preferences", ("wallet_address", "walletAddress")),
 }
 
 

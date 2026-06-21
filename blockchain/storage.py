@@ -17,6 +17,7 @@ from forum import Forum
 from governance import Governance
 from lending import LendingPool
 from logger import vorliq_logger
+from notifications import EVENT_TYPES, Notifications
 from price import PriceDiscovery
 from profiles import Profiles
 from registry import NodeRegistry
@@ -65,6 +66,7 @@ class Storage:
         self.peers_file = self.data_dir / "peers.json"
         self.registry_file = self.data_dir / "registry.json"
         self.authority_nonces_file = self.data_dir / "authority_nonces.json"
+        self.notifications_file = self.data_dir / "notifications.json"
         self.chain_storage_error: str | None = None
         self.chain_write_protected = False
 
@@ -228,6 +230,35 @@ class Storage:
     def save_exchange(self, exchange: Exchange) -> None:
         self._write_json(self.exchange_file, {"offers": exchange.offers})
         vorliq_logger.info("Saved exchange with %s offer records", len(exchange.offers))
+
+    def save_notifications(self, notifications: Notifications) -> None:
+        # Email preferences are durable; the queue is persisted too so opted-in
+        # mail isn't lost across a restart. No provider credentials are ever
+        # written here — only the recipient's own saved address and toggles.
+        self._write_json(
+            self.notifications_file,
+            {"preferences": notifications.preferences, "queue": notifications.queue[-1000:]},
+            create_backup=False,
+        )
+
+    def load_notifications(self) -> Notifications:
+        notifications = Notifications()
+        if not self.notifications_file.exists():
+            return notifications
+        data = self._read_json(self.notifications_file, default={"preferences": {}, "queue": []})
+        preferences = data.get("preferences", {})
+        if isinstance(preferences, dict):
+            # Defensively keep only the recognised event toggles.
+            for wallet, entry in preferences.items():
+                if not isinstance(entry, dict):
+                    continue
+                entry["events"] = {event: bool(entry.get("events", {}).get(event, False)) for event in EVENT_TYPES}
+            notifications.preferences = preferences
+        queue = data.get("queue", [])
+        if isinstance(queue, list):
+            notifications.queue = queue
+        vorliq_logger.info("Loaded notification preferences for %s members", len(notifications.preferences))
+        return notifications
 
     def load_exchange(self) -> Exchange:
         exchange = Exchange()

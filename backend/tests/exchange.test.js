@@ -92,22 +92,27 @@ describe("exchange lifecycle routes", () => {
     expect(axios.post).not.toHaveBeenCalled();
   });
 
-  test("forwards valid record tx request", async () => {
-    axios.post.mockResolvedValue({
-      status: 200,
-      data: { success: true, vlq_tx_id: "tx-1", offer: { status: "vlq_pending" } },
-    });
-
+  test("blocks a validated but unsigned record-vlq-tx write", async () => {
+    // Every exchange coordination write now requires signed wallet authorization
+    // (the actor is bound to the wallet that signs, not a free-typed address).
+    // A complete-but-unsigned body passes field validation, then the signed
+    // authority gate rejects it before anything is forwarded to the core.
     const response = await request(app)
       .post("/api/exchange/record-vlq-tx")
       .send({ offer_id: "offer-1", tx_id: "tx-1", caller_address: "VLQ_MEMBER" });
 
-    expect(response.status).toBe(200);
-    expect(response.body.vlq_tx_id).toBe("tx-1");
-    expect(axios.post).toHaveBeenCalledWith("http://localhost:5001/exchange/record-vlq-tx", {
-      offer_id: "offer-1",
-      tx_id: "tx-1",
-      caller_address: "VLQ_MEMBER",
-    });
+    expect(response.status).toBe(503);
+    expect(response.body.error.code).toBe("SIGNED_AUTHORIZATION_REQUIRED");
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  test("blocks a validated but unsigned exchange offer", async () => {
+    const response = await request(app)
+      .post("/api/exchange/offer")
+      .send({ creator_address: "VLQ_MEMBER", offer_type: "sell", amount: 10, price: "goods", description: "trade" });
+
+    expect(response.status).toBe(503);
+    expect(response.body.error.code).toBe("SIGNED_AUTHORIZATION_REQUIRED");
+    expect(axios.post).not.toHaveBeenCalled();
   });
 });

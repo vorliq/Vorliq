@@ -194,6 +194,14 @@ class SignedAuthorizationTests(unittest.TestCase):
             "/lending/vote": ("lending.vote", "voter_address", {"loan_id": "loan-1", "vote": "yes"}),
             "/lending/repay": ("lending.repay", "repayer_address", {"loan_id": "loan-1"}),
             "/registry/verify-operator": ("registry.verify_operator", "operator_wallet_address", {"node_url": "https://node.example.org"}),
+            "/exchange/offer": ("exchange.offer", "creator_address", {"offer_type": "sell", "amount": 10, "price": "goods", "description": "Detailed coordination request"}),
+            "/exchange/accept": ("exchange.accept", "acceptor_address", {"offer_id": "offer-1"}),
+            "/exchange/complete": ("exchange.complete", "caller_address", {"offer_id": "offer-1"}),
+            "/exchange/confirm-complete": ("exchange.confirm_complete", "caller_address", {"offer_id": "offer-1"}),
+            "/exchange/record-vlq-tx": ("exchange.record_vlq_tx", "caller_address", {"offer_id": "offer-1", "tx_id": "tx-1"}),
+            "/exchange/dispute": ("exchange.dispute", "caller_address", {"offer_id": "offer-1", "reason": "Documented dispute"}),
+            "/exchange/cancel": ("exchange.cancel", "caller_address", {"offer_id": "offer-1"}),
+            "/notifications/preferences": ("notifications.preferences", "wallet_address", {"email": "member@example.org", "events": {"vlq_received": True}}),
         }
         self.assertEqual(set(payloads), set(AUTHORITY_ROUTES))
         verifier_storage = Storage(tempfile.mkdtemp())

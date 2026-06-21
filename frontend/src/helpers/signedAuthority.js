@@ -20,6 +20,14 @@ const AUTHORITY_ACTIONS = Object.freeze({
   "profile.update": { path: "/profiles/profile", actorField: "wallet_address" },
   "profile.avatar": { path: "/profiles/avatar", actorField: "wallet_address" },
   "registry.verify_operator": { path: "/registry/verify-operator", actorField: "operator_wallet_address" },
+  "exchange.offer": { path: "/exchange/offer", actorField: "creator_address" },
+  "exchange.accept": { path: "/exchange/accept", actorField: "acceptor_address" },
+  "exchange.complete": { path: "/exchange/complete", actorField: "caller_address" },
+  "exchange.confirm_complete": { path: "/exchange/confirm-complete", actorField: "caller_address" },
+  "exchange.record_vlq_tx": { path: "/exchange/record-vlq-tx", actorField: "caller_address" },
+  "exchange.dispute": { path: "/exchange/dispute", actorField: "caller_address" },
+  "exchange.cancel": { path: "/exchange/cancel", actorField: "caller_address" },
+  "notifications.preferences": { path: "/notifications/preferences", actorField: "wallet_address" },
 });
 
 const FORBIDDEN_BODY_FIELDS = new Set([

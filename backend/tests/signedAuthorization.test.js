@@ -36,6 +36,14 @@ describe("signed authority write containment", () => {
     "/api/forum/reply": { post_id: "post-1", author_address: validWallet, body: "A forum reply body for authorization testing." },
     "/api/forum/feature": { post_id: "post-1", voter_address: validWallet },
     "/api/profiles/profile": { wallet_address: validWallet, display_name: "Tester Name" },
+    "/api/exchange/offer": { creator_address: validWallet, offer_type: "sell", amount: 10, price: "goods", description: "A documented coordination request." },
+    "/api/exchange/accept": { offer_id: "offer-1", acceptor_address: validWallet },
+    "/api/exchange/complete": { offer_id: "offer-1", caller_address: validWallet },
+    "/api/exchange/confirm-complete": { offer_id: "offer-1", caller_address: validWallet },
+    "/api/exchange/record-vlq-tx": { offer_id: "offer-1", tx_id: "tx-1", caller_address: validWallet },
+    "/api/exchange/dispute": { offer_id: "offer-1", caller_address: validWallet, reason: "A documented dispute reason." },
+    "/api/exchange/cancel": { offer_id: "offer-1", caller_address: validWallet },
+    "/api/notifications/preferences": { wallet_address: validWallet, email: "member@example.org", events: { vlq_received: true } },
   };
 
   test.each(Array.from(UNSIGNED_AUTHORITY_WRITE_PATHS))("blocks unsigned authority write %s", async (path) => {

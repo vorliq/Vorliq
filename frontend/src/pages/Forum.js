@@ -146,6 +146,13 @@ function Forum() {
     loadFeaturedPosts({ quiet: true });
   }, []);
 
+  // Prefill the upvote address with the connected wallet so a signed-in member
+  // doesn't have to retype it (consistent with how posting/replying use the
+  // connected wallet). Doesn't clobber a value the user is already editing.
+  useEffect(() => {
+    if (address) setUpvoteAddress((current) => current || address);
+  }, [address]);
+
   useEffect(() => {
     // Skip the first run: the mount effect already performs the initial load, so
     // the search debounce must not fire on mount and reset pagination.

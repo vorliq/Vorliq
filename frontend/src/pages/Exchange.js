@@ -3,15 +3,16 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import AddressIdentity from "../components/AddressIdentity";
+import AuthorityWriteNotice from "../components/AuthorityWriteNotice";
 import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
+import { authorityErrorMessage, postSignedAuthority } from "../helpers/signedAuthority";
 
 const initialOfferForm = {
-  creatorAddress: "",
   offerType: "buy",
   amount: "",
   price: "",
@@ -33,7 +34,9 @@ function Exchange() {
   const [summary, setSummary] = useState(null);
   const [myTrades, setMyTrades] = useState({ created: [], accepted: [], offers: [] });
   const [offerForm, setOfferForm] = useState(initialOfferForm);
-  const [acceptAddresses, setAcceptAddresses] = useState({});
+  const [offerPassword, setOfferPassword] = useState("");
+  const [acceptPasswords, setAcceptPasswords] = useState({});
+  const [actionPasswords, setActionPasswords] = useState({});
   const [recordTxInputs, setRecordTxInputs] = useState({});
   const [disputeInputs, setDisputeInputs] = useState({});
   const [myAddress, setMyAddress] = useState(wallet?.address || "");
@@ -126,29 +129,45 @@ function Exchange() {
     setOfferForm((current) => ({ ...current, [field]: value }));
   }
 
+  function actionPassword(offer) {
+    return actionPasswords[offer.offer_id]?.trim() || "";
+  }
+
+  function clearActionPassword(offer) {
+    setActionPasswords((current) => ({ ...current, [offer.offer_id]: "" }));
+  }
+
   async function submitOffer(event) {
     event.preventDefault();
-    if (!offerForm.creatorAddress.trim() || !offerForm.amount || !offerForm.price.trim() || !offerForm.description.trim()) {
+    if (!offerForm.amount || !offerForm.price.trim() || !offerForm.description.trim()) {
       toast.error("Fill in every offer field.");
+      return;
+    }
+    if (!offerPassword) {
+      toast.error("Enter your wallet password to sign this request locally.");
       return;
     }
 
     setSubmitting(true);
     try {
-      const response = await api.post("/exchange/offer", {
-        creator_address: offerForm.creatorAddress.trim(),
-        offer_type: offerForm.offerType,
-        amount: Number(offerForm.amount),
-        price: offerForm.price.trim(),
-        description: offerForm.description.trim(),
+      const response = await postSignedAuthority({
+        action: "exchange.offer",
+        body: {
+          offer_type: offerForm.offerType,
+          amount: Number(offerForm.amount),
+          price: offerForm.price.trim(),
+          description: offerForm.description.trim(),
+        },
+        walletPassword: offerPassword,
       });
       toast.success(`Request posted: ${response.data.offer_id}`);
       setOfferForm(initialOfferForm);
+      setOfferPassword("");
       setErrorMessage("");
       await loadExchange({ quiet: true });
       setActiveTab("browse");
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to post exchange offer.");
+      const message = authorityErrorMessage(error, "Unable to post exchange request.");
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -157,25 +176,26 @@ function Exchange() {
   }
 
   async function acceptOffer(offer) {
-    const acceptorAddress = acceptAddresses[offer.offer_id]?.trim();
-    if (!acceptorAddress) {
-      toast.error("Enter your wallet address before accepting.");
+    const password = acceptPasswords[offer.offer_id];
+    if (!password) {
+      toast.error("Enter your wallet password to accept and sign this locally.");
       return;
     }
 
     setActionId(`${offer.offer_id}:accept`);
     try {
-      await api.post("/exchange/accept", {
-        offer_id: offer.offer_id,
-        acceptor_address: acceptorAddress,
+      await postSignedAuthority({
+        action: "exchange.accept",
+        body: { offer_id: offer.offer_id },
+        walletPassword: password,
       });
       toast.success("Request accepted. Record the VLQ transaction after it is sent.");
-      setAcceptAddresses((current) => ({ ...current, [offer.offer_id]: "" }));
-      setMyAddress(acceptorAddress);
+      setAcceptPasswords((current) => ({ ...current, [offer.offer_id]: "" }));
+      if (wallet?.address) setMyAddress(wallet.address);
       await loadExchange({ quiet: true });
       setActiveTab("active");
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to accept this offer.");
+      const message = authorityErrorMessage(error, "Unable to accept this request.");
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -184,65 +204,67 @@ function Exchange() {
   }
 
   async function cancelOffer(offer) {
-    const callerAddress = myAddress.trim();
-    if (!callerAddress) {
-      toast.error("Enter your wallet address in My Requests first.");
-      setActiveTab("mine");
+    const password = actionPassword(offer);
+    if (!password) {
+      toast.error("Enter your wallet password to sign this action locally.");
       return;
     }
 
-    await runOfferAction(offer, "cancel", () => api.post("/exchange/cancel", {
-      offer_id: offer.offer_id,
-      caller_address: callerAddress,
+    await runOfferAction(offer, "cancel", () => postSignedAuthority({
+      action: "exchange.cancel",
+      body: { offer_id: offer.offer_id },
+      walletPassword: password,
     }), "Request cancelled.");
+    clearActionPassword(offer);
   }
 
   async function recordVlqTx(offer) {
-    const callerAddress = myAddress.trim();
+    const password = actionPassword(offer);
     const txId = recordTxInputs[offer.offer_id]?.trim();
-    if (!callerAddress || !txId) {
-      toast.error("Enter your wallet address and the VLQ transaction ID.");
-      setActiveTab("mine");
+    if (!password || !txId) {
+      toast.error("Enter the VLQ transaction ID and your wallet password.");
       return;
     }
 
-    await runOfferAction(offer, "record", () => api.post("/exchange/record-vlq-tx", {
-      offer_id: offer.offer_id,
-      tx_id: txId,
-      caller_address: callerAddress,
+    await runOfferAction(offer, "record", () => postSignedAuthority({
+      action: "exchange.record_vlq_tx",
+      body: { offer_id: offer.offer_id, tx_id: txId },
+      walletPassword: password,
     }), "VLQ transaction recorded.");
     setRecordTxInputs((current) => ({ ...current, [offer.offer_id]: "" }));
+    clearActionPassword(offer);
   }
 
   async function confirmComplete(offer) {
-    const callerAddress = myAddress.trim();
-    if (!callerAddress) {
-      toast.error("Enter your wallet address in My Requests first.");
-      setActiveTab("mine");
+    const password = actionPassword(offer);
+    if (!password) {
+      toast.error("Enter your wallet password to sign this action locally.");
       return;
     }
 
-    await runOfferAction(offer, "confirm", () => api.post("/exchange/confirm-complete", {
-      offer_id: offer.offer_id,
-      caller_address: callerAddress,
+    await runOfferAction(offer, "confirm", () => postSignedAuthority({
+      action: "exchange.confirm_complete",
+      body: { offer_id: offer.offer_id },
+      walletPassword: password,
     }), "Completion confirmation recorded.");
+    clearActionPassword(offer);
   }
 
   async function openDispute(offer) {
-    const callerAddress = myAddress.trim();
+    const password = actionPassword(offer);
     const reason = disputeInputs[offer.offer_id]?.trim();
-    if (!callerAddress || !reason) {
-      toast.error("Enter your wallet address and dispute reason.");
-      setActiveTab("mine");
+    if (!password || !reason) {
+      toast.error("Enter a dispute reason and your wallet password.");
       return;
     }
 
-    await runOfferAction(offer, "dispute", () => api.post("/exchange/dispute", {
-      offer_id: offer.offer_id,
-      caller_address: callerAddress,
-      reason,
+    await runOfferAction(offer, "dispute", () => postSignedAuthority({
+      action: "exchange.dispute",
+      body: { offer_id: offer.offer_id, reason },
+      walletPassword: password,
     }), "Coordination marked as disputed.");
     setDisputeInputs((current) => ({ ...current, [offer.offer_id]: "" }));
+    clearActionPassword(offer);
   }
 
   async function runOfferAction(offer, action, request, successMessage) {
@@ -254,7 +276,7 @@ function Exchange() {
       await loadExchange({ quiet: true });
       if (myAddress.trim()) await loadMyTrades(myAddress.trim());
     } catch (error) {
-      const message = apiErrorMessage(error, "Unable to update this request.");
+      const message = authorityErrorMessage(error, "Unable to update this request.");
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -274,6 +296,7 @@ function Exchange() {
 
       <ErrorMessage message={errorMessage} />
       <RiskNotice />
+      <AuthorityWriteNotice />
 
       {summary && (
         <section className="card card-pad">
@@ -319,10 +342,10 @@ function Exchange() {
           {loadingOffers ? <Spinner label="Loading open requests..." /> : (
             <OfferGrid
               actionId={actionId}
-              acceptAddresses={acceptAddresses}
+              acceptPasswords={acceptPasswords}
               offers={browseOffers}
               onAccept={acceptOffer}
-              setAcceptAddresses={setAcceptAddresses}
+              setAcceptPasswords={setAcceptPasswords}
             />
           )}
         </section>
@@ -336,8 +359,12 @@ function Exchange() {
           </p>
           <form className="form" onSubmit={submitOffer}>
             <div className="field">
-              <label htmlFor="exchange-wallet">Wallet Address</label>
-              <input id="exchange-wallet" className="input" type="text" value={offerForm.creatorAddress} onChange={(event) => updateOfferForm("creatorAddress", event.target.value)} />
+              <label>Posting as</label>
+              {wallet?.address ? (
+                <p className="help-text"><AddressIdentity address={wallet.address} compact /> — the request is signed by, and attributed to, this wallet.</p>
+              ) : (
+                <p className="help-text">Your saved wallet signs this request locally. Its address is derived from your password and recorded as the creator.</p>
+              )}
             </div>
             <div className="field">
               <label htmlFor="exchange-type">Request Type</label>
@@ -357,6 +384,10 @@ function Exchange() {
             <div className="field">
               <label htmlFor="exchange-description">Description</label>
               <textarea id="exchange-description" className="textarea" value={offerForm.description} onChange={(event) => updateOfferForm("description", event.target.value)} />
+            </div>
+            <div className="field">
+              <label htmlFor="exchange-password">Wallet password</label>
+              <input id="exchange-password" className="input" type="password" autoComplete="off" placeholder="Signs this request locally" value={offerPassword} onChange={(event) => setOfferPassword(event.target.value)} />
             </div>
             <button className="button" type="submit" disabled={submitting}>
               {submitting ? "Submitting..." : "Submit Request"}
@@ -380,6 +411,7 @@ function Exchange() {
           {loadingMine ? <Spinner label="Loading your requests..." /> : (
             <TradeGrid
               actionId={actionId}
+              actionPasswords={actionPasswords}
               disputeInputs={disputeInputs}
               myAddress={myAddress}
               offers={myTrades.offers}
@@ -388,6 +420,7 @@ function Exchange() {
               onDispute={openDispute}
               onRecordTx={recordVlqTx}
               recordTxInputs={recordTxInputs}
+              setActionPasswords={setActionPasswords}
               setDisputeInputs={setDisputeInputs}
               setRecordTxInputs={setRecordTxInputs}
             />
@@ -398,6 +431,7 @@ function Exchange() {
       {activeTab === "active" && (
         <TradeSection
           actionId={actionId}
+          actionPasswords={actionPasswords}
           disputeInputs={disputeInputs}
           empty="No active coordination records right now."
           loading={loadingOffers}
@@ -408,6 +442,7 @@ function Exchange() {
           onDispute={openDispute}
           onRecordTx={recordVlqTx}
           recordTxInputs={recordTxInputs}
+          setActionPasswords={setActionPasswords}
           setDisputeInputs={setDisputeInputs}
           setRecordTxInputs={setRecordTxInputs}
           title="Active Coordination"
@@ -427,7 +462,7 @@ function Exchange() {
   );
 }
 
-function OfferGrid({ acceptAddresses, actionId, offers, onAccept, setAcceptAddresses }) {
+function OfferGrid({ acceptPasswords, actionId, offers, onAccept, setAcceptPasswords }) {
   if (offers.length === 0) {
     return <div className="empty-state">No open community requests are available yet.</div>;
   }
@@ -440,11 +475,12 @@ function OfferGrid({ acceptAddresses, actionId, offers, onAccept, setAcceptAddre
           <div className="inline-form">
             <input
               className="input"
-              type="text"
-              aria-label="Your wallet address to accept this offer"
-              placeholder="Your wallet address"
-              value={acceptAddresses[offer.offer_id] || ""}
-              onChange={(event) => setAcceptAddresses((current) => ({ ...current, [offer.offer_id]: event.target.value }))}
+              type="password"
+              autoComplete="off"
+              aria-label="Wallet password to accept and sign this request"
+              placeholder="Wallet password to accept"
+              value={acceptPasswords[offer.offer_id] || ""}
+              onChange={(event) => setAcceptPasswords((current) => ({ ...current, [offer.offer_id]: event.target.value }))}
             />
             <button className="button" type="button" disabled={actionId === `${offer.offer_id}:accept`} onClick={() => onAccept(offer)}>
               Accept
@@ -545,6 +581,7 @@ function TradeDetails({ offer, showStatus = true }) {
 
 function TradeActions({
   actionId = "",
+  actionPasswords = {},
   disputeInputs = {},
   myAddress = "",
   offer,
@@ -553,6 +590,7 @@ function TradeActions({
   onDispute,
   onRecordTx,
   recordTxInputs = {},
+  setActionPasswords = () => {},
   setDisputeInputs,
   setRecordTxInputs,
 }) {
@@ -561,9 +599,25 @@ function TradeActions({
   const canConfirm = offer.status === "vlq_confirmed" && ["creator", "acceptor"].includes(role);
   const canDispute = ["accepted", "vlq_pending", "vlq_confirmed"].includes(offer.status) && ["creator", "acceptor"].includes(role);
   const canCancel = offer.status === "open" && role === "creator";
+  const showActions = canRecord || canConfirm || canDispute || canCancel;
+
+  if (!showActions) {
+    return null;
+  }
 
   return (
     <div className="stack">
+      <div className="field">
+        <input
+          className="input"
+          type="password"
+          autoComplete="off"
+          aria-label="Wallet password to sign this action"
+          placeholder="Wallet password to sign"
+          value={actionPasswords[offer.offer_id] || ""}
+          onChange={(event) => setActionPasswords((current) => ({ ...current, [offer.offer_id]: event.target.value }))}
+        />
+      </div>
       {canRecord && (
         <div className="form">
           <p className="help-text">Send VLQ from the Send page first, then paste the transaction ID here.</p>

@@ -145,6 +145,7 @@ profiles = storage.load_profiles()
 vorliq_logger.info("Flask startup restored %s member profiles", len(profiles.profiles))
 achievements = storage.load_achievements()
 vorliq_logger.info("Flask startup restored achievements for %s wallets", len(achievements.earned))
+notifications = storage.load_notifications()
 _imports_ready = (
     Achievements,
     Block,
@@ -354,6 +355,36 @@ def _sync_faucet(save: bool = True) -> bool:
 
 
 _sync_faucet(save=True)
+
+
+def _emit_notification(wallet_address: object, event: str, data: dict | None = None) -> None:
+    """Best-effort opt-in email enqueue. Never raises into the caller — a
+    notification must not be able to fail a transaction, loan, or vote."""
+    try:
+        address = str(wallet_address or "").strip()
+        if not address or is_reserved_address(address):
+            return
+        result = notifications.enqueue(wallet_address=address, event=event, data=data or {})
+        if result.get("queued"):
+            storage.save_notifications(notifications)
+            notifications.dispatch_async()
+    except Exception as exc:  # noqa: BLE001 - notifications are strictly non-critical
+        vorliq_logger.warning("Notification emit for %s failed: %s", event, exc)
+
+
+def _emit_vlq_received(block: dict) -> None:
+    """Notify the receiver of each genuine peer transfer confirmed in a block.
+    System credits (mining rewards, treasury, lending pool, faucet) are skipped —
+    'received VLQ' means a real transfer from another member."""
+    try:
+        for raw in (block or {}).get("transactions", []) or []:
+            sender = str(raw.get("sender_address") or "")
+            receiver = str(raw.get("receiver_address") or "")
+            if not receiver or is_reserved_address(sender) or is_reserved_address(receiver):
+                continue
+            _emit_notification(receiver, "vlq_received", {"amount": raw.get("amount"), "from": sender})
+    except Exception as exc:  # noqa: BLE001
+        vorliq_logger.warning("vlq_received notification scan failed: %s", exc)
 
 
 def _ensure_peer_reward_pending(mined_block: Block) -> None:
@@ -759,6 +790,8 @@ def mine_block():
             local_node_url=LOCAL_NODE_URL,
             is_local_development=IS_LOCAL_DEVELOPMENT,
         )
+        # Opt-in: notify receivers of genuine peer transfers now confirmed.
+        _emit_vlq_received(block if isinstance(block, dict) else raw_block)
         return jsonify({"success": True, "block": block}), 201
     except MiningCooldownError as exc:
         vorliq_logger.warning("Mine endpoint rejected request during cooldown: %s", exc)
@@ -2229,6 +2262,10 @@ def vote_on_lending_loan():
         storage.save_pending(node.blockchain.pending_transactions)
         _rebuild_indexes(save=True)
         storage.save_achievements(achievements)
+        # Opt-in: when this vote approves the loan, tell the requester it's funded.
+        # Approval happens once, so this fires a single time per loan.
+        if loan.get("status") == "approved_pending_issue":
+            _emit_notification(loan.get("requester_address"), "loan_funded", {"amount": loan.get("amount")})
         return jsonify({
             "success": True,
             "loan": loan,
@@ -2252,6 +2289,12 @@ def repay_lending_loan():
         storage.save_pending(node.blockchain.pending_transactions)
         _rebuild_indexes(save=True)
         storage.save_achievements(achievements)
+        # Opt-in: tell the members who funded this loan (the yes-voters) it's being
+        # repaid. The repayer initiated this, so they aren't notified.
+        funders = [addr for addr, choice in (loan.get("votes") or {}).items() if choice == "yes"]
+        for funder in funders:
+            if funder != repayer_address:
+                _emit_notification(funder, "loan_repaid", {"amount": loan.get("repayment_amount")})
         return jsonify(
             {
                 "success": True,
@@ -2768,6 +2811,13 @@ def vote_on_governance_proposal():
         storage.save_chain(node.blockchain)
         _rebuild_indexes(save=True)
         storage.save_achievements(achievements)
+        # Opt-in: if this vote concluded the proposal, tell everyone who voted.
+        # A concluded proposal accepts no further votes, so this fires once.
+        terminal = {"passed_pending_execution": "passed", "executed": "passed", "rejected": "been rejected"}
+        outcome = terminal.get(proposal.get("status"))
+        if outcome:
+            for voter in (proposal.get("votes") or {}).keys():
+                _emit_notification(voter, "governance_concluded", {"title": proposal.get("title"), "outcome": outcome})
         return jsonify({"success": True, "proposal": proposal})
     except Exception as exc:
         vorliq_logger.error("Governance vote endpoint failed: %s", exc)
@@ -2786,6 +2836,46 @@ def cancel_governance_proposal():
         return jsonify({"success": True, "proposal": proposal})
     except Exception as exc:
         vorliq_logger.error("Governance cancel endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.get("/notifications/preferences")
+def get_notification_preferences():
+    try:
+        address = _require_public_wallet_address(
+            request.args.get("address") or request.args.get("walletAddress"), "wallet address"
+        )
+        # Returns the masked email and event toggles only — never the raw address,
+        # so an unauthenticated read can't harvest members' emails.
+        return jsonify({"success": True, "preferences": notifications.get_preferences(address)})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.post("/notifications/preferences")
+def set_notification_preferences():
+    try:
+        data = _json_body()
+        # This route is in AUTHORITY_ROUTES: the before_request gate already proved
+        # control of the wallet, so use the proven wallet as the storage key rather
+        # than trusting a body field.
+        proven = (getattr(request, "signed_authorization", None) or {}).get("wallet")
+        wallet = _require_public_wallet_address(
+            proven or data.get("wallet_address") or data.get("walletAddress"), "wallet address"
+        )
+        events = data.get("events") or {}
+        # A present email (including an empty string, which clears) updates the
+        # address; an absent email key keeps the saved one and only edits toggles.
+        if data.get("email") is not None:
+            preferences = notifications.set_preferences(wallet, email=data.get("email"), events=events)
+        else:
+            preferences = notifications.update_events(wallet, events=events)
+        storage.save_notifications(notifications)
+        return jsonify({"success": True, "preferences": preferences})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:  # noqa: BLE001
+        vorliq_logger.error("Notification preferences endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
