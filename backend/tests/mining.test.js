@@ -173,17 +173,42 @@ describe("public miner tool", () => {
     fs.rmSync(statusFile, { force: true });
   });
 
-  test("miner.js respects same-address consecutive mining rule", async () => {
+  test("miner.js no longer skips itself when it mined the latest block", async () => {
+    // The old client-side permanent skip ("this address mined the last block, so
+    // stop") is exactly what halted a single-miner network and stranded pending
+    // transactions. The client must now attempt; the core grants the block or
+    // defers it with a time-bounded cooldown (SAME_MINER_MIN_GAP).
     const statusFile = path.join(os.tmpdir(), `vorliq-miner-same-${Date.now()}.json`);
     axios.get.mockResolvedValue({
       data: {
         success: true,
-        status: {
-          chain_valid: true,
-          can_mine_now: true,
-          last_miner_address: "VLQ_MINER",
-        },
+        status: { chain_valid: true, can_mine_now: true, last_miner_address: "VLQ_MINER" },
       },
+    });
+    axios.post.mockResolvedValue({ data: { block: { index: 7, hash: "deadbeef" } } });
+
+    const result = await mineOnce({
+      enabled: true,
+      minerAddress: "VLQ_MINER",
+      apiUrl: "http://localhost:5000",
+      statusFile,
+    });
+
+    expect(axios.post).toHaveBeenCalled();
+    expect(result.mined).toBe(true);
+    fs.rmSync(statusFile, { force: true });
+  });
+
+  test("miner.js surfaces the core's time-bounded cooldown rejection without crashing", async () => {
+    const statusFile = path.join(os.tmpdir(), `vorliq-miner-cooldown-${Date.now()}.json`);
+    axios.get.mockResolvedValue({
+      data: {
+        success: true,
+        status: { chain_valid: true, can_mine_now: true, last_miner_address: "VLQ_MINER" },
+      },
+    });
+    axios.post.mockRejectedValue({
+      response: { data: { message: "the same address cannot mine two consecutive blocks yet; wait 42 seconds" } },
     });
 
     const result = await mineOnce({
@@ -194,8 +219,7 @@ describe("public miner tool", () => {
     });
 
     expect(result.mined).toBe(false);
-    expect(result.reason).toMatch(/fair mining/i);
-    expect(axios.post).not.toHaveBeenCalled();
+    expect(result.reason).toMatch(/two consecutive blocks/i);
     fs.rmSync(statusFile, { force: true });
   });
 
