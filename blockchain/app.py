@@ -464,7 +464,35 @@ def add_cors_headers(response):
 
 @app.get("/health")
 def health():
-    return jsonify({"status": "ok", "coin": "VLQ"})
+    # Surface mempool staleness so a stalled chain is visible before users notice
+    # their transactions are stuck. stuck_pending_count is the number of pending
+    # transactions older than two mining cycles; a non-zero value means blocks are
+    # not being produced (the exact condition behind the stuck-transaction
+    # incident).
+    now = time.time()
+    threshold_seconds = 2 * node.blockchain.BLOCK_TIME_TARGET
+    pending = node.blockchain.pending_transactions or []
+    pending_count = 0
+    stuck_pending_count = 0
+    oldest_age = 0.0
+    for raw in pending:
+        record = raw if isinstance(raw, dict) else raw.to_dict()
+        pending_count += 1
+        timestamp = float(record.get("timestamp") or 0)
+        age = now - timestamp if timestamp else 0.0
+        oldest_age = max(oldest_age, age)
+        if age > threshold_seconds:
+            stuck_pending_count += 1
+    return jsonify(
+        {
+            "status": "ok",
+            "coin": "VLQ",
+            "pending_count": pending_count,
+            "stuck_pending_count": stuck_pending_count,
+            "stuck_pending_threshold_seconds": threshold_seconds,
+            "oldest_pending_age_seconds": int(oldest_age),
+        }
+    )
 
 
 @app.get("/storage/health")

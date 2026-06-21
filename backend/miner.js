@@ -76,12 +76,13 @@ async function mineOnce(overrides = {}) {
       return { mined: false, reason: result };
     }
 
-    if (status.last_miner_address && status.last_miner_address === config.minerAddress) {
-      const result = "Configured miner address mined the latest block; fair mining rules require a different next miner.";
-      writeMinerState(config, { last_mining_attempt_timestamp: attemptedAt, last_mining_result: result });
-      return { mined: false, reason: result };
-    }
-
+    // Note: we no longer skip permanently when this address mined the latest
+    // block. The core enforces a soft, time-bounded anti-monopoly cooldown
+    // (SAME_MINER_MIN_GAP), so attempting again is safe: a different miner gets
+    // first claim on the next block, but a lone miner is allowed once the gap
+    // elapses (the core returns a "wait N seconds" rejection until then, which is
+    // handled gracefully below). This keeps a single-miner network alive instead
+    // of letting it halt with transactions stuck in the mempool.
     const mineResponse = await axios.post(
       `${config.apiUrl}/api/mine`,
       { miner_address: config.minerAddress },

@@ -115,6 +115,34 @@ def test_block_reward_matches_the_mining_page_figure_and_recorded_reward() -> No
     assert recorded == pytest.approx(displayed, abs=1e-8)
 
 
+def test_lone_miner_can_mine_again_after_the_anti_monopoly_gap() -> None:
+    """A single miner must be blocked from mining a consecutive block only within
+    the anti-monopoly window, then allowed again — otherwise a network that drops
+    to one active miner halts forever and strands every pending transaction (the
+    stuck-transaction incident)."""
+    blockchain = _fast_chain()  # BLOCK_TIME_MINIMUM = 0
+    blockchain.SAME_MINER_MIN_GAP = 5
+    miner = Wallet().address
+
+    first = blockchain.mine_pending_transactions(miner)
+
+    # Immediately again, inside the window: rejected with a clear, time-bounded
+    # message (not a permanent ban).
+    with pytest.raises(ValueError) as excinfo:
+        blockchain.mine_pending_transactions(miner)
+    assert "two consecutive blocks" in str(excinfo.value)
+
+    # Once the gap has elapsed, the SAME miner may mine again and the chain stays
+    # valid — this is the liveness guarantee the old hard rule lacked.
+    tip = blockchain.get_latest_block()
+    tip.timestamp = time.time() - blockchain.SAME_MINER_MIN_GAP - 1
+    tip.proof_of_work(blockchain.difficulty)
+
+    second = blockchain.mine_pending_transactions(miner)
+    assert second.index == first.index + 1
+    assert blockchain.is_chain_valid()
+
+
 def test_block_submitted_before_minimum_block_time_is_rejected_with_wait_time() -> None:
     """A block mined before the minimum block time elapses is rejected with a
     message that names the required wait, not silently dropped."""

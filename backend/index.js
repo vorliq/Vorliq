@@ -357,11 +357,19 @@ app.get("/api/health/ready", async (req, res) => {
   try {
     const response = await axios.get(`${FLASK_URL}/health`, { timeout: 3000 });
     const upstreamOk = response.status === 200 && (response.data?.status === "ok" || response.data?.coin);
+    // Surface mempool staleness from the core: a non-zero stuck count means
+    // blocks are not being produced and transactions are stranding.
+    const stuckPending = Number(response.data?.stuck_pending_count) || 0;
+    const mempoolHealthy = stuckPending === 0;
     return res.status(upstreamOk ? 200 : 503).json({
       success: upstreamOk,
-      status: upstreamOk ? "healthy" : "degraded",
+      status: upstreamOk ? (mempoolHealthy ? "healthy" : "degraded") : "degraded",
       node: "up",
       flask: upstreamOk ? "up" : "down",
+      mempool: mempoolHealthy ? "healthy" : "stalled",
+      pending_count: Number(response.data?.pending_count) || 0,
+      stuck_pending_count: stuckPending,
+      stuck_pending_threshold_seconds: Number(response.data?.stuck_pending_threshold_seconds) || null,
       latency_ms: Date.now() - startedAt,
     });
   } catch (error) {

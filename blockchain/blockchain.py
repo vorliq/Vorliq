@@ -28,6 +28,14 @@ class Blockchain:
     # Minimum spacing between blocks. Configurable only so the end-to-end suite can
     # confirm transactions quickly; production leaves the default of 30 seconds.
     BLOCK_TIME_MINIMUM = int(os.environ.get("VORLIQ_BLOCK_TIME_MINIMUM", "30"))
+    # Anti-monopoly window: a miner may not mine two CONSECUTIVE blocks within
+    # this gap, so a *different* miner always gets first claim on the immediate
+    # next block. Crucially it is a time window, not an absolute ban: after the
+    # gap a lone miner may mine again, so a network that drops to a single active
+    # miner keeps producing blocks instead of halting forever (which would strand
+    # every pending transaction). Derived from the minimum spacing so it relaxes
+    # to 0 when block time is relaxed (dev/e2e). Production: 2 x 30s = 60s.
+    SAME_MINER_MIN_GAP = 2 * int(os.environ.get("VORLIQ_BLOCK_TIME_MINIMUM", "30"))
     DIFFICULTY_ADJUSTMENT_INTERVAL = 10
     TREASURY_PERCENTAGE = 0.05
     TREASURY_ADDRESS = TREASURY_ADDRESS
@@ -78,8 +86,13 @@ class Blockchain:
 
             previous_miner = getattr(latest_block, "miner_address", None)
             current_miner = getattr(block, "miner_address", None)
-            if previous_miner and current_miner and previous_miner == current_miner:
-                vorliq_logger.warning("Rejected block %s because miner %s mined consecutive blocks", block.index, current_miner)
+            if (
+                previous_miner
+                and current_miner
+                and previous_miner == current_miner
+                and block.timestamp - latest_block.timestamp < self.SAME_MINER_MIN_GAP
+            ):
+                vorliq_logger.warning("Rejected block %s because miner %s mined a consecutive block within the anti-monopoly window", block.index, current_miner)
                 return False
 
             if not block.has_valid_proof(getattr(block, "difficulty", self.difficulty)):
@@ -130,8 +143,13 @@ class Blockchain:
             if current_miner and current_block.timestamp - previous_block.timestamp < self.BLOCK_TIME_MINIMUM:
                 vorliq_logger.warning("Chain validation failed at block %s: block was mined too soon", current_block.index)
                 return False
-            if current_miner and previous_miner and current_miner == previous_miner:
-                vorliq_logger.warning("Chain validation failed at block %s: consecutive miner address", current_block.index)
+            if (
+                current_miner
+                and previous_miner
+                and current_miner == previous_miner
+                and current_block.timestamp - previous_block.timestamp < self.SAME_MINER_MIN_GAP
+            ):
+                vorliq_logger.warning("Chain validation failed at block %s: consecutive miner within the anti-monopoly window", current_block.index)
                 return False
 
         if not self._chain_transactions_are_valid(self.chain):
@@ -191,7 +209,12 @@ class Blockchain:
 
         previous_miner = getattr(latest_block, "miner_address", None)
         if previous_miner and previous_miner == miner_address:
-            raise ValueError("the same address cannot mine two consecutive blocks")
+            same_miner_elapsed = block.timestamp - latest_block.timestamp
+            if same_miner_elapsed < self.SAME_MINER_MIN_GAP:
+                wait_seconds = int(math.ceil(self.SAME_MINER_MIN_GAP - same_miner_elapsed))
+                # Keep the substring the API layer matches on, but make it a soft,
+                # time-bounded cooldown so a lone miner is not blocked forever.
+                raise ValueError(f"the same address cannot mine two consecutive blocks yet; wait {wait_seconds} seconds")
 
         if not self.add_block(block):
             raise RuntimeError("mined block failed validation")
