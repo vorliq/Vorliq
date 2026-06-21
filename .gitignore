@@ -17,7 +17,10 @@ dist/
 !sdk/dist/
 !sdk/dist/*.js
 e2e/playwright-report/
+e2e/playwright-report-local/
 e2e/test-results/
+e2e/test-results-local/
+e2e/.e2e-data/
 e2e/screenshots/
 frontend/public/docs/
 frontend/public/pitch.html

@@ -103,8 +103,8 @@ function WalletInfo() {
       <div className="vn-side__bal">
         {balance === undefined ? "…" : balance == null || Number.isNaN(balance) ? "Unavailable" : formatVlq(balance)}
       </div>
-      <button type="button" className="vn-side__disconnect" onClick={handleLogout}>
-        <LogOut size={14} aria-hidden="true" /> Disconnect
+      <button type="button" className="vn-side__disconnect" onClick={handleLogout} aria-label="Disconnect" title="Disconnect">
+        <LogOut size={14} aria-hidden="true" /> <span className="vn-side__disconnect-label">Disconnect</span>
       </button>
     </div>
   );

@@ -11,10 +11,21 @@ function rateLimitHandler(req, res, _next, options) {
   });
 }
 
+// End-to-end runs drive the real write paths hard (many wallets, mines, claims)
+// from a single IP, which legitimately trips the per-IP limits. When this flag is
+// set (only by the e2e harness, never in production) the caps are raised so the
+// suite can run; the limiter middleware stays wired so its behaviour is still
+// exercised. Unit tests do NOT set this flag, so the rate-limit tests still pass.
+const RELAX_LIMITS = process.env.VORLIQ_DISABLE_RATE_LIMITS === "true";
+
+function cap(max) {
+  return RELAX_LIMITS ? 1_000_000 : max;
+}
+
 function createLimiter({ windowMs, max, message }) {
   return rateLimit({
     windowMs,
-    max,
+    max: cap(max),
     standardHeaders: true,
     legacyHeaders: false,
     message,
@@ -24,7 +35,7 @@ function createLimiter({ windowMs, max, message }) {
 
 const apiSlowDown = slowDown({
   windowMs: 60 * 1000,
-  delayAfter: 120,
+  delayAfter: cap(120),
   delayMs: () => 100,
   validate: { delayMs: false },
 });
@@ -79,7 +90,7 @@ const registryLimiter = createLimiter({
 
 const faucetLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 8,
+  max: cap(8),
   standardHeaders: true,
   legacyHeaders: false,
   message: "Too many faucet claims. Please try again later.",
@@ -112,7 +123,7 @@ const newsletterLimiter = createLimiter({
 
 const analyticsLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 80,
+  max: cap(80),
   standardHeaders: true,
   legacyHeaders: false,
   message: "Analytics requests are rate limited. Please slow down.",

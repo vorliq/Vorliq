@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import os
 import threading
 import time
 from typing import Any
@@ -17,12 +18,16 @@ class MiningCooldownError(ValueError):
 
 
 class Blockchain:
-    difficulty = 4
+    # Proof-of-work difficulty (leading zero hex digits). Configurable so the e2e
+    # suite can mine quickly; production leaves the default of 4.
+    difficulty = int(os.environ.get("VORLIQ_DIFFICULTY", "4"))
     maximum_supply = 21_000_000.0
     initial_mining_reward = 50.0
     halving_interval = 210_000
     BLOCK_TIME_TARGET = 60
-    BLOCK_TIME_MINIMUM = 30
+    # Minimum spacing between blocks. Configurable only so the end-to-end suite can
+    # confirm transactions quickly; production leaves the default of 30 seconds.
+    BLOCK_TIME_MINIMUM = int(os.environ.get("VORLIQ_BLOCK_TIME_MINIMUM", "30"))
     DIFFICULTY_ADJUSTMENT_INTERVAL = 10
     TREASURY_PERCENTAGE = 0.05
     TREASURY_ADDRESS = TREASURY_ADDRESS
@@ -225,6 +230,11 @@ class Blockchain:
         return balance
 
     def adjust_difficulty(self) -> None:
+        # The e2e suite mines with no minimum block spacing, which would make the
+        # retarget keep raising difficulty until proof-of-work is unusably slow.
+        # This flag pins difficulty for tests only; production never sets it.
+        if os.environ.get("VORLIQ_DISABLE_DIFFICULTY_ADJUSTMENT") == "true":
+            return
         height = self.get_block_height()
         if height <= 0 or height % self.DIFFICULTY_ADJUSTMENT_INTERVAL != 0:
             return

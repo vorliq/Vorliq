@@ -1075,8 +1075,22 @@ html[data-theme="light"] .vnext .vn-side__wallet {
   }
   .vnext .vn-side__brand span,
   .vnext .vn-side__item span.vn-side__label,
-  .vnext .vn-side__wallet {
+  .vnext .vn-side__identity,
+  .vnext .vn-side__bal,
+  .vnext .vn-side__disconnect-label {
     display: none;
+  }
+  /* Keep a reachable, icon-only Disconnect in the collapsed rail so a signed-in
+     user can always sign out at tablet width (the full wallet block is hidden). */
+  .vnext .vn-side__wallet {
+    padding: 8px;
+    display: flex;
+    justify-content: center;
+  }
+  .vnext .vn-side__disconnect {
+    justify-content: center;
+    padding: 11px;
+    width: 44px;
   }
   .vnext .vn-side__nav {
     padding: 8px;
