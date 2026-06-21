@@ -18,7 +18,9 @@ test("user uploads an avatar and it appears on their forum post", async ({ page 
   await expect(page.getByRole("heading", { name: /profile image/i })).toBeVisible();
   await assertNoHorizontalOverflow(page, "settings");
   await page.getByLabel(/choose image/i).setInputFiles(AVATAR_FIXTURE);
-  await page.getByLabel(/wallet password/i).fill("e2e-avatar-pass-1");
+  // Scope to the avatar field by id — the Settings page now has more than one
+  // "Wallet password" input (avatar upload and node-operator verification).
+  await page.locator("#vn-avatar-pw").fill("e2e-avatar-pass-1");
   await page.getByRole("button", { name: /upload image/i }).click();
   await expect(
     page.getByText(/your new profile image is live/i).first(),

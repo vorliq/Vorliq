@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#00A896" />
 
     <title>Vorliq — Your Community's Bank. Your Rules.</title>
     <meta
@@ -35,17 +36,36 @@
       content="A community savings bank built on its own blockchain with the VLQ coin. Create a wallet, save together, move VLQ, and verify activity in real time."
     />
     <meta property="og:url" content="https://vorliq.org/" />
-    <meta property="og:image" content="https://vorliq.org/logo.png" />
+    <meta property="og:image" content="https://vorliq.org/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Vorliq — Your Community's Bank. Your Rules. A community savings bank built on its own blockchain with the VLQ coin." />
 
     <!-- Twitter -->
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@Vorliq" />
     <meta name="twitter:title" content="Vorliq — Your Community's Bank. Your Rules." />
     <meta
       name="twitter:description"
       content="A community savings bank built on its own blockchain with the VLQ coin."
     />
-    <meta name="twitter:image" content="https://vorliq.org/logo.png" />
+    <meta name="twitter:image" content="https://vorliq.org/og-image.png" />
+
+    <!-- Structured data: describes Vorliq as a web application for search engines. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Vorliq",
+        "url": "https://vorliq.org/",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web",
+        "description": "Vorliq is a community savings bank built on its own blockchain with the VLQ coin. Create a wallet, save together, move VLQ, and verify activity in real time.",
+        "image": "https://vorliq.org/og-image.png",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "publisher": { "@type": "Organization", "name": "Vorliq", "url": "https://vorliq.org/" }
+      }
+    </script>
 
     <style>
       #vq-boot {

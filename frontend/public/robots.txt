@@ -1,3 +1,10 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+# Authenticated / per-user routes carry no indexable public content.
+Disallow: /admin
+Disallow: /account
+Disallow: /settings
+Disallow: /notifications
+
+Sitemap: https://vorliq.org/sitemap.xml

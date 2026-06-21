@@ -4200,3 +4200,50 @@ html[data-theme="light"] .mobile-drawer button {
   justify-content: center;
   padding: 4px 0 10px;
 }
+
+/* ---- Admin dashboard: wallets/treasury panels + confirm dialog ---- */
+.admin-section { margin-top: 16px; }
+.admin-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px;
+  font-size: 0.9rem;
+}
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+.admin-table td.mono { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+.admin-table thead th { color: var(--vn-text-2, #a9bdd6); font-weight: 700; }
+.admin-stat { display: flex; align-items: baseline; gap: 12px; margin: 0 0 18px; flex-wrap: wrap; }
+.admin-stat__label { color: var(--vn-text-2, #a9bdd6); }
+.admin-stat__value { font-size: 1.5rem; font-weight: 900; }
+
+.admin-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 8, 18, 0.66);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1300;
+}
+.admin-confirm {
+  width: min(440px, 100%);
+  max-width: 100%;
+}
+.admin-confirm__title { margin: 0 0 8px; font-size: 1.2rem; }
+.admin-confirm__message { margin: 0 0 18px; color: var(--vn-text-2, #a9bdd6); line-height: 1.5; }

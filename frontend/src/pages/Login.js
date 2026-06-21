@@ -146,6 +146,9 @@ function Login() {
     } catch (error) {
       setPkBusy(false);
       setPkKey("");
+      // Wipe the raw key from every error path too: if encryption threw after a
+      // successful derivation, `derived` would still hold the plaintext key.
+      if (derived) derived.private_key = null;
       const message = error?.message || "That private key could not be read.";
       setErrorMessage(message);
       toast.error(message);

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../helpers/api";
 
 const ADMIN_TOKEN_KEY = "vorliq_admin_token";
-const tabs = ["Overview", "Readiness", "Network Monitor", "Registry Lifecycle", "Analytics", "Storage", "Indexes", "Migration", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
+const tabs = ["Overview", "Wallets", "Treasury", "Readiness", "Network Monitor", "Registry Lifecycle", "Analytics", "Storage", "Indexes", "Migration", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
 
 function authHeader(token) {
   return { Authorization: `Bearer ${token}` };
@@ -29,8 +29,14 @@ function Admin() {
   const [chatMessages, setChatMessages] = useState([]);
   const [profileSearch, setProfileSearch] = useState("");
   const [profileResults, setProfileResults] = useState([]);
+  const [wallets, setWallets] = useState(null);
+  const [treasury, setTreasury] = useState(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  // Pending confirmation for any write action: { message, action }. No write
+  // fires until the operator confirms.
+  const [confirmState, setConfirmState] = useState(null);
+  const requestConfirm = useCallback((message, action) => setConfirmState({ message, action }), []);
   const [incidentForm, setIncidentForm] = useState({
     title: "",
     message: "",
@@ -118,11 +124,54 @@ function Admin() {
     setChatMessages(response.data.messages || []);
   }, [headers]);
 
+  // Registered wallets with their live balance and transaction count. The
+  // profiles list is the registry of wallets; balance and tx count are looked up
+  // per wallet for the page shown.
+  const loadWallets = useCallback(async () => {
+    setWallets(null);
+    const response = await api.get("/profiles", { params: { limit: 25, offset: 0 } });
+    const profiles = response.data?.profiles || [];
+    const enriched = await Promise.all(
+      profiles.map(async (profile) => {
+        const address = profile.wallet_address || profile.address;
+        let balance = null;
+        let txCount = null;
+        try {
+          const [balanceRes, historyRes] = await Promise.all([
+            api.get("/wallet/balance", { params: { address } }),
+            api.get("/wallet/history", { params: { address, limit: 1, offset: 0 } }),
+          ]);
+          balance = Number(balanceRes.data?.balance);
+          txCount = Number(historyRes.data?.total ?? historyRes.data?.transaction_count ?? 0);
+        } catch (lookupError) {
+          /* leave nulls; the row still shows the wallet */
+        }
+        return { address, display_name: profile.display_name, balance, txCount };
+      })
+    );
+    setWallets(enriched);
+  }, []);
+
+  // Treasury balance plus the recent treasury ledger transactions.
+  const loadTreasury = useCallback(async () => {
+    setTreasury(null);
+    const [balanceRes, ledgerRes] = await Promise.all([
+      api.get("/treasury/balance"),
+      api.get("/treasury/ledger", { params: { limit: 25, offset: 0 } }).catch(() => ({ data: {} })),
+    ]);
+    setTreasury({
+      balance: Number(balanceRes.data?.balance ?? balanceRes.data?.treasury_balance),
+      transactions: ledgerRes.data?.transactions || ledgerRes.data?.ledger || ledgerRes.data?.entries || [],
+    });
+  }, []);
+
   const refreshCurrentTab = useCallback(async (tab = activeTab) => {
     if (!headers) return;
     setError("");
     try {
       if (tab === "Overview") await loadOverview();
+      if (tab === "Wallets") await loadWallets();
+      if (tab === "Treasury") await loadTreasury();
       if (tab === "Readiness") await loadReadiness();
       if (tab === "Network Monitor") await loadNodeMonitor();
       if (tab === "Registry Lifecycle") await loadRegistryLifecycle();
@@ -139,7 +188,7 @@ function Admin() {
     } catch (requestError) {
       setError(requestError.response?.status === 401 ? "Unauthorized" : "Unable to load admin data.");
     }
-  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadMigration, loadNodeMonitor, loadOverview, loadReadiness, loadRegistryLifecycle, loadReports, loadSecurity, loadStorage]);
+  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadMigration, loadNodeMonitor, loadOverview, loadReadiness, loadRegistryLifecycle, loadReports, loadSecurity, loadStorage, loadWallets, loadTreasury]);
 
   useEffect(() => {
     if (adminToken) {
@@ -181,107 +230,130 @@ function Admin() {
     setChatMessages([]);
   }
 
-  async function runBackup() {
-    setStatus("Running backup...");
-    try {
-      const response = await api.post("/admin/backups/run", {}, { headers });
-      setStatus(response.data.success ? "Backup completed." : "Backup did not complete.");
-      await loadBackups();
-    } catch (requestError) {
-      setStatus(requestError.response?.data?.message || "Backup failed.");
-    }
+  // Every handler below writes state, so each routes through requestConfirm: the
+  // network call only fires after the operator confirms in the dialog.
+  function runBackup() {
+    requestConfirm("Run a full backup now?", async () => {
+      setStatus("Running backup...");
+      try {
+        const response = await api.post("/admin/backups/run", {}, { headers });
+        setStatus(response.data.success ? "Backup completed." : "Backup did not complete.");
+        await loadBackups();
+      } catch (requestError) {
+        setStatus(requestError.response?.data?.message || "Backup failed.");
+      }
+    });
   }
 
-  async function verifyBackup() {
-    setStatus("Verifying latest backup...");
-    try {
-      const response = await api.post("/admin/backups/verify", {}, { headers });
-      setStatus(response.data.verification_passed ? "Latest backup verification passed." : "Backup verification failed.");
-      await loadBackups();
-    } catch (requestError) {
-      setStatus(requestError.response?.data?.message || "Backup verification failed.");
-    }
+  function verifyBackup() {
+    requestConfirm("Verify the latest backup now?", async () => {
+      setStatus("Verifying latest backup...");
+      try {
+        const response = await api.post("/admin/backups/verify", {}, { headers });
+        setStatus(response.data.verification_passed ? "Latest backup verification passed." : "Backup verification failed.");
+        await loadBackups();
+      } catch (requestError) {
+        setStatus(requestError.response?.data?.message || "Backup verification failed.");
+      }
+    });
   }
 
-  async function rebuildIndexes() {
-    setStatus("Rebuilding derived indexes...");
-    try {
-      const response = await api.post("/admin/indexes/rebuild", {}, { headers });
-      setStatus(response.data.success ? "Index rebuild completed." : "Index rebuild reported a warning.");
-      await loadIndexes();
-    } catch (requestError) {
-      setStatus(requestError.response?.data?.message || "Index rebuild failed.");
-    }
+  function rebuildIndexes() {
+    requestConfirm("Rebuild the derived indexes? This recomputes them from the chain.", async () => {
+      setStatus("Rebuilding derived indexes...");
+      try {
+        const response = await api.post("/admin/indexes/rebuild", {}, { headers });
+        setStatus(response.data.success ? "Index rebuild completed." : "Index rebuild reported a warning.");
+        await loadIndexes();
+      } catch (requestError) {
+        setStatus(requestError.response?.data?.message || "Index rebuild failed.");
+      }
+    });
   }
 
-  async function submitLifecycleAction(action) {
-    setStatus(`${action} registry node...`);
-    try {
-      const response = await api.post(
-        `/admin/registry/${action}`,
-        {
-          node_url: lifecycleForm.node_url,
-          reason: lifecycleForm.reason || `${action} requested from operator dashboard.`,
-        },
-        { headers }
-      );
-      setStatus(response.data.success ? `Registry node ${action} completed.` : `Registry node ${action} did not complete.`);
-      await loadRegistryLifecycle();
-    } catch (requestError) {
-      setStatus(requestError.response?.data?.message || `Unable to ${action} registry node.`);
-    }
+  function submitLifecycleAction(action) {
+    requestConfirm(`${action} the registry node ${lifecycleForm.node_url || "(no URL set)"}?`, async () => {
+      setStatus(`${action} registry node...`);
+      try {
+        const response = await api.post(
+          `/admin/registry/${action}`,
+          {
+            node_url: lifecycleForm.node_url,
+            reason: lifecycleForm.reason || `${action} requested from operator dashboard.`,
+          },
+          { headers }
+        );
+        setStatus(response.data.success ? `Registry node ${action} completed.` : `Registry node ${action} did not complete.`);
+        await loadRegistryLifecycle();
+      } catch (requestError) {
+        setStatus(requestError.response?.data?.message || `Unable to ${action} registry node.`);
+      }
+    });
   }
 
-  async function createIncident(event) {
+  function createIncident(event) {
     event.preventDefault();
-    try {
-      const affected = incidentForm.affected_services
-        .split(",")
-        .map((service) => service.trim())
-        .filter(Boolean);
-      await api.post(
-        "/admin/incidents/create",
-        { ...incidentForm, affected_services: affected },
-        { headers }
-      );
-      setStatus("Incident created.");
-      setIncidentForm({ title: "", message: "", severity: "minor", affected_services: "" });
+    requestConfirm(`Publish the incident "${incidentForm.title || "(untitled)"}"?`, async () => {
+      try {
+        const affected = incidentForm.affected_services
+          .split(",")
+          .map((service) => service.trim())
+          .filter(Boolean);
+        await api.post(
+          "/admin/incidents/create",
+          { ...incidentForm, affected_services: affected },
+          { headers }
+        );
+        setStatus("Incident created.");
+        setIncidentForm({ title: "", message: "", severity: "minor", affected_services: "" });
+        await loadIncidents();
+      } catch (requestError) {
+        setStatus(requestError.response?.data?.message || "Unable to create incident.");
+      }
+    });
+  }
+
+  function resolveIncident(id) {
+    requestConfirm("Mark this incident as resolved?", async () => {
+      await api.post("/admin/incidents/resolve", { id }, { headers });
+      setStatus("Incident resolved.");
       await loadIncidents();
-    } catch (requestError) {
-      setStatus(requestError.response?.data?.message || "Unable to create incident.");
-    }
+    });
   }
 
-  async function resolveIncident(id) {
-    await api.post("/admin/incidents/resolve", { id }, { headers });
-    setStatus("Incident resolved.");
-    await loadIncidents();
-  }
-
-  async function updateForumPost(post, field) {
+  function updateForumPost(post, field) {
     const endpoint = field === "pinned" ? "/admin/moderation/forum/pin" : "/admin/moderation/forum/feature";
-    const payload = { post_id: post.post_id, [field]: !post[field] };
-    await api.post(endpoint, payload, { headers });
-    setStatus(`${field === "pinned" ? "Pin" : "Feature"} status updated.`);
-    await loadForumModeration();
+    const verb = post[field] ? "Remove" : "Apply";
+    requestConfirm(`${verb} the ${field === "pinned" ? "pin" : "feature"} on this forum post?`, async () => {
+      const payload = { post_id: post.post_id, [field]: !post[field] };
+      await api.post(endpoint, payload, { headers });
+      setStatus(`${field === "pinned" ? "Pin" : "Feature"} status updated.`);
+      await loadForumModeration();
+    });
   }
 
-  async function moderateForumItem(payload) {
-    await api.post("/admin/moderation/forum/moderate", payload, { headers });
-    setStatus("Forum moderation status updated.");
-    await loadForumModeration();
+  function moderateForumItem(payload) {
+    requestConfirm(`Set this ${payload.target_type || "item"} to "${payload.status}"?`, async () => {
+      await api.post("/admin/moderation/forum/moderate", payload, { headers });
+      setStatus("Forum moderation status updated.");
+      await loadForumModeration();
+    });
   }
 
-  async function updateReport(report, action) {
-    await api.post(`/admin/reports/${action}`, { report_id: report.report_id, moderator_note: "Reviewed from admin dashboard." }, { headers });
-    setStatus("Report status updated.");
-    await loadReports();
+  function updateReport(report, action) {
+    requestConfirm(`Apply "${action}" to this report?`, async () => {
+      await api.post(`/admin/reports/${action}`, { report_id: report.report_id, moderator_note: "Reviewed from admin dashboard." }, { headers });
+      setStatus("Report status updated.");
+      await loadReports();
+    });
   }
 
-  async function hideChatMessage(message) {
-    await api.post("/admin/moderation/chat/hide", { message_id: message.message_id }, { headers });
-    setStatus("Chat message hidden from future history.");
-    await loadChatModeration();
+  function hideChatMessage(message) {
+    requestConfirm("Hide this chat message from future history?", async () => {
+      await api.post("/admin/moderation/chat/hide", { message_id: message.message_id }, { headers });
+      setStatus("Chat message hidden from future history.");
+      await loadChatModeration();
+    });
   }
 
   async function searchProfiles(event) {
@@ -350,6 +422,8 @@ function Admin() {
       {status && <div className="empty-state">{status}</div>}
 
       {activeTab === "Overview" && <OverviewTab overview={overview} />}
+      {activeTab === "Wallets" && <WalletsTab wallets={wallets} onLoad={loadWallets} />}
+      {activeTab === "Treasury" && <TreasuryTab treasury={treasury} onLoad={loadTreasury} />}
       {activeTab === "Readiness" && <ReadinessTab readiness={readiness} onLoad={loadReadiness} />}
       {activeTab === "Network Monitor" && <NetworkMonitorTab monitor={nodeMonitor} onLoad={loadNodeMonitor} />}
       {activeTab === "Registry Lifecycle" && (
@@ -389,7 +463,127 @@ function Admin() {
       {activeTab === "Profiles" && (
         <ProfilesModerationTab search={profileSearch} setSearch={setProfileSearch} profiles={profileResults} onSearch={searchProfiles} />
       )}
+
+      {confirmState && (
+        <ConfirmDialog
+          message={confirmState.message}
+          onCancel={() => setConfirmState(null)}
+          onConfirm={async () => {
+            const action = confirmState.action;
+            setConfirmState(null);
+            try {
+              await action();
+            } catch (actionError) {
+              setStatus(actionError.response?.data?.message || "Action failed.");
+            }
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+// Confirmation dialog shown before any admin write fires.
+function ConfirmDialog({ message, onConfirm, onCancel }) {
+  return (
+    <div className="admin-confirm-backdrop" role="presentation" onClick={onCancel}>
+      <div className="admin-confirm card card-pad" role="alertdialog" aria-modal="true" aria-label="Confirm action" onClick={(event) => event.stopPropagation()}>
+        <h3 className="admin-confirm__title">Confirm action</h3>
+        <p className="admin-confirm__message">{message}</p>
+        <div className="button-row">
+          <button className="button brand-button" type="button" onClick={onConfirm}>Confirm</button>
+          <button className="button secondary brand-button-secondary" type="button" onClick={onCancel}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WalletsTab({ wallets, onLoad }) {
+  return (
+    <section className="card card-pad admin-section">
+      <div className="admin-section__head">
+        <h2>Registered wallets</h2>
+        <button className="button secondary brand-button-secondary" type="button" onClick={onLoad}>Refresh</button>
+      </div>
+      {wallets == null ? (
+        <div className="empty-state">Loading wallets…</div>
+      ) : wallets.length === 0 ? (
+        <div className="empty-state">No registered wallets yet.</div>
+      ) : (
+        <div className="table-scroll">
+          <table className="admin-table">
+            <thead>
+              <tr><th>Wallet</th><th>Name</th><th>Balance (VLQ)</th><th>Transactions</th></tr>
+            </thead>
+            <tbody>
+              {wallets.map((wallet) => (
+                <tr key={wallet.address}>
+                  <td className="mono" title={wallet.address}>{wallet.address}</td>
+                  <td>{wallet.display_name || "—"}</td>
+                  <td>{wallet.balance == null || Number.isNaN(wallet.balance) ? "—" : wallet.balance}</td>
+                  <td>{wallet.txCount == null || Number.isNaN(wallet.txCount) ? "—" : wallet.txCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TreasuryTab({ treasury, onLoad }) {
+  return (
+    <section className="card card-pad admin-section">
+      <div className="admin-section__head">
+        <h2>Community treasury</h2>
+        <button className="button secondary brand-button-secondary" type="button" onClick={onLoad}>Refresh</button>
+      </div>
+      {treasury == null ? (
+        <div className="empty-state">Loading treasury…</div>
+      ) : (
+        <>
+          <p className="admin-stat">
+            <span className="admin-stat__label">Treasury balance</span>
+            <span className="admin-stat__value">
+              {treasury.balance == null || Number.isNaN(treasury.balance) ? "—" : `${treasury.balance} VLQ`}
+            </span>
+          </p>
+          <h3>Recent treasury transactions</h3>
+          {treasury.transactions.length === 0 ? (
+            <div className="empty-state">No treasury transactions recorded yet.</div>
+          ) : (
+            <div className="table-scroll">
+              <table className="admin-table">
+                <thead>
+                  <tr><th>Description</th><th>Amount (VLQ)</th><th>Counterparty</th><th>Block</th></tr>
+                </thead>
+                <tbody>
+                  {treasury.transactions.slice(0, 25).map((entry, index) => {
+                    const toTreasury = (entry.to_address || entry.receiver_address) === "VORLIQ_TREASURY";
+                    const counterparty = toTreasury
+                      ? entry.from_address || entry.sender_address
+                      : entry.to_address || entry.receiver_address;
+                    const label =
+                      entry.description ||
+                      (entry.transaction_type || entry.type || (toTreasury ? "Inflow" : "Outflow")).replace(/_/g, " ");
+                    return (
+                      <tr key={entry.tx_id || entry.ledger_id || index}>
+                        <td>{label}</td>
+                        <td>{entry.amount}</td>
+                        <td className="mono" title={counterparty}>{counterparty || "—"}</td>
+                        <td>{entry.block_index != null ? `#${entry.block_index}` : "pending"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 

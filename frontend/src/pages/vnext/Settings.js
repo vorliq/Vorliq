@@ -494,6 +494,243 @@ function AvatarSection({ address }) {
   );
 }
 
+/* ------------------------------------------------ Node operator flow ------ */
+// Step-by-step onboarding for someone running a Vorliq node. It detects the
+// current state of their node from the public registry and shows only the steps
+// that remain. Identity is proven with the signed operator claim (Thread 2), so
+// registration is cryptographic, not just a URL submission.
+const OPERATOR_STEPS = [
+  { key: "run", title: "Run your Vorliq node" },
+  { key: "register", title: "Register your node in the network registry" },
+  { key: "verify", title: "Verify your node identity (cryptographic proof)" },
+  { key: "heartbeat", title: "Heartbeat & monitoring" },
+];
+
+function timeAgo(seconds) {
+  if (!seconds) return "never";
+  const delta = Math.max(0, Math.floor(Date.now() / 1000 - Number(seconds)));
+  if (delta < 90) return "just now";
+  if (delta < 3600) return `${Math.floor(delta / 60)} min ago`;
+  if (delta < 86400) return `${Math.floor(delta / 3600)} h ago`;
+  return `${Math.floor(delta / 86400)} d ago`;
+}
+
+function NodeOperatorFlow() {
+  const { isLoggedIn, wallet } = useAuth();
+  const [nodeUrl, setNodeUrl] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [password, setPassword] = useState("");
+  const [node, setNode] = useState(null); // registry record or null
+  const [checked, setChecked] = useState(false);
+  const [busy, setBusy] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const detect = useCallback(async (url) => {
+    const target = (url ?? nodeUrl).trim();
+    if (!target) return;
+    setError("");
+    setBusy("detect");
+    try {
+      const response = await api.get("/registry/node", { params: { node_url: target } });
+      setNode(response.data?.node || null);
+    } catch (err) {
+      setNode(null); // not found yet — that is a valid, early state
+    } finally {
+      setChecked(true);
+      setBusy("");
+    }
+  }, [nodeUrl]);
+
+  // Identity is "done" only when the operator is cryptographically VERIFIED
+  // (is_verified_operator, set by a signed claim) and bound to this wallet — not
+  // merely the unsigned operator_wallet_address hint that registration records.
+  const operatorVerified =
+    Boolean(node?.is_verified_operator) && wallet?.address && node.operator_wallet_address === wallet.address;
+  const heartbeating = Boolean(node?.last_heartbeat_at);
+
+  // Completion state per step, derived from the detected registry record.
+  const done = {
+    run: Boolean(node), // a registered node is, by definition, running and reachable enough to be listed
+    register: Boolean(node),
+    verify: operatorVerified,
+    heartbeat: heartbeating,
+  };
+  const currentKey = OPERATOR_STEPS.find((step) => !done[step.key])?.key || null;
+
+  async function registerNode(event) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    if (!nodeUrl.trim() || !displayName.trim()) {
+      setError("Enter your node URL and a display name.");
+      return;
+    }
+    setBusy("register");
+    try {
+      await api.post("/registry/register", {
+        node_url: nodeUrl.trim(),
+        display_name: displayName.trim(),
+        operator_wallet_address: wallet?.address,
+      });
+      setMessage("Node registered. Now prove you control it below.");
+      await detect(nodeUrl);
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to register the node.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function verifyIdentity() {
+    setError("");
+    setMessage("");
+    if (!password) {
+      setError("Enter your wallet password to sign the operator claim.");
+      return;
+    }
+    setBusy("verify");
+    try {
+      await postSignedAuthority({
+        action: "registry.verify_operator",
+        body: { node_url: nodeUrl.trim(), release: false },
+        walletPassword: password,
+      });
+      setPassword("");
+      setMessage("Operator identity verified and cryptographically bound to your wallet.");
+      await detect(nodeUrl);
+    } catch (err) {
+      setError(authorityErrorMessage(err, "Could not verify the operator claim. Check your password and node URL."));
+    } finally {
+      setBusy("");
+    }
+  }
+
+  return (
+    <section className="vn-settings__section">
+      <h2>Run a node</h2>
+      <p className="vn-settings__hint">
+        Operate a Vorliq node to help secure and serve the network. Enter your node URL to detect what
+        is left to do — completed steps collapse so you only see what remains.
+      </p>
+
+      {!isLoggedIn ? (
+        <p className="vn-empty-note" style={{ margin: 0 }}>
+          <Link className="vn-block-link" to="/login">Sign in</Link> to register and verify a node.
+        </p>
+      ) : (
+        <>
+          <div className="vn-field">
+            <label htmlFor="vn-op-url">Your node URL</label>
+            <div className="vn-op-detect">
+              <input
+                id="vn-op-url"
+                className="vn-input"
+                type="url"
+                placeholder="https://node.example.org"
+                value={nodeUrl}
+                onChange={(event) => setNodeUrl(event.target.value)}
+              />
+              <Button variant="secondary" onClick={() => detect()} disabled={!nodeUrl.trim() || busy === "detect"}>
+                {busy === "detect" ? "Checking…" : "Detect status"}
+              </Button>
+            </div>
+          </div>
+
+          <ol className="vn-op-steps">
+            {OPERATOR_STEPS.map((step) => {
+              const isDone = done[step.key];
+              const isCurrent = step.key === currentKey;
+              return (
+                <li key={step.key} className={`vn-op-step ${isDone ? "is-done" : ""} ${isCurrent ? "is-current" : ""}`}>
+                  <div className="vn-op-step__head">
+                    <span className="vn-op-step__mark" aria-hidden="true">{isDone ? "✓" : "•"}</span>
+                    <span className="vn-op-step__title">{step.title}</span>
+                    {isDone && <span className="vn-op-step__badge">Done</span>}
+                  </div>
+
+                  {/* Completed steps collapse to just the title + checkmark. */}
+                  {!isDone && (isCurrent || (checked && !node)) && (
+                    <div className="vn-op-step__body">
+                      {step.key === "run" && (
+                        <p className="vn-field__hint" style={{ margin: 0 }}>
+                          Install and start your node, then come back here. Full instructions:{" "}
+                          <a className="vn-block-link" href="https://vorliq.github.io/Vorliq/run-your-own-node.html" target="_blank" rel="noopener noreferrer">
+                            run your own node
+                          </a>.
+                        </p>
+                      )}
+                      {step.key === "register" && (
+                        <form className="vn-send-form" onSubmit={registerNode}>
+                          <div className="vn-field">
+                            <label htmlFor="vn-op-name">Display name</label>
+                            <input
+                              id="vn-op-name"
+                              className="vn-input"
+                              value={displayName}
+                              onChange={(event) => setDisplayName(event.target.value)}
+                              placeholder="My community node"
+                            />
+                          </div>
+                          <Button variant="primary" type="submit" disabled={busy === "register"}>
+                            {busy === "register" ? "Registering…" : "Register node"}
+                          </Button>
+                        </form>
+                      )}
+                      {step.key === "verify" && (
+                        <div className="vn-send-form">
+                          <p className="vn-field__hint" style={{ margin: 0 }}>
+                            Prove you control this node by signing a claim that binds it to your wallet. The
+                            signature is created in your browser; only the signed claim is sent.
+                          </p>
+                          <div className="vn-field">
+                            <label htmlFor="vn-op-pw">Wallet password</label>
+                            <input
+                              id="vn-op-pw"
+                              className="vn-input"
+                              type="password"
+                              autoComplete="current-password"
+                              value={password}
+                              onChange={(event) => setPassword(event.target.value)}
+                            />
+                          </div>
+                          <Button variant="primary" onClick={verifyIdentity} disabled={busy === "verify"}>
+                            {busy === "verify" ? "Signing…" : "Verify identity"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {step.key === "heartbeat" && (
+                    <div className="vn-op-step__body">
+                      <p className="vn-field__hint" style={{ margin: 0 }}>
+                        Your node sends a heartbeat to the registry about every 5 minutes. It reports the node
+                        is online and its chain height, so the network knows it is reachable and in sync. If the
+                        heartbeat stops, your node is marked stale and then inactive.
+                      </p>
+                      {node && (
+                        <p className="vn-field__hint" style={{ marginTop: 8 }}>
+                          Last heartbeat: <strong>{timeAgo(node.last_heartbeat_at || node.last_seen)}</strong>
+                          {" · "}Sync: <strong>{node.sync_status || "unknown"}</strong>
+                          {" · "}Reachable: <strong>{node.reachable === true ? "yes" : node.reachable === false ? "no" : "unknown"}</strong>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+
+          <InlineError message={error} />
+          {message && <p className="vn-settings__hint" style={{ margin: 0 }}>{message}</p>}
+        </>
+      )}
+    </section>
+  );
+}
+
 export default function Settings() {
   const { isLoggedIn, wallet, logout } = useAuth();
   const navigate = useNavigate();
@@ -582,6 +819,9 @@ export default function Settings() {
 
         {/* Network */}
         <NetworkSection />
+
+        {/* Node operator onboarding */}
+        <NodeOperatorFlow />
       </Card>
 
       <p className="vn-field__hint" style={{ marginTop: 14, display: "flex", gap: 8, alignItems: "center" }}>

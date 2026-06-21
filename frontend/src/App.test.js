@@ -3468,6 +3468,11 @@ test("Admin Indexes section stays protected and renders safe rebuild controls af
 
   await userEvent.click(screen.getByRole("button", { name: /rebuild indexes/i }));
 
+  // Writes are confirm-gated: the API must not fire until the operator confirms.
+  expect(await screen.findByRole("alertdialog", { name: /confirm action/i })).toBeInTheDocument();
+  expect(api.post).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: /^confirm$/i }));
+
   await waitFor(() => {
     expect(api.post).toHaveBeenCalledWith("/admin/indexes/rebuild", {}, expect.objectContaining({ headers: expect.any(Object) }));
   });
