@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const { expect } = require("@playwright/test");
 
 const NODE_PORT = process.env.E2E_NODE_PORT || "5000";
+const FLASK_PORT = process.env.E2E_FLASK_PORT || "5001";
 const AUTHORIZATION_DOMAIN = "vorliq.authority.v1";
 const API = `http://127.0.0.1:${NODE_PORT}/api`;
 
@@ -154,6 +155,90 @@ async function createForumPost(wallet, { title, body, category = "general" }) {
   return res.data;
 }
 
+// Seed the community lending pool via the test-only Flask endpoint, then mine it
+// in, so a test loan can be funded from a positive pool balance.
+async function seedLendingPool(amount = 60) {
+  const res = await fetch(`http://127.0.0.1:${FLASK_PORT}/test/seed-lending-pool`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount }),
+  });
+  expect(res.status, "lending pool seed endpoint should be enabled and succeed").toBeLessThan(300);
+  await mineSome(1);
+}
+
+// Mine (alternating miners) until an address holds at least `minBalance`.
+async function fundWalletToThreshold(address, minBalance) {
+  const { a } = await miners();
+  for (let i = 0; i < 12; i += 1) {
+    if ((await getBalance(address)) >= minBalance) break;
+    await mineBlock(address, a.address);
+    await mineBlock(a.address, address);
+  }
+  return getBalance(address);
+}
+
+async function createLoanRequest(wallet, { amount, reason }) {
+  const res = await postSigned("/lending/request", "lending.request", "requester_address", wallet, { amount, reason });
+  expect(res.status, `loan request should be created (${res.status}: ${JSON.stringify(res.data)})`).toBeLessThan(300);
+  return res.data.loan_id || res.data.loan?.loan_id;
+}
+
+async function voteOnLoan(wallet, loanId, vote) {
+  const res = await postSigned("/lending/vote", "lending.vote", "voter_address", wallet, { loan_id: loanId, vote });
+  expect(res.status, `loan vote should succeed (${res.status}: ${JSON.stringify(res.data)})`).toBeLessThan(300);
+  return res.data;
+}
+
+async function repayLoan(wallet, loanId) {
+  const res = await postSigned("/lending/repay", "lending.repay", "repayer_address", wallet, { loan_id: loanId });
+  expect(res.status, `loan repayment should succeed (${res.status}: ${JSON.stringify(res.data)})`).toBeLessThan(300);
+  return res.data;
+}
+
+async function createProposal(wallet, { title, description, category = "general", parameter = "documented-value" }) {
+  const res = await postSigned("/governance/propose", "governance.propose", "proposer_address", wallet, {
+    title,
+    description,
+    category,
+    parameter,
+  });
+  expect(res.status, `proposal should be created (${res.status}: ${JSON.stringify(res.data)})`).toBeLessThan(300);
+  return res.data.proposal_id || res.data.proposal?.proposal_id;
+}
+
+async function voteOnProposal(wallet, proposalId, vote) {
+  const res = await postSigned("/governance/vote", "governance.vote", "voter_address", wallet, { proposal_id: proposalId, vote });
+  expect(res.status, `proposal vote should succeed (${res.status}: ${JSON.stringify(res.data)})`).toBeLessThan(300);
+  return res.data;
+}
+
+// Apply the same onboarding-complete + motion-disable init as the page fixture,
+// for pages created in a second browser context (e.g. a recipient watching the
+// notification bell). Must be called before the first navigation.
+async function prepPage(page) {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem("vorliq_onboarding_complete", "true");
+    } catch (error) {
+      /* ignore */
+    }
+    const install = () => {
+      const style = document.createElement("style");
+      style.textContent =
+        "*,*::before,*::after{animation-duration:1ms!important;animation-delay:0ms!important;" +
+        "animation-iteration-count:1!important;transition-duration:1ms!important;" +
+        "transition-delay:0ms!important;scroll-behavior:auto!important}";
+      (document.head || document.documentElement).appendChild(style);
+    };
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", install, { once: true });
+    } else {
+      install();
+    }
+  });
+}
+
 // Log a known wallet into the browser using the REAL private-key import UI we
 // ship, so signed actions (avatar, votes, loans) work with `password` afterwards.
 async function importWalletViaUI(page, privateKeyPem, password) {
@@ -194,8 +279,16 @@ module.exports = {
   assertNoHorizontalOverflow,
   createWallet,
   createForumPost,
+  createLoanRequest,
+  createProposal,
   fundWalletSpendable,
+  fundWalletToThreshold,
   mineSome,
+  prepPage,
+  repayLoan,
+  seedLendingPool,
+  voteOnLoan,
+  voteOnProposal,
   getBalance,
   mineBlock,
   ensureTreasuryFunded,

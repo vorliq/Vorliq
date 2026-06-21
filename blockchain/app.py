@@ -2075,6 +2075,34 @@ def registry_heartbeat():
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
+@app.post("/test/seed-lending-pool")
+def seed_lending_pool():
+    # Test-only: credit the community lending pool so a test loan can be funded
+    # from a positive pool balance. Gated behind an env flag set only by the e2e
+    # harness; it 404s in production. The credit is a SYSTEM-sender coinbase-style
+    # transaction (the same mechanism mining rewards use), mined on the next block.
+    if os.environ.get("VORLIQ_ENABLE_TEST_SEED") != "true":
+        return jsonify({"success": False, "message": "Not found"}), 404
+    try:
+        from transaction import LENDING_POOL_ADDRESS
+
+        data = _json_body()
+        amount = _require_number(data.get("amount", 100), "seed amount", 1_000_000)
+        seed_transaction = Transaction(
+            sender_address=SYSTEM_ADDRESS,
+            receiver_address=LENDING_POOL_ADDRESS,
+            amount=amount,
+            transaction_type="test_pool_seed",
+            category="lending",
+        )
+        node.blockchain.add_pending_transaction(seed_transaction)
+        storage.save_pending(node.blockchain.pending_transactions)
+        return jsonify({"success": True, "tx_id": seed_transaction.tx_id, "amount": amount}), 201
+    except Exception as exc:
+        vorliq_logger.error("Seed lending pool endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
 @app.post("/lending/request")
 def create_lending_request():
     try:

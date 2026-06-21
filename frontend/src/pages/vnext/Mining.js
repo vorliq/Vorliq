@@ -8,7 +8,7 @@
 // run-your-own-node guide.
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Coins, Gauge, Timer } from "lucide-react";
+import { Boxes, Coins, Gauge, Timer } from "lucide-react";
 
 import "../../styles/vnext.css";
 import AppShell from "../../components/vnext/AppShell";
@@ -17,6 +17,7 @@ import DataTable from "../../components/vnext/DataTable";
 import SummaryCard from "../../components/vnext/SummaryCard";
 import { Button, Card, InlineError } from "../../components/vnext/primitives";
 import { useAuth } from "../../context/AuthContext";
+import { useRealtime } from "../../context/RealtimeContext";
 import api from "../../helpers/api";
 import { formatHash, formatNumber, formatRelativeTime, formatVlq } from "../../helpers/publicApi";
 
@@ -173,11 +174,22 @@ export default function Mining() {
   const difficulty = num(status?.current_difficulty);
   const blockTimeTarget = num(status?.block_time_target);
 
+  // Live block height: the fetched status figure, raised in real time whenever a
+  // new block is confirmed on the network (via the realtime socket), so the
+  // counter increments without a manual refresh.
+  const { latestBlockHeight } = useRealtime();
+  const statusHeight = num(status?.current_block_height);
+  const blockHeight =
+    statusHeight != null || latestBlockHeight != null
+      ? Math.max(statusHeight ?? 0, latestBlockHeight ?? 0)
+      : null;
+
   // No honest network hash rate exists on this chain: block production is gated
   // by a minimum block time, not by hashing power, and per-block mining
   // durations are not recorded, so a difficulty-over-time figure would only
   // reflect the cadence floor. Show the real block-time target instead.
   const cards = [
+    { label: "Block height", value: blockHeight != null ? formatNumber(blockHeight) : null, icon: Boxes },
     { label: "Current block reward", value: blockReward != null ? formatVlq(blockReward) : null, icon: Coins },
     { label: "Network difficulty", value: difficulty != null ? formatNumber(difficulty) : null, icon: Gauge },
     { label: "Block time target", value: blockTimeTarget != null ? `${formatNumber(blockTimeTarget)}s` : null, icon: Timer },
@@ -197,7 +209,7 @@ export default function Mining() {
       {statusError ? (
         <InlineError message={statusError} onRetry={reloadStatus} />
       ) : (
-        <div className="vn-summary-grid vn-summary-grid--3">
+        <div className="vn-summary-grid">
           {cards.map((c) => (
             <SummaryCard key={c.label} label={c.label} value={c.value} icon={c.icon} loading={statusLoading} />
           ))}

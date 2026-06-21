@@ -2,6 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const { handleRouteError } = require("./routeError");
 const { paginationParams } = require("../pagination");
+const realtime = require("../realtime");
 
 const router = express.Router();
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
@@ -123,6 +124,8 @@ router.post("/api/governance/vote", async (req, res) => {
   try {
     const response = await axios.post(`${flaskUrl}/governance/vote`, req.body);
     res.status(response.status).json(response.data);
+    // If this vote pushed the proposal to a recorded outcome, notify its author.
+    realtime.emitProposalOutcome(response.data?.proposal);
   } catch (error) {
     return handleRouteError(res, error, "POST /api/governance/vote", "Unable to cast governance vote.");
   }

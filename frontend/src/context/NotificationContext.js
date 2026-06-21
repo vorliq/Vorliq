@@ -51,20 +51,24 @@ export function NotificationProvider({ children }) {
     });
   }, []);
 
-  const addNotification = useCallback((type, title, message) => {
+  const addNotification = useCallback((type, title, message, link = null) => {
     // In-app notices are generated locally from public chain activity. When the
     // user turns them off, none are created.
     if (!enabledRef.current) return;
     const notification = {
-      id: Date.now(),
+      // Date.now() alone can collide for events in the same millisecond (e.g.
+      // several credits in one block), so add a short random suffix.
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       type,
       title,
       message,
+      link,
       timestamp: Date.now(),
       read: false,
     };
 
-    updateNotifications((current) => [notification, ...current]);
+    // Keep the persisted history bounded.
+    updateNotifications((current) => [notification, ...current].slice(0, 50));
   }, [updateNotifications]);
 
   const markAsRead = useCallback((id) => {

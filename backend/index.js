@@ -41,6 +41,7 @@ const migrationRoutes = require("./routes/migration");
 const newsletterRoutes = require("./routes/newsletter");
 const walletHistoryRoutes = require("./routes/walletHistory");
 const avatarRoutes = require("./routes/avatar");
+const realtime = require("./realtime");
 const adminAuth = require("./middleware/adminAuth");
 const { sendError } = require("./utils/apiResponse");
 const { pruneAnalytics } = require("./analytics");
@@ -85,6 +86,7 @@ const io = new Server(server, {
   },
   path: "/api/socket.io",
 });
+realtime.setIo(io);
 const port = process.env.PORT || 5000;
 const host = process.env.HOST || "127.0.0.1";
 const socketAddresses = new Map();

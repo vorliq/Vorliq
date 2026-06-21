@@ -27,6 +27,9 @@ import { formatHash, formatNumber, formatVlq } from "../../helpers/publicApi";
 
 const PENDING_VOTE = "pending_vote";
 const ACTIVE_STATUSES = ["approved_pending_issue", "active", "repayment_pending", "overdue"];
+// Terminal loan states, shown in a read-only "Closed loans" section so a repaid
+// or rejected loan's final state stays visible after it leaves the active list.
+const CLOSED_STATUSES = ["repaid", "rejected"];
 
 function num(v) {
   const n = Number(v);
@@ -286,6 +289,7 @@ export default function Lending() {
 
   const openLoans = useMemo(() => loans.filter((l) => l.status === PENDING_VOTE), [loans]);
   const activeLoans = useMemo(() => loans.filter((l) => ACTIVE_STATUSES.includes(l.status)), [loans]);
+  const closedLoans = useMemo(() => loans.filter((l) => CLOSED_STATUSES.includes(l.status)), [loans]);
 
   const myBorrowed = mine?.borrowed || [];
   const myActiveTotal = myBorrowed
@@ -398,6 +402,28 @@ export default function Lending() {
           <h2 className="vn-panel-title">Active loans</h2>
           <div className="vn-card-grid">
             {activeLoans.map((loan) => (
+              <LoanCard
+                key={loan.loan_id}
+                loan={loan}
+                address={address}
+                isLoggedIn={isLoggedIn}
+                onVote={castVote}
+                onRepay={repayLoan}
+                busyId={busyId}
+                feedback={feedback}
+              />
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Closed loans (repaid / rejected): read-only, so a loan's final state
+          stays visible after it leaves the active list. */}
+      {!loading && closedLoans.length > 0 && (
+        <Card style={{ marginTop: 20 }}>
+          <h2 className="vn-panel-title">Closed loans</h2>
+          <div className="vn-card-grid">
+            {closedLoans.map((loan) => (
               <LoanCard
                 key={loan.loan_id}
                 loan={loan}

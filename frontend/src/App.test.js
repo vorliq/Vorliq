@@ -62,6 +62,12 @@ jest.mock("./components/QRPayment", () => function MockQRPayment() {
   return <div data-testid="qr-payment" />;
 });
 
+// Stub the realtime socket so RealtimeProvider/Chat never open a real connection
+// (which would leave reconnect timers running and flake the suite under load).
+jest.mock("socket.io-client", () => ({
+  io: () => ({ on: jest.fn(), off: jest.fn(), emit: jest.fn(), disconnect: jest.fn(), connected: false }),
+}));
+
 jest.mock("react-toastify", () => ({
   ToastContainer: () => null,
   toast: {

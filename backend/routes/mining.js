@@ -2,6 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const { paginationParams } = require("../pagination");
 const { handleRouteError } = require("./routeError");
+const realtime = require("../realtime");
 
 const router = express.Router();
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
@@ -32,6 +33,9 @@ router.post("/api/mine", async (req, res, next) => {
   try {
     const response = await axios.post(`${flaskUrl}/mine`, req.body);
     res.status(response.status).json(response.data);
+    // Fan out real-time events for the newly confirmed block (new block, wallet
+    // credits, loan funded/repaid). Best-effort; never affects the response.
+    realtime.emitMinedBlock(response.data?.block);
   } catch (error) {
     if (error.response?.status === 503 && error.response.data?.code === "MINING_DISABLED") {
       return res.status(503).json({

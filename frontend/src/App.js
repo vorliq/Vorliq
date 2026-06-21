@@ -14,6 +14,7 @@ import { initAnalytics } from "./helpers/analytics";
 import { applyTheme, getStoredTheme } from "./helpers/theme";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { RealtimeProvider } from "./context/RealtimeContext";
 import { WalletBalanceProvider } from "./context/WalletBalanceContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -141,9 +142,11 @@ function App() {
       <NotificationProvider>
         <AuthProvider>
           <WalletBalanceProvider>
-            <BrowserRouter>
-              <AppShell />
-            </BrowserRouter>
+            <RealtimeProvider>
+              <BrowserRouter>
+                <AppShell />
+              </BrowserRouter>
+            </RealtimeProvider>
           </WalletBalanceProvider>
         </AuthProvider>
       </NotificationProvider>

@@ -1,6 +1,6 @@
 // Local e2e global setup: wait for the stack to answer, then mine enough blocks
 // to fund the community treasury so the faucet journey can pay out.
-const { ensureTreasuryFunded, api } = require("./tests/journeys/helpers");
+const { ensureTreasuryFunded, seedLendingPool, api } = require("./tests/journeys/helpers");
 
 module.exports = async () => {
   // Wait for the Node backend (and through it, Flask) to be ready.
@@ -25,4 +25,9 @@ module.exports = async () => {
   const treasury = await ensureTreasuryFunded(12);
   // eslint-disable-next-line no-console
   console.log(`[e2e] community treasury funded to ${treasury} VLQ for faucet journeys.`);
+
+  // Seed the lending pool so journey 6 can fund a loan from a positive balance.
+  await seedLendingPool(60);
+  // eslint-disable-next-line no-console
+  console.log("[e2e] lending pool seeded for the loan-lifecycle journey.");
 };

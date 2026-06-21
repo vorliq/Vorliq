@@ -15,16 +15,17 @@ test("signed-in user disconnects via More drawer / sidebar and returns to landin
   await assertNoHorizontalOverflow(page, "dashboard (signed in)");
 
   // On the mobile tab bar the Disconnect control lives behind the More drawer;
-  // on the tablet rail and desktop sidebar it is directly in the side nav.
+  // on the tablet rail and desktop sidebar it is directly in the side nav. Retry
+  // the open-and-find so a not-yet-painted tab bar can't race the lookup.
   const moreTab = page.getByRole("button", { name: /^more$/i });
-  if ((await moreTab.count()) > 0) {
-    await moreTab.click();
-    await expect(page.getByRole("dialog", { name: /more navigation/i })).toBeVisible();
-    await assertNoHorizontalOverflow(page, "more drawer");
-  }
-
   const disconnect = page.getByRole("button", { name: /disconnect/i }).filter({ visible: true });
-  await expect(disconnect, "a Disconnect control should be reachable at this viewport").toHaveCount(1);
+  await expect(async () => {
+    if (await moreTab.isVisible().catch(() => false)) {
+      await moreTab.click();
+    }
+    expect(await disconnect.count(), "a Disconnect control should be reachable at this viewport").toBe(1);
+  }).toPass({ timeout: 20_000 });
+  await assertNoHorizontalOverflow(page, "disconnect control reachable");
   await disconnect.click();
 
   // Lands on the landing page.

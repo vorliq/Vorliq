@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from hashlib import sha256
+import os
 import time
 from typing import Any
 
@@ -27,7 +28,9 @@ class Governance:
     }
     quorum = 500.0
     approval_threshold = 0.60
-    voting_period_seconds = 7 * 24 * 60 * 60
+    # Voting window. Configurable so the e2e suite can let a proposal reach its
+    # outcome without waiting days; production defaults to the 7-day rule.
+    voting_period_seconds = int(os.environ.get("VORLIQ_GOVERNANCE_VOTING_PERIOD_SECONDS", str(7 * 24 * 60 * 60)))
 
     def __init__(self) -> None:
         self.proposals: dict[str, dict[str, Any]] = {}

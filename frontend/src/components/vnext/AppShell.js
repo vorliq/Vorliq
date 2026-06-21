@@ -21,6 +21,7 @@ import {
 
 import logo from "../../assets/logo.png";
 import ProfileAvatar from "../ProfileAvatar";
+import NotificationBell from "./NotificationBell";
 import { useAuth } from "../../context/AuthContext";
 import { formatVlq } from "../../helpers/publicApi";
 import { useSharedWalletBalance } from "../../context/WalletBalanceContext";
@@ -244,6 +245,16 @@ function BottomTabBar({ active }) {
   );
 }
 
+function TopBar() {
+  const { isLoggedIn } = useAuth();
+  if (!isLoggedIn) return null;
+  return (
+    <header className="vn-topbar">
+      <NotificationBell />
+    </header>
+  );
+}
+
 export default function AppShell({ active, children }) {
   const location = useLocation();
   // Derive the active key from the URL if not explicitly provided.
@@ -256,6 +267,7 @@ export default function AppShell({ active, children }) {
       {/* The sidebar/tab bar are navigation; the content region is the single
           main landmark (App.js does not wrap standalone routes in a <main>). */}
       <main className="vn-app__main" id="main-content" tabIndex="-1">
+        <TopBar />
         {children}
       </main>
       <BottomTabBar active={derived} />

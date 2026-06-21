@@ -78,6 +78,10 @@ module.exports = defineConfig({
         VORLIQ_BLOCK_TIME_MINIMUM: "0",
         VORLIQ_DISABLE_DIFFICULTY_ADJUSTMENT: "true",
         VORLIQ_DIFFICULTY: "2",
+        // Short governance voting window so journey 7 can reach an outcome fast.
+        VORLIQ_GOVERNANCE_VOTING_PERIOD_SECONDS: "3",
+        // Enable the test-only lending-pool seeding endpoint for journey 6.
+        VORLIQ_ENABLE_TEST_SEED: "true",
         NODE_ENV: "test",
       },
     },

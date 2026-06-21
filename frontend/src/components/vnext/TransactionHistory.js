@@ -2,7 +2,7 @@
 // column definitions, the expandable per-row detail, and the Card wrapper.
 // Used by both the Dashboard and the Wallet page so the two surfaces show the
 // same data through the same code path rather than diverging copies.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 
@@ -150,24 +150,89 @@ function TxDetail({ tx, address }) {
 // Full Card-wrapped transaction history panel. `data`/`error`/`onRetry` can be
 // supplied by a caller that already owns the fetch (so the Dashboard does not
 // fetch twice); otherwise it fetches its own via useTransactions.
+const FILTERS = [
+  { key: "all", label: "All" },
+  { key: "received", label: "Received" },
+  { key: "sent", label: "Sent" },
+];
+
 export default function TransactionHistory({ address, isLoggedIn, rows: rowsProp, error: errorProp, onRetry, title = "Transaction history" }) {
   const own = useTransactions(rowsProp === undefined ? address : null);
   const rows = rowsProp === undefined ? own.rows : rowsProp;
   const error = rowsProp === undefined ? own.error : errorProp;
   const retry = rowsProp === undefined ? own.reload : onRetry;
 
+  const [filter, setFilter] = useState("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  // Debounce the search so filtering runs at most every 300ms, not per keystroke.
+  // All filtering is client-side over already-loaded rows — no new fetch.
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const query = search.trim().toLowerCase();
+  const filteredRows = useMemo(() => {
+    if (rows == null) return null;
+    const byDirection = rows.filter((tx) => {
+      if (filter === "sent") return tx.sender_address === address;
+      if (filter === "received") return tx.receiver_address === address;
+      return true;
+    });
+    if (!query) return byDirection;
+    return byDirection.filter((tx) =>
+      [tx.tx_id, tx.hash, tx.sender_address, tx.receiver_address].some((value) =>
+        String(value || "").toLowerCase().includes(query)
+      )
+    );
+  }, [rows, filter, query, address]);
+
+  const emptyMessage = !isLoggedIn
+    ? "Sign in to see your transactions."
+    : query
+      ? `No transactions match "${search.trim()}".`
+      : filter !== "all"
+        ? `No ${filter} transactions for this wallet yet.`
+        : "No transactions for this wallet yet.";
+
   return (
     <Card>
       <h2 className="vn-panel-title">{title}</h2>
+      <div className="vn-txfilter">
+        <div className="vn-txfilter__tabs" role="tablist" aria-label="Filter transactions">
+          {FILTERS.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              role="tab"
+              aria-selected={filter === option.key}
+              className={`vn-txfilter__tab ${filter === option.key ? "is-active" : ""}`}
+              onClick={() => setFilter(option.key)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <input
+          type="search"
+          className="vn-input vn-txfilter__search"
+          placeholder="Search address or transaction ID"
+          aria-label="Search transactions"
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+        />
+      </div>
       <DataTable
         columns={txColumns(address)}
-        rows={rows}
+        rows={filteredRows}
         loading={rows == null && isLoggedIn}
         error={error}
         onRetry={retry}
         rowKey={(tx, i) => tx.tx_id || tx.hash || `${tx.block_index}-${i}`}
         pageSize={20}
-        emptyMessage={isLoggedIn ? "No transactions for this wallet yet." : "Sign in to see your transactions."}
+        emptyMessage={emptyMessage}
         renderExpanded={(tx) => <TxDetail tx={tx} address={address} />}
         caption="Wallet transaction history"
       />

@@ -453,9 +453,26 @@ class Storage:
                 handle.write("\n")
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(tmp_path, path)
+            self._atomic_replace(tmp_path, path)
             self._fsync_directory(path.parent)
         return True
+
+    @staticmethod
+    def _atomic_replace(tmp_path: Path, path: Path) -> None:
+        # os.replace is atomic on POSIX, but on Windows it raises PermissionError
+        # (WinError 5/32) if the destination is momentarily held open by a
+        # concurrent reader or antivirus. Retry briefly so a transient lock does
+        # not surface as a failed write. No effect on POSIX, where it succeeds
+        # first try.
+        last_error: Exception | None = None
+        for attempt in range(10):
+            try:
+                os.replace(tmp_path, path)
+                return
+            except PermissionError as exc:  # pragma: no cover - Windows-specific timing
+                last_error = exc
+                time.sleep(0.05 * (attempt + 1))
+        raise last_error  # type: ignore[misc]
 
     def _write_json(self, path: Path, data: Any, create_backup: bool = True) -> None:
         payload = json.dumps(data, indent=2, sort_keys=True)
@@ -472,7 +489,7 @@ class Storage:
                 handle.flush()
                 os.fsync(handle.fileno())
 
-            os.replace(tmp_path, path)
+            self._atomic_replace(tmp_path, path)
             self._fsync_directory(path.parent)
 
     def _read_json(self, path: Path, default: Any = None, critical_chain: bool = False) -> Any:
