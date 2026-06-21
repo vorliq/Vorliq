@@ -228,6 +228,7 @@ function AppShell() {
           <Route path="/audit" element={<Audit />} />
           <Route path="/transparency" element={<Transparency />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/:address" element={<Profile />} />
           <Route path="/profiles" element={<Profile />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />

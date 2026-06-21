@@ -30,7 +30,12 @@ export default function SummaryCard({ label, value, trend, icon: Icon, loading =
       ) : (
         <div className="vn-sum__value">{value == null || value === "" ? "Unavailable" : value}</div>
       )}
-      {!loading && <Trend trend={trend} />}
+      {/* Always reserve the trend row, even when a card has no trend. Without
+          this, cards with a trend ("— lifetime") are taller than cards without
+          one, so the summary grid looks ragged — most visibly on mobile where
+          the four cards stack into a single column. A fixed-height slot keeps
+          every card identical at every breakpoint. */}
+      <div className="vn-sum__trend-slot">{!loading && <Trend trend={trend} />}</div>
     </Card>
   );
 }

@@ -1578,6 +1578,24 @@ summary {
   margin-bottom: clamp(22px, 4vw, 38px);
 }
 
+/* Chain tip: the height + last-block summary shown at the top of the explorer. */
+.chain-tip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(16px, 5vw, 48px);
+  margin-bottom: clamp(16px, 3vw, 24px);
+}
+.chain-tip__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.chain-tip__item .stat-value {
+  font-size: clamp(1.4rem, 5vw, 1.9rem);
+  font-weight: 800;
+}
+
 .explorer-row-link,
 .explorer-transaction-link {
   color: var(--text-secondary);
@@ -2752,6 +2770,22 @@ html[data-theme="light"] .vote-no {
   gap: 10px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 18px;
+}
+
+/* Owner shortcut into Settings sits at the end of the profile header row. */
+.profile-edit-link {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Public on-chain activity block on the profile page. */
+.profile-onchain {
+  margin-top: 22px;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  padding-top: 18px;
+}
+.profile-onchain__subhead {
+  margin: 20px 0 12px;
 }
 
 .compact-stat {
@@ -4234,7 +4268,7 @@ html[data-theme="light"] .mobile-drawer button {
   flex-wrap: wrap;
   margin-bottom: 12px;
 }
-.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-scroll { overflow-x: auto; }
 .admin-table {
   width: 100%;
   border-collapse: collapse;

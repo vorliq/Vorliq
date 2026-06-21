@@ -2,10 +2,11 @@ import hashlib
 import hmac
 import ipaddress
 import os
+import threading
 import time
 from urllib.parse import urlparse
 
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, request
 
 from achievements import Achievements
 from block import Block
@@ -66,6 +67,105 @@ MAX_TEXT_LENGTHS = {
     "currency": 24,
 }
 app = Flask(__name__)
+
+
+# --------------------------------------------------------------------------- #
+# Request concurrency control
+#
+# The server runs threaded (see app.run at the bottom) so that independent read
+# requests — balance, chain summary, recent blocks — no longer queue behind one
+# another. Before this, the dev server handled one request at a time, so ten
+# concurrent dashboard users serialised completely: measured read latency was
+# ~2.0s p95 under 10 users for an in-memory lookup that costs ~0.2s on its own.
+#
+# Threading the server means the single shared in-memory blockchain can now be
+# touched by several threads at once, so writes must stay mutually exclusive to
+# avoid corrupting chain/pending state mid-mutation. A readers-writer lock gives
+# us exactly that: any number of *verified read-only* endpoints run in parallel,
+# while every state-mutating request (and, fail-safe, anything not on the
+# read-only allowlist) takes the lock exclusively — i.e. it keeps the previous
+# fully-serialised behaviour for writes, and only opens up parallelism for reads
+# that have been confirmed not to mutate shared state.
+class _ReadWriteLock:
+    def __init__(self) -> None:
+        self._cond = threading.Condition()
+        self._readers = 0
+        self._writer = False
+        self._waiting_writers = 0
+
+    def acquire_read(self) -> None:
+        with self._cond:
+            # Writer-preference: queued writers block new readers so a steady
+            # stream of reads cannot starve a pending write (e.g. a mined block).
+            while self._writer or self._waiting_writers:
+                self._cond.wait()
+            self._readers += 1
+
+    def release_read(self) -> None:
+        with self._cond:
+            self._readers -= 1
+            if self._readers == 0:
+                self._cond.notify_all()
+
+    def acquire_write(self) -> None:
+        with self._cond:
+            self._waiting_writers += 1
+            try:
+                while self._writer or self._readers:
+                    self._cond.wait()
+            finally:
+                self._waiting_writers -= 1
+            self._writer = True
+
+    def release_write(self) -> None:
+        with self._cond:
+            self._writer = False
+            self._cond.notify_all()
+
+
+_chain_lock = _ReadWriteLock()
+
+# View-function names that only read shared state (no chain mutation, no disk
+# write). These run concurrently under the read lock. Anything not listed here
+# — including the lazy-sync GET endpoints that may persist on the request thread
+# — is treated as a writer and serialised, exactly as before threading.
+PARALLEL_READ_ENDPOINTS = frozenset(
+    {
+        "health",
+        "storage_health",
+        "indexes_health",
+        "get_chain",
+        "get_chain_blocks",
+        "get_chain_summary",
+        "get_chain_address",
+        "get_chain_block_detail",
+        "get_pending_transactions",
+        "get_pending_transaction_records",
+        "get_balance",
+        "get_leaderboard",
+    }
+)
+
+
+@app.before_request
+def _acquire_concurrency_guard():
+    # request.endpoint is the matched view function's name (None for a 404).
+    if request.endpoint in PARALLEL_READ_ENDPOINTS:
+        _chain_lock.acquire_read()
+        g._chain_lock_mode = "read"
+    else:
+        _chain_lock.acquire_write()
+        g._chain_lock_mode = "write"
+    return None
+
+
+@app.teardown_request
+def _release_concurrency_guard(_exc=None):
+    mode = getattr(g, "_chain_lock_mode", None)
+    if mode == "read":
+        _chain_lock.release_read()
+    elif mode == "write":
+        _chain_lock.release_write()
 
 
 @app.before_request
@@ -2967,4 +3067,10 @@ def get_leaderboard():
 
 if __name__ == "__main__":
     vorliq_logger.info("Starting Vorliq Flask blockchain API on %s:%s", VORLIQ_HOST, VORLIQ_PORT)
-    app.run(host=VORLIQ_HOST, port=VORLIQ_PORT, debug=False)
+    # threaded=True lets independent read requests be served in parallel instead
+    # of queuing behind a single request thread; the readers-writer lock above
+    # keeps state-mutating requests mutually exclusive so shared chain state is
+    # never updated by two requests at once. Configurable only so the concurrency
+    # behaviour can be A/B measured; production should always run threaded.
+    threaded = os.environ.get("VORLIQ_THREADED", "1") != "0"
+    app.run(host=VORLIQ_HOST, port=VORLIQ_PORT, debug=False, threaded=threaded)

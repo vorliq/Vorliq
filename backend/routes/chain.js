@@ -43,8 +43,15 @@ router.get("/api/economics", async (req, res, next) => {
 router.get("/api/chain/blocks", async (req, res) => {
   try {
     const params = paginationParams(req);
-    const response = await axios.get(`${flaskUrl}/chain/blocks`, { params });
-    res.status(response.status).json(response.data);
+    req.query = params; // normalise so the cache key reflects the clamped paging
+    // Recent-block pages are read constantly by the public explorer and the
+    // dashboard but only change when a new block is mined (minutes apart). A
+    // short cache per (limit, offset) collapses concurrent reads into one
+    // upstream call without the list ever looking stale to a human.
+    return sendCachedJson(req, res, "chain-blocks", 5000, async () => {
+      const response = await axios.get(`${flaskUrl}/chain/blocks`, { params });
+      return { status: response.status, data: response.data };
+    });
   } catch (error) {
     if (error.status && !error.response) {
       return res.status(error.status).json({ success: false, message: error.message });

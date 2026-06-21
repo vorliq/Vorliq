@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import AddressIdentity, { shortAddress } from "../components/AddressIdentity";
@@ -15,6 +15,7 @@ import { apiErrorMessage } from "../helpers/errors";
 import { authorityErrorMessage, postSignedAuthority } from "../helpers/signedAuthority";
 import { signMessage } from "../helpers/signer";
 import { loadWallet } from "../helpers/storage";
+import { formatTime, formatVlq, shortHash } from "../helpers/publicApi";
 
 const emptyForm = {
   display_name: "",
@@ -30,8 +31,12 @@ const emptyForm = {
 
 function Profile() {
   const { wallet, isLoggedIn } = useAuth();
+  const { address: routeAddress } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const queryAddress = searchParams.get("address") || "";
+  // A profile address can arrive as a path param (/profile/:address — the canonical
+  // public link used from forum and governance) or as a ?address= query (legacy
+  // links). The path param wins; either way the page is fully public.
+  const queryAddress = routeAddress || searchParams.get("address") || "";
   const initialAddress = queryAddress || wallet?.address || "";
   const [addressInput, setAddressInput] = useState(initialAddress);
   const [activeAddress, setActiveAddress] = useState(initialAddress);
@@ -90,6 +95,31 @@ function Profile() {
 
     loadProfile();
 
+    return () => {
+      mounted = false;
+    };
+  }, [activeAddress]);
+
+  // Public on-chain activity for the viewed address. This is read straight from
+  // the public chain explorer endpoint (no auth) so a visitor can see how active
+  // a member is — transactions sent/received and a recent history — without the
+  // member needing to have created a display-name profile at all.
+  const [onchain, setOnchain] = useState({ loading: false, data: null });
+  useEffect(() => {
+    let mounted = true;
+    if (!activeAddress) {
+      setOnchain({ loading: false, data: null });
+      return undefined;
+    }
+    setOnchain({ loading: true, data: null });
+    api
+      .get("/chain/address", { params: { address: activeAddress, limit: 8, offset: 0 } })
+      .then((response) => {
+        if (mounted) setOnchain({ loading: false, data: response.data });
+      })
+      .catch(() => {
+        if (mounted) setOnchain({ loading: false, data: null });
+      });
     return () => {
       mounted = false;
     };
@@ -325,6 +355,13 @@ function Profile() {
                 <h2>{profile?.display_name || "No profile yet"}</h2>
                 <AddressIdentity address={activeAddress} compact />
               </div>
+              {/* The owner — and only the owner — gets a shortcut to edit their
+                  public profile. Editing lives in Settings in the new design. */}
+              {canEdit && (
+                <Link className="button secondary small-button profile-edit-link" to="/settings">
+                  Edit profile
+                </Link>
+              )}
             </div>
 
             {!profile && (
@@ -362,6 +399,7 @@ function Profile() {
                 <ReportButton targetType="profile" targetId={activeAddress} defaultReporter={wallet?.address || ""} />
               </>
             )}
+            <OnchainActivity address={activeAddress} state={onchain} />
           </section>
 
           {canEdit && (
@@ -525,6 +563,74 @@ function ProfileLinks({ profile }) {
           {label}
         </a>
       ))}
+    </div>
+  );
+}
+
+// Public on-chain activity card: transaction counts (sent / received) plus a
+// recent history, all relative to the viewed address. Sourced from the public
+// /chain/address endpoint so it needs no authentication.
+function OnchainActivity({ address, state }) {
+  const { loading, data } = state;
+  if (!address) return null;
+  if (loading) {
+    return <p className="help-text">Loading on-chain activity…</p>;
+  }
+  if (!data) {
+    return <p className="help-text">On-chain activity is unavailable right now.</p>;
+  }
+
+  const sentCount = (data.confirmed_outgoing || []).length + (data.pending_outgoing || []).length;
+  const receivedCount = (data.confirmed_incoming || []).length + (data.pending_incoming || []).length;
+  const recent = data.transactions || [];
+
+  const stats = [
+    ["Transactions sent", sentCount],
+    ["Transactions received", receivedCount],
+    ["Total sent", formatVlq(data.total_sent)],
+    ["Total received", formatVlq(data.total_received)],
+  ];
+
+  return (
+    <div className="profile-onchain">
+      <h3>On-chain activity</h3>
+      <div className="profile-activity-grid">
+        {stats.map(([label, value]) => (
+          <div className="stat-card compact-stat" key={label}>
+            <span className="stat-label">{label}</span>
+            <span className="stat-value mono-wrap">{value}</span>
+          </div>
+        ))}
+      </div>
+      <h4 className="profile-onchain__subhead">Recent transactions</h4>
+      {recent.length ? (
+        <div className="stack">
+          {recent.map((tx) => {
+            const sent = (tx.sender_address || tx.sender) === address;
+            return (
+              <Link
+                className="lifecycle-step record-link"
+                to={`/tx/${encodeURIComponent(tx.tx_id)}`}
+                key={tx.tx_id}
+              >
+                <div className="section-title">
+                  <span className={sent ? "status-badge rejected" : "status-badge executed"}>
+                    {sent ? "Sent" : "Received"}
+                  </span>
+                  <span className="muted-text mono-wrap">{formatVlq(tx.amount)}</span>
+                </div>
+                <span className="muted-text mono-wrap">
+                  {sent ? "To" : "From"}{" "}
+                  {shortHash(sent ? tx.receiver_address : tx.sender_address || tx.sender)}
+                </span>
+                <span className="muted-text mono-wrap">{formatTime(tx.timestamp)}</span>
+              </Link>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="empty-state">This wallet has no public transactions yet.</div>
+      )}
     </div>
   );
 }

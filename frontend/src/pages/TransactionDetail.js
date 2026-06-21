@@ -80,6 +80,10 @@ function TransactionDetail() {
             <IdentityPanel label="Sender" address={transaction.sender_address} onCopy={copy} />
             <IdentityPanel label="Recipient" address={transaction.receiver_address} onCopy={copy} />
             <Meta label="Amount" value={`${transaction.amount} VLQ`} />
+            <Meta
+              label="Fee"
+              value={transaction.fee != null ? `${transaction.fee} VLQ` : "0 VLQ"}
+            />
             <Meta label="Type" value={transaction.type || transaction.category || "transfer"} />
             <Meta label="Timestamp" value={formatTime(transaction.timestamp)} />
             <Meta label="Confirmations" value={transaction.confirmations ?? 0} />
@@ -167,6 +171,7 @@ function publicTransactionFields(transaction) {
     status: transaction.status || null,
     type: transaction.type || transaction.category || "transfer",
     amount: transaction.amount ?? null,
+    fee: transaction.fee ?? null,
     sender_address: transaction.sender_address || null,
     receiver_address: transaction.receiver_address || null,
     timestamp: transaction.timestamp ?? null,

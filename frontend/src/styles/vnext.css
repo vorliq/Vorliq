@@ -1176,11 +1176,17 @@ html[data-theme="light"] .vnext .vn-side__wallet {
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
+/* Fixed-height slot so cards with and without a trend are the same height. */
+.vnext .vn-sum__trend-slot {
+  margin-top: 10px;
+  min-height: 18px;
+  display: flex;
+  align-items: center;
+}
 .vnext .vn-sum__trend {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-top: 10px;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--vn-text-2);

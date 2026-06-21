@@ -7,7 +7,13 @@ import RevealSection from "../components/RevealSection";
 import Spinner from "../components/Spinner";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
-import { formatTime, formatVlq, loadPublicChainSnapshot, shortHash } from "../helpers/publicApi";
+import {
+  formatRelativeTime,
+  formatTime,
+  formatVlq,
+  loadPublicChainSnapshot,
+  shortHash,
+} from "../helpers/publicApi";
 
 const PAGE_SIZE = 12;
 
@@ -182,6 +188,27 @@ function Blockchain() {
         </p>
       </section>
 
+      {/* Chain tip: the two figures any visitor checks first — how tall the
+          chain is and how recently it advanced — shown before anything else so
+          a logged-out visitor can confirm the chain is live at a glance. */}
+      {!loading && !snapshot?.unavailable.summary && (
+        <section className="card card-pad chain-tip" aria-label="Chain tip">
+          <div className="chain-tip__item">
+            <span className="stat-label">Chain Height</span>
+            <span className="stat-value mono-wrap">#{summary.block_height ?? "—"}</span>
+          </div>
+          <div className="chain-tip__item">
+            <span className="stat-label">Last Block</span>
+            <span className="stat-value">
+              {summary.last_block_timestamp ? formatRelativeTime(summary.last_block_timestamp) : "Unknown"}
+            </span>
+            {summary.last_block_timestamp && (
+              <span className="muted-text">{formatTime(summary.last_block_timestamp)}</span>
+            )}
+          </div>
+        </section>
+      )}
+
       <ErrorMessage message={errorMessage} />
 
       <RevealSection className="card card-pad stack elev-2" aria-label="Explorer search">
@@ -329,7 +356,7 @@ function Blockchain() {
                 </div>
                 <Link
                   className="button secondary small-button"
-                  to={`/profile?address=${encodeURIComponent(addressSearch)}`}
+                  to={`/profile/${encodeURIComponent(addressSearch)}`}
                 >
                   View Profile
                 </Link>
@@ -342,7 +369,7 @@ function Blockchain() {
               {addressResults.length ? (
                 <div className="stack">
                   {addressResults.map((transaction) => (
-                    <TransactionRow transaction={transaction} key={transaction.tx_id} />
+                    <TransactionRow transaction={transaction} perspective={addressSearch} key={transaction.tx_id} />
                   ))}
                 </div>
               ) : (
@@ -364,16 +391,28 @@ function BlockRow({ block }) {
         <span className="muted-text mono-wrap">{formatTime(block.timestamp)}</span>
       </div>
       <span className="meta-value mono-wrap">{shortHash(block.hash)}</span>
+      <span className="muted-text mono-wrap">
+        Miner {block.miner_address ? shortHash(block.miner_address) : "Unknown"}
+      </span>
       <span className="muted-text">{block.transaction_count ?? (block.transactions || []).length} tx</span>
     </Link>
   );
 }
 
-function TransactionRow({ transaction }) {
+function TransactionRow({ transaction, perspective }) {
   const status = String(transaction.status || "confirmed").toLowerCase();
   const txId = transaction.tx_id || transaction.id;
   const badgeClass = status === "pending" ? "status-badge active" : "status-badge executed";
   const badgeLabel = status === "pending" ? "Pending" : "Confirmed";
+  // When the row is shown inside a wallet-address search, label each transaction
+  // relative to that address so sent and received are unmistakable.
+  const sender = transaction.sender_address || transaction.sender;
+  const receiver = transaction.receiver_address;
+  let direction = null;
+  if (perspective) {
+    if (sender === perspective) direction = { label: "Sent", className: "status-badge rejected" };
+    else if (receiver === perspective) direction = { label: "Received", className: "status-badge executed" };
+  }
 
   if (!txId) {
     return (
@@ -389,6 +428,7 @@ function TransactionRow({ transaction }) {
     <Link className="lifecycle-step record-link" to={`/tx/${encodeURIComponent(txId)}`}>
       <div className="section-title">
         <span className={badgeClass}>{badgeLabel}</span>
+        {direction && <span className={direction.className}>{direction.label}</span>}
         <span className="muted-text mono-wrap">{formatVlq(transaction.amount)}</span>
       </div>
       <span className="meta-value mono-wrap">{shortHash(txId)}</span>
