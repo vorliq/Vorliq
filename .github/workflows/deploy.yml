@@ -339,6 +339,14 @@ jobs:
             systemctl enable --now vorliq-heartbeat.timer
             systemctl enable --now vorliq-node-probe.timer
             systemctl stop vorliq-miner.service >/dev/null 2>&1 || true
+            # Eager first heartbeat. This is a best-effort kick only: if the public
+            # registry is momentarily slow it can exceed heartbeat.js's own 8s
+            # timeout, and under `set -e` that single slow call would abort an
+            # otherwise-healthy deploy. The resilient retry loop immediately below
+            # (and the 5-minute vorliq-heartbeat.timer) is the real gate — it
+            # retries, re-triggers heartbeat-once, and HARD-fails the deploy if the
+            # node is not actually registered. So a slow first beat is a warning,
+            # never a deploy failure.
             sudo -u vorliq -H env \
               NODE_ENV=production \
               HEARTBEAT_API_URL=http://127.0.0.1:5000 \
@@ -347,7 +355,8 @@ jobs:
               VORLIQ_NODE_NAME="Vorliq Public Node" \
               VORLIQ_NODE_REGION=London \
               VORLIQ_NODE_COUNTRY="United Kingdom" \
-              bash -lc 'cd /home/vorliq/app/backend && node heartbeat.js --once'
+              bash -lc 'cd /home/vorliq/app/backend && node heartbeat.js --once' \
+              || echo "::warning::Eager heartbeat did not complete in time; the retry loop and 5-minute timer will register the node."
             journalctl -u vorliq-heartbeat -n 20 --no-pager | grep -E 'Heartbeat sent|Registered|Heartbeat failed|Registry registration failed' || true
             for attempt in 1 2 3 4 5; do
               REGISTRY_NODE_RESPONSE="$(curl -s http://localhost:5000/api/registry/node?node_url=https%3A%2F%2Fnode.vorliq.org || true)"
