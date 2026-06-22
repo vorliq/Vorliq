@@ -795,6 +795,7 @@ html[data-glow="reduced"] .brand-network {
   width: fit-content;
   color: transparent;
   background: var(--gradient-brand);
+  -webkit-background-clip: text;
   background-clip: text;
   font-size: 0.78rem;
   font-weight: 900;
@@ -4327,8 +4328,8 @@ html[data-theme="light"] .mobile-drawer button {
   justify-content: center;
   padding: 20px;
   background: rgba(4, 8, 16, 0.66);
-  backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
 }
 .session-warning__card {
   width: min(440px, 100%);
