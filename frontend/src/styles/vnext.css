@@ -1261,27 +1261,37 @@ html[data-theme="light"] .vnext .vn-side__wallet {
 /* Lower-dashboard grid with named areas. Desktop: personal transaction history
    on the left spanning both rows; the public activity feed at the top of the
    right sidebar, with the balance chart + network status beneath it. */
-.vnext .vn-dash-grid {
+/* Lower dashboard zones. On tablet/desktop this reproduces the previous layout
+   exactly: personal transaction history on the left, public activity feed top
+   right, balance chart and network status stacked beneath it. Below 768px the
+   same four panels are split into two tabbed sections (see the mobile query). */
+.vnext .vn-dash-zones {
   display: grid;
   grid-template-columns: 6fr 4fr;
   grid-template-areas:
-    "main feed"
-    "main aside";
+    "history feed"
+    "history chart"
+    "history network";
   gap: 20px;
   align-items: start;
   margin-top: 20px;
 }
-.vnext .vn-dash-grid__feed {
-  grid-area: feed;
-}
-.vnext .vn-dash-grid__main {
-  grid-area: main;
+.vnext .vn-dash-zones__history {
+  grid-area: history;
   min-width: 0;
 }
-.vnext .vn-dash-grid__aside {
-  grid-area: aside;
-  display: grid;
-  gap: 20px;
+.vnext .vn-dash-zones__feed {
+  grid-area: feed;
+}
+.vnext .vn-dash-zones__chart {
+  grid-area: chart;
+}
+.vnext .vn-dash-zones__network {
+  grid-area: network;
+}
+/* The section toggles only exist on mobile; tablet/desktop shows both panels. */
+.vnext .vn-dash-zones__tabs {
+  display: none;
 }
 
 /* Activity feed */
@@ -1362,6 +1372,14 @@ html[data-theme="light"] .vnext .vn-side__wallet {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.vnext .vn-feed__reward {
+  align-self: flex-start;
+  margin-top: 3px;
+  font-size: var(--vn-fs-label);
+  font-weight: 700;
+  color: var(--vn-green-text);
+  white-space: nowrap;
 }
 .vnext .vn-feed__time {
   flex: 0 0 auto;
@@ -1999,14 +2017,74 @@ html[data-theme="light"] .vnext .vn-code {
   .vnext .vn-dash-split {
     grid-template-columns: 1fr;
   }
-  /* Single column: activity feed first (right below the summary cards), then
-     the personal transaction history, then the chart + network status. */
-  .vnext .vn-dash-grid {
+  /* Tablet single column: activity feed first (right below the summary cards),
+     then the personal transaction history, then the chart + network status —
+     unchanged from before. Tabs do not appear until below 768px. */
+  .vnext .vn-dash-zones {
     grid-template-columns: 1fr;
     grid-template-areas:
       "feed"
-      "main"
-      "aside";
+      "history"
+      "chart"
+      "network";
+  }
+}
+
+/* Mobile: split the lower dashboard into two tabbed sections so the page is not
+   one long scroll. Section A toggles the balance chart and the network status;
+   section B toggles the network activity feed and the personal transaction
+   history. Every panel stays mounted (no refetch on switch); the inactive one is
+   only hidden. No data is removed — only how it is reached changes. */
+@media (max-width: 767px) {
+  .vnext .vn-dash-zones {
+    display: block;
+    margin-top: 18px;
+  }
+  .vnext .vn-dash-zones > div {
+    margin-bottom: 16px;
+  }
+  .vnext .vn-dash-zones__tabs {
+    display: flex;
+    gap: 6px;
+    background: var(--vn-card-2);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-r-sm);
+    padding: 4px;
+    margin-bottom: 12px;
+  }
+  .vnext .vn-dash-zones__tabs--b {
+    margin-top: 4px;
+  }
+  .vnext .vn-dash-zones__tab {
+    flex: 1;
+    padding: 9px 10px;
+    border: none;
+    background: transparent;
+    color: var(--vn-text-2);
+    font-weight: 600;
+    font-size: var(--vn-fs-secondary);
+    border-radius: calc(var(--vn-r-sm) - 3px);
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+  .vnext .vn-dash-zones__tab.is-active {
+    background: var(--vn-card);
+    color: var(--vn-text);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  }
+  /* Section A: show only the selected panel. */
+  .vnext .vn-dash-zones[data-chart-tab="chart"] .vn-dash-zones__network {
+    display: none;
+  }
+  .vnext .vn-dash-zones[data-chart-tab="network"] .vn-dash-zones__chart {
+    display: none;
+  }
+  /* Section B: show only the selected panel. */
+  .vnext .vn-dash-zones[data-list-tab="activity"] .vn-dash-zones__history {
+    display: none;
+  }
+  .vnext .vn-dash-zones[data-list-tab="transactions"] .vn-dash-zones__feed {
+    display: none;
   }
 }
 @media (max-width: 560px) {
@@ -2667,10 +2745,16 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
 .vnext .vn-bell__item-title {
   font-weight: 700;
   font-size: 0.9rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .vnext .vn-bell__item-msg {
   font-size: 0.82rem;
   color: var(--vn-text-2, #a9bdd6);
+  /* Any long token (e.g. a hash that escaped truncation) wraps inside the
+     dropdown rather than forcing horizontal overflow past its edge. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .vnext .vn-bell__item-time {
   font-size: 0.72rem;

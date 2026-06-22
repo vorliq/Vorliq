@@ -4,6 +4,19 @@ import { Bell } from "lucide-react";
 
 import { useNotifications } from "../../context/NotificationContext";
 
+// Notification messages embed full block hashes and wallet addresses (e.g.
+// "Block 000ba82ad8b268289c5e3862cec7fa738b5e0557b4 was mined"). Untruncated
+// these run past the edge of the dropdown. Shorten any long hash/address-like
+// token — a run of 16+ alphanumerics that contains a digit or mixed case, which
+// matches hex hashes and base58 addresses but not ordinary words — to its first
+// eight characters and an ellipsis. Plain prose is left untouched.
+function shortenHashes(text) {
+  return String(text || "").replace(/[A-Za-z0-9]{16,}/g, (token) => {
+    const looksLikeId = /\d/.test(token) || (/[a-z]/.test(token) && /[A-Z]/.test(token));
+    return looksLikeId ? `${token.slice(0, 8)}…` : token;
+  });
+}
+
 function timeAgo(timestamp) {
   const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
   if (seconds < 60) return "just now";
@@ -68,8 +81,8 @@ export default function NotificationBell() {
                       setOpen(false);
                     }}
                   >
-                    <span className="vn-bell__item-title">{notification.title}</span>
-                    <span className="vn-bell__item-msg">{notification.message}</span>
+                    <span className="vn-bell__item-title">{shortenHashes(notification.title)}</span>
+                    <span className="vn-bell__item-msg">{shortenHashes(notification.message)}</span>
                     <span className="vn-bell__item-time">{timeAgo(notification.timestamp)}</span>
                   </Link>
                 </li>

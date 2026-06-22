@@ -83,36 +83,57 @@ function useWalletData(address) {
 function NetworkStatusPanel({ onHeight }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [ready, setReady] = useState(false);
 
   const load = useCallback(async (signal) => {
-    try {
-      const [summaryRes, blockRes, diagRes] = await Promise.allSettled([
-        api.get("/chain/summary", { signal }),
-        api.get("/chain/blocks", { params: { limit: 1, offset: 0 }, signal }),
-        api.get("/diagnostics", { signal }),
-      ]);
+    // Update each value the moment its source responds, rather than waiting for
+    // the slowest of the three fetches. A slow /diagnostics (Flask cold start)
+    // therefore only delays "Node uptime" — block height, difficulty, and total
+    // transactions still appear immediately from /chain/summary.
+    const merge = (patch) => {
       if (signal?.aborted) return;
-      if (summaryRes.status === "rejected" && blockRes.status === "rejected" && diagRes.status === "rejected") {
-        setError("Network status is unavailable.");
-        return;
-      }
-      const summary = summaryRes.status === "fulfilled" ? summaryRes.value.data?.summary || {} : {};
-      const latest = blockRes.status === "fulfilled" ? blockRes.value.data?.blocks?.[0] : null;
-      const diag = diagRes.status === "fulfilled" ? diagRes.value.data || {} : {};
+      setData((prev) => ({ ...(prev || {}), ...patch }));
       setError("");
-      const height = summary.block_height ?? diag.block_height;
-      setData({
-        height,
-        difficulty: latest?.difficulty ?? summary.current_difficulty,
-        totalTransactions: summary.total_transactions,
-        uptime: diag.uptime_seconds,
+    };
+
+    const summaryTask = api
+      .get("/chain/summary", { signal })
+      .then((res) => {
+        const summary = res.data?.summary || {};
+        merge({
+          height: summary.block_height,
+          totalTransactions: summary.total_transactions,
+        });
+        setData((prev) => ({ ...(prev || {}), difficulty: prev?.difficulty ?? summary.current_difficulty }));
+        if (summary.block_height != null && onHeight) onHeight(summary.block_height);
       });
-      // Share the height with the page header so it does not fetch the same
-      // chain summary a second time.
-      if (height != null && onHeight) onHeight(height);
-    } catch (err) {
-      if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
-      setError("Network status is unavailable.");
+
+    const blockTask = api
+      .get("/chain/blocks", { params: { limit: 1, offset: 0 }, signal })
+      .then((res) => {
+        const latest = res.data?.blocks?.[0];
+        if (latest?.difficulty != null) merge({ difficulty: latest.difficulty });
+      });
+
+    const diagTask = api
+      .get("/diagnostics", { signal })
+      .then((res) => {
+        const diag = res.data || {};
+        merge({ uptime: diag.uptime_seconds });
+        setData((prev) => ({ ...(prev || {}), height: prev?.height ?? diag.block_height }));
+        if (diag.block_height != null && onHeight) onHeight(diag.block_height);
+      });
+
+    const settled = await Promise.allSettled([summaryTask, blockTask, diagTask]);
+    if (signal?.aborted) return;
+    setReady(true);
+    // Only show the panel-level error if every source failed; a partial response
+    // still shows the values that did arrive.
+    if (settled.every((r) => r.status === "rejected")) {
+      const realFailure = settled.some(
+        (r) => r.reason?.name !== "CanceledError" && r.reason?.code !== "ERR_CANCELED"
+      );
+      if (realFailure) setError("Network status is unavailable.");
     }
   }, [onHeight]);
 
@@ -127,15 +148,17 @@ function NetworkStatusPanel({ onHeight }) {
     };
   }, [load]);
 
-  const loading = !data && !error;
+  // A field that has not arrived yet shows "…"; once every fetch has settled, a
+  // field that is still missing is genuinely "Unavailable".
+  const cell = (value, format) => {
+    if (value != null) return format(value);
+    return ready ? "Unavailable" : "…";
+  };
   const rows = [
-    { label: "Block height", value: data?.height != null ? `#${formatNumber(data.height)}` : "Unavailable" },
-    { label: "Difficulty", value: data?.difficulty != null ? formatNumber(data.difficulty) : "Unavailable" },
-    {
-      label: "Total transactions",
-      value: data?.totalTransactions != null ? formatNumber(data.totalTransactions) : "Unavailable",
-    },
-    { label: "Node uptime", value: formatUptime(data?.uptime) || "Unavailable" },
+    { label: "Block height", value: cell(data?.height, (v) => `#${formatNumber(v)}`) },
+    { label: "Difficulty", value: cell(data?.difficulty, (v) => formatNumber(v)) },
+    { label: "Total transactions", value: cell(data?.totalTransactions, (v) => formatNumber(v)) },
+    { label: "Node uptime", value: cell(data?.uptime, (v) => formatUptime(v) || "Unavailable") },
   ];
 
   return (
@@ -148,7 +171,7 @@ function NetworkStatusPanel({ onHeight }) {
           {rows.map((r) => (
             <div className="vn-netstat__row" key={r.label}>
               <span className="vn-netstat__label">{r.label}</span>
-              <span className="vn-netstat__value">{loading ? "…" : r.value}</span>
+              <span className="vn-netstat__value">{r.value}</span>
             </div>
           ))}
         </div>
@@ -167,6 +190,10 @@ export default function Dashboard() {
   const { rows: txRows, error: txError, reload: reloadTx } = useTransactions(address);
   const [now, setNow] = useState(() => new Date());
   const [latestHeight, setLatestHeight] = useState(null);
+  // Mobile-only section toggles (ignored by CSS on tablet/desktop, where both
+  // panels in each section are shown side by side as before).
+  const [chartTab, setChartTab] = useState("chart");
+  const [listTab, setListTab] = useState("activity");
 
   // Tick the header clock once a minute.
   useEffect(() => {
@@ -195,6 +222,15 @@ export default function Dashboard() {
     const up = last > prev;
     return { direction: up ? "up" : "down", label: `${up ? "+" : "−"}${formatNumber(Math.abs(last - prev))} VLQ` };
   }, [chartData]);
+
+  // Directional colour for the balance line: teal when the latest balance is up
+  // on the previous point, red when down, neutral grey when unchanged.
+  const chartColor =
+    balanceTrend?.direction === "down"
+      ? "#ef4444"
+      : balanceTrend?.direction === "flat"
+        ? "#8a9bb0"
+        : "#00a896";
 
   const activeLending = useMemo(() => {
     if (!walletData.lending) return null;
@@ -302,18 +338,82 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Lower dashboard. A grid with named areas so the public activity feed
-          sits in the right-hand sidebar next to the charts on desktop, but drops
-          to directly below the summary cards on mobile (above the personal
-          transaction history), per the responsive spec. */}
-      <div className="vn-dash-grid">
+      {/* Lower dashboard. One set of components, arranged by CSS grid on
+          tablet/desktop exactly as before. Below 768px the same components are
+          reorganised into two tabbed sections (charts ↔ network status, and
+          activity ↔ transaction history) via the data-* attributes — no data is
+          removed, only the way it is reached on a small screen. Each component is
+          mounted once, so switching tabs never refetches. */}
+      <div className="vn-dash-zones" data-chart-tab={chartTab} data-list-tab={listTab}>
+        {/* Section A toggle (mobile only): Balance chart ↔ Network status. */}
+        <div className="vn-dash-zones__tabs" role="tablist" aria-label="Charts and network">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={chartTab === "chart"}
+            className={`vn-dash-zones__tab ${chartTab === "chart" ? "is-active" : ""}`}
+            onClick={() => setChartTab("chart")}
+          >
+            Balance
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={chartTab === "network"}
+            className={`vn-dash-zones__tab ${chartTab === "network" ? "is-active" : ""}`}
+            onClick={() => setChartTab("network")}
+          >
+            Network status
+          </button>
+        </div>
+
+        <div className="vn-dash-zones__chart">
+          <Card>
+            <h2 className="vn-panel-title">Balance over time</h2>
+            <LineChart
+              data={chartData}
+              loading={walletData.loading && isLoggedIn}
+              color={chartColor}
+              formatY={(v) => formatVlq(v)}
+              formatX={(v) => (v > 1e9 ? new Date(v * 1000).toLocaleDateString() : `#${v}`)}
+              ariaLabel="Wallet balance over time"
+            />
+          </Card>
+        </div>
+
+        <div className="vn-dash-zones__network">
+          <NetworkStatusPanel onHeight={setLatestHeight} />
+        </div>
+
+        {/* Section B toggle (mobile only): Network activity ↔ Transactions. */}
+        <div className="vn-dash-zones__tabs vn-dash-zones__tabs--b" role="tablist" aria-label="Activity and transactions">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={listTab === "activity"}
+            className={`vn-dash-zones__tab ${listTab === "activity" ? "is-active" : ""}`}
+            onClick={() => setListTab("activity")}
+          >
+            Activity
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={listTab === "transactions"}
+            className={`vn-dash-zones__tab ${listTab === "transactions" ? "is-active" : ""}`}
+            onClick={() => setListTab("transactions")}
+          >
+            Transactions
+          </button>
+        </div>
+
         {/* Public network activity — everyone sees the same chain events. */}
-        <div className="vn-dash-grid__feed">
+        <div className="vn-dash-zones__feed">
           <ActivityFeed />
         </div>
 
         {/* Personal transaction history (shared with the Wallet page). */}
-        <div className="vn-dash-grid__main">
+        <div className="vn-dash-zones__history">
           <TransactionHistory
             address={address}
             isLoggedIn={isLoggedIn}
@@ -321,21 +421,6 @@ export default function Dashboard() {
             error={txError}
             onRetry={reloadTx}
           />
-        </div>
-
-        {/* Balance chart + network status. */}
-        <div className="vn-dash-grid__aside">
-          <Card>
-            <h2 className="vn-panel-title">Balance over time</h2>
-            <LineChart
-              data={chartData}
-              loading={walletData.loading && isLoggedIn}
-              formatY={(v) => formatVlq(v)}
-              formatX={(v) => (v > 1e9 ? new Date(v * 1000).toLocaleDateString() : `#${v}`)}
-              ariaLabel="Wallet balance over time"
-            />
-          </Card>
-          <NetworkStatusPanel onHeight={setLatestHeight} />
         </div>
       </div>
 

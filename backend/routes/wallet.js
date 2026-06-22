@@ -24,10 +24,18 @@ router.get("/api/wallet/balance", async (req, res, next) => {
     // seconds. The TTL is deliberately small: balances only change when a block
     // is mined, and the send path validates funds server-side at Flask, so a
     // 2.5s-stale display figure is safe. Keyed by address via the query string.
-    return sendCachedJson(req, res, "wallet-balance", 2500, async () => {
-      const response = await axios.get(`${flaskUrl}/balance`, { params: { address } });
-      return { status: response.status, data: response.data };
-    });
+    return sendCachedJson(
+      req,
+      res,
+      "wallet-balance",
+      2500,
+      async () => {
+        const response = await axios.get(`${flaskUrl}/balance`, { params: { address } });
+        return { status: response.status, data: response.data };
+      },
+      // Per-wallet figure: browser-cacheable but never via a shared proxy.
+      "private"
+    );
   } catch (error) {
     return handleRouteError(res, error, "GET /api/wallet/balance", "Unable to load wallet balance.");
   }

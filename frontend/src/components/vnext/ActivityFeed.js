@@ -24,9 +24,9 @@ const ICONS = {
 function subtitleFor(event) {
   switch (event.kind) {
     case "block":
-      return event.miner
-        ? `Miner ${shortHash(event.miner)}${event.amount ? ` · +${formatVlq(event.amount)} reward` : ""}`
-        : "New block";
+      // The reward is rendered on its own line (see ActivityRow) so it is never
+      // clipped on a narrow screen; the subtitle keeps just the miner.
+      return event.miner ? `Miner ${shortHash(event.miner)}` : "New block";
     case "transaction":
       return `${shortHash(event.sender)} → ${shortHash(event.receiver)}`;
     case "proposal":
@@ -40,6 +40,9 @@ function subtitleFor(event) {
 
 function ActivityRow({ event }) {
   const Icon = ICONS[event.kind] || Blocks;
+  // A block's mining reward is shown as its own pill below the miner so it always
+  // fits on a 375px screen rather than being clipped off the end of the subtitle.
+  const reward = event.kind === "block" && event.amount ? `+${formatVlq(event.amount)} VLQ` : null;
   return (
     <Link className="vn-feed__row" to={event.link}>
       <span className={`vn-feed__icon vn-feed__icon--${event.kind}`} aria-hidden="true">
@@ -48,6 +51,7 @@ function ActivityRow({ event }) {
       <span className="vn-feed__body">
         <span className="vn-feed__title">{event.title}</span>
         <span className="vn-feed__sub">{subtitleFor(event)}</span>
+        {reward && <span className="vn-feed__reward">{reward}</span>}
       </span>
       <span className="vn-feed__time">{formatRelativeTime(event.timestamp)}</span>
     </Link>

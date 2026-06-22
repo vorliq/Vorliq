@@ -18,6 +18,9 @@ export default function LineChart({
   formatY = (v) => v,
   formatX = (v) => v,
   ariaLabel = "Line chart",
+  // Line/fill colour. Callers that track directional movement pass teal for a
+  // rising series, red for a falling one, and grey for no change.
+  color = "#00a896",
 }) {
   const wrapRef = useRef(null);
   const [width, setWidth] = useState(0);
@@ -64,10 +67,27 @@ export default function LineChart({
   const ys = data.map((d) => d.y);
   const minX = Math.min(...xs);
   const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
   const spanX = maxX - minX || 1;
+
+  // Vertical scale. Auto-fit to the data so small balance changes are visible
+  // rather than a flat line lost against a 0-based axis. A genuinely unchanging
+  // series is centred (not glued to the bottom edge); a varying one gets a small
+  // headroom pad so the line never touches the top/bottom of the frame.
+  const rawMinY = Math.min(...ys);
+  const rawMaxY = Math.max(...ys);
+  let minY;
+  let maxY;
+  if (rawMaxY === rawMinY) {
+    const magnitude = Math.abs(rawMinY) || 1;
+    minY = rawMinY - magnitude * 0.5;
+    maxY = rawMaxY + magnitude * 0.5;
+  } else {
+    const padY = (rawMaxY - rawMinY) * 0.12;
+    minY = rawMinY - padY;
+    maxY = rawMaxY + padY;
+  }
   const spanY = maxY - minY || 1;
+  const gradId = `vn-chart-fill-${String(color).replace(/[^a-z0-9]/gi, "")}`;
 
   const px = (x) => PAD.left + ((x - minX) / spanX) * innerW;
   const py = (y) => PAD.top + (1 - (y - minY) / spanY) * innerH;
@@ -108,9 +128,9 @@ export default function LineChart({
         onMouseLeave={() => setHover(null)}
       >
         <defs>
-          <linearGradient id="vn-chart-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#00a896" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#00a896" stopOpacity="0" />
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
           </linearGradient>
         </defs>
         {gridYs.map((gy, i) => (
@@ -126,8 +146,8 @@ export default function LineChart({
             className="vn-chart__grid"
           />
         ))}
-        <path d={area} fill="url(#vn-chart-fill)" />
-        <path d={line} fill="none" stroke="#00a896" strokeWidth="2" />
+        <path d={area} fill={`url(#${gradId})`} />
+        <path d={line} fill="none" stroke={color} strokeWidth="2" />
         {hoverPoint && (
           <>
             <line
@@ -139,7 +159,7 @@ export default function LineChart({
               strokeOpacity="0.5"
               strokeWidth="1"
             />
-            <circle cx={hoverPoint[0]} cy={hoverPoint[1]} r="4" fill="#00a896" stroke="#fff" strokeWidth="1.5" />
+            <circle cx={hoverPoint[0]} cy={hoverPoint[1]} r="4" fill={color} stroke="#fff" strokeWidth="1.5" />
           </>
         )}
       </svg>

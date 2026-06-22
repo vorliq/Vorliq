@@ -30,7 +30,21 @@ import { resizeImageToDataUrl } from "../../helpers/resizeImage";
 import { authorityErrorMessage, postSignedAuthority } from "../../helpers/signedAuthority";
 import { loadWallet, saveWallet } from "../../helpers/storage";
 
+// The server caps the *decoded* avatar at 2MB. We resize every chosen image to a
+// 256x256 PNG in the browser first, so the only size that matters is the resized
+// output — never the original camera file (a normal phone photo is 3-5MB and
+// would shrink to well under 100KB). We guard the original only against absurd
+// inputs so we don't try to decode a huge file into memory.
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const MAX_SOURCE_BYTES = 30 * 1024 * 1024;
+
+// A base64 data URL ("data:...;base64,XXXX") decodes to roughly 3/4 of the
+// base64 character count; estimate the real byte size without decoding it.
+function dataUrlByteLength(dataUrl) {
+  const base64 = String(dataUrl).split(",")[1] || "";
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  return Math.floor((base64.length * 3) / 4) - padding;
+}
 
 const CONFIRM_PHRASE = "REVEAL MY PRIVATE KEY";
 const REVEAL_TIMEOUT_MS = 60000;
@@ -404,12 +418,23 @@ function AvatarSection({ address }) {
     setDone(false);
     const file = event.target.files?.[0];
     if (!file) return;
-    if (file.size > MAX_AVATAR_BYTES) {
-      setError("Image must be 2MB or smaller.");
+    // Only reject genuinely enormous source files (we have to decode the chosen
+    // file to resize it); a normal multi-megabyte phone photo is fine because the
+    // resize below shrinks it before it is ever uploaded.
+    if (file.size > MAX_SOURCE_BYTES) {
+      setError("That image is unusually large. Choose a photo under 30MB.");
       return;
     }
     try {
-      setPreview(await resizeImageToDataUrl(file, 256));
+      const resized = await resizeImageToDataUrl(file, 256);
+      // Validate the size that actually gets uploaded (the 256x256 PNG), not the
+      // original file, matching the server's 2MB cap on the decoded image.
+      if (dataUrlByteLength(resized) > MAX_AVATAR_BYTES) {
+        setPreview("");
+        setError("That image could not be compressed under 2MB. Try a different photo.");
+        return;
+      }
+      setPreview(resized);
     } catch (err) {
       setPreview("");
       setError(err.message || "Could not read that image.");
@@ -449,8 +474,9 @@ function AvatarSection({ address }) {
     <section className="vn-settings__section">
       <h2>Profile image</h2>
       <p className="vn-settings__hint">
-        Upload a profile image or logo (PNG or JPEG, up to 2MB). It appears on your profile, your
-        forum posts, governance proposals, lending requests, and in the sidebar.
+        Upload a profile image or logo (PNG or JPEG). Large photos are automatically resized, so a
+        picture straight from your phone is fine. It appears on your profile, your forum posts,
+        governance proposals, lending requests, and in the sidebar.
       </p>
       <div className="vn-avatar-upload">
         <div className="vn-avatar-upload__preview">
