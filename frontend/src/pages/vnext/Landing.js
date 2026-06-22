@@ -622,6 +622,9 @@ export default function Landing() {
             <Button variant="primary" size="lg" to="/register">
               Create your wallet
             </Button>
+            <Button variant="secondary" size="lg" to="/community">
+              See community stats
+            </Button>
             <Button variant="secondary" size="lg" to="/whitepaper">
               Read the whitepaper
             </Button>

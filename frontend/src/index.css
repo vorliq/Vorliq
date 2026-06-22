@@ -4354,6 +4354,34 @@ html[data-theme="light"] .mobile-drawer button {
   gap: 10px;
 }
 
+/* ===== Admin: registered-node badges (verified / reachability) ===== */
+.registry-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  background: var(--surface-glass);
+}
+.registry-badge.is-verified,
+.registry-badge.is-ok {
+  color: #56c870;
+  border-color: rgba(86, 200, 112, 0.45);
+}
+.registry-badge.is-unverified,
+.registry-badge.is-bad {
+  color: #ff5d6c;
+  border-color: rgba(255, 93, 108, 0.45);
+}
+.registry-badge.is-neutral {
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
 /* ===== Legal pages (Terms / Privacy) list ===== */
 .legal-list {
   margin: 4px 0 0;

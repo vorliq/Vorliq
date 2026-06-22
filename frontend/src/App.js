@@ -29,6 +29,7 @@ const Ambassador = lazy(() => import("./pages/Ambassador"));
 const Audit = lazy(() => import("./pages/Audit"));
 const Blockchain = lazy(() => import("./pages/Blockchain"));
 const BlockDetail = lazy(() => import("./pages/BlockDetail"));
+const Community = lazy(() => import("./pages/Community"));
 const Bootstrap = lazy(() => import("./pages/Bootstrap"));
 const Chat = lazy(() => import("./pages/Chat"));
 const Exchange = lazy(() => import("./pages/Exchange"));
@@ -234,6 +235,7 @@ function AppShell() {
           <Route path="/transparency" element={<Transparency />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/community" element={<Community />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/:address" element={<Profile />} />
           <Route path="/profiles" element={<Profile />} />

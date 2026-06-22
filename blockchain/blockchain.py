@@ -17,6 +17,12 @@ class MiningCooldownError(ValueError):
         super().__init__(f"too soon to mine the next block; wait {wait_seconds} seconds")
 
 
+class StaleBlockError(RuntimeError):
+    """Raised when a block was solved against a tip that has since advanced (some
+    other miner won the race). The solved block is discarded rather than appended,
+    so the caller can simply try again on the new tip."""
+
+
 class Blockchain:
     # Proof-of-work difficulty (leading zero hex digits). Configurable so the e2e
     # suite can mine quickly; production leaves the default of 4.
@@ -198,7 +204,14 @@ class Blockchain:
         )
         return True
 
-    def mine_pending_transactions(self, miner_address: str) -> Block:
+    def build_candidate_block(self, miner_address: str) -> tuple[Block, str]:
+        """Phase 1 of mining: validate and assemble an un-mined candidate block.
+
+        This is cheap — it does no proof of work — so a caller can run it while
+        holding a lock only briefly, release the lock, compute the (expensive)
+        proof of work without blocking anyone, and then call finalize_mined_block
+        to append. Returns (candidate_block, expected_previous_hash); the latter is
+        the tip the block was built on, used to detect a stale race at finalize."""
         if not miner_address:
             raise ValueError("miner_address is required")
         miner_address = str(miner_address).replace("\x00", "").strip()
@@ -222,14 +235,20 @@ class Blockchain:
         if dropped_count:
             vorliq_logger.warning("Dropped %s invalid pending transactions before mining", dropped_count)
 
+        # Snapshot the difficulty onto the block so the proof of work the caller
+        # computes targets the difficulty in force when the candidate was built.
         block = Block(
             index=len(self.chain),
             transactions=valid_transactions,
-            previous_hash=self.get_latest_block().hash,
+            previous_hash=latest_block.hash,
             miner_address=miner_address,
+            difficulty=self.difficulty,
         )
-        block.proof_of_work(self.difficulty)
 
+        # Same-miner anti-monopoly cooldown, checked before proof of work so we do
+        # not burn the work on a block that cannot be accepted. Measured against
+        # the candidate block's own timestamp (the time it would be mined), the
+        # same value add_block re-checks, so the boundary is identical.
         previous_miner = getattr(latest_block, "miner_address", None)
         if previous_miner and previous_miner == miner_address:
             same_miner_elapsed = block.timestamp - latest_block.timestamp
@@ -239,6 +258,20 @@ class Blockchain:
                 # time-bounded cooldown so a lone miner is not blocked forever.
                 raise ValueError(f"the same address cannot mine two consecutive blocks yet; wait {wait_seconds} seconds")
 
+        return block, latest_block.hash
+
+    def finalize_mined_block(self, block: Block, expected_previous_hash: str) -> Block:
+        """Phase 2 of mining: append an already-proof-of-worked block, but only if
+        the tip has not advanced since the candidate was built. If another block
+        was appended in the meantime, the solved block is stale (its previous_hash
+        and difficulty no longer match the chain), so we raise StaleBlockError
+        instead of corrupting the chain."""
+        latest_block = self.get_latest_block()
+        if latest_block.hash != expected_previous_hash:
+            raise StaleBlockError(
+                "chain tip advanced while mining; the solved block is stale and was not appended"
+            )
+
         if not self.add_block(block):
             raise RuntimeError("mined block failed validation")
 
@@ -247,7 +280,7 @@ class Blockchain:
         treasury_reward = round(mining_reward * self.TREASURY_PERCENTAGE, 8)
         reward_transaction = Transaction(
             sender_address=SYSTEM_ADDRESS,
-            receiver_address=miner_address,
+            receiver_address=block.miner_address,
             amount=miner_reward,
         )
         treasury_transaction = Transaction(
@@ -260,8 +293,15 @@ class Blockchain:
         )
         self._indexes = None
         vorliq_logger.info("Mined block %s with hash %s", block.index, block.hash)
-
         return block
+
+    def mine_pending_transactions(self, miner_address: str) -> Block:
+        """Atomic build + proof of work + append. Used directly by tests and any
+        single-threaded caller; the threaded service splits these phases so the
+        proof of work runs outside the chain lock (see app.py)."""
+        block, expected_previous_hash = self.build_candidate_block(miner_address)
+        block.proof_of_work(block.difficulty)
+        return self.finalize_mined_block(block, expected_previous_hash)
 
     def get_treasury_balance(self) -> float:
         balance = 0.0

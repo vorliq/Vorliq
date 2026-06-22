@@ -186,6 +186,9 @@ function Blockchain() {
           Follow blocks, confirmed transactions, pending transactions, and wallet activity on Vorliq's own
           lightweight blockchain.
         </p>
+        <p className="help-text">
+          See the whole network at a glance on the <Link to="/community">community statistics</Link> page.
+        </p>
       </section>
 
       {/* Chain tip: the two figures any visitor checks first — how tall the

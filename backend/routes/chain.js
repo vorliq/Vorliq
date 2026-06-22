@@ -71,6 +71,19 @@ router.get("/api/chain/summary", async (req, res) => {
   }
 });
 
+router.get("/api/community/stats", async (req, res) => {
+  try {
+    // Public community statistics, polled every 30s by the community page. A 15s
+    // cache halves the upstream load while keeping the figures fresh.
+    return sendCachedJson(req, res, "community-stats", 15_000, async () => {
+      const response = await axios.get(`${flaskUrl}/community/stats`);
+      return { status: response.status, data: response.data };
+    });
+  } catch (error) {
+    return handleRouteError(res, error, "GET /api/community/stats", "Unable to load community statistics.");
+  }
+});
+
 router.get("/api/indexes/health", async (req, res) => {
   try {
     const response = await axios.get(`${flaskUrl}/indexes/health`);

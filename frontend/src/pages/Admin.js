@@ -9,6 +9,36 @@ function authHeader(token) {
   return { Authorization: `Bearer ${token}` };
 }
 
+// --- Node registry display helpers ---
+function formatHeartbeat(node) {
+  const ts = Number(node.last_heartbeat_at || node.last_seen);
+  if (!Number.isFinite(ts) || ts <= 0) return "never";
+  const ageSeconds = Math.max(0, Math.floor(Date.now() / 1000 - ts));
+  const when = new Date(ts * 1000).toLocaleString();
+  if (ageSeconds < 60) return `${when} (${ageSeconds}s ago)`;
+  if (ageSeconds < 3600) return `${when} (${Math.floor(ageSeconds / 60)}m ago)`;
+  if (ageSeconds < 86400) return `${when} (${Math.floor(ageSeconds / 3600)}h ago)`;
+  return `${when} (${Math.floor(ageSeconds / 86400)}d ago)`;
+}
+
+function shortWallet(address) {
+  if (!address) return "—";
+  return address.length > 16 ? `${address.slice(0, 8)}…${address.slice(-4)}` : address;
+}
+
+function reachabilityLabel(node) {
+  if (node.reachable === true) return "reachable";
+  if (node.reachable === false) return "unreachable";
+  return "not probed yet";
+}
+
+// The genuinely strong check: a signed operator claim AND an independent probe
+// that confirmed the node advertises that same wallet. The backend exposes this
+// as operator_verified; is_verified_operator alone is only the signed claim.
+function isOperatorVerified(node) {
+  return node.operator_verified === true;
+}
+
 function Admin() {
   const [tokenInput, setTokenInput] = useState("");
   const [adminToken, setAdminToken] = useState(() => window.sessionStorage.getItem(ADMIN_TOKEN_KEY) || "");
@@ -956,20 +986,52 @@ function RegistryLifecycleTab({ lifecycle, form, setForm, onLoad, onAction }) {
         <button className="button secondary brand-button-secondary" type="button" onClick={() => onAction("retire")}>Retire</button>
       </form>
 
-      <h2>Lifecycle Records</h2>
+      <h2>Registered nodes</h2>
+      <p className="help-text">
+        Operator <strong>Verified</strong> means a signed operator claim AND an independent probe that
+        confirmed the node advertises that same wallet — not just a self-reported claim. Reachability and
+        sync come from the latest independent probe.
+      </p>
       <div className="table-wrap">
         <table className="stats-table">
-          <thead><tr><th>Node</th><th>URL</th><th>Lifecycle</th><th>Last seen</th><th>Reason</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Node</th>
+              <th>Operator</th>
+              <th>Reachability</th>
+              <th>Sync</th>
+              <th>Last heartbeat</th>
+              <th>Lifecycle</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
           <tbody>
             {(lifecycle?.nodes || []).map((node) => (
               <tr key={node.node_url}>
-                <td>{node.display_name || "Vorliq Node"}</td>
-                <td className="hash-text">{node.node_url}</td>
+                <td>
+                  <div>{node.display_name || "Vorliq Node"}</div>
+                  <div className="hash-text">{node.node_url}</div>
+                </td>
+                <td>
+                  <div className="hash-text">{shortWallet(node.operator_wallet_address)}</div>
+                  <span className={`registry-badge ${isOperatorVerified(node) ? "is-verified" : "is-unverified"}`}>
+                    {isOperatorVerified(node) ? "Verified" : "Unverified"}
+                  </span>
+                </td>
+                <td>
+                  <span className={`registry-badge ${node.reachable === true ? "is-ok" : node.reachable === false ? "is-bad" : "is-neutral"}`}>
+                    {reachabilityLabel(node)}
+                  </span>
+                </td>
+                <td>{node.sync_status || "unknown"}</td>
+                <td>{formatHeartbeat(node)}</td>
                 <td>{node.lifecycle_status || "unknown"}</td>
-                <td>{node.last_seen || "unknown"}</td>
                 <td>{node.lifecycle_reason || ""}</td>
               </tr>
             ))}
+            {!(lifecycle?.nodes || []).length && (
+              <tr><td colSpan={7}><span className="empty-state">No registered nodes yet.</span></td></tr>
+            )}
           </tbody>
         </table>
       </div>

@@ -10,7 +10,7 @@ from flask import Flask, g, jsonify, request
 
 from achievements import Achievements
 from block import Block
-from blockchain import Blockchain, MiningCooldownError
+from blockchain import Blockchain, MiningCooldownError, StaleBlockError
 from exchange import Exchange
 from faucet import Faucet
 from forum import Forum
@@ -146,11 +146,20 @@ PARALLEL_READ_ENDPOINTS = frozenset(
     }
 )
 
+# Endpoints that manage the chain lock themselves rather than holding it for the
+# whole request. Mining does this so the expensive proof of work runs WITHOUT the
+# lock held — it takes the lock only briefly to read the tip and again briefly to
+# append the finished block — instead of blocking every reader for the seconds a
+# difficulty-5 proof of work can take.
+SELF_MANAGED_LOCK_ENDPOINTS = frozenset({"mine_block"})
+
 
 @app.before_request
 def _acquire_concurrency_guard():
     # request.endpoint is the matched view function's name (None for a 404).
-    if request.endpoint in PARALLEL_READ_ENDPOINTS:
+    if request.endpoint in SELF_MANAGED_LOCK_ENDPOINTS:
+        g._chain_lock_mode = "self"
+    elif request.endpoint in PARALLEL_READ_ENDPOINTS:
         _chain_lock.acquire_read()
         g._chain_lock_mode = "read"
     else:
@@ -933,6 +942,34 @@ def _persist_after_mine(raw_block, miner_address):
     return block
 
 
+def _mine_one_block(miner_address):
+    """Mine one block with the proof of work computed OUTSIDE the chain lock, so a
+    several-second proof of work no longer blocks every reader for its duration.
+
+      Phase 1 (brief read lock): build the candidate block on the current tip.
+      Phase 2 (no lock held):    compute the proof of work — the slow part.
+      Phase 3 (brief write lock): re-check the tip and append, or raise
+                                  StaleBlockError if another block landed first.
+
+    Shared by the /mine endpoint and the background miner so they behave
+    identically. Returns the appended block detail dict."""
+    _chain_lock.acquire_read()
+    try:
+        block, expected_previous_hash = node.blockchain.build_candidate_block(miner_address)
+    finally:
+        _chain_lock.release_read()
+
+    # The expensive part runs with no lock held — reads are served normally.
+    block.proof_of_work(block.difficulty)
+
+    _chain_lock.acquire_write()
+    try:
+        node.blockchain.finalize_mined_block(block, expected_previous_hash)
+        return _persist_after_mine(block.to_dict(), miner_address)
+    finally:
+        _chain_lock.release_write()
+
+
 @app.post("/mine")
 def mine_block():
     if not mining_enabled():
@@ -953,9 +990,13 @@ def mine_block():
             data.get("miner_address") or data.get("minerAddress"),
             "miner address",
         )
-        raw_block = node.mine_new_block(miner_address)
-        block = _persist_after_mine(raw_block, miner_address)
+        block = _mine_one_block(miner_address)
         return jsonify({"success": True, "block": block}), 201
+    except StaleBlockError as exc:
+        # Another miner appended a block while this one was being solved. Not an
+        # error the caller did anything wrong — just retry on the new tip.
+        vorliq_logger.info("Mine endpoint: %s", exc)
+        return jsonify({"success": False, "code": "STALE_BLOCK", "message": str(exc)}), 409
     except MiningCooldownError as exc:
         vorliq_logger.warning("Mine endpoint rejected request during cooldown: %s", exc)
         return (
@@ -1056,20 +1097,16 @@ def _background_miner_loop(wallet):
         try:
             if not _background_miner_should_mine(wallet):
                 continue
-            _chain_lock.acquire_write()
-            try:
-                # Re-check under the lock: a member (or a peer block) may have
-                # mined in the gap between the cheap check and acquiring the lock.
-                if not _background_miner_should_mine(wallet):
-                    continue
-                raw_block = node.mine_new_block(wallet)
-                _persist_after_mine(raw_block, wallet)
-            finally:
-                _chain_lock.release_write()
+            # Same three-phase path as /mine: proof of work runs outside the lock,
+            # and finalize_mined_block raises StaleBlockError if a member (or a peer
+            # block) landed first, in which case we just try again next cycle.
+            raw_block = _mine_one_block(wallet)
             background_miner_state["last_mined_at"] = time.time()
             background_miner_state["last_mined_index"] = raw_block.get("index")
             background_miner_state["last_error"] = None
             vorliq_logger.info("Background fallback miner produced block %s", raw_block.get("index"))
+        except StaleBlockError as exc:
+            vorliq_logger.debug("Background miner lost a mining race; retrying next cycle: %s", exc)
         except MiningCooldownError as exc:
             vorliq_logger.debug("Background miner waiting on cooldown: %s", exc)
         except ValueError as exc:
@@ -3262,6 +3299,101 @@ def get_governance_settings_history():
         return jsonify({"success": True, "history": history, "rule_changes": history, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/community/stats")
+def get_community_stats():
+    """Public, no-auth community statistics: the live network summary plus the top
+    miners and top lenders. Everything here is already derivable from the public
+    chain; this endpoint just assembles it in one pass so the community page can
+    poll a single URL."""
+    try:
+        now = time.time()
+        thirty_days_ago = now - 30 * 86400
+        excluded = set(SYSTEM_ADDRESSES) | {TREASURY_ADDRESS}
+        chain_summary = node.blockchain.get_chain_summary()
+
+        miner_blocks: dict[str, int] = {}
+        miner_rewards: dict[str, float] = {}
+        active_wallets: set[str] = set()
+        total_transactions = 0
+
+        for block in node.blockchain.chain:
+            miner = getattr(block, "miner_address", None)
+            if miner and miner not in excluded:
+                miner_blocks[miner] = miner_blocks.get(miner, 0) + 1
+            block_ts = float(getattr(block, "timestamp", 0) or 0)
+            for raw_tx in (block.transactions or []):
+                tx = raw_tx if isinstance(raw_tx, dict) else raw_tx.to_dict()
+                total_transactions += 1
+                category = tx.get("category") or tx.get("type")
+                sender = tx.get("sender_address") or tx.get("sender")
+                receiver = tx.get("receiver_address") or tx.get("recipient")
+                amount = float(tx.get("amount") or 0)
+                ts = float(tx.get("timestamp") or block_ts)
+                if category == "mining_reward" and receiver and receiver not in excluded:
+                    miner_rewards[receiver] = miner_rewards.get(receiver, 0.0) + amount
+                if ts >= thirty_days_ago:
+                    for addr in (sender, receiver):
+                        if addr and addr not in excluded:
+                            active_wallets.add(addr)
+
+        top_miners = sorted(
+            (
+                {"address": a, "blocks": c, "rewards": round(miner_rewards.get(a, 0.0), 8)}
+                for a, c in miner_blocks.items()
+            ),
+            key=lambda r: (r["blocks"], r["rewards"]),
+            reverse=True,
+        )[:10]
+
+        # Top lenders: members who voted to fund loans that were actually funded.
+        # Vorliq lending is community-funded — members vote "yes" to approve a loan
+        # from the shared pool — so the funders are the yes-voters on funded loans.
+        funded_statuses = {"approved_pending_issue", "active", "repaid", "overdue", "repayment_pending"}
+        lender_counts: dict[str, int] = {}
+        for loan in lending_pool.get_all_loans():
+            if loan.get("status") in funded_statuses:
+                for voter, vote in (loan.get("votes") or {}).items():
+                    if vote == "yes" and voter and voter not in excluded:
+                        lender_counts[voter] = lender_counts.get(voter, 0) + 1
+        top_lenders = sorted(
+            ({"address": a, "loans_funded": c} for a, c in lender_counts.items()),
+            key=lambda r: r["loans_funded"],
+            reverse=True,
+        )[:10]
+
+        gov = governance.get_summary()
+        # Concluded = reached a terminal outcome (not still open or awaiting execution).
+        concluded = (
+            int(gov.get("executed_count", 0))
+            + int(gov.get("rejected_count", 0))
+            + int(gov.get("cancelled_count", 0))
+            + int(gov.get("expired_count", 0))
+        )
+
+        lending_summary = lending_pool.get_summary()
+        total_value_locked = float(lending_summary.get("total_vlq_active", 0) or 0)
+
+        return jsonify(
+            {
+                "success": True,
+                "summary": {
+                    "total_blocks": chain_summary.get("total_blocks"),
+                    "total_transactions": total_transactions,
+                    "total_vlq_in_circulation": chain_summary.get("total_issued"),
+                    "active_wallets_30d": len(active_wallets),
+                    "registered_nodes": len(node_registry.registered_nodes),
+                    "total_value_locked": total_value_locked,
+                    "governance_proposals_concluded": concluded,
+                },
+                "top_miners": top_miners,
+                "top_lenders": top_lenders,
+            }
+        )
+    except Exception as exc:
+        vorliq_logger.error("Community stats endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 500
 
 
 @app.get("/leaderboard")
