@@ -35,6 +35,35 @@ jobs:
           ssh-keygen -lf ~/.ssh/vorliq_deploy_key.pub
           ssh-keyscan -H 159.65.24.177 >> ~/.ssh/known_hosts
 
+      - name: Check server disk space
+        run: |
+          # Fail fast and loud if the server is low on disk, before any deploy
+          # work runs, so a full disk is an obvious diagnostic failure here rather
+          # than a silent mid-deploy crash (e.g. a half-written backup tarball).
+          AVAIL_KB="$(ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes root@159.65.24.177 "df -Pk /home/vorliq | awk 'NR==2 {print \$4}'")"
+          AVAIL_MB=$(( AVAIL_KB / 1024 ))
+          echo "Available disk on /home/vorliq: ${AVAIL_MB} MB"
+          if [ "${AVAIL_MB}" -lt 500 ]; then
+            echo "::error::Deploy aborted: only ${AVAIL_MB} MB free on the production server (need at least 500 MB). Free disk space — prune old backups in /home/vorliq/backups, old snapshots in /home/vorliq/app/backend/data/snapshots, and large logs — then re-run the deploy."
+            exit 1
+          fi
+
+      - name: Prune old backups and snapshots
+        run: |
+          # Keep the disk from accumulating indefinitely: delete backups older
+          # than 3 days and snapshots older than 7 days on every deploy. Runs
+          # before any backup work below.
+          ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes root@159.65.24.177 bash -s <<'CLEANUP'
+            set -euo pipefail
+            if [ -d /home/vorliq/backups ]; then
+              find /home/vorliq/backups -maxdepth 1 -type f -name 'vorliq-backup-*.tar.gz' -mtime +3 -print -delete || true
+            fi
+            if [ -d /home/vorliq/app/backend/data/snapshots ]; then
+              find /home/vorliq/app/backend/data/snapshots -maxdepth 1 -type f -mtime +7 -print -delete || true
+            fi
+            echo "Pruned backups older than 3 days and snapshots older than 7 days."
+          CLEANUP
+
       - name: Build frontend artifact
         run: |
           cd frontend
@@ -263,20 +292,13 @@ jobs:
             chmod 644 /etc/cron.d/vorliq-snapshot-archive
             /home/vorliq/alert.sh warning "Vorliq deployment alert smoke test" "Deployment verified alert logging on the production server."
             grep -q 'Vorliq deployment alert smoke test' /var/log/vorliq-alerts.log
-            /home/vorliq/backup.sh
-            LATEST_BACKUP="$(ls -1t /home/vorliq/backups/vorliq-backup-*.tar.gz 2>/dev/null | head -n1 || true)"
-            if [ -n "${LATEST_BACKUP}" ]; then
-              DRILL_DIR="$(mktemp -d)"
-              cp "${LATEST_BACKUP}" "${DRILL_DIR}/"
-              DRILL_ARCHIVE="${DRILL_DIR}/$(basename "${LATEST_BACKUP}")"
-              bash /home/vorliq/app/deployment/verify_backup.sh "${DRILL_ARCHIVE}"
-              mkdir -p "${DRILL_DIR}/isolated-extract"
-              tar -xzf "${DRILL_ARCHIVE}" -C "${DRILL_DIR}/isolated-extract"
-              VORLIQ_DATA_DIR="${DRILL_DIR}/isolated-data" bash /home/vorliq/app/deployment/restore_backup.sh "${DRILL_ARCHIVE}" --dry-run
-              rm -rf "${DRILL_DIR}"
-            else
-              echo "No backup archive found for restore drill; backup status endpoint will report this."
-            fi
+            # Backups run once daily via the vorliq-backup cron (installed above),
+            # not on every deploy. Writing a multi-MB tarball and a full extract/
+            # restore drill on every push was filling the disk. The deploy now only
+            # confirms the backup script is installed and executable so the daily
+            # cron can run; the actual backup-and-restore drill is the cron's job.
+            test -x /home/vorliq/backup.sh
+            echo "Backup script installed and executable; full backups run daily via cron, not per deploy."
             if [ -f /etc/letsencrypt/live/vorliq.org/fullchain.pem ] && [ -f /etc/letsencrypt/live/vorliq.org/privkey.pem ]; then
               CERT_DOMAIN=vorliq.org
               sed "s#/etc/letsencrypt/live/vorliq.org#/etc/letsencrypt/live/${CERT_DOMAIN}#g" /home/vorliq/app/deployment/vorliq_nginx_ssl.conf > /etc/nginx/sites-available/vorliq
