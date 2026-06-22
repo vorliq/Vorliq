@@ -2583,6 +2583,21 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
   word-break: break-all;
   font-size: 0.85rem;
 }
+.vnext .vn-invite-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.vnext .vn-invite-list li {
+  background: var(--vn-card-2);
+  border: 1px solid var(--vn-border);
+  border-radius: var(--vn-r-pill, 999px);
+  padding: 5px 12px;
+  font-size: 0.82rem;
+}
 .vnext .vn-key-field {
   position: relative;
   margin-top: 12px;

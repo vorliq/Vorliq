@@ -2,6 +2,7 @@ import { createContext, useContext, useState } from "react";
 
 import api from "../helpers/api";
 import { markWalletCreated } from "../helpers/onboarding";
+import { recordReferralForNewWallet } from "../helpers/referral";
 import { clearWallet, loadStoredWalletPublicInfo, loadWallet, persistEncryptedWallet, saveWallet } from "../helpers/storage";
 
 export const AuthContext = createContext(null);
@@ -58,6 +59,10 @@ export function AuthProvider({ children }) {
       address: newWallet.address,
       public_key: newWallet.public_key,
     });
+    // If this browser followed an invite link, record the referral against the
+    // new member. Best-effort and non-blocking — wallet creation never waits on
+    // it and never fails because of it.
+    recordReferralForNewWallet(newWallet.address);
     return newWallet;
   }
 

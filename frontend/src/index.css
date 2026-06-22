@@ -2839,6 +2839,25 @@ html[data-theme="light"] .vote-no {
   margin-top: 18px;
 }
 
+.profile-invites {
+  margin-top: 18px;
+}
+.profile-invite-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.profile-invite-list li {
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.82rem;
+}
+
 /* Owner shortcut into Settings sits at the end of the profile header row. */
 .profile-edit-link {
   margin-left: auto;

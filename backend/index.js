@@ -43,10 +43,12 @@ const newsletterRoutes = require("./routes/newsletter");
 const walletHistoryRoutes = require("./routes/walletHistory");
 const avatarRoutes = require("./routes/avatar");
 const activityRoutes = require("./routes/activity");
+const invitesRoutes = require("./routes/invites");
 const realtime = require("./realtime");
 const adminAuth = require("./middleware/adminAuth");
 const { sendError } = require("./utils/apiResponse");
 const { pruneAnalytics } = require("./analytics");
+const { startMonitors } = require("./monitors");
 const chatStore = require("./chatStore");
 const { logError, logInfo } = require("./logger");
 const { sendWeeklyReport } = require("./reports");
@@ -325,6 +327,7 @@ app.use(
     "/api/exchange/confirm-complete",
     "/api/exchange/dispute",
     "/api/profiles/profile",
+    "/api/invites/record",
   ],
   writeLimiter
 );
@@ -427,6 +430,7 @@ app.get("/api/chat/history", (req, res) => {
 
 app.use(chainRoutes);
 app.use(activityRoutes);
+app.use(invitesRoutes);
 app.use(walletRoutes);
 app.use(transactionRoutes);
 app.use(miningRoutes);
@@ -493,6 +497,10 @@ if (require.main === module) {
     { timezone: "Europe/London" }
   );
   logInfo("Weekly community report scheduled for Monday 09:00 Europe/London");
+
+  // Server-side production monitoring (chain health, Flask reachability, disk
+  // headroom). Runs as in-process timers so there is no separate service.
+  startMonitors();
 
   server.listen(port, host, () => {
     console.log(`Vorliq backend API running on ${host}:${port}`);

@@ -143,6 +143,10 @@ PARALLEL_READ_ENDPOINTS = frozenset(
         "get_pending_transaction_records",
         "get_balance",
         "get_leaderboard",
+        # Read-only product-usage aggregation: it only iterates the chain and the
+        # community stores, so it runs under the shared read lock instead of
+        # blocking every reader behind the write lock.
+        "get_analytics_usage",
     }
 )
 
@@ -3299,6 +3303,80 @@ def get_governance_settings_history():
         return jsonify({"success": True, "history": history, "rule_changes": history, "total": total, "limit": limit, "offset": offset, "has_more": has_more})
     except ValueError as exc:
         return jsonify({"success": False, "message": str(exc)}), 400
+
+
+@app.get("/analytics/usage")
+def get_analytics_usage():
+    """Windowed product-usage counts for the admin Usage tab, computed from the
+    chain and the community stores (governance, lending, forum, faucet). Returns
+    the same metrics for the last 7 and 30 days. Read-only and derived from data
+    the node already holds; the Node admin layer guards it behind the admin token
+    and adds the analytics-derived top pages."""
+    now = time.time()
+    excluded = set(SYSTEM_ADDRESSES) | {TREASURY_ADDRESS}
+    windows = {"7d": now - 7 * 86400, "30d": now - 30 * 86400}
+
+    # One pass over the chain per metric group, reused for both windows.
+    chain_txs = []  # (timestamp, sender, receiver)
+    for block in node.blockchain.chain:
+        block_ts = float(getattr(block, "timestamp", 0) or 0)
+        for raw_tx in (block.transactions or []):
+            tx = raw_tx if isinstance(raw_tx, dict) else raw_tx.to_dict()
+            ts = float(tx.get("timestamp") or block_ts)
+            sender = tx.get("sender_address") or tx.get("sender")
+            receiver = tx.get("receiver_address") or tx.get("recipient")
+            chain_txs.append((ts, sender, receiver))
+
+    def window_stats(cutoff: float) -> dict:
+        active: set[str] = set()
+        submitted = 0
+        for ts, sender, receiver in chain_txs:
+            if ts < cutoff:
+                continue
+            # "Transactions submitted" = user-originated transfers, excluding
+            # system-minted mining/treasury rewards.
+            if sender and sender not in excluded:
+                submitted += 1
+            for addr in (sender, receiver):
+                if addr and addr not in excluded:
+                    active.add(addr)
+        faucet_claims = sum(
+            1
+            for claim in faucet.claims.values()
+            if claim.get("tx_id") and float(claim.get("requested_at") or 0) >= cutoff
+        )
+        governance_proposals = sum(
+            1
+            for proposal in governance.proposals.values()
+            if float(proposal.get("created_at") or proposal.get("timestamp") or 0) >= cutoff
+        )
+        lending_requests = sum(
+            1
+            for loan in lending_pool.get_all_loans()
+            if float(loan.get("created_at") or loan.get("timestamp") or 0) >= cutoff
+        )
+        forum_posts = sum(
+            1
+            for post in forum.get_all_posts(include_hidden=True)
+            if float(post.get("timestamp") or 0) >= cutoff
+        )
+        return {
+            "unique_active_wallets": len(active),
+            "total_transactions": submitted,
+            "faucet_claims": faucet_claims,
+            "governance_proposals": governance_proposals,
+            "lending_requests": lending_requests,
+            "forum_posts": forum_posts,
+        }
+
+    return jsonify(
+        {
+            "success": True,
+            "generated_at": now,
+            "7d": window_stats(windows["7d"]),
+            "30d": window_stats(windows["30d"]),
+        }
+    )
 
 
 @app.get("/community/stats")

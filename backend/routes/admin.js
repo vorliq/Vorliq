@@ -10,6 +10,8 @@ const adminAuth = require("../middleware/adminAuth");
 const { publicBackupStatus } = require("./backup");
 const { listReports, reportCountForTarget, updateReport } = require("../communityReports");
 const { createIncident, listActiveIncidents, listIncidents, resolveIncident } = require("../incidents");
+const { getRecentAlerts } = require("../monitors");
+const { topPages } = require("../analytics");
 const { logError } = require("../logger");
 
 const router = express.Router();
@@ -502,6 +504,45 @@ router.post("/api/admin/moderation/forum/moderate", async (req, res) => {
     // host:port). Log the real cause server-side instead.
     if (!error.response) logError(`admin moderation upstream error: ${error.message}`);
     return res.status(status).json({ success: false, message: error.response?.data?.error || "Unable to complete this moderation action." });
+  }
+});
+
+// The most recent production monitoring alerts (chain health, Flask
+// reachability, disk space) so the admin dashboard can surface them without
+// anyone watching a terminal. Last ten events, newest first.
+router.get("/api/admin/alerts", (req, res) => {
+  try {
+    return res.json({ success: true, alerts: getRecentAlerts(10) });
+  } catch (error) {
+    logError(`GET /api/admin/alerts failed: ${error.message}`);
+    return res.status(500).json({ success: false, message: "Unable to load alerts." });
+  }
+});
+
+// Usage summary for the Usage tab. Domain counts (active wallets, transactions,
+// faucet claims, governance proposals, lending requests, forum posts) for the
+// last 7 and 30 days come from Flask, which holds the chain and the community
+// stores; the top pages come from the Node analytics events. If Flask is briefly
+// unavailable the page still renders the analytics-derived parts.
+router.get("/api/admin/usage", async (req, res) => {
+  try {
+    const domain = await flaskGet("/analytics/usage", { timeout: 8000 }).catch((error) => {
+      logError(`admin usage: Flask domain stats unavailable: ${error.message}`);
+      return null;
+    });
+    return res.json({
+      success: true,
+      generated_at: new Date().toISOString(),
+      domain_available: Boolean(domain && domain.success !== false),
+      windows: domain
+        ? { "7d": domain["7d"] || null, "30d": domain["30d"] || null }
+        : { "7d": null, "30d": null },
+      top_pages_7d: topPages(7, 5),
+      top_pages_30d: topPages(30, 5),
+    });
+  } catch (error) {
+    logError(`GET /api/admin/usage failed: ${error.message}`);
+    return res.status(500).json({ success: false, message: "Unable to load usage summary." });
   }
 });
 

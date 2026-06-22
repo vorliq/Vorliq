@@ -400,6 +400,7 @@ function Profile() {
               </>
             )}
             <OnchainActivity address={activeAddress} state={onchain} />
+            <InvitedMembers address={activeAddress} />
           </section>
 
           {canEdit && (
@@ -563,6 +564,57 @@ function ProfileLinks({ profile }) {
           {label}
         </a>
       ))}
+    </div>
+  );
+}
+
+// Public invite record for the viewed wallet: how many members they have invited
+// and who (by address), plus who invited them. Read from the public invite
+// summary endpoint, no authentication required.
+function InvitedMembers({ address }) {
+  const [summary, setSummary] = useState(null);
+
+  useEffect(() => {
+    if (!address) return undefined;
+    const controller = new AbortController();
+    api
+      .get("/invites/summary", { params: { address }, signal: controller.signal })
+      .then((res) => setSummary(res.data || null))
+      .catch((err) => {
+        if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
+        setSummary(null);
+      });
+    return () => controller.abort();
+  }, [address]);
+
+  if (!address || !summary) return null;
+  const invited = summary.invited || [];
+
+  return (
+    <div className="profile-invites">
+      <h3>Community invites</h3>
+      <p className="help-text" style={{ marginTop: 0 }}>
+        Members invited: <strong>{summary.invited_count || 0}</strong>
+        {summary.referrer ? (
+          <>
+            {" · Invited by "}
+            <Link className="link" to={`/profile/${encodeURIComponent(summary.referrer)}`}>
+              {shortHash(summary.referrer)}
+            </Link>
+          </>
+        ) : null}
+      </p>
+      {invited.length > 0 && (
+        <ul className="profile-invite-list">
+          {invited.map((entry) => (
+            <li key={entry.address}>
+              <Link className="link" to={`/profile/${encodeURIComponent(entry.address)}`}>
+                {shortHash(entry.address)}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

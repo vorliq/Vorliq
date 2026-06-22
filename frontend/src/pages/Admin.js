@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../helpers/api";
 
 const ADMIN_TOKEN_KEY = "vorliq_admin_token";
-const tabs = ["Overview", "Wallets", "Treasury", "Readiness", "Network Monitor", "Registry Lifecycle", "Analytics", "Storage", "Indexes", "Migration", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
+const tabs = ["Overview", "Usage", "Wallets", "Treasury", "Readiness", "Network Monitor", "Registry Lifecycle", "Analytics", "Storage", "Indexes", "Migration", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
 
 function authHeader(token) {
   return { Authorization: `Bearer ${token}` };
@@ -49,6 +49,7 @@ function Admin() {
   const [registryLifecycle, setRegistryLifecycle] = useState(null);
   const [security, setSecurity] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [usage, setUsage] = useState(null);
   const [storage, setStorage] = useState(null);
   const [indexes, setIndexes] = useState(null);
   const [migration, setMigration] = useState(null);
@@ -109,6 +110,14 @@ function Admin() {
   const loadAnalytics = useCallback(async () => {
     const response = await api.get("/admin/analytics", { headers });
     setAnalytics(response.data);
+  }, [headers]);
+
+  const loadUsage = useCallback(async () => {
+    const [usageRes, alertsRes] = await Promise.all([
+      api.get("/admin/usage", { headers }),
+      api.get("/admin/alerts", { headers }),
+    ]);
+    setUsage({ ...usageRes.data, alerts: alertsRes.data?.alerts || [] });
   }, [headers]);
 
   const loadBackups = useCallback(async () => {
@@ -200,6 +209,7 @@ function Admin() {
     setError("");
     try {
       if (tab === "Overview") await loadOverview();
+      if (tab === "Usage") await loadUsage();
       if (tab === "Wallets") await loadWallets();
       if (tab === "Treasury") await loadTreasury();
       if (tab === "Readiness") await loadReadiness();
@@ -218,7 +228,7 @@ function Admin() {
     } catch (requestError) {
       setError(requestError.response?.status === 401 ? "Unauthorized" : "Unable to load admin data.");
     }
-  }, [activeTab, headers, loadAnalytics, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadMigration, loadNodeMonitor, loadOverview, loadReadiness, loadRegistryLifecycle, loadReports, loadSecurity, loadStorage, loadWallets, loadTreasury]);
+  }, [activeTab, headers, loadAnalytics, loadUsage, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadMigration, loadNodeMonitor, loadOverview, loadReadiness, loadRegistryLifecycle, loadReports, loadSecurity, loadStorage, loadWallets, loadTreasury]);
 
   useEffect(() => {
     if (adminToken) {
@@ -251,6 +261,7 @@ function Admin() {
     setRegistryLifecycle(null);
     setSecurity(null);
     setAnalytics(null);
+    setUsage(null);
     setStorage(null);
     setIndexes(null);
     setMigration(null);
@@ -465,6 +476,7 @@ function Admin() {
           onAction={submitLifecycleAction}
         />
       )}
+      {activeTab === "Usage" && <UsageTab usage={usage} onLoad={loadUsage} />}
       {activeTab === "Analytics" && <AnalyticsTab analytics={analytics} onLoad={loadAnalytics} />}
       {activeTab === "Storage" && <StorageTab storage={storage} onLoad={loadStorage} />}
       {activeTab === "Indexes" && <IndexesTab indexes={indexes} onLoad={loadIndexes} onRebuild={rebuildIndexes} />}
@@ -755,6 +767,87 @@ function MigrationTab({ migration, onLoad }) {
           </div>
         </>
       )}
+    </section>
+  );
+}
+
+function UsageTab({ usage, onLoad }) {
+  useEffect(() => { if (!usage) onLoad(); }, [usage, onLoad]);
+  if (!usage) return <div className="empty-state">Loading usage summary...</div>;
+
+  const metrics = [
+    ["Unique active wallets", "unique_active_wallets"],
+    ["Transactions submitted", "total_transactions"],
+    ["Faucet claims", "faucet_claims"],
+    ["Governance proposals", "governance_proposals"],
+    ["Lending requests", "lending_requests"],
+    ["Forum posts", "forum_posts"],
+  ];
+  const win = usage.windows || {};
+  const cell = (window, key) => (window && window[key] != null ? window[key] : "—");
+  const alerts = usage.alerts || [];
+
+  return (
+    <section className="glass-section card-pad">
+      <h2>Platform Usage</h2>
+      {!usage.domain_available && (
+        <p className="risk-box">
+          Domain metrics (transactions, proposals, lending, forum) are temporarily unavailable; page-visit
+          figures below are still live.
+        </p>
+      )}
+      <div className="table-wrap">
+        <table className="stats-table">
+          <thead><tr><th>Metric</th><th>Last 7 days</th><th>Last 30 days</th></tr></thead>
+          <tbody>
+            {metrics.map(([label, key]) => (
+              <tr key={key}>
+                <td>{label}</td>
+                <td>{cell(win["7d"], key)}</td>
+                <td>{cell(win["30d"], key)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Top Pages (7 days)</h2>
+      <div className="admin-list">
+        {(usage.top_pages_7d || []).length === 0 ? (
+          <div className="admin-row"><span>No page views recorded yet.</span></div>
+        ) : (
+          (usage.top_pages_7d || []).map((row) => (
+            <div className="admin-row" key={`7-${row.name}`}><strong>{row.name}</strong><span>{row.count}</span></div>
+          ))
+        )}
+      </div>
+
+      <h2>Top Pages (30 days)</h2>
+      <div className="admin-list">
+        {(usage.top_pages_30d || []).length === 0 ? (
+          <div className="admin-row"><span>No page views recorded yet.</span></div>
+        ) : (
+          (usage.top_pages_30d || []).map((row) => (
+            <div className="admin-row" key={`30-${row.name}`}><strong>{row.name}</strong><span>{row.count}</span></div>
+          ))
+        )}
+      </div>
+
+      <h2>Production Alerts (last 10)</h2>
+      <div className="admin-list">
+        {alerts.length === 0 ? (
+          <div className="admin-row"><span>No alerts recorded. All monitors healthy.</span></div>
+        ) : (
+          alerts.map((alert) => (
+            <div className="admin-row" key={alert.id}>
+              <strong>
+                [{alert.monitor}] {alert.status === "resolved" ? "resolved" : alert.message}
+              </strong>
+              <span>{new Date(alert.created_at).toLocaleString()}</span>
+            </div>
+          ))
+        )}
+      </div>
     </section>
   );
 }

@@ -322,6 +322,14 @@ function journeyFunnel(events) {
   return stages;
 }
 
+// Top pages by visit (page_view) count over the last `days`, for the admin usage
+// panel. Pulled straight from the stored analytics events.
+function topPages(days, limit = 5, now = Date.now()) {
+  const events = pruneAnalytics(now);
+  const windowed = eventsSince(events, days, now).filter((event) => event.event_type === "page_view");
+  return topCounts(windowed, "route", limit);
+}
+
 function summary(now = Date.now()) {
   const events = pruneAnalytics(now);
   const today = eventsToday(events, now);
@@ -390,5 +398,6 @@ module.exports = {
   analyticsFile,
   pruneAnalytics,
   summary,
+  topPages,
   validateAnalyticsEvent,
 };

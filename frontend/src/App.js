@@ -11,6 +11,7 @@ import IncidentBanner from "./components/IncidentBanner";
 import { ProductFooter, ProductNav } from "./components/ProductShell";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { initAnalytics } from "./helpers/analytics";
+import { captureReferrerFromUrl } from "./helpers/referral";
 import { applyTheme, getStoredTheme } from "./helpers/theme";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
@@ -168,6 +169,8 @@ function AppShell() {
 
   useEffect(() => {
     applyTheme(getStoredTheme());
+    // Remember an invite referrer if the visitor arrived via an invite link.
+    captureReferrerFromUrl();
     return initAnalytics();
   }, []);
 

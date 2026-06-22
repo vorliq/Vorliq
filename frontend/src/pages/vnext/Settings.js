@@ -29,6 +29,8 @@ import { bumpAvatarVersion } from "../../helpers/avatarStore";
 import { resizeImageToDataUrl } from "../../helpers/resizeImage";
 import { authorityErrorMessage, postSignedAuthority } from "../../helpers/signedAuthority";
 import { loadWallet, saveWallet } from "../../helpers/storage";
+import { inviteLinkFor } from "../../helpers/referral";
+import { shortHash } from "../../helpers/publicApi";
 
 // The server caps the *decoded* avatar at 2MB. We resize every chosen image to a
 // 256x256 PNG in the browser first, so the only size that matters is the resized
@@ -816,6 +818,71 @@ function SessionsSection() {
   );
 }
 
+/* ---------------------------------------------------------- Invite -------- */
+// Generate a shareable invite link and show who this member has invited. The
+// link is a plain URL (the site plus a `ref` of this wallet), so it works pasted
+// into any messaging app and on any device the recipient opens it on.
+function InviteSection({ address }) {
+  const link = inviteLinkFor(address);
+  const [invited, setInvited] = useState([]);
+  const [count, setCount] = useState(0);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!address) return undefined;
+    const controller = new AbortController();
+    api
+      .get("/invites/summary", { params: { address }, signal: controller.signal })
+      .then((res) => {
+        setInvited(res.data?.invited || []);
+        setCount(res.data?.invited_count || 0);
+        setError("");
+      })
+      .catch((err) => {
+        if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
+        setError("Could not load your invites right now.");
+      });
+    return () => controller.abort();
+  }, [address]);
+
+  return (
+    <section className="vn-settings__section">
+      <h2>Invite members</h2>
+      <p className="vn-settings__hint">
+        Vorliq grows by word of mouth. Share your personal invite link — anyone who follows it and creates a
+        wallet is recorded as someone you invited. The link works on any device or app.
+      </p>
+      <div className="vn-field">
+        <label>Your invite link</label>
+        <div className="vn-addr-field">
+          <span className="vn-addr-field__value vn-mono">{link}</span>
+          <CopyButton value={link} label="Copy link" />
+        </div>
+      </div>
+      <div className="vn-field" style={{ marginTop: 12 }}>
+        <label>Members you have invited ({count})</label>
+        {error ? (
+          <InlineError message={error} />
+        ) : count === 0 ? (
+          <p className="vn-empty-note" style={{ margin: 0 }}>
+            No invites yet. Share your link to start growing the community.
+          </p>
+        ) : (
+          <ul className="vn-invite-list">
+            {invited.map((entry) => (
+              <li key={entry.address}>
+                <Link className="vn-block-link vn-mono" to={`/profile/${encodeURIComponent(entry.address)}`}>
+                  {shortHash(entry.address)}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function Settings() {
   const { isLoggedIn, wallet, logout } = useAuth();
   const navigate = useNavigate();
@@ -881,6 +948,9 @@ export default function Settings() {
 
         {/* Profile image */}
         {isLoggedIn && address && <AvatarSection address={address} />}
+
+        {/* Invite members */}
+        {isLoggedIn && address && <InviteSection address={address} />}
 
         {/* Notifications */}
         <section className="vn-settings__section">
