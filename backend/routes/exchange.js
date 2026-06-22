@@ -2,9 +2,29 @@ const express = require("express");
 const axios = require("axios");
 const { handleRouteError } = require("./routeError");
 const { paginationParams } = require("../pagination");
+const { emit } = require("../realtime");
 
 const router = express.Router();
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
+
+// Fan a coordination lifecycle change out over the socket so both parties' open
+// Exchange views update live without polling. Best-effort and never throws — the
+// HTTP response to the caller is unaffected if no socket is connected.
+function broadcastExchangeUpdate(response) {
+  try {
+    const data = response && response.data;
+    if (!data || data.success === false) return;
+    const offer = data.offer || data.request || {};
+    emit("exchange:update", {
+      offer_id: offer.offer_id || data.offer_id || null,
+      status: offer.status || data.status || null,
+      creator_address: offer.creator_address || null,
+      acceptor_address: offer.acceptor_address || null,
+    });
+  } catch (_error) {
+    /* never let a broadcast failure affect the request */
+  }
+}
 const EXCHANGE_STATUSES = new Set(["open", "accepted", "vlq_pending", "vlq_confirmed", "completed", "cancelled", "disputed"]);
 const OFFER_TYPES = new Set(["buy", "sell"]);
 
@@ -60,6 +80,7 @@ function handleValidationError(res, error) {
 router.post("/api/exchange/offer", async (req, res) => {
   try {
     const response = await axios.post(`${flaskUrl}/exchange/offer`, req.body);
+    broadcastExchangeUpdate(response);
     res.status(response.status).json(response.data);
   } catch (error) {
     if (handleValidationError(res, error)) return;
@@ -122,6 +143,7 @@ router.get("/api/exchange/summary", async (req, res) => {
 router.post("/api/exchange/accept", async (req, res) => {
   try {
     const response = await axios.post(`${flaskUrl}/exchange/accept`, req.body);
+    broadcastExchangeUpdate(response);
     res.status(response.status).json(response.data);
   } catch (error) {
     return handleRouteError(res, error, "POST /api/exchange/accept", "Unable to accept exchange offer.");
@@ -131,6 +153,7 @@ router.post("/api/exchange/accept", async (req, res) => {
 router.post("/api/exchange/complete", async (req, res) => {
   try {
     const response = await axios.post(`${flaskUrl}/exchange/complete`, req.body);
+    broadcastExchangeUpdate(response);
     res.status(response.status).json(response.data);
   } catch (error) {
     return handleRouteError(res, error, "POST /api/exchange/complete", "Unable to complete exchange offer.");
@@ -140,6 +163,7 @@ router.post("/api/exchange/complete", async (req, res) => {
 router.post("/api/exchange/confirm-complete", async (req, res) => {
   try {
     const response = await axios.post(`${flaskUrl}/exchange/confirm-complete`, req.body);
+    broadcastExchangeUpdate(response);
     res.status(response.status).json(response.data);
   } catch (error) {
     return handleRouteError(res, error, "POST /api/exchange/confirm-complete", "Unable to confirm exchange completion.");
@@ -149,6 +173,7 @@ router.post("/api/exchange/confirm-complete", async (req, res) => {
 router.post("/api/exchange/record-vlq-tx", async (req, res) => {
   try {
     const response = await axios.post(`${flaskUrl}/exchange/record-vlq-tx`, req.body);
+    broadcastExchangeUpdate(response);
     res.status(response.status).json(response.data);
   } catch (error) {
     return handleRouteError(res, error, "POST /api/exchange/record-vlq-tx", "Unable to record VLQ transaction.");
@@ -158,6 +183,7 @@ router.post("/api/exchange/record-vlq-tx", async (req, res) => {
 router.post("/api/exchange/dispute", async (req, res) => {
   try {
     const response = await axios.post(`${flaskUrl}/exchange/dispute`, req.body);
+    broadcastExchangeUpdate(response);
     res.status(response.status).json(response.data);
   } catch (error) {
     return handleRouteError(res, error, "POST /api/exchange/dispute", "Unable to open exchange dispute.");
@@ -167,6 +193,7 @@ router.post("/api/exchange/dispute", async (req, res) => {
 router.post("/api/exchange/cancel", async (req, res) => {
   try {
     const response = await axios.post(`${flaskUrl}/exchange/cancel`, req.body);
+    broadcastExchangeUpdate(response);
     res.status(response.status).json(response.data);
   } catch (error) {
     return handleRouteError(res, error, "POST /api/exchange/cancel", "Unable to cancel exchange offer.");

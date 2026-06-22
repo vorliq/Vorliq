@@ -12,7 +12,7 @@
 // reveal action is blocked until it matches), and the key auto-hides after 60s.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, ImageUp, KeyRound, Lock, LogOut, ShieldAlert } from "lucide-react";
+import { Clock, Eye, EyeOff, ImageUp, KeyRound, Lock, LogOut, ShieldAlert } from "lucide-react";
 import { toast } from "react-toastify";
 
 import "../../styles/vnext.css";
@@ -22,6 +22,7 @@ import ProfileAvatar from "../../components/ProfileAvatar";
 import { Button, Card, CopyButton, InlineError } from "../../components/vnext/primitives";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
+import { useSession } from "../../context/SessionContext";
 import { isAnalyticsEnabled, setAnalyticsEnabled } from "../../helpers/analytics";
 import api, { getNodeUrl, setNodeUrl } from "../../helpers/api";
 import { bumpAvatarVersion } from "../../helpers/avatarStore";
@@ -731,6 +732,64 @@ function NodeOperatorFlow() {
   );
 }
 
+/* ---------------------------------------------------------- Sessions ------ */
+function formatClock(ms) {
+  if (!ms) return "—";
+  return new Date(ms).toLocaleString();
+}
+
+function relativeFromNow(ms, now) {
+  if (!ms) return "";
+  const seconds = Math.max(0, Math.floor((now - ms) / 1000));
+  if (seconds < 5) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ${minutes % 60}m ago`;
+}
+
+function SessionsSection() {
+  const { sessionStartedAt, getLastActivity, endSession } = useSession();
+  // Tick once a second so the "last activity" line stays current without the
+  // session context having to re-render the whole app on every mouse move.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const lastActivity = getLastActivity();
+
+  return (
+    <section className="vn-settings__section">
+      <h2>Sessions</h2>
+      <p className="vn-settings__hint">
+        This is the wallet session open in this browser. Vorliq has no server-side login, so there are
+        no other devices to sign out — but you can end this session now, and it will end automatically
+        after 30 minutes of inactivity.
+      </p>
+      <div className="vn-session-grid">
+        <div className="vn-session-stat">
+          <span className="vn-session-stat__label">Session started</span>
+          <span className="vn-session-stat__value">{formatClock(sessionStartedAt)}</span>
+        </div>
+        <div className="vn-session-stat">
+          <span className="vn-session-stat__label">Last activity</span>
+          <span className="vn-session-stat__value">
+            {formatClock(lastActivity)}{" "}
+            <small className="vn-session-stat__rel">{relativeFromNow(lastActivity, now)}</small>
+          </span>
+        </div>
+      </div>
+      <div className="vn-btn-row" style={{ marginTop: 16 }}>
+        <Button variant="secondary" onClick={() => endSession(true)}>
+          <Clock size={16} aria-hidden="true" /> End session now
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 export default function Settings() {
   const { isLoggedIn, wallet, logout } = useAuth();
   const navigate = useNavigate();
@@ -790,6 +849,9 @@ export default function Settings() {
             </p>
           )}
         </section>
+
+        {/* Sessions */}
+        {isLoggedIn && address && <SessionsSection />}
 
         {/* Profile image */}
         {isLoggedIn && address && <AvatarSection address={address} />}

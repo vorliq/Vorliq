@@ -1563,6 +1563,72 @@ summary {
   color: var(--on-sell);
 }
 
+/* Exchange: plain-language "what's happening / what to do next" guidance box. */
+.exchange-guidance {
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-glass);
+  border-left: 3px solid var(--text-tertiary, var(--border));
+}
+.exchange-guidance strong {
+  display: block;
+  font-size: 0.92rem;
+  margin-bottom: 2px;
+}
+.exchange-guidance p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.exchange-guidance--action {
+  border-left-color: var(--accent);
+}
+.exchange-guidance--wait {
+  border-left-color: var(--brand-blue, #1e6fd9);
+}
+.exchange-guidance--done {
+  border-left-color: var(--success, #56c870);
+}
+.exchange-guidance--alert {
+  border-left-color: var(--danger, #ff5d6c);
+}
+
+/* Exchange: how-it-works explainer with the human signing explanation. */
+.exchange-steps {
+  margin: 6px 0 4px;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 10px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+.exchange-steps li {
+  list-style: decimal;
+}
+.exchange-steps strong {
+  color: var(--text-primary);
+}
+.exchange-signing-note {
+  margin-top: 6px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-glass);
+}
+.exchange-signing-note strong {
+  display: block;
+  margin-bottom: 4px;
+}
+.exchange-signing-note p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
 .compact-stat {
   font-size: clamp(1.2rem, 3vw, 1.75rem);
   overflow-wrap: anywhere;
@@ -4249,6 +4315,55 @@ html[data-theme="light"] .mobile-drawer button {
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--surface-glass);
+}
+
+/* ===== Session inactivity warning ===== */
+.session-warning {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(4, 8, 16, 0.66);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.session-warning__card {
+  width: min(440px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: clamp(20px, 4vw, 28px);
+}
+.session-warning__title {
+  margin: 0 0 10px;
+  font-size: 1.25rem;
+}
+.session-warning__body {
+  margin: 0 0 18px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.session-warning__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ===== Legal pages (Terms / Privacy) list ===== */
+.legal-list {
+  margin: 4px 0 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 10px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.legal-list li {
+  list-style: disc;
 }
 
 /* ===== Chat: load older messages ===== */

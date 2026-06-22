@@ -1,6 +1,12 @@
 const crypto = require("crypto");
 
 const { sendError } = require("../utils/apiResponse");
+const {
+  clearFailures,
+  lockedSecondsRemaining,
+  lockoutMessage,
+  recordFailure,
+} = require("./authLockout");
 
 const AUTHORIZATION_DOMAIN = "vorliq.authority.v1";
 const AUTHORIZATION_MAX_AGE_SECONDS = 300;
@@ -275,10 +281,26 @@ function verifySignedAuthorization(body, route, nowSeconds = Math.floor(Date.now
 
 function requireSignedAuthorityWrite(req, res, next) {
   if (req.method !== "POST" || !AUTHORITY_ROUTES.has(req.path)) return next();
+
+  // Block a connection that has already failed wallet authentication too many
+  // times — a brute force against a wallet's signed-write path stops here.
+  const locked = lockedSecondsRemaining(req);
+  if (locked > 0) {
+    return sendError(res, 429, "WALLET_AUTH_LOCKED", lockoutMessage(locked));
+  }
+
   try {
     req.signedAuthorization = verifySignedAuthorization(req.body, req.path);
+    // A good signature clears the slate for this connection.
+    clearFailures(req);
     return next();
   } catch (error) {
+    // Count only credential (wrong-key) failures toward the lockout; if this one
+    // trips the limit, answer with the wait-time message instead.
+    const lockSeconds = recordFailure(req, error.code);
+    if (lockSeconds > 0) {
+      return sendError(res, 429, "WALLET_AUTH_LOCKED", lockoutMessage(lockSeconds));
+    }
     return sendError(res, error.status || 401, error.code || "AUTHORIZATION_INVALID", error.message);
   }
 }

@@ -49,9 +49,9 @@ const footerGroups = [
   {
     title: "Legal",
     links: [
-      { label: "Terms", href: "https://vorliq.github.io/Vorliq/terms.html" },
-      { label: "Privacy", href: "https://vorliq.github.io/Vorliq/privacy.html" },
-      { label: "Risk Notice", href: "https://vorliq.github.io/Vorliq/terms.html#risk-notice" },
+      { label: "Terms of Service", to: "/terms" },
+      { label: "Privacy Policy", to: "/privacy" },
+      { label: "Risk Notice", to: "/terms#risk-notice" },
       { label: "MIT License", href: "https://github.com/vorliq/Vorliq/blob/main/LICENSE" },
     ],
   },

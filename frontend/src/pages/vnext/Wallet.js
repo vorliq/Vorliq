@@ -11,6 +11,7 @@ import AppShell from "../../components/vnext/AppShell";
 import Modal from "../../components/vnext/Modal";
 import SendForm from "../../components/vnext/SendForm";
 import TransactionHistory from "../../components/vnext/TransactionHistory";
+import WalletExchangeHistory from "../../components/vnext/WalletExchangeHistory";
 import WalletQR from "../../components/vnext/WalletQR";
 import { Button, Card, CopyButton, InlineError, Skeleton } from "../../components/vnext/primitives";
 import { useAuth } from "../../context/AuthContext";
@@ -133,6 +134,11 @@ export default function Wallet() {
           <ReceiveContents address={address} qrSize={240} />
         </Modal>
       )}
+
+      {/* Exchange activity — the member's recent coordination records */}
+      <div style={{ marginTop: 18 }}>
+        <WalletExchangeHistory address={address} />
+      </div>
 
       {/* Transaction history — same shared component the Dashboard uses */}
       <div style={{ marginTop: 18 }}>

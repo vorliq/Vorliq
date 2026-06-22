@@ -1,6 +1,7 @@
 import { createContext, useContext, useState } from "react";
 
 import api from "../helpers/api";
+import { markWalletCreated } from "../helpers/onboarding";
 import { clearWallet, loadStoredWalletPublicInfo, loadWallet, persistEncryptedWallet, saveWallet } from "../helpers/storage";
 
 export const AuthContext = createContext(null);
@@ -50,6 +51,8 @@ export function AuthProvider({ children }) {
     const response = await api.post("/wallet/create");
     const newWallet = response.data;
     await saveWallet(newWallet, password);
+    // Flag this as a brand-new wallet so the dashboard shows the first-run tour.
+    markWalletCreated();
     unlockStoredWalletSession();
     setWallet({
       address: newWallet.address,

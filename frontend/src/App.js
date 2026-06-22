@@ -15,6 +15,7 @@ import { applyTheme, getStoredTheme } from "./helpers/theme";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { RealtimeProvider } from "./context/RealtimeContext";
+import { SessionProvider } from "./context/SessionContext";
 import { WalletBalanceProvider } from "./context/WalletBalanceContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -41,7 +42,9 @@ const NodeSync = lazy(() => import("./pages/NodeSync"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const PeerPropagation = lazy(() => import("./pages/PeerPropagation"));
 const Price = lazy(() => import("./pages/Price"));
+const Privacy = lazy(() => import("./pages/Privacy"));
 const Profile = lazy(() => import("./pages/Profile"));
+const Terms = lazy(() => import("./pages/Terms"));
 const Readiness = lazy(() => import("./pages/Readiness"));
 const Registry = lazy(() => import("./pages/Registry"));
 const Releases = lazy(() => import("./pages/Releases"));
@@ -144,7 +147,9 @@ function App() {
           <WalletBalanceProvider>
             <RealtimeProvider>
               <BrowserRouter>
-                <AppShell />
+                <SessionProvider>
+                  <AppShell />
+                </SessionProvider>
               </BrowserRouter>
             </RealtimeProvider>
           </WalletBalanceProvider>
@@ -227,6 +232,8 @@ function AppShell() {
           <Route path="/bootstrap" element={<Bootstrap />} />
           <Route path="/audit" element={<Audit />} />
           <Route path="/transparency" element={<Transparency />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/:address" element={<Profile />} />
           <Route path="/profiles" element={<Profile />} />

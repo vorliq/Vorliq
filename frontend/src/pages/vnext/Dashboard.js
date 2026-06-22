@@ -9,6 +9,7 @@ import { ArrowUpRight, Coins, Droplets, Landmark, Wallet } from "lucide-react";
 import "../../styles/vnext.css";
 import ActivityFeed from "../../components/vnext/ActivityFeed";
 import AppShell from "../../components/vnext/AppShell";
+import OnboardingTour from "../../components/vnext/OnboardingTour";
 import LineChart from "../../components/vnext/LineChart";
 import SummaryCard from "../../components/vnext/SummaryCard";
 import TransactionHistory, { useTransactions } from "../../components/vnext/TransactionHistory";
@@ -337,6 +338,10 @@ export default function Dashboard() {
           <NetworkStatusPanel onHeight={setLatestHeight} />
         </div>
       </div>
+
+      {/* First-run guided tour — only renders for a brand-new wallet, and only
+          while it is active (it remembers if it was dismissed or finished). */}
+      {isLoggedIn && <OnboardingTour />}
     </AppShell>
   );
 }

@@ -1855,16 +1855,16 @@ test("wallet safety confirmation blocks wallet creation until checked", async ()
   expect(revealButton).toBeEnabled();
 });
 
-test("Footer exposes a public Risk Notice link", async () => {
+test("Footer exposes public Terms, Privacy, and Risk Notice links", async () => {
   render(<App />);
 
   await screen.findByRole("heading", { level: 1, name: /your community's bank/i });
   const footer = document.querySelector("footer");
 
-  expect(within(footer).getByRole("link", { name: /risk notice/i })).toHaveAttribute(
-    "href",
-    "https://vorliq.github.io/Vorliq/terms.html#risk-notice"
-  );
+  // Legal documents are now in-app pages, linked from the footer.
+  expect(within(footer).getByRole("link", { name: /terms of service/i })).toHaveAttribute("href", "/terms");
+  expect(within(footer).getByRole("link", { name: /privacy policy/i })).toHaveAttribute("href", "/privacy");
+  expect(within(footer).getByRole("link", { name: /risk notice/i })).toHaveAttribute("href", "/terms#risk-notice");
 });
 
 test("Profile page renders a public member profile", async () => {

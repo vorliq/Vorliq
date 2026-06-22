@@ -10,7 +10,7 @@ function socketUrl() {
   return window.location.hostname === "localhost" ? "http://localhost:5000" : window.location.origin;
 }
 
-const RealtimeContext = createContext({ latestBlockHeight: null });
+const RealtimeContext = createContext({ latestBlockHeight: null, exchangeVersion: 0 });
 
 function formatAmount(value) {
   const number = Number(value);
@@ -30,6 +30,9 @@ export function RealtimeProvider({ children }) {
   const { wallet } = useAuth();
   const { addNotification } = useNotifications();
   const [latestBlockHeight, setLatestBlockHeight] = useState(null);
+  // Bumped whenever any exchange coordination changes, so an open Exchange view
+  // can refetch live when the other party acts (accept, send VLQ, confirm, etc.).
+  const [exchangeVersion, setExchangeVersion] = useState(0);
 
   // Read the live address inside long-lived handlers without re-subscribing.
   const addressRef = useRef(wallet?.address || null);
@@ -64,6 +67,12 @@ export function RealtimeProvider({ children }) {
       addNotification("loan_repaid", "Loan repaid", "Your loan has been repaid and is now closed.", "/lending");
     });
 
+    socket.on("exchange:update", () => {
+      // Payload is intentionally ignored — the Exchange view refetches the
+      // authoritative state; this is just the "something changed" signal.
+      setExchangeVersion((v) => v + 1);
+    });
+
     socket.on("proposal:outcome", (payload) => {
       if (!isMine(payload)) return;
       const title = payload.title ? `"${String(payload.title).slice(0, 48)}"` : "Your proposal";
@@ -76,7 +85,11 @@ export function RealtimeProvider({ children }) {
     };
   }, [addNotification]);
 
-  return <RealtimeContext.Provider value={{ latestBlockHeight }}>{children}</RealtimeContext.Provider>;
+  return (
+    <RealtimeContext.Provider value={{ latestBlockHeight, exchangeVersion }}>
+      {children}
+    </RealtimeContext.Provider>
+  );
 }
 
 export function useRealtime() {

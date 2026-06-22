@@ -13,6 +13,7 @@ function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [safetyConfirmed, setSafetyConfirmed] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -31,6 +32,11 @@ function Register() {
 
     if (!safetyConfirmed) {
       toast.error("Confirm that you understand Vorliq cannot recover your private key.");
+      return;
+    }
+
+    if (!agreedToTerms) {
+      toast.error("Please read and agree to the Terms of Service and Privacy Policy.");
       return;
     }
 
@@ -130,7 +136,21 @@ function Register() {
               />
             </div>
 
-            <button className="button" type="submit" disabled={loading || !safetyConfirmed}>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(event) => setAgreedToTerms(event.target.checked)}
+              />
+              <span>
+                I have read and agree to the{" "}
+                <Link to="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</Link>{" "}
+                and{" "}
+                <Link to="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>.
+              </span>
+            </label>
+
+            <button className="button" type="submit" disabled={loading || !safetyConfirmed || !agreedToTerms}>
               {loading ? "Creating..." : "Create Account"}
             </button>
             <p className="help-text">

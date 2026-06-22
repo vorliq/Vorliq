@@ -1392,6 +1392,133 @@ html[data-theme="light"] .vnext .vn-side__wallet {
   line-height: 1.5;
 }
 
+/* First-run onboarding tour — non-blocking floating panel (desktop) /
+   bottom sheet (mobile). No backdrop, so the app stays fully usable. */
+.vnext .vn-tour {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 900;
+  width: min(380px, calc(100vw - 32px));
+  pointer-events: none; /* only the card is interactive */
+}
+.vnext .vn-tour__card {
+  pointer-events: auto;
+  background: var(--vn-card);
+  border: 1px solid var(--vn-border-strong);
+  border-radius: var(--vn-r-card);
+  box-shadow: var(--vn-shadow);
+  padding: 18px 18px 14px;
+}
+.vnext .vn-tour__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.vnext .vn-tour__step {
+  font-size: var(--vn-fs-label);
+  text-transform: uppercase;
+  letter-spacing: var(--vn-ls-label);
+  font-weight: 700;
+  color: var(--vn-teal-text);
+}
+.vnext .vn-tour__close {
+  background: none;
+  border: none;
+  color: var(--vn-text-2);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--vn-r-xs);
+  display: inline-flex;
+}
+.vnext .vn-tour__close:hover {
+  color: var(--vn-text);
+  background: var(--vn-row);
+}
+.vnext .vn-tour__title {
+  margin: 10px 0 6px;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.vnext .vn-tour__body {
+  margin: 0 0 14px;
+  color: var(--vn-text-2);
+  font-size: var(--vn-fs-secondary);
+  line-height: 1.55;
+}
+.vnext .vn-tour__dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.vnext .vn-tour__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--vn-border-strong);
+}
+.vnext .vn-tour__dot.is-done {
+  background: var(--vn-teal);
+  opacity: 0.55;
+}
+.vnext .vn-tour__dot.is-active {
+  background: var(--vn-teal);
+  opacity: 1;
+}
+.vnext .vn-tour__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.vnext .vn-tour__cta {
+  flex: 1;
+  justify-content: center;
+}
+.vnext .vn-tour__skip {
+  background: none;
+  border: none;
+  color: var(--vn-text-2);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 8px 10px;
+}
+.vnext .vn-tour__skip:hover {
+  color: var(--vn-text);
+}
+.vnext .vn-tour__dismiss {
+  display: block;
+  margin: 10px auto 0;
+  background: none;
+  border: none;
+  color: var(--vn-text-3);
+  font-size: var(--vn-fs-label);
+  cursor: pointer;
+}
+.vnext .vn-tour__dismiss:hover {
+  color: var(--vn-text-2);
+  text-decoration: underline;
+}
+
+/* Mobile: dock as a bottom sheet sitting just above the tab bar, and give the
+   page extra bottom space so the sheet never hides the last row of content. */
+@media (max-width: 760px) {
+  .vnext .vn-tour {
+    right: 0;
+    left: 0;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    width: 100%;
+    padding: 0 12px;
+  }
+  .vnext .vn-tour__card {
+    border-radius: var(--vn-r-card) var(--vn-r-card) 0 0;
+  }
+  body.vn-tour-open .vnext .vn-app__main {
+    padding-bottom: calc(320px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .vnext .vn-panel-title {
   font-size: 1rem;
   font-weight: 700;
@@ -2224,6 +2351,95 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
   font-size: 0.88rem;
   line-height: 1.55;
   margin: 0 0 16px;
+}
+.vnext .vn-session-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.vnext .vn-session-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--vn-card-2);
+  border: 1px solid var(--vn-border);
+  border-radius: var(--vn-r-sm);
+}
+.vnext .vn-session-stat__label {
+  font-size: var(--vn-fs-label);
+  text-transform: uppercase;
+  letter-spacing: var(--vn-ls-label);
+  color: var(--vn-text-2);
+  font-weight: 600;
+}
+.vnext .vn-session-stat__value {
+  font-size: var(--vn-fs-body);
+  font-weight: 600;
+}
+.vnext .vn-session-stat__rel {
+  color: var(--vn-text-2);
+  font-weight: 500;
+}
+
+/* Wallet-page exchange activity list */
+.vnext .vn-xchg-list {
+  display: flex;
+  flex-direction: column;
+}
+.vnext .vn-xchg-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 8px;
+  border-bottom: 1px solid var(--vn-rule);
+  text-decoration: none;
+  color: var(--vn-text);
+}
+.vnext .vn-xchg-row:last-child {
+  border-bottom: none;
+}
+.vnext .vn-xchg-row:hover {
+  background: var(--vn-row);
+}
+.vnext .vn-xchg-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.vnext .vn-xchg-row__amount {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.vnext .vn-xchg-row__terms {
+  font-size: var(--vn-fs-secondary);
+  color: var(--vn-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 46ch;
+}
+.vnext .vn-xchg-row__status {
+  flex: 0 0 auto;
+  font-size: var(--vn-fs-label);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 9px;
+  border-radius: var(--vn-r-pill);
+  background: var(--vn-card-2);
+  color: var(--vn-text-2);
+}
+.vnext .vn-xchg-row__status.is-active {
+  color: var(--vn-teal-text);
+}
+.vnext .vn-xchg-row__status.is-done {
+  color: var(--vn-green-text);
+}
+.vnext .vn-xchg-row__status.is-alert {
+  color: var(--vn-red-text);
 }
 .vnext .vn-toggle-row {
   display: flex;

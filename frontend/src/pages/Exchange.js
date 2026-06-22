@@ -8,6 +8,7 @@ import ErrorMessage from "../components/ErrorMessage";
 import RiskNotice from "../components/RiskNotice";
 import Spinner from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
+import { useRealtime } from "../context/RealtimeContext";
 import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 import { authorityErrorMessage, postSignedAuthority } from "../helpers/signedAuthority";
@@ -29,6 +30,7 @@ const tabs = [
 
 function Exchange() {
   const { wallet } = useAuth();
+  const { latestBlockHeight, exchangeVersion } = useRealtime();
   const [activeTab, setActiveTab] = useState("browse");
   const [offers, setOffers] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -95,6 +97,16 @@ function Exchange() {
   useEffect(() => {
     loadExchange();
   }, []);
+
+  // Live updates: refetch when any coordination changes over the socket
+  // (exchange:update — the other party accepted, sent VLQ, confirmed, etc.) or
+  // when a new block confirms (which can move a recorded VLQ tx to confirmed).
+  // The initial mount load above already runs, so this only fires on changes.
+  useEffect(() => {
+    if (latestBlockHeight == null && exchangeVersion === 0) return;
+    loadExchange({ quiet: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exchangeVersion, latestBlockHeight]);
 
   useEffect(() => {
     if (wallet?.address && !myAddress) {
@@ -298,6 +310,31 @@ function Exchange() {
       <RiskNotice />
       <AuthorityWriteNotice />
 
+      <section className="card card-pad stack exchange-explainer" aria-label="How the community exchange works">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">How it works</span>
+            <h2>A community exchange, step by step</h2>
+          </div>
+          <span className="status-badge active" title="This page updates in real time">Live updates</span>
+        </div>
+        <ol className="exchange-steps">
+          <li><strong>Post or accept a request.</strong> One member offers or requests VLQ in exchange for something agreed off-chain (goods, services, support). Another member accepts it.</li>
+          <li><strong>Send the VLQ.</strong> Whoever is sending VLQ sends it from the Send page, then records the transaction ID here so both sides can track it.</li>
+          <li><strong>Wait for confirmation.</strong> The VLQ transaction confirms on the chain automatically — you do not need to refresh.</li>
+          <li><strong>Both sides confirm completion.</strong> Once the off-chain part of the deal is done, each member confirms. If something goes wrong, either side can open a dispute or cancel an open request.</li>
+        </ol>
+        <div className="exchange-signing-note">
+          <strong>Why Vorliq asks for your password at each step</strong>
+          <p>
+            Every exchange action — posting, accepting, recording the VLQ transaction, confirming, or
+            disputing — is signed by your wallet so the network can prove it really came from you, and
+            nobody can act in your name. Your password unlocks your wallet in this browser just long
+            enough to sign. It never leaves your device, and Vorliq never sees it or your private key.
+          </p>
+        </div>
+      </section>
+
       {summary && (
         <section className="card card-pad">
           <div className="grid stats-grid">
@@ -343,6 +380,7 @@ function Exchange() {
             <OfferGrid
               actionId={actionId}
               acceptPasswords={acceptPasswords}
+              myAddress={wallet?.address || myAddress}
               offers={browseOffers}
               onAccept={acceptOffer}
               setAcceptPasswords={setAcceptPasswords}
@@ -462,7 +500,7 @@ function Exchange() {
   );
 }
 
-function OfferGrid({ acceptPasswords, actionId, offers, onAccept, setAcceptPasswords }) {
+function OfferGrid({ acceptPasswords, actionId, offers, onAccept, setAcceptPasswords, myAddress = "" }) {
   if (offers.length === 0) {
     return <div className="empty-state">No open community requests are available yet.</div>;
   }
@@ -471,7 +509,7 @@ function OfferGrid({ acceptPasswords, actionId, offers, onAccept, setAcceptPassw
     <div className="exchange-grid">
       {offers.map((offer) => (
         <article className="exchange-card" key={offer.offer_id}>
-          <TradeDetails offer={offer} />
+          <TradeDetails offer={offer} myAddress={myAddress} />
           <div className="inline-form">
             <input
               className="input"
@@ -512,7 +550,7 @@ function TradeGrid(props) {
     <div className="exchange-grid">
       {props.offers.map((offer) => (
         <article className="exchange-card" key={offer.offer_id}>
-          <TradeDetails offer={offer} showStatus />
+          <TradeDetails offer={offer} showStatus myAddress={props.myAddress} />
           <TradeActions offer={offer} {...props} />
         </article>
       ))}
@@ -520,7 +558,19 @@ function TradeGrid(props) {
   );
 }
 
-function TradeDetails({ offer, showStatus = true }) {
+function LifecycleGuidance({ offer, role }) {
+  const guidance = lifecycleGuidance(offer, role);
+  if (!guidance) return null;
+  return (
+    <div className={`exchange-guidance exchange-guidance--${guidance.tone}`}>
+      <strong>{guidance.headline}</strong>
+      <p>{guidance.detail}</p>
+    </div>
+  );
+}
+
+function TradeDetails({ offer, showStatus = true, myAddress = "" }) {
+  const role = userRole(offer, myAddress);
   return (
     <>
       <div className="section-title">
@@ -528,6 +578,7 @@ function TradeDetails({ offer, showStatus = true }) {
         {showStatus && <span className={`status-badge ${offer.status}`}>{statusLabel(offer.status)}</span>}
       </div>
       <h3>{formatNumber(offer.amount)} VLQ</h3>
+      <LifecycleGuidance offer={offer} role={role} />
       <div className="meta-item">
         <span className="meta-label">Terms</span>
         <span className="meta-value">{offer.price}</span>
@@ -678,6 +729,71 @@ function SummaryStat({ label, value }) {
 
 function offerTypeLabel(type) {
   return type === "sell" ? "offering VLQ" : "requesting VLQ";
+}
+
+function capitalize(value) {
+  const text = String(value || "");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+// Plain-language "where is this, and what do I do next" for the viewing member.
+// Tone drives the colour: wait (neutral), action (you must do something), done,
+// or alert (disputed).
+function lifecycleGuidance(offer, role) {
+  const youSend = role === expectedSenderRole(offer);
+  const otherParty = role === "creator" ? "the acceptor" : "the creator";
+  switch (offer.status) {
+    case "open":
+      if (role === "creator") {
+        return {
+          tone: "wait",
+          headline: "Open — waiting for someone to accept",
+          detail: "Your request is live for the community. You can cancel it any time while it is still open.",
+        };
+      }
+      return {
+        tone: "action",
+        headline: "Open — you can accept this",
+        detail: "Accepting commits you to coordinate with the creator. You sign with your wallet, then follow the steps to send or receive the VLQ.",
+      };
+    case "accepted":
+      if (youSend) {
+        return {
+          tone: "action",
+          headline: "Your turn — send the VLQ",
+          detail: `Send ${formatNumber(offer.amount)} VLQ from the Send page to ${otherParty}, then paste the transaction ID below to record it.`,
+        };
+      }
+      return {
+        tone: "wait",
+        headline: "Waiting for the VLQ to be sent",
+        detail: `${capitalize(otherParty)} needs to send the VLQ and record the transaction. This page updates the moment they do.`,
+      };
+    case "vlq_pending":
+      return {
+        tone: "wait",
+        headline: "VLQ sent — waiting to confirm",
+        detail: "The VLQ transaction is recorded and confirming on the chain. It moves on automatically once it is included in a block.",
+      };
+    case "vlq_confirmed":
+      return {
+        tone: "action",
+        headline: "VLQ confirmed — finish your side, then confirm",
+        detail: "The VLQ has arrived and is confirmed on-chain. Once you have completed the off-chain part of the deal, confirm completion. Both sides must confirm.",
+      };
+    case "completed":
+      return { tone: "done", headline: "Completed", detail: "Both sides confirmed. This coordination is finished." };
+    case "cancelled":
+      return { tone: "done", headline: "Cancelled", detail: "This request was cancelled and is no longer active." };
+    case "disputed":
+      return {
+        tone: "alert",
+        headline: "Disputed",
+        detail: "This coordination was marked as disputed, which pauses completion. Review the reason and resolve it together with the other member.",
+      };
+    default:
+      return null;
+  }
 }
 
 function userRole(offer, address) {
