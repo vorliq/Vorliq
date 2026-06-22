@@ -178,7 +178,13 @@ class Network:
         candidate.chain = chain
         candidate.pending_transactions = []
         candidate._indexes = None
-        return candidate.is_chain_valid()
+        # Validate the canonical chain fully on integrity (every hash, proof of
+        # work, previous-hash link, and the balance/signature ledger) but
+        # grandfather historical block spacing: spacing is admission policy for
+        # new blocks at the tip, not a property of already-mined history. Without
+        # this, a node could never join a network whose chain contains any block
+        # mined faster than the current minimum.
+        return candidate.is_chain_valid(enforce_block_spacing=False)
 
     def _filter_pending_after_chain_update(self, blockchain: Blockchain) -> list[Any]:
         retained_transactions = []

@@ -60,8 +60,15 @@ jobs:
               sed -i 's#^Environment=VORLIQ_HOST=0.0.0.0#Environment=VORLIQ_HOST=127.0.0.1#' /etc/systemd/system/vorliq-blockchain.service
               systemctl daemon-reload
             fi
-            if ! grep -q '^Environment=VORLIQ_MINING_ENABLED=' /etc/systemd/system/vorliq-blockchain.service; then
-              sed -i '/^Environment=VORLIQ_DATA_DIR=/a Environment=VORLIQ_MINING_ENABLED=false' /etc/systemd/system/vorliq-blockchain.service
+            # Production mining must ALWAYS be on, or the chain halts. Enforce
+            # true on every deploy: flip any lingering "false" to "true", and
+            # insert "true" if the variable is missing. A fresh deploy can never
+            # silently re-disable mining.
+            if grep -q '^Environment=VORLIQ_MINING_ENABLED=false' /etc/systemd/system/vorliq-blockchain.service; then
+              sed -i 's#^Environment=VORLIQ_MINING_ENABLED=false#Environment=VORLIQ_MINING_ENABLED=true#' /etc/systemd/system/vorliq-blockchain.service
+              systemctl daemon-reload
+            elif ! grep -q '^Environment=VORLIQ_MINING_ENABLED=' /etc/systemd/system/vorliq-blockchain.service; then
+              sed -i '/^Environment=VORLIQ_DATA_DIR=/a Environment=VORLIQ_MINING_ENABLED=true' /etc/systemd/system/vorliq-blockchain.service
               systemctl daemon-reload
             fi
             if ! grep -q '^Environment=HOST=127.0.0.1' /etc/systemd/system/vorliq-backend.service; then

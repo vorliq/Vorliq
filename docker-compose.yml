@@ -8,6 +8,11 @@ services:
       VORLIQ_PORT: 5001
       VORLIQ_DATA_DIR: /app/data
       NODE_ENV: production
+      # Production mining is always on so the chain keeps producing blocks.
+      VORLIQ_MINING_ENABLED: "true"
+      # Wallet the in-process fallback miner mines to when no member is mining.
+      # Override per deployment; blank leaves the fallback miner idle.
+      VORLIQ_SERVER_WALLET_ADDRESS: "${VORLIQ_SERVER_WALLET_ADDRESS:-}"
     ports:
       - "5001:5001"
     volumes:

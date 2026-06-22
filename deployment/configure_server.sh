@@ -39,7 +39,13 @@ Environment=VORLIQ_HOST=127.0.0.1
 Environment=VORLIQ_PORT=5001
 Environment=VORLIQ_DATA_DIR=/home/vorliq/app/blockchain/data
 Environment=NODE_ENV=production
-Environment=VORLIQ_MINING_ENABLED=false
+# Production mining is always on so the chain keeps producing blocks. The
+# fail-closed default in code stays false for safety; production turns it on here.
+Environment=VORLIQ_MINING_ENABLED=true
+# Wallet the in-process fallback miner mines to when no member is mining. Set this
+# to the node operator's wallet address. If left blank the fallback miner stays
+# idle (it then falls back to VORLIQ_NODE_OPERATOR_WALLET if that is set).
+Environment=VORLIQ_SERVER_WALLET_ADDRESS=
 ExecStart=/home/vorliq/app/blockchain/.venv/bin/python app.py
 Restart=on-failure
 RestartSec=5

@@ -641,6 +641,21 @@ def health():
         oldest_age = max(oldest_age, age)
         if age > threshold_seconds:
             stuck_pending_count += 1
+
+    # Dead-chain alert. The mempool check above can lag, so check the chain tip
+    # directly: if the newest block is older than ten minutes AND there are
+    # pending transactions waiting, chain health is "degraded". Ten minutes is
+    # three full background-miner cycles (35s each) plus generous slack, so at
+    # this threshold the chain genuinely is not producing blocks — it is not just
+    # a quiet moment between blocks — and something is wrong.
+    latest_block = node.blockchain.get_latest_block()
+    last_block_age = now - float(getattr(latest_block, "timestamp", 0) or 0)
+    dead_chain_threshold = 10 * 60
+    chain_health = "ok"
+    if pending_count > 0 and last_block_age > dead_chain_threshold:
+        chain_health = "degraded"
+
+    miner = background_miner_state
     return jsonify(
         {
             "status": "ok",
@@ -649,6 +664,18 @@ def health():
             "stuck_pending_count": stuck_pending_count,
             "stuck_pending_threshold_seconds": threshold_seconds,
             "oldest_pending_age_seconds": int(oldest_age),
+            # Chain-level liveness, distinct from the mempool staleness above.
+            "chain_health": chain_health,
+            "last_block_age_seconds": int(last_block_age),
+            "dead_chain_threshold_seconds": dead_chain_threshold,
+            # Background fallback miner visibility.
+            "background_miner": {
+                "configured": miner["configured"],
+                "running": miner["running"],
+                "wallet_configured": miner["wallet"] is not None,
+                "last_mined_at": miner["last_mined_at"],
+                "last_mined_index": miner["last_mined_index"],
+            },
         }
     )
 
@@ -875,6 +902,37 @@ def create_transaction():
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
+def _persist_after_mine(raw_block, miner_address):
+    """Everything that must happen after a block is mined, shared by the /mine
+    endpoint and the in-process background miner so they can never drift: persist
+    the chain and pending pool, rebuild indexes, sync the sub-ledgers, award
+    achievements, broadcast to peers, and emit received-VLQ notifications."""
+    block = node.blockchain.get_block_detail(str(raw_block["index"])) or raw_block
+    _sync_lending_pool(save=False)
+    _sync_exchange(save=False)
+    _sync_treasury(save=False)
+    _sync_faucet(save=False)
+    storage.save_chain(node.blockchain)
+    storage.save_pending(node.blockchain.pending_transactions)
+    _rebuild_indexes(save=True)
+    storage.save_lending_pool(lending_pool)
+    storage.save_exchange(exchange)
+    storage.save_treasury(treasury)
+    storage.save_faucet(faucet)
+    achievements.check_and_award(miner_address, "first_mine", node.blockchain)
+    achievements.check_and_award(miner_address, "ten_blocks", node.blockchain)
+    storage.save_achievements(achievements)
+    peer_propagation.broadcast_block(
+        raw_block,
+        node_registry,
+        local_node_url=LOCAL_NODE_URL,
+        is_local_development=IS_LOCAL_DEVELOPMENT,
+    )
+    # Opt-in: notify receivers of genuine peer transfers now confirmed.
+    _emit_vlq_received(block if isinstance(block, dict) else raw_block)
+    return block
+
+
 @app.post("/mine")
 def mine_block():
     if not mining_enabled():
@@ -896,29 +954,7 @@ def mine_block():
             "miner address",
         )
         raw_block = node.mine_new_block(miner_address)
-        block = node.blockchain.get_block_detail(str(raw_block["index"])) or raw_block
-        _sync_lending_pool(save=False)
-        _sync_exchange(save=False)
-        _sync_treasury(save=False)
-        _sync_faucet(save=False)
-        storage.save_chain(node.blockchain)
-        storage.save_pending(node.blockchain.pending_transactions)
-        _rebuild_indexes(save=True)
-        storage.save_lending_pool(lending_pool)
-        storage.save_exchange(exchange)
-        storage.save_treasury(treasury)
-        storage.save_faucet(faucet)
-        achievements.check_and_award(miner_address, "first_mine", node.blockchain)
-        achievements.check_and_award(miner_address, "ten_blocks", node.blockchain)
-        storage.save_achievements(achievements)
-        peer_propagation.broadcast_block(
-            raw_block,
-            node_registry,
-            local_node_url=LOCAL_NODE_URL,
-            is_local_development=IS_LOCAL_DEVELOPMENT,
-        )
-        # Opt-in: notify receivers of genuine peer transfers now confirmed.
-        _emit_vlq_received(block if isinstance(block, dict) else raw_block)
+        block = _persist_after_mine(raw_block, miner_address)
         return jsonify({"success": True, "block": block}), 201
     except MiningCooldownError as exc:
         vorliq_logger.warning("Mine endpoint rejected request during cooldown: %s", exc)
@@ -949,6 +985,201 @@ def get_mining_status():
     except Exception as exc:
         vorliq_logger.error("Mining status endpoint failed: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 400
+
+
+# --------------------------------------------------------------------------- #
+# In-process background fallback miner
+#
+# A small community network cannot rely on a member being online and mining to
+# keep the chain alive. This daemon thread, part of the Flask service itself,
+# wakes every 35 seconds and mines exactly one block IF there is pending work and
+# the spacing rule allows it — using the server's own wallet. It is a fallback,
+# not a competitor: it only mines when there are pending transactions and the
+# tip is old enough, so if members are mining it simply finds nothing to do and
+# goes back to sleep. It holds the same write lock as request handlers so it can
+# never corrupt shared chain state, and it runs as a daemon so it never blocks a
+# clean shutdown. With no server wallet configured it logs a warning and idles.
+BACKGROUND_MINER_INTERVAL_SECONDS = int(os.environ.get("VORLIQ_BACKGROUND_MINER_INTERVAL", "35"))
+
+background_miner_state = {
+    "configured": False,   # a server wallet was resolved
+    "running": False,      # the loop thread is alive
+    "wallet": None,
+    "last_mined_at": None,     # epoch seconds of the last block this miner produced
+    "last_mined_index": None,
+    "last_error": None,
+}
+
+
+def _resolve_server_wallet():
+    """The wallet the fallback miner mines to. A dedicated variable first, then
+    the node operator's wallet, so an existing operator-configured node gets a
+    working fallback miner without extra setup. Never hardcoded."""
+    for key in ("VORLIQ_SERVER_WALLET_ADDRESS", "VORLIQ_NODE_OPERATOR_WALLET", "VORLIQ_OPERATOR_WALLET"):
+        value = (os.environ.get(key) or "").strip()
+        if value:
+            return value
+    return None
+
+
+def _background_miner_should_mine(wallet):
+    """True only when there is real, mineable work right now. Cheap checks done
+    outside the lock; re-verified inside the lock before mining."""
+    if not mining_enabled():
+        return False
+    if not (node.blockchain.pending_transactions or []):
+        return False
+    status = node.blockchain.get_mining_status()
+    if not status.get("chain_valid"):
+        return False
+    if status.get("seconds_until_next_allowed_block", 0) > 0:
+        return False
+    # Respect the same-miner anti-monopoly cooldown so we do not spin on a
+    # rejection every cycle when we were the last miner (single-node case).
+    if (
+        status.get("last_miner_address") == wallet
+        and status.get("seconds_since_last_block", 0) < node.blockchain.SAME_MINER_MIN_GAP
+    ):
+        return False
+    return True
+
+
+def _background_miner_loop(wallet):
+    background_miner_state["running"] = True
+    vorliq_logger.info(
+        "Background fallback miner active; mining to %s every %ss when the chain needs it",
+        wallet,
+        BACKGROUND_MINER_INTERVAL_SECONDS,
+    )
+    while True:
+        time.sleep(BACKGROUND_MINER_INTERVAL_SECONDS)
+        try:
+            if not _background_miner_should_mine(wallet):
+                continue
+            _chain_lock.acquire_write()
+            try:
+                # Re-check under the lock: a member (or a peer block) may have
+                # mined in the gap between the cheap check and acquiring the lock.
+                if not _background_miner_should_mine(wallet):
+                    continue
+                raw_block = node.mine_new_block(wallet)
+                _persist_after_mine(raw_block, wallet)
+            finally:
+                _chain_lock.release_write()
+            background_miner_state["last_mined_at"] = time.time()
+            background_miner_state["last_mined_index"] = raw_block.get("index")
+            background_miner_state["last_error"] = None
+            vorliq_logger.info("Background fallback miner produced block %s", raw_block.get("index"))
+        except MiningCooldownError as exc:
+            vorliq_logger.debug("Background miner waiting on cooldown: %s", exc)
+        except ValueError as exc:
+            # Same-miner cooldown or a transient validation issue — fallback only.
+            if "same address cannot mine two consecutive blocks" in str(exc):
+                vorliq_logger.debug("Background miner waiting on same-miner cooldown: %s", exc)
+            else:
+                vorliq_logger.warning("Background miner skipped a cycle: %s", exc)
+                background_miner_state["last_error"] = str(exc)
+        except Exception as exc:  # never let the miner thread die on one bad cycle
+            vorliq_logger.error("Background miner cycle error: %s", exc)
+            background_miner_state["last_error"] = str(exc)
+
+
+def start_background_miner():
+    """Start the fallback miner in a daemon thread. Safe to call once at startup.
+    Logs a warning and does nothing if no server wallet is configured."""
+    wallet = _resolve_server_wallet()
+    if not wallet:
+        vorliq_logger.warning(
+            "Background fallback miner disabled: no server wallet configured "
+            "(set VORLIQ_SERVER_WALLET_ADDRESS). The chain will only advance when "
+            "a member mines."
+        )
+        return
+    background_miner_state["configured"] = True
+    background_miner_state["wallet"] = wallet
+    thread = threading.Thread(target=_background_miner_loop, args=(wallet,), name="vorliq-background-miner", daemon=True)
+    thread.start()
+
+
+# --------------------------------------------------------------------------- #
+# Automatic network join + periodic chain sync
+#
+# A new node "points at the network" through VORLIQ_BOOTSTRAP_PEERS (a comma-
+# separated list of peer URLs). On startup it registers those seed peers,
+# discovers the rest of the network from them, downloads the longest valid chain
+# and adopts it after full integrity validation, then announces itself so the
+# existing nodes peer back. It re-syncs on an interval so a node that falls
+# behind catches up on its own. Everything runs in a daemon thread, so a slow or
+# unreachable peer never blocks startup or a clean shutdown.
+NETWORK_SYNC_INTERVAL_SECONDS = int(os.environ.get("VORLIQ_NETWORK_SYNC_INTERVAL", "300"))
+
+
+def _bootstrap_peers():
+    raw = os.environ.get("VORLIQ_BOOTSTRAP_PEERS", "") or ""
+    return [peer.strip() for peer in raw.split(",") if peer.strip()]
+
+
+def _join_network_once(seed_peers):
+    # 1. Discover: register the seed peers and pull their peer lists.
+    try:
+        network.discover_peers(seed_peers)
+        network.remove_peer(LOCAL_NODE_URL)
+    except Exception as exc:
+        vorliq_logger.warning("Network join: peer discovery failed: %s", exc)
+    # 2. Download, fully validate, and adopt the longest valid chain. This can
+    #    replace node.blockchain.chain, so hold the write lock (same as the
+    #    /peers/sync endpoint) to stay consistent with request handlers.
+    try:
+        _chain_lock.acquire_write()
+        try:
+            adopted = network.sync_chain(node.blockchain)
+            if adopted:
+                storage.save_chain(node.blockchain)
+                storage.save_pending(node.blockchain.pending_transactions)
+                _rebuild_indexes(save=True)
+        finally:
+            _chain_lock.release_write()
+        if adopted:
+            vorliq_logger.info(
+                "Network join: adopted a longer canonical chain; height is now %s",
+                node.blockchain.get_block_height(),
+            )
+    except Exception as exc:
+        vorliq_logger.warning("Network join: chain sync failed: %s", exc)
+    # 3. Announce self so existing nodes add us as a peer (and will sync from us).
+    try:
+        network.announce_to_peers(LOCAL_NODE_URL, network.get_peers())
+    except Exception as exc:
+        vorliq_logger.warning("Network join: announce failed: %s", exc)
+    # 4. Persist the discovered peer set.
+    try:
+        storage.save_peers(network.peers)
+    except Exception as exc:
+        vorliq_logger.warning("Network join: saving peers failed: %s", exc)
+
+
+def _network_join_loop(bootstrap):
+    _join_network_once(bootstrap)  # immediate join on boot
+    while True:
+        time.sleep(NETWORK_SYNC_INTERVAL_SECONDS)
+        try:
+            _join_network_once(network.get_peers() or bootstrap)
+        except Exception as exc:
+            vorliq_logger.error("Network sync cycle error: %s", exc)
+
+
+def start_network_join():
+    """Join the network and keep in sync, in a daemon thread. Does nothing if no
+    bootstrap peers are configured and none are already known (standalone node)."""
+    bootstrap = _bootstrap_peers()
+    if not bootstrap and not network.get_peers():
+        vorliq_logger.info(
+            "No bootstrap peers configured (VORLIQ_BOOTSTRAP_PEERS); running as a standalone node"
+        )
+        return
+    thread = threading.Thread(target=_network_join_loop, args=(bootstrap,), name="vorliq-network-join", daemon=True)
+    thread.start()
+    vorliq_logger.info("Network join thread started (bootstrap: %s)", bootstrap or "saved peers")
 
 
 @app.get("/mining/history")
@@ -3094,6 +3325,16 @@ def get_leaderboard():
 
 if __name__ == "__main__":
     vorliq_logger.info("Starting Vorliq Flask blockchain API on %s:%s", VORLIQ_HOST, VORLIQ_PORT)
+    # Join the network (discover peers + adopt the canonical chain) before we
+    # start mining, so a fresh node builds on the network's chain rather than its
+    # own genesis. Both run in daemon threads; only started for the running
+    # service, never on import (so tests are unaffected).
+    start_network_join()
+    # Keep the chain alive even when no member is mining.
+    if mining_enabled():
+        start_background_miner()
+    else:
+        vorliq_logger.info("Background miner not started: mining is disabled on this node")
     # threaded=True lets independent read requests be served in parallel instead
     # of queuing behind a single request thread; the readers-writer lock above
     # keeps state-mutating requests mutually exclusive so shared chain state is
