@@ -134,7 +134,9 @@ class BlockchainIndexes:
             "current_mining_reward": blockchain.get_current_mining_reward(),
             "last_block_hash": latest_block.hash if latest_block else None,
             "last_block_timestamp": latest_block.timestamp if latest_block else None,
-            "chain_valid": blockchain.is_chain_valid(),
+            # Integrity-only: this summarises our own chain, where historical
+            # block spacing is grandfathered (enforced at admission, not reload).
+            "chain_valid": blockchain.is_chain_valid(enforce_block_spacing=False),
         }
 
         indexes = {

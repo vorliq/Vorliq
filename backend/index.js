@@ -42,6 +42,7 @@ const migrationRoutes = require("./routes/migration");
 const newsletterRoutes = require("./routes/newsletter");
 const walletHistoryRoutes = require("./routes/walletHistory");
 const avatarRoutes = require("./routes/avatar");
+const activityRoutes = require("./routes/activity");
 const realtime = require("./realtime");
 const adminAuth = require("./middleware/adminAuth");
 const { sendError } = require("./utils/apiResponse");
@@ -425,6 +426,7 @@ app.get("/api/chat/history", (req, res) => {
 });
 
 app.use(chainRoutes);
+app.use(activityRoutes);
 app.use(walletRoutes);
 app.use(transactionRoutes);
 app.use(miningRoutes);

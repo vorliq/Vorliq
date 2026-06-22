@@ -207,6 +207,33 @@ if saved_blockchain:
 else:
     vorliq_logger.info("Flask startup created fresh blockchain with height %s", node.blockchain.get_block_height())
 
+
+def _assert_startup_chain_valid() -> None:
+    """Refuse to begin serving on a structurally invalid chain.
+
+    A restart must never silently discard real history. load_chain() already
+    grandfathers historical block spacing, so a chain that was mined faster than
+    today's BLOCK_TIME_MINIMUM still reloads intact. This gate is the last line
+    of defence: if the reloaded chain is structurally broken (bad hashes, broken
+    links, invalid proof of work, or an invalid ledger) we raise before the app
+    accepts requests rather than quietly starting fresh and losing transactions.
+    """
+    if not node.blockchain.is_chain_valid(enforce_block_spacing=False):
+        message = (
+            "Refusing to start: reloaded chain failed structural validation. "
+            "Chain state is preserved on disk and was not overwritten; "
+            "investigate chain.json before restarting."
+        )
+        vorliq_logger.critical(message)
+        raise SystemExit(message)
+    vorliq_logger.info(
+        "Flask startup chain validation passed for %s blocks; ready to serve",
+        len(node.blockchain.chain),
+    )
+
+
+_assert_startup_chain_valid()
+
 node.blockchain.pending_transactions = [
     Transaction.from_dict(transaction) for transaction in storage.load_pending()
 ]
@@ -996,7 +1023,7 @@ def get_diagnostics():
             "success": True,
             "node_url": LOCAL_NODE_URL,
             "block_height": node.blockchain.get_block_height(),
-            "chain_valid": node.blockchain.is_chain_valid(),
+            "chain_valid": node.blockchain.is_chain_valid(enforce_block_spacing=False),
             "pending_transactions": len(node.blockchain.pending_transactions),
             "known_peers": len(network.peers),
             "active_registry_nodes": len(node_registry.get_active_nodes()),
@@ -1080,7 +1107,7 @@ def get_weekly_report_preview():
             "stats": {
                 **_weekly_report_stats(),
                 "block_height": node.blockchain.get_block_height(),
-                "chain_valid": node.blockchain.is_chain_valid(),
+                "chain_valid": node.blockchain.is_chain_valid(enforce_block_spacing=False),
                 "current_mining_reward": node.blockchain.get_current_mining_reward(),
                 "last_block_hash": latest_block.hash,
             },
@@ -1111,7 +1138,7 @@ def get_audit_chain():
         {
             **_audit_base("chain"),
             "block_count": len(blocks),
-            "chain_valid": node.blockchain.is_chain_valid(),
+            "chain_valid": node.blockchain.is_chain_valid(enforce_block_spacing=False),
             "difficulty": node.blockchain.difficulty,
             "current_reward": node.blockchain.get_current_mining_reward(),
             "genesis_hash": genesis_hash,

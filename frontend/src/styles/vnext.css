@@ -20,11 +20,20 @@
   --vn-green-text: var(--vn-green);
   --vn-red-text: #ff5d6c; /* danger/error/negative text — bright reads on dark */
 
-  /* --- Dark surfaces (default) --- */
-  --vn-bg: #080b14;            /* near-black deep navy page background */
-  --vn-card: #0d1628;          /* elevated card surface */
-  --vn-card-2: #111f38;        /* nested/secondary surface */
-  --vn-section: #0d1526;       /* full-width separator section */
+  /* --- Dark surfaces (default) ---
+     A deliberate three-level depth ladder so hierarchy reads at a glance:
+       L1 page  (deepest)  --vn-bg
+       L2 panel (cards, sidebar, tables)  --vn-card
+       L3 raised (inputs and interactive controls)  --vn-input
+     The old values stepped too gently (bg #080b14 -> card #0d1628), so page,
+     sidebar and cards all looked like one flat plane. These steps are larger
+     and evenly spaced in luminance so each level is unmistakably distinct while
+     staying in the deep-navy brand family. */
+  --vn-bg: #070a12;            /* L1 — deepest near-black navy page */
+  --vn-card: #101a2e;          /* L2 — clearly lifted card / panel / sidebar */
+  --vn-card-2: #172338;        /* nested surface inside a card (table details) */
+  --vn-input: #1c2a45;         /* L3 — raised input / interactive control */
+  --vn-section: #0b1220;       /* full-width separator section, just above page */
 
   /* --- Text on dark --- */
   --vn-text: #ffffff;
@@ -65,6 +74,24 @@
   --vn-space-6: 32px;
   --vn-space-7: 48px;
 
+  /* --- Type scale ---
+     Three legibility tiers so a page is scannable rather than a flat wall of
+     same-size text:
+       primary   — balances and amounts: large, heavy, tight (the figure you read first)
+       secondary — addresses, timestamps, counterparties: clearly subordinate
+       tertiary  — metadata labels: small, uppercase, tracked, quietest
+     The brand accents and AA contrast gate are unaffected; only size/weight/
+     spacing change. */
+  --vn-fs-display: clamp(1.7rem, 1.15rem + 2.1vw, 2.1rem); /* primary figures */
+  --vn-fs-h1: clamp(1.5rem, 1.1rem + 1.6vw, 1.9rem);
+  --vn-fs-h2: 1.05rem;
+  --vn-fs-body: 0.95rem;
+  --vn-fs-secondary: 0.84rem;  /* addresses, timestamps, counterparties */
+  --vn-fs-label: 0.73rem;      /* tertiary metadata labels */
+  --vn-fw-figure: 800;
+  --vn-ls-label: 0.06em;       /* tracking for uppercase metadata labels */
+  --vn-ls-figure: -0.01em;     /* slight negative tracking on large figures */
+
   /* --- Elevation (canonical; dark values carried from the legacy scale) --- */
   --vn-shadow: 0 26px 90px rgba(0, 0, 0, 0.34);
   --vn-shadow-soft: 0 18px 58px rgba(0, 0, 0, 0.24);
@@ -86,10 +113,18 @@
 
 /* Light mode inversion — accents and gradient stay identical. */
 html[data-theme="light"] .vnext {
-  --vn-bg: #ffffff;
-  --vn-card: #f4f6fa;
-  --vn-card-2: #e8ebf0;
-  --vn-section: #f4f6fa;
+  /* Light depth ladder. The old light theme put a pure-white page behind a
+     near-white #f4f6fa card, so cards never lifted off the page. Now the page
+     is a soft cool grey, cards are pure white (so they clearly float above the
+     page and pick up the soft shadow), and interactive controls sit on a
+     distinct tinted surface so the third level is still legible — on light a
+     control reads as a recessed well rather than a raised tile, which is the
+     conventional and most readable light-mode treatment. */
+  --vn-bg: #e8ecf3;            /* L1 — soft cool-grey page */
+  --vn-card: #ffffff;          /* L2 — white card / panel / sidebar lifts off page */
+  --vn-card-2: #eef1f7;        /* nested surface inside a white card */
+  --vn-input: #eef1f7;         /* L3 — interactive control surface, distinct from card */
+  --vn-section: #f1f4f9;       /* full-width separator section */
   --vn-text: #080b14;
   /* The spec's 55% secondary tone resolves to ~4.36:1 on white (below AA). The
      accessibility gate wins over the literal opacity rule, so light secondary
@@ -768,8 +803,8 @@ html[data-theme="light"] .vnext .vn-ticker__item {
 }
 .vnext .vn-input {
   flex: 1;
-  background: var(--vn-card);
-  border: 1px solid var(--vn-border);
+  background: var(--vn-input);
+  border: 1px solid var(--vn-border-strong);
   border-radius: var(--vn-r-sm);
   padding: 12px 16px;
   color: var(--vn-text);
@@ -1163,18 +1198,21 @@ html[data-theme="light"] .vnext .vn-side__wallet {
 }
 .vnext .vn-sum__label {
   color: var(--vn-text-2);
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: var(--vn-fs-label);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--vn-ls-label);
 }
 .vnext .vn-sum__icon {
   color: var(--vn-teal-text);
 }
 .vnext .vn-sum__value {
-  font-size: 1.7rem;
-  font-weight: 800;
+  font-size: var(--vn-fs-display);
+  font-weight: var(--vn-fw-figure);
+  letter-spacing: var(--vn-ls-figure);
   margin-top: 8px;
   font-variant-numeric: tabular-nums;
-  line-height: 1.1;
+  line-height: 1.05;
 }
 /* Fixed-height slot so cards with and without a trend are the same height. */
 .vnext .vn-sum__trend-slot {
@@ -1219,6 +1257,141 @@ html[data-theme="light"] .vnext .vn-side__wallet {
   display: grid;
   gap: 20px;
 }
+
+/* Lower-dashboard grid with named areas. Desktop: personal transaction history
+   on the left spanning both rows; the public activity feed at the top of the
+   right sidebar, with the balance chart + network status beneath it. */
+.vnext .vn-dash-grid {
+  display: grid;
+  grid-template-columns: 6fr 4fr;
+  grid-template-areas:
+    "main feed"
+    "main aside";
+  gap: 20px;
+  align-items: start;
+  margin-top: 20px;
+}
+.vnext .vn-dash-grid__feed {
+  grid-area: feed;
+}
+.vnext .vn-dash-grid__main {
+  grid-area: main;
+  min-width: 0;
+}
+.vnext .vn-dash-grid__aside {
+  grid-area: aside;
+  display: grid;
+  gap: 20px;
+}
+
+/* Activity feed */
+.vnext .vn-feed__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.vnext .vn-feed__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--vn-fs-label);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--vn-ls-label);
+  color: var(--vn-green-text);
+}
+.vnext .vn-feed__live::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--vn-green);
+  box-shadow: var(--vn-glow-green-sm);
+}
+.vnext .vn-feed__list {
+  display: flex;
+  flex-direction: column;
+}
+.vnext .vn-feed__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 8px;
+  border-radius: var(--vn-r-sm);
+  text-decoration: none;
+  color: var(--vn-text);
+  transition: background-color 120ms ease;
+}
+.vnext .vn-feed__row:hover {
+  background: var(--vn-row);
+}
+.vnext .vn-feed__icon {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--vn-r-sm);
+  display: grid;
+  place-items: center;
+  background: var(--vn-card-2);
+  color: var(--vn-teal-text);
+}
+.vnext .vn-feed__icon--transaction {
+  color: var(--vn-blue);
+}
+.vnext .vn-feed__icon--loan {
+  color: var(--vn-green-text);
+}
+.vnext .vn-feed__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.vnext .vn-feed__title {
+  font-size: var(--vn-fs-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vnext .vn-feed__sub {
+  font-size: var(--vn-fs-label);
+  color: var(--vn-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vnext .vn-feed__time {
+  flex: 0 0 auto;
+  font-size: var(--vn-fs-label);
+  color: var(--vn-text-2);
+  white-space: nowrap;
+}
+.vnext .vn-feed__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  padding: 26px 12px;
+  color: var(--vn-text-2);
+}
+.vnext .vn-feed__empty svg {
+  color: var(--vn-text-3);
+}
+.vnext .vn-feed__empty p {
+  margin: 6px 0 0;
+  font-weight: 700;
+  color: var(--vn-text);
+}
+.vnext .vn-feed__empty span {
+  font-size: var(--vn-fs-secondary);
+  max-width: 36ch;
+  line-height: 1.5;
+}
+
 .vnext .vn-panel-title {
   font-size: 1rem;
   font-weight: 700;
@@ -1386,10 +1559,12 @@ html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
 }
 .vnext .vn-netstat__label {
   color: var(--vn-text-2);
+  font-size: var(--vn-fs-secondary);
 }
 .vnext .vn-netstat__value {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  font-size: var(--vn-fs-body);
 }
 
 /* =========================================================================
@@ -1696,6 +1871,15 @@ html[data-theme="light"] .vnext .vn-code {
   }
   .vnext .vn-dash-split {
     grid-template-columns: 1fr;
+  }
+  /* Single column: activity feed first (right below the summary cards), then
+     the personal transaction history, then the chart + network status. */
+  .vnext .vn-dash-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "feed"
+      "main"
+      "aside";
   }
 }
 @media (max-width: 560px) {

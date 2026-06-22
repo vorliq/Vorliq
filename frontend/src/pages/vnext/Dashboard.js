@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { ArrowUpRight, Coins, Droplets, Landmark, Wallet } from "lucide-react";
 
 import "../../styles/vnext.css";
+import ActivityFeed from "../../components/vnext/ActivityFeed";
 import AppShell from "../../components/vnext/AppShell";
 import LineChart from "../../components/vnext/LineChart";
 import SummaryCard from "../../components/vnext/SummaryCard";
@@ -300,18 +301,29 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="vn-dash-split">
-        {/* Left: full transaction history (shared with the Wallet page) */}
-        <TransactionHistory
-          address={address}
-          isLoggedIn={isLoggedIn}
-          rows={txRows}
-          error={txError}
-          onRetry={reloadTx}
-        />
+      {/* Lower dashboard. A grid with named areas so the public activity feed
+          sits in the right-hand sidebar next to the charts on desktop, but drops
+          to directly below the summary cards on mobile (above the personal
+          transaction history), per the responsive spec. */}
+      <div className="vn-dash-grid">
+        {/* Public network activity — everyone sees the same chain events. */}
+        <div className="vn-dash-grid__feed">
+          <ActivityFeed />
+        </div>
 
-        {/* Right: balance chart + network status */}
-        <div className="vn-dash-right">
+        {/* Personal transaction history (shared with the Wallet page). */}
+        <div className="vn-dash-grid__main">
+          <TransactionHistory
+            address={address}
+            isLoggedIn={isLoggedIn}
+            rows={txRows}
+            error={txError}
+            onRetry={reloadTx}
+          />
+        </div>
+
+        {/* Balance chart + network status. */}
+        <div className="vn-dash-grid__aside">
           <Card>
             <h2 className="vn-panel-title">Balance over time</h2>
             <LineChart

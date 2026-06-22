@@ -75,9 +75,14 @@ class Storage:
             raise StorageCorruptionError(
                 "chain.json is corrupt and no valid backup was available; refusing to overwrite chain state"
             )
-        if not blockchain.is_chain_valid():
+        # Persistence guards against structural corruption (bad hashes, broken
+        # links, invalid PoW or ledger), not against the spacing of historical
+        # blocks — that is admission policy, already enforced when each block was
+        # mined, and re-checking it here would refuse to save a perfectly intact
+        # chain whenever the spacing parameter changed.
+        if not blockchain.is_chain_valid(enforce_block_spacing=False):
             self.chain_write_protected = True
-            self.chain_storage_error = "refusing to save a blockchain that failed full chain validation"
+            self.chain_storage_error = "refusing to save a blockchain that failed structural chain validation"
             vorliq_logger.critical(self.chain_storage_error)
             raise StorageCorruptionError(self.chain_storage_error)
         chain_data = {
@@ -90,9 +95,9 @@ class Storage:
             "chain": [block.to_dict() for block in blockchain.chain],
         }
         serialized_blockchain = self._blockchain_from_chain_data(chain_data)
-        if serialized_blockchain is None or not serialized_blockchain.is_chain_valid():
+        if serialized_blockchain is None or not serialized_blockchain.is_chain_valid(enforce_block_spacing=False):
             self.chain_write_protected = True
-            self.chain_storage_error = "refusing to save serialized blockchain payload that failed full chain validation"
+            self.chain_storage_error = "refusing to save serialized blockchain payload that failed structural chain validation"
             vorliq_logger.critical(self.chain_storage_error)
             raise StorageCorruptionError(self.chain_storage_error)
         self._write_json(self.chain_file, chain_data)
@@ -114,7 +119,11 @@ class Storage:
         if blockchain is None:
             return None
 
-        if not blockchain.is_chain_valid():
+        # Reloading our own persisted chain: accept it on structural integrity
+        # alone. Historical blocks were admitted under the spacing policy in force
+        # when they were mined and are grandfathered, so a restart never discards
+        # a structurally intact chain just because spacing later changed.
+        if not blockchain.is_chain_valid(enforce_block_spacing=False):
             blockchain = self._restore_valid_chain_backup()
 
         vorliq_logger.info("Loaded blockchain from disk with %s blocks", len(blockchain.chain))
@@ -141,7 +150,7 @@ class Storage:
         try:
             backup_data = json.loads(backup_path.read_text(encoding="utf-8"))
             backup_blockchain = self._blockchain_from_chain_data(backup_data)
-            if backup_blockchain is None or not backup_blockchain.is_chain_valid():
+            if backup_blockchain is None or not backup_blockchain.is_chain_valid(enforce_block_spacing=False):
                 raise ValueError("backup chain failed validation")
 
             invalid_path = self.chain_file.with_suffix(self.chain_file.suffix + f".invalid.{int(time.time())}")

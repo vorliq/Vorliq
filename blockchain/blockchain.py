@@ -108,7 +108,25 @@ class Blockchain:
             self.adjust_difficulty()
             return True
 
-    def is_chain_valid(self) -> bool:
+    def is_chain_valid(self, enforce_block_spacing: bool = True) -> bool:
+        # Two kinds of rule are checked here, and they are not the same kind of
+        # thing. Structural integrity — the genesis hash, every block's hash and
+        # proof of work, the previous-hash links, and the balance/signature
+        # ledger — is a permanent, tamper-evident invariant: it must hold for
+        # every block forever. The block-spacing rules (BLOCK_TIME_MINIMUM and
+        # the same-miner anti-monopoly gap) are admission policy: they govern
+        # whether a *new* block may join the tip, and they are already enforced
+        # at admission in add_block() and the mining cooldown.
+        #
+        # Re-applying admission policy to already-admitted historical blocks is
+        # wrong, because the policy value can change over time (it is read from
+        # the environment) and tests/local nodes mine faster than production. A
+        # block that was validly admitted under the policy in force when it was
+        # mined must stay valid forever, or the persisted chain cannot survive a
+        # restart. So callers validating our own trusted, already-persisted chain
+        # (reload, save, status) pass enforce_block_spacing=False to check
+        # integrity only, while callers admitting new or untrusted blocks (peer
+        # chain adoption) keep the default and enforce spacing too.
         if not self.chain:
             vorliq_logger.warning("Chain validation failed because the chain is empty")
             return False
@@ -140,17 +158,18 @@ class Blockchain:
 
             current_miner = getattr(current_block, "miner_address", None)
             previous_miner = getattr(previous_block, "miner_address", None)
-            if current_miner and current_block.timestamp - previous_block.timestamp < self.BLOCK_TIME_MINIMUM:
-                vorliq_logger.warning("Chain validation failed at block %s: block was mined too soon", current_block.index)
-                return False
-            if (
-                current_miner
-                and previous_miner
-                and current_miner == previous_miner
-                and current_block.timestamp - previous_block.timestamp < self.SAME_MINER_MIN_GAP
-            ):
-                vorliq_logger.warning("Chain validation failed at block %s: consecutive miner within the anti-monopoly window", current_block.index)
-                return False
+            if enforce_block_spacing:
+                if current_miner and current_block.timestamp - previous_block.timestamp < self.BLOCK_TIME_MINIMUM:
+                    vorliq_logger.warning("Chain validation failed at block %s: block was mined too soon", current_block.index)
+                    return False
+                if (
+                    current_miner
+                    and previous_miner
+                    and current_miner == previous_miner
+                    and current_block.timestamp - previous_block.timestamp < self.SAME_MINER_MIN_GAP
+                ):
+                    vorliq_logger.warning("Chain validation failed at block %s: consecutive miner within the anti-monopoly window", current_block.index)
+                    return False
 
         if not self._chain_transactions_are_valid(self.chain):
             vorliq_logger.warning("Chain validation failed because balances or transaction signatures are invalid")
@@ -185,7 +204,11 @@ class Blockchain:
         miner_address = str(miner_address).replace("\x00", "").strip()
         if miner_address in SYSTEM_ADDRESSES or miner_address == self.TREASURY_ADDRESS:
             raise ValueError("reserved system addresses cannot receive public mining rewards")
-        if not self.is_chain_valid():
+        # Gate mining on the *integrity* of our own chain, not on the spacing of
+        # historical blocks — otherwise a node carrying grandfathered fast blocks
+        # could never mine again. The new block's own spacing is still enforced
+        # by the cooldown check below and by add_block().
+        if not self.is_chain_valid(enforce_block_spacing=False):
             raise ValueError("current chain is invalid; mining is disabled until validated recovery completes")
 
         latest_block = self.get_latest_block()
@@ -347,7 +370,9 @@ class Blockchain:
             "current_mining_reward": self.get_current_mining_reward(),
             "last_block_hash": last_block.hash,
             "last_block_timestamp": last_block.timestamp,
-            "chain_valid": self.is_chain_valid(),
+            # Reported validity of our own persisted chain: integrity only, so a
+            # chain with grandfathered fast blocks is not mislabelled invalid.
+            "chain_valid": self.is_chain_valid(enforce_block_spacing=False),
         }
 
     def get_mining_status(self) -> dict[str, Any]:
@@ -355,7 +380,9 @@ class Blockchain:
         now = time.time()
         seconds_since_last_block = max(now - float(last_block.timestamp), 0.0)
         seconds_until_next_allowed_block = max(self.BLOCK_TIME_MINIMUM - seconds_since_last_block, 0.0)
-        chain_valid = self.is_chain_valid()
+        # Our own chain's integrity gates whether mining is offered; the per-block
+        # spacing is surfaced separately as seconds_until_next_allowed_block.
+        chain_valid = self.is_chain_valid(enforce_block_spacing=False)
         current_reward = self.get_current_mining_reward()
         miner_reward = round(current_reward * (1 - self.TREASURY_PERCENTAGE), 8)
         treasury_reward = round(current_reward * self.TREASURY_PERCENTAGE, 8)
@@ -875,7 +902,7 @@ class Blockchain:
             "treasury_percentage": self.TREASURY_PERCENTAGE,
             "treasury_address": self.TREASURY_ADDRESS,
             "treasury_balance": self.get_treasury_balance(),
-            "is_valid": self.is_chain_valid(),
+            "is_valid": self.is_chain_valid(enforce_block_spacing=False),
             "pending_transactions": self.get_pending_transactions(),
             "chain": self.get_chain_data(),
         }

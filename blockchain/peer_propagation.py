@@ -346,7 +346,10 @@ class PeerPropagation:
     def classify_peer_block(self, data: dict[str, Any], blockchain: Blockchain) -> tuple[Block | None, dict[str, Any], int]:
         if not self.receive_enabled:
             return None, {"success": False, "message": "Peer block receive is disabled.", "reason": "receive_disabled"}, 403
-        if not blockchain.is_chain_valid():
+        # Gate on the integrity of our own local chain; historical block spacing
+        # is grandfathered (enforced at admission, not re-judged on every check),
+        # so a node carrying legacy fast blocks can still receive peer blocks.
+        if not blockchain.is_chain_valid(enforce_block_spacing=False):
             return None, {
                 "success": False,
                 "message": "Peer blocks are disabled until validated chain recovery completes.",
