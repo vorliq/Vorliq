@@ -5,6 +5,13 @@ const { Server } = require("socket.io");
 const cron = require("node-cron");
 require("dotenv").config();
 
+// Connection pool for all outbound HTTP (every call to the Flask core is HTTP to
+// localhost). A bounded keep-alive agent means concurrent requests reuse a small
+// set of pooled sockets and anything beyond the cap is queued, instead of every
+// request opening its own socket and hammering Flask's single-process lock all at
+// once. keep-alive also avoids a TCP handshake per call.
+axios.defaults.httpAgent = new http.Agent({ keepAlive: true, maxSockets: 16, maxFreeSockets: 8 });
+
 const FLASK_URL = process.env.FLASK_URL || "http://localhost:5001";
 
 const chainRoutes = require("./routes/chain");

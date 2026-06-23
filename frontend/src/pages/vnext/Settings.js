@@ -32,13 +32,13 @@ import { loadWallet, saveWallet } from "../../helpers/storage";
 import { inviteLinkFor } from "../../helpers/referral";
 import { shortHash } from "../../helpers/publicApi";
 
-// The server caps the *decoded* avatar at 2MB. We resize every chosen image to a
-// 256x256 PNG in the browser first, so the only size that matters is the resized
-// output — never the original camera file (a normal phone photo is 3-5MB and
-// would shrink to well under 100KB). We guard the original only against absurd
-// inputs so we don't try to decode a huge file into memory.
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
-const MAX_SOURCE_BYTES = 30 * 1024 * 1024;
+// There is NO limit on the original file the user picks. Every chosen image is
+// resized to a 256x256 PNG in the browser first, which produces ~30-100KB
+// regardless of the source — a 20MB phone photo becomes a ~60KB upload. The only
+// size that can matter is the resized output, capped at 3MB to match the server's
+// JSON body limit; in practice a 256x256 PNG never comes close, so this never
+// triggers. It exists only as a final sanity guard.
+const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
 
 // A base64 data URL ("data:...;base64,XXXX") decodes to roughly 3/4 of the
 // base64 character count; estimate the real byte size without decoding it.
@@ -420,20 +420,15 @@ function AvatarSection({ address }) {
     setDone(false);
     const file = event.target.files?.[0];
     if (!file) return;
-    // Only reject genuinely enormous source files (we have to decode the chosen
-    // file to resize it); a normal multi-megabyte phone photo is fine because the
-    // resize below shrinks it before it is ever uploaded.
-    if (file.size > MAX_SOURCE_BYTES) {
-      setError("That image is unusually large. Choose a photo under 30MB.");
-      return;
-    }
+    // No source-size check: any photo from the phone is fine because it is resized
+    // below before it is ever uploaded.
     try {
       const resized = await resizeImageToDataUrl(file, 256);
-      // Validate the size that actually gets uploaded (the 256x256 PNG), not the
-      // original file, matching the server's 2MB cap on the decoded image.
+      // The only size that can matter is the resized 256x256 output, capped at 3MB
+      // to match the server. A 256x256 PNG is tens of KB, so this never triggers.
       if (dataUrlByteLength(resized) > MAX_AVATAR_BYTES) {
         setPreview("");
-        setError("That image could not be compressed under 2MB. Try a different photo.");
+        setError("That image could not be processed. Try a different photo.");
         return;
       }
       setPreview(resized);
