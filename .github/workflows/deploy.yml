@@ -35,34 +35,49 @@ jobs:
           ssh-keygen -lf ~/.ssh/vorliq_deploy_key.pub
           ssh-keyscan -H 159.65.24.177 >> ~/.ssh/known_hosts
 
-      - name: Check server disk space
+      - name: Free disk space
         run: |
-          # Fail fast and loud if the server is low on disk, before any deploy
-          # work runs, so a full disk is an obvious diagnostic failure here rather
-          # than a silent mid-deploy crash (e.g. a half-written backup tarball).
-          AVAIL_KB="$(ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes root@159.65.24.177 "df -Pk /home/vorliq | awk 'NR==2 {print \$4}'")"
-          AVAIL_MB=$(( AVAIL_KB / 1024 ))
-          echo "Available disk on /home/vorliq: ${AVAIL_MB} MB"
-          if [ "${AVAIL_MB}" -lt 500 ]; then
-            echo "::error::Deploy aborted: only ${AVAIL_MB} MB free on the production server (need at least 500 MB). Free disk space — prune old backups in /home/vorliq/backups, old snapshots in /home/vorliq/app/backend/data/snapshots, and large logs — then re-run the deploy."
-            exit 1
-          fi
-
-      - name: Prune old backups and snapshots
-        run: |
-          # Keep the disk from accumulating indefinitely: delete backups older
-          # than 3 days and snapshots older than 7 days on every deploy. Runs
-          # before any backup work below.
+          # IMPORTANT: this runs BEFORE the disk-space check. The earlier ordering
+          # (check first, prune second) meant a genuinely full disk aborted the
+          # deploy before the cleanup that would have freed it — so the server
+          # could get stuck full with no way for a deploy to recover it. Cleaning
+          # up first lets the deploy self-heal a full disk. Everything here is safe
+          # to delete: aged backups/snapshots, the systemd journal, and package and
+          # npm caches that are repopulated on demand.
           ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes root@159.65.24.177 bash -s <<'CLEANUP'
-            set -euo pipefail
+            set -uo pipefail
+            echo "Disk before cleanup:"; df -Pk /home/vorliq | awk 'NR==2 {print int($4/1024) " MB free"}'
+            # Aged backups and snapshots (slightly more aggressive than steady state
+            # since we may be recovering from a full disk).
             if [ -d /home/vorliq/backups ]; then
-              find /home/vorliq/backups -maxdepth 1 -type f -name 'vorliq-backup-*.tar.gz' -mtime +3 -print -delete || true
+              find /home/vorliq/backups -maxdepth 1 -type f -name 'vorliq-backup-*.tar.gz' -mtime +2 -print -delete || true
             fi
             if [ -d /home/vorliq/app/backend/data/snapshots ]; then
-              find /home/vorliq/app/backend/data/snapshots -maxdepth 1 -type f -mtime +7 -print -delete || true
+              find /home/vorliq/app/backend/data/snapshots -maxdepth 1 -type f -mtime +3 -print -delete || true
+              # Always keep at least the most recent few snapshots, drop the rest.
+              ls -1t /home/vorliq/app/backend/data/snapshots/* 2>/dev/null | tail -n +6 | xargs -r rm -f || true
             fi
-            echo "Pruned backups older than 3 days and snapshots older than 7 days."
+            # Systemd journal and package/npm caches — safe, regenerated as needed.
+            journalctl --vacuum-size=80M >/dev/null 2>&1 || true
+            apt-get clean >/dev/null 2>&1 || true
+            sudo -u vorliq -H npm cache clean --force >/dev/null 2>&1 || true
+            npm cache clean --force >/dev/null 2>&1 || true
+            rm -rf /tmp/vorliq-frontend-build.tar.gz /root/.npm/_cacache 2>/dev/null || true
+            echo "Disk after cleanup:"; df -Pk /home/vorliq | awk 'NR==2 {print int($4/1024) " MB free"}'
           CLEANUP
+
+      - name: Check server disk space
+        run: |
+          # Now that cleanup has run, fail fast and loud if the server is still low
+          # on disk, before any deploy work runs — a full disk that cleanup could
+          # not rescue is an obvious diagnostic failure here, not a silent crash.
+          AVAIL_KB="$(ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes root@159.65.24.177 "df -Pk /home/vorliq | awk 'NR==2 {print \$4}'")"
+          AVAIL_MB=$(( AVAIL_KB / 1024 ))
+          echo "Available disk on /home/vorliq after cleanup: ${AVAIL_MB} MB"
+          if [ "${AVAIL_MB}" -lt 500 ]; then
+            echo "::error::Deploy aborted: only ${AVAIL_MB} MB free on the production server after cleanup (need at least 500 MB). The disk is full from something cleanup does not cover — investigate large files under /home/vorliq and /var, then re-run the deploy."
+            exit 1
+          fi
 
       - name: Build frontend artifact
         run: |

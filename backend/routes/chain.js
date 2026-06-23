@@ -74,12 +74,12 @@ router.get("/api/chain/summary", async (req, res) => {
 
 router.get("/api/community/stats", async (req, res) => {
   try {
-    // Public community statistics, polled every 30s by the community page. A 15s
-    // cache halves the upstream load while keeping the figures fresh.
-    return sendCachedJson(req, res, "community-stats", 15_000, async () => {
-      const response = await axios.get(`${flaskUrl}/community/stats`);
-      return { status: response.status, data: response.data };
-    });
+    // Computed fresh from the FULL chain history on every request (no cached
+    // subset), so the figures always match the block explorer. Flask now serves
+    // /community/stats under the read lock, so concurrent requests do not
+    // serialise and this stays cheap even without a Node cache.
+    const response = await axios.get(`${flaskUrl}/community/stats`, { timeout: 8000 });
+    return res.status(response.status).json(response.data);
   } catch (error) {
     return handleRouteError(res, error, "GET /api/community/stats", "Unable to load community statistics.");
   }
