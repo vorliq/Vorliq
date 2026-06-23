@@ -3,6 +3,7 @@ const { ipKeyGenerator } = require("express-rate-limit");
 const slowDown = require("express-slow-down");
 const crypto = require("crypto");
 const { logError } = require("../logger");
+const { SharedFileStore } = require("../rateLimitStore");
 
 // Seconds until the window resets, for the Retry-After header. express-rate-limit
 // exposes req.rateLimit.resetTime; fall back to the full window if it is missing.
@@ -53,7 +54,7 @@ function cap(max) {
   return RELAX_LIMITS ? 1_000_000 : max;
 }
 
-function createLimiter({ windowMs, max, message }) {
+function createLimiter({ windowMs, max, message, store }) {
   return rateLimit({
     windowMs,
     max: cap(max),
@@ -61,6 +62,7 @@ function createLimiter({ windowMs, max, message }) {
     legacyHeaders: false,
     message,
     handler: rateLimitHandler,
+    ...(store ? { store } : {}),
   });
 }
 
@@ -84,6 +86,7 @@ const walletLimiter = createLimiter({
   windowMs: 60 * 60 * 1000,
   max: 10,
   message: "Too many wallets created from this connection. Please try again later.",
+  store: new SharedFileStore("wallet-create"),
 });
 
 const miningLimiter = createLimiter({
@@ -129,6 +132,7 @@ const faucetLimiter = rateLimit({
   max: cap(6),
   standardHeaders: true,
   legacyHeaders: false,
+  store: new SharedFileStore("faucet"),
   message: "Too many faucet claims. Please try again later.",
   handler(req, res, _next, options) {
     const fingerprint = crypto
@@ -152,6 +156,7 @@ const perWalletWriteLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: walletKey,
+  store: new SharedFileStore("per-wallet-write"),
   message: "You are making signed actions too quickly. Please wait a few seconds and try again.",
   handler: rateLimitHandler,
 });
@@ -163,6 +168,7 @@ const forumPostLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: walletKey,
+  store: new SharedFileStore("forum-post"),
   message: "You are posting too quickly. Please wait a moment before posting again.",
   handler: rateLimitHandler,
 });
@@ -173,6 +179,7 @@ const exchangeLimiter = rateLimit({
   max: cap(20),
   standardHeaders: true,
   legacyHeaders: false,
+  store: new SharedFileStore("exchange"),
   message: "Too many exchange requests. Please slow down and try again shortly.",
   handler: rateLimitHandler,
 });

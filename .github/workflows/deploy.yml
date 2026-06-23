@@ -419,6 +419,38 @@ jobs:
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app && node tools/verify_snapshot_archive.js https://vorliq.org --require-signature'
           EOF
 
+      - name: Correct nginx Permissions-Policy header
+        run: |
+          # nginx was emitting its own Permissions-Policy header (with a camera=(self)
+          # exception) that conflicts with the strict one the Node app sets. SSH is
+          # not otherwise available, so fix it here: delete any nginx-set
+          # Permissions-Policy directive so the only header served is the Node app's
+          # camera=(), microphone=(), geolocation=() (no self exceptions), then
+          # reload nginx if the config still tests clean.
+          ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes root@159.65.24.177 bash -s <<'NGINX'
+            set -uo pipefail
+            changed=0
+            files="$(grep -rliE 'Permissions-Policy' /etc/nginx/ 2>/dev/null || true)"
+            for f in ${files}; do
+              if grep -qiE '(add_header|more_set_headers)[^;#]*Permissions-Policy' "${f}"; then
+                cp -a "${f}" "${f}.vorliq.bak.$(date +%s)" 2>/dev/null || true
+                sed -i -E '/(add_header|more_set_headers)[^;#]*Permissions-Policy/Id' "${f}"
+                echo "Removed nginx Permissions-Policy directive from ${f}"
+                changed=1
+              fi
+            done
+            if [ "${changed}" = "1" ]; then
+              if nginx -t; then
+                systemctl reload nginx && echo "nginx reloaded with the Node app's Permissions-Policy as the only one."
+              else
+                echo "::error::nginx config test failed after editing Permissions-Policy; not reloading."
+                exit 1
+              fi
+            else
+              echo "No nginx-set Permissions-Policy directive found; nothing to change."
+            fi
+          NGINX
+
       - name: Run public production readiness gate
         run: |
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do

@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 
 const { sendError } = require("../utils/apiResponse");
+const { recordHit, peekHit, clearHit, resetStore } = require("../rateLimitStore");
 
 // Constant-time token comparison. Hashing first gives both inputs a fixed length
 // so timingSafeEqual never throws on a length mismatch and the comparison leaks
@@ -13,12 +14,15 @@ function tokensMatch(provided, expected) {
 
 // Brute-force lockout for the admin token. Five wrong tokens from one IP within
 // ten minutes locks that IP out of every admin endpoint for one hour. A correct
-// token immediately clears that IP's failure count.
+// token immediately clears that IP's failure count. Counters live in the SHARED
+// file store (not per-process memory), so the lockout is enforced globally across
+// all Node workers.
 const FAILURE_LIMIT = 5;
 const WINDOW_MS = 10 * 60 * 1000;
 const LOCK_MS = 60 * 60 * 1000;
+const FAIL_NS = "admin-fail";
+const LOCK_NS = "admin-lock";
 const DISABLED = process.env.VORLIQ_DISABLE_RATE_LIMITS === "true";
-const attempts = new Map(); // ip -> { count, firstAt, lockedUntil }
 
 function ipKey(req) {
   return req.ip || (req.connection && req.connection.remoteAddress) || "unknown";
@@ -26,26 +30,26 @@ function ipKey(req) {
 
 function lockedSeconds(req) {
   if (DISABLED) return 0;
-  const entry = attempts.get(ipKey(req));
-  if (!entry || !entry.lockedUntil) return 0;
-  const remaining = entry.lockedUntil - Date.now();
+  const lock = peekHit(LOCK_NS, ipKey(req));
+  if (!lock.count) return 0;
+  const remaining = lock.resetAt - Date.now();
   return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
 }
 
 function recordFailure(req) {
   if (DISABLED) return;
-  const now = Date.now();
   const key = ipKey(req);
-  let entry = attempts.get(key);
-  const windowExpired = entry && now - entry.firstAt > WINDOW_MS && (!entry.lockedUntil || entry.lockedUntil <= now);
-  if (!entry || windowExpired) entry = { count: 0, firstAt: now, lockedUntil: 0 };
-  entry.count += 1;
-  if (entry.count >= FAILURE_LIMIT) entry.lockedUntil = now + LOCK_MS;
-  attempts.set(key, entry);
+  const { count } = recordHit(FAIL_NS, key, WINDOW_MS);
+  if (count >= FAILURE_LIMIT) {
+    // Open (or keep) a one-hour lock for this IP.
+    recordHit(LOCK_NS, key, LOCK_MS);
+  }
 }
 
 function clearFailures(req) {
-  attempts.delete(ipKey(req));
+  const key = ipKey(req);
+  clearHit(FAIL_NS, key);
+  clearHit(LOCK_NS, key);
 }
 
 function adminAuth(req, res, next) {
@@ -72,7 +76,7 @@ function adminAuth(req, res, next) {
 }
 
 function resetAdminLockoutForTests() {
-  attempts.clear();
+  resetStore();
 }
 
 module.exports = adminAuth;

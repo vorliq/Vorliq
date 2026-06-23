@@ -69,6 +69,69 @@ class Storage:
         self.notifications_file = self.data_dir / "notifications.json"
         self.chain_storage_error: str | None = None
         self.chain_write_protected = False
+        # Append-only persistence: every confirmed block is appended as one JSON
+        # line here (a fixed-cost write), and the full chain.json is written only
+        # as a periodic snapshot. chain.json is the recovery baseline; this log
+        # holds the blocks mined since the last snapshot.
+        self.blocks_log_file = self.data_dir / "blocks.log"
+        self.snapshot_block_interval = int(os.environ.get("VORLIQ_SNAPSHOT_BLOCK_INTERVAL", "100"))
+        self.snapshot_time_seconds = float(os.environ.get("VORLIQ_SNAPSHOT_TIME_SECONDS", str(10 * 60)))
+        self._last_snapshot_height = -1
+        self._last_snapshot_time = 0.0
+
+    def append_block(self, block: Any) -> None:
+        """Append one block to the blocks log as a single JSON line, fsynced. This
+        is the hot path on block confirmation: it is O(1) in the chain length, so
+        it costs the same whether the chain has 50 blocks or 50,000. A crash mid
+        write can leave at most a partial trailing line, which load_chain skips."""
+        block_dict = block.to_dict() if hasattr(block, "to_dict") else dict(block)
+        line = json.dumps(block_dict, sort_keys=True, separators=(",", ":"))
+        self.blocks_log_file.parent.mkdir(parents=True, exist_ok=True)
+        with self._file_lock(self.blocks_log_file):
+            with self.blocks_log_file.open("a", encoding="utf-8") as handle:
+                handle.write(line + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+
+    def _should_snapshot(self, blockchain: Blockchain) -> bool:
+        # Snapshot every N blocks or every T seconds, whichever comes first. A
+        # negative last-height means no snapshot has been taken this session yet.
+        if self._last_snapshot_height < 0:
+            return True
+        height = blockchain.get_block_height()
+        if height - self._last_snapshot_height >= self.snapshot_block_interval:
+            return True
+        if time.time() - self._last_snapshot_time >= self.snapshot_time_seconds:
+            return True
+        return False
+
+    def persist_new_block(self, blockchain: Blockchain) -> bool:
+        """Persist a newly confirmed block: append it to the log, and write a full
+        chain.json snapshot when one is due. Returns True iff a snapshot was
+        written, so callers can persist derived state (indexes) only on snapshots
+        rather than on every block."""
+        self.append_block(blockchain.get_latest_block())
+        if self._should_snapshot(blockchain):
+            self.save_chain(blockchain)
+            return True
+        return False
+
+    def _truncate_blocks_log(self) -> None:
+        # After a full snapshot, the log's blocks are all captured in chain.json,
+        # so reset it. Done as an atomic replace with an empty file; even if it is
+        # interrupted, load_chain only replays log blocks with an index beyond the
+        # snapshot, so stale entries are ignored.
+        try:
+            if not self.blocks_log_file.exists():
+                return
+            tmp_path = self.blocks_log_file.with_name(
+                f".{self.blocks_log_file.name}.{os.getpid()}.{int(time.time() * 1000)}.tmp"
+            )
+            tmp_path.write_text("", encoding="utf-8")
+            self._atomic_replace(tmp_path, self.blocks_log_file)
+            self._fsync_directory(self.blocks_log_file.parent)
+        except Exception as error:  # noqa: BLE001 - never let log reset break a snapshot
+            vorliq_logger.warning("Could not reset blocks log after snapshot: %s", error)
 
     def save_chain(self, blockchain: Blockchain) -> None:
         if self.chain_write_protected:
@@ -101,33 +164,108 @@ class Storage:
             vorliq_logger.critical(self.chain_storage_error)
             raise StorageCorruptionError(self.chain_storage_error)
         self._write_json(self.chain_file, chain_data)
-        vorliq_logger.info("Saved blockchain to disk with %s blocks", len(blockchain.chain))
+        # A full chain.json write IS the snapshot/recovery point: the append log is
+        # now redundant, so reset it and remember when/where we snapshotted.
+        self._truncate_blocks_log()
+        self._last_snapshot_height = blockchain.get_block_height()
+        self._last_snapshot_time = time.time()
+        vorliq_logger.info("Saved blockchain snapshot to disk with %s blocks", len(blockchain.chain))
 
     def load_chain(self) -> Blockchain | None:
-        if not self.chain_file.exists():
+        # Load the snapshot baseline (chain.json) if present, then replay any
+        # blocks appended to the log since the snapshot. A node upgrading from the
+        # old format has chain.json and no log: it simply loads the snapshot, which
+        # keeps the migration fully backward compatible. A node with no chain.json
+        # but a log (unusual) replays from genesis.
+        snapshot_blockchain: Blockchain | None = None
+        snapshot_count = 0
+        if self.chain_file.exists():
+            data = self._read_json(self.chain_file, default=None, critical_chain=True)
+            if data is None:
+                self.chain_write_protected = True
+                self.chain_storage_error = "chain.json is corrupt and no valid backup is available"
+                vorliq_logger.critical(self.chain_storage_error)
+                return None
+            snapshot_blockchain = self._blockchain_from_chain_data(data)
+            if snapshot_blockchain is not None:
+                snapshot_count = len(snapshot_blockchain.chain)
+
+        log_count, skipped = 0, 0
+        blockchain = snapshot_blockchain
+        if self.blocks_log_file.exists():
+            if blockchain is None:
+                # No snapshot: rebuild from a fresh genesis chain and the log.
+                blockchain = Blockchain()
+            max_index = blockchain.chain[-1].index if blockchain.chain else -1
+            try:
+                with self.blocks_log_file.open("r", encoding="utf-8") as handle:
+                    for lineno, raw in enumerate(handle, start=1):
+                        line = raw.strip()
+                        if not line:
+                            continue
+                        block = self._parse_log_block(line, lineno)
+                        if block is None:
+                            skipped += 1
+                            continue
+                        if block.index <= max_index:
+                            continue  # already in the snapshot — ignore duplicates
+                        if block.index != max_index + 1:
+                            skipped += 1
+                            vorliq_logger.warning(
+                                "Skipping out-of-sequence block in log line %s (index %s, expected %s)",
+                                lineno, block.index, max_index + 1,
+                            )
+                            continue
+                        if blockchain.chain and block.previous_hash != blockchain.chain[-1].hash:
+                            skipped += 1
+                            vorliq_logger.warning("Skipping block in log line %s with a broken link (index %s)", lineno, block.index)
+                            continue
+                        blockchain.chain.append(block)
+                        max_index = block.index
+                        log_count += 1
+            except Exception as error:  # noqa: BLE001 - a bad log must not crash startup
+                vorliq_logger.warning("Stopped replaying blocks log after an error: %s", error)
+
+        if blockchain is None:
             vorliq_logger.info("No saved blockchain found on disk")
             return None
 
-        data = self._read_json(self.chain_file, default=None, critical_chain=True)
-        if data is None:
-            self.chain_write_protected = True
-            self.chain_storage_error = "chain.json is corrupt and no valid backup is available"
-            vorliq_logger.critical(self.chain_storage_error)
-            return None
-
-        blockchain = self._blockchain_from_chain_data(data)
-        if blockchain is None:
-            return None
-
         # Reloading our own persisted chain: accept it on structural integrity
-        # alone. Historical blocks were admitted under the spacing policy in force
-        # when they were mined and are grandfathered, so a restart never discards
-        # a structurally intact chain just because spacing later changed.
+        # alone (spacing is grandfathered). If the snapshot-plus-log chain fails,
+        # fall back to the snapshot alone (dropping a bad tail), then to the backup
+        # — and if none is valid, _restore_valid_chain_backup refuses to start.
         if not blockchain.is_chain_valid(enforce_block_spacing=False):
-            blockchain = self._restore_valid_chain_backup()
+            if snapshot_blockchain is not None and snapshot_blockchain.is_chain_valid(enforce_block_spacing=False):
+                vorliq_logger.warning("Replayed chain failed validation; falling back to the snapshot alone.")
+                blockchain = snapshot_blockchain
+                log_count = 0
+            else:
+                blockchain = self._restore_valid_chain_backup()
+                snapshot_count = len(blockchain.chain)
+                log_count = 0
 
-        vorliq_logger.info("Loaded blockchain from disk with %s blocks", len(blockchain.chain))
+        self._last_snapshot_height = blockchain.get_block_height()
+        self._last_snapshot_time = time.time()
+        vorliq_logger.info(
+            "Loaded blockchain: %s block(s) from snapshot, %s from the append log (%s log line(s) skipped); height %s",
+            snapshot_count, log_count, skipped, blockchain.get_block_height(),
+        )
         return blockchain
+
+    def _parse_log_block(self, line: str, lineno: int) -> Block | None:
+        """Parse one blocks-log line into a Block, or None if it is unparseable or
+        not a valid block dict (e.g. a partial trailing line left by a crash)."""
+        try:
+            parsed = json.loads(line)
+        except Exception as error:  # noqa: BLE001
+            vorliq_logger.warning("Skipping unparseable block log line %s: %s", lineno, error)
+            return None
+        try:
+            block = self._block_from_dict(parsed)
+        except Exception as error:  # noqa: BLE001
+            vorliq_logger.warning("Skipping invalid block in log line %s: %s", lineno, error)
+            return None
+        return block
 
     def _blockchain_from_chain_data(self, data: dict[str, Any]) -> Blockchain | None:
         blocks = [self._block_from_dict(block_data) for block_data in data.get("chain", [])]

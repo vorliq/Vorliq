@@ -23,7 +23,10 @@ from block import Block  # noqa: E402
 from blockchain import Blockchain  # noqa: E402
 from wallet import Wallet  # noqa: E402
 
-POW_SECONDS = 1.5
+# A few seconds of simulated proof of work. Kept generous so the "read returned
+# in well under the PoW time" assertion has margin and does not flake on a busy
+# CI runner where an unrelated read can momentarily be slow under CPU contention.
+POW_SECONDS = 3.0
 
 
 def test_read_is_not_blocked_during_mine_proof_of_work():

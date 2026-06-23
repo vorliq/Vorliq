@@ -602,9 +602,11 @@ def _persist_after_peer_block(mined_block: Block) -> None:
     _sync_exchange(save=False)
     _sync_treasury(save=False)
     _sync_faucet(save=False)
-    storage.save_chain(node.blockchain)
+    # Append-only: append this block (O(1)); a full chain.json snapshot and the
+    # index save are written only when one is due, not on every block.
+    snapshotted = storage.persist_new_block(node.blockchain)
     storage.save_pending(node.blockchain.pending_transactions)
-    _rebuild_indexes(save=True)
+    _rebuild_indexes(save=snapshotted)
     storage.save_lending_pool(lending_pool)
     storage.save_exchange(exchange)
     storage.save_treasury(treasury)
@@ -968,9 +970,11 @@ def _persist_after_mine(raw_block, miner_address):
     _sync_exchange(save=False)
     _sync_treasury(save=False)
     _sync_faucet(save=False)
-    storage.save_chain(node.blockchain)
+    # Append-only: append this block (O(1)); a full chain.json snapshot and the
+    # index save are written only when one is due, not on every block.
+    snapshotted = storage.persist_new_block(node.blockchain)
     storage.save_pending(node.blockchain.pending_transactions)
-    _rebuild_indexes(save=True)
+    _rebuild_indexes(save=snapshotted)
     storage.save_lending_pool(lending_pool)
     storage.save_exchange(exchange)
     storage.save_treasury(treasury)
