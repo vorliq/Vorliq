@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../helpers/api";
 
 const ADMIN_TOKEN_KEY = "vorliq_admin_token";
-const tabs = ["Overview", "Usage", "Abuse", "Wallets", "Treasury", "Readiness", "Network Monitor", "Registry Lifecycle", "Analytics", "Storage", "Indexes", "Migration", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
+const tabs = ["Overview", "Usage", "Alerts", "Abuse", "Wallets", "Treasury", "Readiness", "Network Monitor", "Registry Lifecycle", "Analytics", "Storage", "Indexes", "Migration", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
 
 function authHeader(token) {
   return { Authorization: `Bearer ${token}` };
@@ -50,6 +50,7 @@ function Admin() {
   const [security, setSecurity] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [usage, setUsage] = useState(null);
+  const [alerts, setAlerts] = useState(null);
   const [abuse, setAbuse] = useState(null);
   const [storage, setStorage] = useState(null);
   const [indexes, setIndexes] = useState(null);
@@ -114,11 +115,13 @@ function Admin() {
   }, [headers]);
 
   const loadUsage = useCallback(async () => {
-    const [usageRes, alertsRes] = await Promise.all([
-      api.get("/admin/usage", { headers }),
-      api.get("/admin/alerts", { headers }),
-    ]);
-    setUsage({ ...usageRes.data, alerts: alertsRes.data?.alerts || [] });
+    const response = await api.get("/admin/usage", { headers });
+    setUsage(response.data);
+  }, [headers]);
+
+  const loadAlerts = useCallback(async () => {
+    const response = await api.get("/admin/alerts", { headers });
+    setAlerts({ list: response.data?.alerts || [] });
   }, [headers]);
 
   const loadAbuse = useCallback(async () => {
@@ -227,6 +230,7 @@ function Admin() {
     try {
       if (tab === "Overview") await loadOverview();
       if (tab === "Usage") await loadUsage();
+      if (tab === "Alerts") await loadAlerts();
       if (tab === "Abuse") await loadAbuse();
       if (tab === "Wallets") await loadWallets();
       if (tab === "Treasury") await loadTreasury();
@@ -246,7 +250,7 @@ function Admin() {
     } catch (requestError) {
       setError(requestError.response?.status === 401 ? "Unauthorized" : "Unable to load admin data.");
     }
-  }, [activeTab, headers, loadAnalytics, loadUsage, loadAbuse, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadMigration, loadNodeMonitor, loadOverview, loadReadiness, loadRegistryLifecycle, loadReports, loadSecurity, loadStorage, loadWallets, loadTreasury]);
+  }, [activeTab, headers, loadAnalytics, loadUsage, loadAlerts, loadAbuse, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadMigration, loadNodeMonitor, loadOverview, loadReadiness, loadRegistryLifecycle, loadReports, loadSecurity, loadStorage, loadWallets, loadTreasury]);
 
   useEffect(() => {
     if (adminToken) {
@@ -496,6 +500,7 @@ function Admin() {
         />
       )}
       {activeTab === "Usage" && <UsageTab usage={usage} onLoad={loadUsage} />}
+      {activeTab === "Alerts" && <AlertsTab alerts={alerts} onLoad={loadAlerts} />}
       {activeTab === "Abuse" && <AbuseTab abuse={abuse} onLoad={loadAbuse} onBan={banFaucet} onUnban={unbanFaucet} />}
       {activeTab === "Analytics" && <AnalyticsTab analytics={analytics} onLoad={loadAnalytics} />}
       {activeTab === "Storage" && <StorageTab storage={storage} onLoad={loadStorage} />}
@@ -910,7 +915,6 @@ function UsageTab({ usage, onLoad }) {
   ];
   const win = usage.windows || {};
   const cell = (window, key) => (window && window[key] != null ? window[key] : "—");
-  const alerts = usage.alerts || [];
 
   return (
     <section className="glass-section card-pad">
@@ -957,21 +961,43 @@ function UsageTab({ usage, onLoad }) {
           ))
         )}
       </div>
+    </section>
+  );
+}
 
-      <h2>Production Alerts (last 10)</h2>
-      <div className="admin-list">
-        {alerts.length === 0 ? (
-          <div className="admin-row"><span>No alerts recorded. All monitors healthy.</span></div>
-        ) : (
-          alerts.map((alert) => (
-            <div className="admin-row" key={alert.id}>
-              <strong>
-                [{alert.monitor}] {alert.status === "resolved" ? "resolved" : alert.message}
-              </strong>
-              <span>{new Date(alert.created_at).toLocaleString()}</span>
-            </div>
-          ))
-        )}
+// Production monitoring alerts (chain health, Flask reachability, disk space),
+// newest first, each showing the monitor type, the message, and when it fired —
+// so an operator can see incidents at a glance without watching a terminal.
+function AlertsTab({ alerts, onLoad }) {
+  useEffect(() => { if (!alerts) onLoad(); }, [alerts, onLoad]);
+  if (!alerts) return <div className="empty-state">Loading alerts...</div>;
+  const list = alerts.list || [];
+  return (
+    <section className="glass-section card-pad">
+      <h2>Production Alerts (last 20)</h2>
+      <p className="muted">
+        Server-side monitors check chain health and the mempool every 2 minutes, Flask reachability every 2
+        minutes, and free disk space hourly. Alerts are edge-triggered: one entry when a fault begins and one
+        when it clears.
+      </p>
+      <div className="table-wrap">
+        <table className="stats-table">
+          <thead><tr><th>Type</th><th>Status</th><th>Message</th><th>When</th></tr></thead>
+          <tbody>
+            {list.length === 0 ? (
+              <tr><td colSpan={4}>No alerts recorded. All monitors healthy.</td></tr>
+            ) : (
+              list.map((alert) => (
+                <tr key={alert.id}>
+                  <td>{alert.monitor}</td>
+                  <td>{alert.status === "resolved" ? "resolved" : (alert.severity || "firing")}</td>
+                  <td>{alert.message}</td>
+                  <td>{new Date(alert.created_at).toLocaleString()}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </section>
   );

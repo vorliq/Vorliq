@@ -8,7 +8,6 @@ const { validateAddress } = require("../address");
 const {
   isIpBanned,
   isWalletBanned,
-  walletTooNew,
   ipFaucetDecision,
   recordFaucetClaim,
 } = require("../faucetAbuse");
@@ -93,15 +92,16 @@ router.post("/api/faucet/claim", async (req, res) => {
       logError(`Faucet blocked banned ip/wallet ip=${ip}`);
       return res.status(403).json({ success: false, message: "This connection or wallet has been banned from the faucet." });
     }
-    // Layer 2: minimum wallet age — a wallet must be at least an hour old before
-    // its first claim, defeating the create-and-immediately-drain loop.
-    if (walletTooNew(walletAddress)) {
-      res.set("Retry-After", "3600");
-      return res.status(429).json({
-        success: false,
-        message: "This wallet is too new. A wallet must be at least one hour old before its first faucet claim.",
-      });
-    }
+    // NOTE: a "wallet must be at least an hour old" gate used to live here. It was
+    // the single biggest onboarding blocker — a brand-new user who creates a
+    // wallet and immediately tries the faucet (the very first thing they do) was
+    // turned away for an hour. It is removed deliberately: the create-and-drain
+    // abuse it targeted is already bounded by the layers that remain — one IP may
+    // fund at most two distinct wallets per 24h (Layer 3 below), wallet creation
+    // is capped at three per hour per IP, and Flask enforces a per-wallet 24h
+    // cooldown plus a device-fingerprint limit. Those cap faucet payout per IP
+    // regardless of wallet age, so the age gate added friction without materially
+    // changing the abuse ceiling.
     // Layer 3: one IP may fund at most two distinct wallets per 24 hours.
     const ipDecision = ipFaucetDecision(ip, walletAddress);
     if (!ipDecision.allowed) {

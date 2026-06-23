@@ -56,6 +56,12 @@ class Network:
 
     def sync_chain(self, local_blockchain: Blockchain) -> bool:
         best_chain = local_blockchain.chain
+        # Compare by HEIGHT (the tip block's index), not list length: a pruned node
+        # retains only its most recent N blocks, so its list is short while its
+        # height is large. Length comparison would let a peer with more *blocks*
+        # but a lower *height* wrongly replace a pruned node's chain.
+        best_height = local_blockchain.get_block_height()
+        local_prune_point = getattr(local_blockchain, "prune_point", None)
 
         for peer in self.get_peers():
             try:
@@ -67,23 +73,52 @@ class Network:
                 vorliq_logger.warning("Failed to sync chain from %s: %s", peer, exc)
                 continue
 
-            if len(peer_chain) <= len(best_chain):
+            if not peer_chain:
+                continue
+            peer_height = peer_chain[-1].index
+            if peer_height <= best_height:
                 continue
 
-            if self._is_valid_chain(peer_chain, local_blockchain):
-                best_chain = peer_chain
-                vorliq_logger.info("Longer valid chain found from %s with %s blocks", peer, len(peer_chain))
-            else:
+            if not self._is_valid_chain(peer_chain, local_blockchain):
                 vorliq_logger.warning(
                     "Rejected longer chain from %s because it failed full hash, link, proof, or balance validation",
                     peer,
                 )
+                continue
 
-        if len(best_chain) > len(local_blockchain.chain):
+            # If THIS node is pruned, a longer offered chain may only be adopted
+            # when it reconciles with our prune-point commitment — i.e. its history
+            # reaches exactly the state we committed to at the prune height. A chain
+            # that rewrote our pruned history is rejected even though it is longer
+            # and internally valid, so a fork can never erase committed history.
+            if local_prune_point and not local_blockchain.offered_chain_matches_prune_point(peer_chain):
+                vorliq_logger.warning(
+                    "Rejected longer chain from %s because it contradicts our prune-point commitment at height %s",
+                    peer,
+                    local_prune_point.get("height"),
+                )
+                continue
+
+            best_chain = peer_chain
+            best_height = peer_height
+            vorliq_logger.info(
+                "Longer valid chain found from %s reaching height %s (%s blocks)", peer, peer_height, len(peer_chain)
+            )
+
+        if best_height > local_blockchain.get_block_height():
             local_blockchain.chain = best_chain
+            # We adopted a genesis-rooted full chain (the only kind _is_valid_chain
+            # accepts), so this node now holds the complete history and is no longer
+            # pruned — drop the prune point and the derived caches so reads rebuild
+            # against the adopted chain.
+            local_blockchain.prune_point = None
+            local_blockchain._indexes = None
+            local_blockchain._valid_cache = None
+            local_blockchain._valid_cache_height = -1
+            local_blockchain._valid_cache_tip = None
             local_blockchain.pending_transactions = self._filter_pending_after_chain_update(local_blockchain)
             local_blockchain.prune_pending_transactions(drop_system_rewards=True)
-            vorliq_logger.info("Local chain updated to longer network chain with %s blocks", len(best_chain))
+            vorliq_logger.info("Local chain updated to longer network chain reaching height %s", best_height)
             return True
 
         vorliq_logger.info("Chain sync complete; local chain is already longest")
@@ -178,6 +213,17 @@ class Network:
         candidate.chain = chain
         candidate.pending_transactions = []
         candidate._indexes = None
+        # The offered chain is genesis-rooted and self-contained, so it must be
+        # validated on its own terms. Crucially, clear any prune point inherited
+        # from the local node via the shallow copy: otherwise a *pruned* local
+        # node would validate the peer's full chain against its own prune-point
+        # back-link (whose first block is genesis, previous_hash "0", not the
+        # prune-point hash) and wrongly reject every full chain. Reconciliation
+        # with our prune commitment is a separate, explicit step in sync_chain.
+        candidate.prune_point = None
+        candidate._valid_cache = None
+        candidate._valid_cache_height = -1
+        candidate._valid_cache_tip = None
         # A peer's chain is untrusted, so it is validated in full — including block
         # spacing. A node only adopts a peer chain that satisfies every rule the
         # network enforces, so a peer cannot push a chain with invalid timing.

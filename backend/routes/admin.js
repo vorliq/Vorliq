@@ -519,10 +519,10 @@ router.post("/api/admin/moderation/forum/moderate", async (req, res) => {
 
 // The most recent production monitoring alerts (chain health, Flask
 // reachability, disk space) so the admin dashboard can surface them without
-// anyone watching a terminal. Last ten events, newest first.
+// anyone watching a terminal. Last twenty events, newest first.
 router.get("/api/admin/alerts", (req, res) => {
   try {
-    return res.json({ success: true, alerts: getRecentAlerts(10) });
+    return res.json({ success: true, alerts: getRecentAlerts(20) });
   } catch (error) {
     logError(`GET /api/admin/alerts failed: ${error.message}`);
     return res.status(500).json({ success: false, message: "Unable to load alerts." });

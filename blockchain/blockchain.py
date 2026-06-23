@@ -1140,6 +1140,47 @@ class Blockchain:
             return False
         return True
 
+    def offered_chain_matches_prune_point(self, offered_chain: list[Block]) -> bool:
+        """Whether an offered (genesis-rooted) peer chain reproduces this node's
+        prune-point commitment at the prune height.
+
+        A pruned node has dropped its early history and kept only a cryptographic
+        commitment to it (the prune-point block hash plus a confirmed-balance
+        snapshot). When a full-chain peer offers a longer chain, the pruned node
+        must not blindly adopt it: it has to confirm the offered chain's history
+        reaches exactly the state we committed to at the prune height, otherwise a
+        fork that rewrote pruned history could replace our chain. We check two
+        things that together are airtight: the offered chain's block at the prune
+        height hashes to our recorded prune-point hash (the block hash commits to
+        all prior history via the previous-hash chain), and the confirmed-balance
+        state recomputed from the offered chain's prefix reproduces our snapshot's
+        commitment exactly. No prune point means there is nothing to reconcile."""
+        if not self.prune_point:
+            return True
+        height = int(self.prune_point.get("height", -1))
+        expected_hash = self.prune_point.get("block_hash")
+        tip_block = next((block for block in offered_chain if block.index == height), None)
+        if tip_block is None or tip_block.hash != expected_hash:
+            return False
+        balances: dict[str, float] = {}
+        total_issued = 0.0
+        for block in offered_chain:
+            if block.index > height:
+                continue
+            for transaction in block.transactions:
+                tx = transaction if isinstance(transaction, Transaction) else Transaction.from_dict(transaction)
+                sender = tx.sender_address
+                receiver = tx.receiver_address
+                amount = float(tx.amount)
+                if sender == SYSTEM_ADDRESS:
+                    total_issued += amount
+                else:
+                    balances[sender] = balances.get(sender, 0.0) - amount
+                balances[receiver] = balances.get(receiver, 0.0) + amount
+        balances = {address: value for address, value in balances.items() if abs(value) > 1e-12}
+        commitment = self.compute_prune_commitment(height, expected_hash, total_issued, balances)
+        return commitment == self.prune_point.get("commitment")
+
     def prune_chain(self, keep_blocks: int) -> dict[str, Any]:
         """Drop all but the most recent ``keep_blocks`` blocks, replacing the
         pruned history with a cryptographic, balance-bearing commitment.
