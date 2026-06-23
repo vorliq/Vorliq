@@ -85,6 +85,22 @@ class AppendOnlyPersistenceTests(unittest.TestCase):
             self.assertEqual(len(restored.chain), 4)  # genesis + 3
             self.assertTrue(restored.is_chain_valid(enforce_block_spacing=False))
 
+    def test_chain_valid_fast_is_consistent_and_maintained_incrementally(self):
+        # After a load the memoised validity is seeded True; every mined block keeps
+        # it True in O(1) and it agrees with the full is_chain_valid result.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+            blockchain = Blockchain()
+            storage.save_chain(blockchain)
+            loaded = Storage(temp_dir).load_chain()
+            self.assertTrue(loaded.chain_valid_fast())  # seeded True on load
+            before_height = loaded.get_block_height()
+            _mine_fast(loaded, "miner", 5)
+            # Tip advanced; fast check still True and matches the authoritative one.
+            self.assertGreater(loaded.get_block_height(), before_height)
+            self.assertTrue(loaded.chain_valid_fast())
+            self.assertEqual(loaded.chain_valid_fast(), loaded.is_chain_valid(enforce_block_spacing=False))
+
     def test_snapshot_resets_log_and_chain_survives_restart(self):
         # With a small interval, a snapshot is written mid-run; the log is reset
         # and the full chain still reloads correctly across a restart.

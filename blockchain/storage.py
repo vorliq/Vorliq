@@ -246,6 +246,12 @@ class Storage:
 
         self._last_snapshot_height = blockchain.get_block_height()
         self._last_snapshot_time = time.time()
+        # The chain passed structural validation just above, so seed the memoised
+        # validity as True; every subsequent admitted block keeps it True in O(1),
+        # and the hot read paths never re-run the full O(n) validation.
+        blockchain._valid_cache = True
+        blockchain._valid_cache_height = blockchain.get_block_height()
+        blockchain._valid_cache_tip = blockchain.chain[-1].hash if blockchain.chain else None
         vorliq_logger.info(
             "Loaded blockchain: %s block(s) from snapshot, %s from the append log (%s log line(s) skipped); height %s",
             snapshot_count, log_count, skipped, blockchain.get_block_height(),

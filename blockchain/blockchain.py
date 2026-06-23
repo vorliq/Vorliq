@@ -118,6 +118,15 @@ class Blockchain:
 
             self.chain.append(block)
             self._indexes = None
+            # The block just passed full admission validation (index, link, proof
+            # of work, and transaction/signature checks) against a valid tip, so if
+            # the chain was known-valid it stays valid. Maintain the memoised result
+            # in O(1) instead of forcing a full O(n) re-validation on the next read
+            # — this is what stops per-block validation from becoming O(n^2) as the
+            # chain grows.
+            if self._valid_cache is True:
+                self._valid_cache_height = self.get_block_height()
+                self._valid_cache_tip = block.hash
             self.adjust_difficulty()
             return True
 
