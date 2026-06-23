@@ -117,17 +117,34 @@ class Blockchain:
                 return False
 
             self.chain.append(block)
-            self._indexes = None
             # The block just passed full admission validation (index, link, proof
             # of work, and transaction/signature checks) against a valid tip, so if
             # the chain was known-valid it stays valid. Maintain the memoised result
             # in O(1) instead of forcing a full O(n) re-validation on the next read
             # — this is what stops per-block validation from becoming O(n^2) as the
-            # chain grows.
+            # chain grows. Update it *before* the index merge below so the index's
+            # chain_valid_fast() read is the O(1) memoised path, not an O(n) revalidate.
             if self._valid_cache is True:
                 self._valid_cache_height = self.get_block_height()
                 self._valid_cache_tip = block.hash
             self.adjust_difficulty()
+            # Maintain the read index incrementally: merge only this block's
+            # transactions into the existing index in O(block) time rather than
+            # discarding it and forcing an O(n) full rebuild on the next read.
+            # Done after adjust_difficulty() so the summary captures the current
+            # difficulty/reward, exactly as a full rebuild would. The pending
+            # overlay is reconciled lazily by get_indexes(). If anything goes
+            # wrong we drop the index so the next read rebuilds from scratch —
+            # the chain itself is never put at risk by index maintenance.
+            if self._indexes is not None:
+                try:
+                    self._indexes.add_block(self, block)
+                except Exception:
+                    vorliq_logger.exception(
+                        "Incremental index update failed for block %s; dropping index for rebuild",
+                        block.index,
+                    )
+                    self._indexes = None
             return True
 
     def is_chain_valid(self, enforce_block_spacing: bool = True) -> bool:
@@ -226,7 +243,9 @@ class Blockchain:
             raise ValueError("sender does not have enough confirmed VLQ for this transaction")
 
         self.pending_transactions.append(transaction)
-        self._indexes = None
+        # Keep the incrementally-maintained index: a new pending transaction only
+        # shifts the cheap pending overlay, which get_indexes() reconciles in
+        # O(pending) via the pending fingerprint — no full O(n) rebuild needed.
         vorliq_logger.info(
             "Transaction added to pending pool from %s to %s for %s VLQ",
             transaction.sender_address,
@@ -322,7 +341,10 @@ class Blockchain:
         self.pending_transactions = (
             [reward_transaction, treasury_transaction] if mining_reward > 0 else []
         )
-        self._indexes = None
+        # add_block() above already merged this block into the index's confirmed
+        # core. Swapping in the next round's reward/treasury pending pool only
+        # changes the pending overlay, which get_indexes() reconciles in
+        # O(pending) via the fingerprint — no full rebuild on each mined block.
         vorliq_logger.info("Mined block %s with hash %s", block.index, block.hash)
         return block
 
@@ -408,7 +430,21 @@ class Blockchain:
             getattr(self._indexes, "chain_height", None) != self.get_block_height()
             or getattr(self._indexes, "latest_block_hash", None) != latest_block.hash
         ):
+            # The chain advanced or reorganised by a path that did not maintain
+            # the index incrementally; rebuild authoritatively from scratch.
             return self.rebuild_indexes()
+        # Chain tip matches, so the confirmed core is current. Reconcile only the
+        # pending overlay if the pending pool changed since it was last applied —
+        # an O(pending) refresh, never an O(n) rebuild.
+        from indexes import _pending_fingerprint
+
+        fingerprint = _pending_fingerprint(self.pending_transactions)
+        if getattr(self._indexes, "pending_fingerprint", None) != fingerprint:
+            try:
+                self._indexes.refresh_pending_overlay(self)
+            except Exception:
+                vorliq_logger.exception("Pending overlay refresh failed; rebuilding index")
+                return self.rebuild_indexes()
         return self._indexes
 
     def index_health(self, *, exists: bool = True, valid: bool = True, message: str | None = None) -> dict[str, Any]:
@@ -885,8 +921,27 @@ class Blockchain:
         return min(scheduled_reward, remaining_supply)
 
     def get_total_issued(self) -> float:
-        total = 0.0
+        # Served from the incrementally-maintained index when it is current: the
+        # index tracks total_issued by adding each new block's SYSTEM-minted
+        # amount, so this is O(1) instead of an O(n) rescan of the whole chain on
+        # every /diagnostics and /economics read. That rescan (which built a
+        # Transaction object per transaction) was both the original log-spam
+        # trigger and a reason diagnostics slowed down as the chain grew. The
+        # index value is provably equal to the full scan (see
+        # test_incremental_index, which asserts total_issued agreement). We gate
+        # on an exact tip match and fall back to the full scan otherwise.
+        indexes = self._indexes
+        if indexes is not None and self.chain:
+            latest = self.get_latest_block()
+            if (
+                getattr(indexes, "chain_height", None) == self.get_block_height()
+                and getattr(indexes, "latest_block_hash", None) == latest.hash
+            ):
+                summary = indexes.indexes.get("chain_summary")
+                if isinstance(summary, dict) and "total_issued" in summary:
+                    return float(summary["total_issued"])
 
+        total = 0.0
         for block in self.chain:
             for transaction in block.transactions:
                 if isinstance(transaction, dict):
@@ -1039,8 +1094,30 @@ class Blockchain:
         return True
 
     def _confirmed_balances(self) -> dict[str, float]:
-        balances: dict[str, float] = {}
+        # Prefer the incrementally-maintained confirmed-balance index. It is kept
+        # in lock-step with the chain as blocks are appended and is provably
+        # identical to a full re-derivation (see test_incremental_index), so we
+        # can hand back a copy in O(addresses) instead of rescanning every
+        # transaction in the whole chain on every block append and every send
+        # validation. That full rescan was a second unbounded O(n) under the
+        # write lock — alongside the old index rebuild — and is what kept block
+        # processing growing with chain length. We read self._indexes directly
+        # and gate on an exact tip match so this never triggers a rebuild and
+        # never trusts a stale index; any mismatch falls back to the full scan.
+        # A copy is returned because callers mutate the result with trial
+        # transactions.
+        indexes = self._indexes
+        if indexes is not None and self.chain:
+            latest = self.get_latest_block()
+            if (
+                getattr(indexes, "chain_height", None) == self.get_block_height()
+                and getattr(indexes, "latest_block_hash", None) == latest.hash
+            ):
+                confirmed = indexes.indexes.get("confirmed_balances_by_address")
+                if confirmed is not None:
+                    return dict(confirmed)
 
+        balances: dict[str, float] = {}
         for block in self.chain:
             if not self._apply_transactions_to_balances(block.transactions, balances):
                 raise ValueError("current chain contains invalid balances")

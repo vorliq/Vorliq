@@ -81,6 +81,25 @@ jobs:
             echo "Disk after cleanup:"; df -Pk /home/vorliq | awk 'NR==2 {print int($4/1024) " MB free"}'
           CLEANUP
 
+      - name: Cap system logs
+        run: |
+          # Defence in depth for the disk. The real fix for the 20GB syslog that
+          # filled the box was removing a per-transaction INFO log that fired
+          # O(n) times per chain read (see transaction.py); this step makes sure
+          # that even a future runaway logger can never fill the disk again, and
+          # that the cap survives a server reprovision. Idempotent. printf is used
+          # (not nested heredocs) to keep config content alignment-proof.
+          ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes root@159.65.24.177 bash -s <<'LOGCAP'
+            set -uo pipefail
+            mkdir -p /etc/systemd/journald.conf.d
+            printf '[Journal]\nSystemMaxUse=200M\nRuntimeMaxUse=100M\nForwardToSyslog=no\n' > /etc/systemd/journald.conf.d/vorliq-cap.conf
+            systemctl restart systemd-journald 2>/dev/null || true
+            # Bound /var/log/syslog growth as well, in case rsyslog is installed
+            # and forwarding is re-enabled by a future change.
+            printf '/var/log/syslog /var/log/messages {\n  rotate 3\n  daily\n  maxsize 100M\n  missingok\n  notifempty\n  compress\n  delaycompress\n  copytruncate\n}\n' > /etc/logrotate.d/vorliq-syslog
+            echo "Log caps applied."
+          LOGCAP
+
       - name: Check server disk space
         run: |
           # Now that cleanup has run, fail fast and loud if the server is still low

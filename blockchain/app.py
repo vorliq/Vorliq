@@ -462,8 +462,16 @@ INDEX_STARTUP_STATUS = {
 }
 
 
-def _rebuild_indexes(save: bool = True) -> dict:
-    indexes = node.blockchain.rebuild_indexes()
+def _rebuild_indexes(save: bool = True, force: bool = False) -> dict:
+    # The index is now maintained incrementally as blocks are appended, so the
+    # common path just fetches the already-current index (get_indexes does an
+    # O(pending) overlay reconcile at most). Only the explicit admin rebuild
+    # endpoint forces a full O(n) rebuild from the whole chain. This is what
+    # removes the per-mined-block full rebuild that ran under the write lock.
+    if force:
+        indexes = node.blockchain.rebuild_indexes()
+    else:
+        indexes = node.blockchain.get_indexes()
     if save:
         storage.save_indexes(indexes)
     return indexes.health(node.blockchain, exists=storage.indexes_file.exists())
@@ -777,7 +785,7 @@ def indexes_health():
 @app.post("/indexes/rebuild")
 def rebuild_indexes_endpoint():
     try:
-        return jsonify(_rebuild_indexes(save=True))
+        return jsonify(_rebuild_indexes(save=True, force=True))
     except Exception as exc:
         vorliq_logger.error("Index rebuild endpoint failed: %s", exc)
         return jsonify({"success": False, "status": "error", "message": "Index rebuild failed."}), 500

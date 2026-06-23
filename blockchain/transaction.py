@@ -46,12 +46,11 @@ class Transaction:
         self.category = category or self.transaction_type
         self.metadata = metadata if isinstance(metadata, dict) else {}
         self.tx_id = tx_id or self.calculate_tx_id()
-        vorliq_logger.info(
-            "Transaction object created from %s to %s for %s VLQ",
-            self.sender_address,
-            self.receiver_address,
-            self.amount,
-        )
+        # NB: do NOT log here. Transaction objects are constructed constantly during
+        # ordinary reads — every from_dict() while iterating the chain creates one —
+        # so an INFO line here fired O(n) times per chain-summary/economics read and
+        # filled the server disk with ~20GB of syslog. Meaningful transaction events
+        # (submitted, mined, confirmed) are logged at the route and mining layer.
 
     def data_to_sign(self) -> str:
         data = {
