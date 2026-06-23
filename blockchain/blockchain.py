@@ -427,8 +427,14 @@ class Blockchain:
         return page, total, offset + limit < total
 
     def get_chain_summary(self) -> dict[str, Any]:
-        if self._indexes is not None:
-            summary = dict(self.get_indexes().indexes.get("chain_summary", {}))
+        # Compute the summary directly from cheap O(n) sums rather than forcing a
+        # full index rebuild via get_indexes(): on a chain where every block
+        # invalidates the index, going through the index meant the constantly-polled
+        # summary endpoint rebuilt the whole index, which does not scale. Validity
+        # uses the memoised fast path. (Reuse the cached index summary only when it
+        # is already current, so we never trigger a rebuild.)
+        if self._indexes is not None and getattr(self._indexes, "chain_height", None) == self.get_block_height():
+            summary = dict(self._indexes.indexes.get("chain_summary", {}))
             if summary:
                 return summary
         last_block = self.get_latest_block()
@@ -441,9 +447,8 @@ class Blockchain:
             "current_mining_reward": self.get_current_mining_reward(),
             "last_block_hash": last_block.hash,
             "last_block_timestamp": last_block.timestamp,
-            # Reported validity of our own persisted chain: integrity only, so a
-            # chain with grandfathered fast blocks is not mislabelled invalid.
-            "chain_valid": self.is_chain_valid(enforce_block_spacing=False),
+            # Integrity only (grandfathered spacing), memoised so it is O(1).
+            "chain_valid": self.chain_valid_fast(),
         }
 
     def get_mining_status(self) -> dict[str, Any]:
