@@ -52,7 +52,7 @@ const { startMonitors } = require("./monitors");
 const chatStore = require("./chatStore");
 const { logError, logInfo } = require("./logger");
 const { sendWeeklyReport } = require("./reports");
-const { corsMiddleware, helmetMiddleware, isAllowedOrigin, securityStatus } = require("./middleware/security");
+const { corsMiddleware, helmetMiddleware, permissionsPolicyMiddleware, isAllowedOrigin, securityStatus } = require("./middleware/security");
 const { apiV1Alias, requestMetadata } = require("./middleware/requestMetadata");
 const { validateBody } = require("./middleware/validation");
 const crypto = require("crypto");
@@ -65,10 +65,13 @@ const {
 const {
   apiSlowDown,
   chatLimiter,
+  exchangeLimiter,
   faucetLimiter,
+  forumPostLimiter,
   generalLimiter,
   miningLimiter,
   newsletterLimiter,
+  perWalletWriteLimiter,
   proposalLimiter,
   registryLimiter,
   reportLimiter,
@@ -281,6 +284,7 @@ io.on("connection", (socket) => {
 });
 
 app.use(helmetMiddleware());
+app.use(permissionsPolicyMiddleware());
 app.use(corsMiddleware());
 app.use(requestMetadata);
 app.use(apiV1Alias);
@@ -307,6 +311,33 @@ app.use("/api/socket.io", chatLimiter);
 app.use("/api/wallet/create", walletLimiter);
 app.use("/api/mine", miningLimiter);
 app.use("/api/transaction/send", transactionLimiter);
+// Per-wallet limits (10/min) for signed value writes, on top of the per-IP
+// limits above/below. Keyed by the acting wallet so it follows identity.
+app.use(
+  [
+    "/api/transaction/send",
+    "/api/governance/vote",
+    "/api/lending/request",
+    "/api/lending/vote",
+    "/api/lending/repay",
+  ],
+  perWalletWriteLimiter
+);
+// Forum posting: 5/min per wallet.
+app.use("/api/forum/post", forumPostLimiter);
+// Exchange coordination: 20/min per IP.
+app.use(
+  [
+    "/api/exchange/offer",
+    "/api/exchange/accept",
+    "/api/exchange/cancel",
+    "/api/exchange/complete",
+    "/api/exchange/record-vlq-tx",
+    "/api/exchange/confirm-complete",
+    "/api/exchange/dispute",
+  ],
+  exchangeLimiter
+);
 app.use(
   [
     "/api/forum/post",

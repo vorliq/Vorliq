@@ -31,6 +31,10 @@ function corsMiddleware() {
 
 function helmetMiddleware() {
   return helmet({
+    // Deny framing entirely (X-Frame-Options: DENY), not the SAMEORIGIN default.
+    frameguard: { action: "deny" },
+    // Send a useful-but-private referrer policy rather than helmet's no-referrer.
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
     contentSecurityPolicy: {
       useDefaults: true,
       directives: {
@@ -63,6 +67,17 @@ function helmetMiddleware() {
   });
 }
 
+// Helmet does not emit a Permissions-Policy, so set one explicitly on every
+// response: camera, microphone, and geolocation are fully disabled (no origin can
+// use them). Vorliq needs none of these, and turning them off shrinks the attack
+// surface if any embedded or injected content tries to reach for them.
+function permissionsPolicyMiddleware() {
+  return function permissionsPolicy(req, res, next) {
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    next();
+  };
+}
+
 function securityStatus() {
   return {
     success: true,
@@ -78,6 +93,7 @@ function securityStatus() {
 module.exports = {
   corsMiddleware,
   helmetMiddleware,
+  permissionsPolicyMiddleware,
   isAllowedOrigin,
   securityStatus,
 };
