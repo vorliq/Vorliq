@@ -385,6 +385,26 @@ jobs:
               sudo -u vorliq -H bash -lc 'cd /home/vorliq/app && python3 tools/diagnose_chain_startup.py'
               exit 1
             fi
+            # Chain-disk auto-prune: if chain data on disk exceeds 500MB, trigger a
+            # prune to the configured depth so the disk cannot grow without bound.
+            # Logged clearly (with ::warning:: annotations) so an operator can see
+            # in the deploy log exactly when and why a prune happened.
+            CHAIN_DISK_MB="$(curl -s http://localhost:5001/chain/prune-info | python3 -c 'import sys,json; print(int(float(json.load(sys.stdin).get("chain_disk_usage",{}).get("total_mb",0))))' 2>/dev/null || echo 0)"
+            echo "Chain data on disk: ${CHAIN_DISK_MB} MB (prune threshold 500 MB)"
+            if [ "${CHAIN_DISK_MB}" -gt 500 ]; then
+              echo "::warning::Chain data on disk is ${CHAIN_DISK_MB} MB (>500MB); triggering an automatic chain prune to the configured depth."
+              PRUNE_ADMIN_TOKEN="$(sed -n 's/^ADMIN_TOKEN=//p' /etc/vorliq/backend.env | tail -n1)"
+              if [ -n "${PRUNE_ADMIN_TOKEN}" ]; then
+                PRUNE_RESULT="$(curl -s -X POST http://localhost:5001/admin/chain/prune -H "Authorization: Bearer ${PRUNE_ADMIN_TOKEN}" -H 'Content-Type: application/json' --data '{}' || true)"
+                echo "Automatic prune result: ${PRUNE_RESULT}"
+                NEW_DISK_MB="$(curl -s http://localhost:5001/chain/prune-info | python3 -c 'import sys,json; print(int(float(json.load(sys.stdin).get("chain_disk_usage",{}).get("total_mb",0))))' 2>/dev/null || echo 0)"
+                echo "::warning::Automatic chain prune complete; chain data on disk is now ${NEW_DISK_MB} MB."
+              else
+                echo "::warning::Chain over 500MB but ADMIN_TOKEN was unavailable; skipped automatic prune."
+              fi
+            else
+              echo "Chain data is under the 500MB prune threshold; no prune needed."
+            fi
             systemctl enable vorliq-heartbeat
             systemctl restart vorliq-heartbeat
             systemctl is-active --quiet vorliq-heartbeat

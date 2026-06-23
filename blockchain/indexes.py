@@ -61,11 +61,19 @@ class BlockchainIndexes:
         transactions_by_id: dict[str, dict[str, Any]] = {}
         transactions_by_address: dict[str, list[dict[str, Any]]] = {}
         transactions_by_block: dict[str, list[dict[str, Any]]] = {}
-        confirmed_balances: dict[str, float] = {}
+        # Seed confirmed balances and issued supply from the prune-point snapshot
+        # (empty when the full chain is present) so a pruned chain's index reports
+        # exactly the same balances and supply as a full rebuild would.
+        prune_point = getattr(blockchain, "prune_point", None)
+        if prune_point:
+            confirmed_balances = {a: float(v) for a, v in (prune_point.get("balances") or {}).items()}
+            total_issued = float(prune_point.get("total_issued") or 0.0)
+        else:
+            confirmed_balances = {}
+            total_issued = 0.0
         balances_by_address: dict[str, float] = {}
         miner_stats: dict[str, dict[str, Any]] = {}
         treasury_ledger_index: list[dict[str, Any]] = []
-        total_issued = 0.0
 
         for block in blockchain.chain:
             block_record = blockchain.safe_block_record(block, include_transactions=True)

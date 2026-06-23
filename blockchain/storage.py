@@ -156,6 +156,12 @@ class Storage:
             "maximum_supply": blockchain.maximum_supply,
             "halving_interval": blockchain.halving_interval,
             "chain": [block.to_dict() for block in blockchain.chain],
+            # The prune-point commitment is part of the chain's identity once
+            # history has been pruned: without it the retained chain cannot be
+            # validated (its first block links to a block that no longer exists)
+            # or balance-checked (balances seed from the snapshot). Persist it so a
+            # restart reloads a pruned chain exactly as it was.
+            "prune_point": getattr(blockchain, "prune_point", None),
         }
         serialized_blockchain = self._blockchain_from_chain_data(chain_data)
         if serialized_blockchain is None or not serialized_blockchain.is_chain_valid(enforce_block_spacing=False):
@@ -287,6 +293,12 @@ class Storage:
         )
         blockchain.mining_reward = saved_reward
         blockchain.initial_mining_reward = saved_reward
+        # Restore the prune-point commitment BEFORE the caller validates the chain,
+        # so a pruned chain validates against its snapshot rather than being
+        # rejected for starting at a non-genesis block.
+        prune_point = data.get("prune_point")
+        if isinstance(prune_point, dict) and prune_point.get("block_hash"):
+            blockchain.prune_point = prune_point
         return blockchain
 
     def _restore_valid_chain_backup(self) -> Blockchain:
@@ -805,6 +817,31 @@ class Storage:
             os.fsync(descriptor)
         finally:
             os.close(descriptor)
+
+    def chain_disk_usage(self) -> dict[str, Any]:
+        """Bytes on disk attributable to chain data (the snapshot, its backup, the
+        append log, and the derived index). Drives the prune-info endpoint and the
+        deploy auto-prune threshold."""
+        files = {
+            "chain_json": self.chain_file,
+            "chain_json_bak": self.chain_file.with_suffix(self.chain_file.suffix + ".bak"),
+            "blocks_log": self.blocks_log_file,
+            "indexes_json": self.indexes_file,
+        }
+        sizes: dict[str, int] = {}
+        total = 0
+        for name, path in files.items():
+            try:
+                size = path.stat().st_size if path.exists() else 0
+            except OSError:
+                size = 0
+            sizes[name] = size
+            total += size
+        return {
+            "total_bytes": total,
+            "total_mb": round(total / (1024 * 1024), 3),
+            "files": sizes,
+        }
 
     def storage_health(self) -> dict[str, Any]:
         files = [self._file_health(self.data_dir / name) for name in CRITICAL_JSON_FILES]

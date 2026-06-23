@@ -39,6 +39,18 @@ from wallet import Wallet, address_from_public_key_pem, is_reserved_address, val
 APP_START_TIME = time.time()
 VORLIQ_HOST = os.environ.get("VORLIQ_HOST", "127.0.0.1")
 VORLIQ_PORT = int(os.environ.get("VORLIQ_PORT", "5001"))
+# Chain pruning configuration. When enabled, the active chain is kept to the most
+# recent KEEP blocks (with a cryptographic commitment to the pruned history); a
+# generous default keep so even a long-running node retains ample recent history.
+VORLIQ_CHAIN_PRUNE_ENABLED = os.environ.get("VORLIQ_CHAIN_PRUNE_ENABLED", "false").lower() in {"1", "true", "yes", "on"}
+try:
+    VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS = max(1, int(os.environ.get("VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS", "10000")))
+except ValueError:
+    VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS = 10000
+# Only auto-prune once the retained chain has drifted a batch beyond the keep
+# target, so a continuously-mining node prunes periodically rather than on every
+# single block (which would do prune-point work every block).
+VORLIQ_CHAIN_PRUNE_BATCH = max(1, int(os.environ.get("VORLIQ_CHAIN_PRUNE_BATCH", "256")))
 VORLIQ_ADVERTISED_HOST = "localhost" if VORLIQ_HOST in {"0.0.0.0", "::"} else VORLIQ_HOST
 LOCAL_NODE_URL = os.environ.get("VORLIQ_NODE_URL", f"http://{VORLIQ_ADVERTISED_HOST}:{VORLIQ_PORT}")
 IS_LOCAL_DEVELOPMENT = os.environ.get("NODE_ENV") != "production" and os.environ.get("FLASK_ENV") != "production"
@@ -477,6 +489,38 @@ def _rebuild_indexes(save: bool = True, force: bool = False) -> dict:
     return indexes.health(node.blockchain, exists=storage.indexes_file.exists())
 
 
+def _prune_chain_to(keep_blocks: int) -> dict:
+    """Prune the active chain to the most recent keep_blocks, then durably persist
+    the pruned chain (which truncates the append log to the new snapshot) and
+    rebuild the index from the prune-point snapshot. Returns the prune result."""
+    result = node.blockchain.prune_chain(keep_blocks)
+    if result.get("pruned"):
+        # save_chain re-validates against the prune-point commitment and resets
+        # the append log to this snapshot; force a fresh index rebuild so it
+        # reseeds from the new prune baseline.
+        storage.save_chain(node.blockchain)
+        _rebuild_indexes(save=True, force=True)
+        vorliq_logger.warning(
+            "Chain pruned to %s blocks (dropped %s); disk now %s MB",
+            result.get("retained_blocks"),
+            result.get("dropped_blocks"),
+            storage.chain_disk_usage().get("total_mb"),
+        )
+    return result
+
+
+def _auto_prune_if_enabled() -> None:
+    """Keep the chain bounded when pruning is enabled, pruning in batches so the
+    prune-point work does not run on every block."""
+    if not VORLIQ_CHAIN_PRUNE_ENABLED:
+        return
+    if len(node.blockchain.chain) >= VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS + VORLIQ_CHAIN_PRUNE_BATCH:
+        try:
+            _prune_chain_to(VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS)
+        except Exception as exc:  # never let pruning disrupt mining/serving
+            vorliq_logger.error("Automatic chain prune failed: %s", exc)
+
+
 def _public_forum_post(post: dict, *, include_hidden_replies: bool = False) -> dict:
     public_post = dict(post)
     replies = list(public_post.get("replies", []))
@@ -820,6 +864,51 @@ def get_chain_summary():
     return jsonify({"success": True, "summary": node.blockchain.get_chain_summary()})
 
 
+@app.get("/chain/prune-info")
+def get_chain_prune_info():
+    disk = storage.chain_disk_usage()
+    return jsonify(
+        {
+            "success": True,
+            "chain_height": node.blockchain.get_block_height(),
+            "retained_blocks": len(node.blockchain.chain),
+            "prune_enabled": VORLIQ_CHAIN_PRUNE_ENABLED,
+            "keep_blocks": VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS,
+            "prune_point": node.blockchain._public_prune_point(),
+            "chain_disk_usage": disk,
+        }
+    )
+
+
+@app.post("/admin/chain/prune")
+def admin_prune_chain():
+    unauthorized = _require_admin_request()
+    if unauthorized:
+        return unauthorized
+    # Allow an explicit override of the depth in the body; default to the
+    # configured keep target.
+    keep_blocks = VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS
+    payload = request.get_json(silent=True) or {}
+    if payload.get("keep_blocks") is not None:
+        try:
+            keep_blocks = max(1, int(payload["keep_blocks"]))
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "message": "keep_blocks must be a positive integer"}), 400
+    try:
+        result = _prune_chain_to(keep_blocks)
+    except Exception as exc:
+        vorliq_logger.error("Manual chain prune failed: %s", exc)
+        return jsonify({"success": False, "message": "Chain prune failed."}), 500
+    return jsonify(
+        {
+            "success": True,
+            "keep_blocks": keep_blocks,
+            **result,
+            "chain_disk_usage": storage.chain_disk_usage(),
+        }
+    )
+
+
 @app.get("/chain/address")
 def get_chain_address():
     try:
@@ -983,6 +1072,9 @@ def _persist_after_mine(raw_block, miner_address):
     snapshotted = storage.persist_new_block(node.blockchain)
     storage.save_pending(node.blockchain.pending_transactions)
     _rebuild_indexes(save=snapshotted)
+    # When pruning is enabled, keep the chain bounded (batched, so this is a no-op
+    # on the vast majority of blocks). Done after the block is durably persisted.
+    _auto_prune_if_enabled()
     storage.save_lending_pool(lending_pool)
     storage.save_exchange(exchange)
     storage.save_treasury(treasury)

@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from blockchain import Blockchain
@@ -77,7 +78,11 @@ class BlockchainTests(unittest.TestCase):
         self.assertEqual(blockchain.get_current_mining_reward(), 50)
 
         blockchain.get_total_issued = lambda: 0
-        blockchain.chain = [None] * 210000
+        # The halving schedule is driven by the tip block's index + 1 (the true
+        # block count, which survives pruning), not the retained-list length, so
+        # the synthetic chain just needs its tip to carry index 209999 (the
+        # 210000th block). Only the tip is dereferenced.
+        blockchain.chain = [None] * 209999 + [SimpleNamespace(index=209999)]
         self.assertEqual(blockchain.get_current_mining_reward(), 25)
 
     def test_maximum_supply_constant(self):

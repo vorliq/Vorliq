@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import os
 import threading
@@ -62,6 +64,16 @@ class Blockchain:
         # Serializes tip validation and append so concurrent miners cannot
         # both extend the same tip (two blocks claiming the same index).
         self._append_lock = threading.Lock()
+        # Chain pruning: when set, all blocks up to and including
+        # prune_point["height"] have been dropped from self.chain, and this record
+        # is the cryptographic, balance-bearing commitment to that pruned history.
+        # It carries the prune-point block hash (which the first retained block
+        # links back to), a UTXO-style confirmed-balance snapshot of every wallet
+        # as of the prune point, the total issued supply at that point, and a
+        # commitment hash over all of it. Balance and supply computations seed
+        # from this snapshot instead of from zero, so a pruned chain stays exactly
+        # as verifiable and balance-accurate as a full one.
+        self.prune_point: dict[str, Any] | None = None
 
     def create_genesis_block(self) -> Block:
         genesis_block = Block(
@@ -168,6 +180,15 @@ class Blockchain:
         # chain adoption) keep the default and enforce spacing too.
         if not self.chain:
             vorliq_logger.warning("Chain validation failed because the chain is empty")
+            return False
+
+        # On a pruned chain the first retained block is not the original genesis;
+        # its integrity is bound to the dropped history by the prune-point
+        # commitment (the snapshot hash and the back-link). Verify that first, then
+        # the retained blocks validate exactly as normal (their hashes, proofs of
+        # work and links are real), with balances seeded from the prune snapshot.
+        if self.prune_point and not self.prune_commitment_is_valid():
+            vorliq_logger.warning("Chain validation failed because the prune-point commitment is invalid")
             return False
 
         genesis_block = self.chain[0]
@@ -288,7 +309,9 @@ class Blockchain:
         # Snapshot the difficulty onto the block so the proof of work the caller
         # computes targets the difficulty in force when the candidate was built.
         block = Block(
-            index=len(self.chain),
+            # Continue from the tip's true index, not the retained-list length, so
+            # mining keeps producing correctly-numbered blocks after a prune.
+            index=latest_block.index + 1,
             transactions=valid_transactions,
             previous_hash=latest_block.hash,
             miner_address=miner_address,
@@ -912,10 +935,24 @@ class Blockchain:
         }
 
     def get_block_height(self) -> int:
-        return len(self.chain) - 1
+        # The true height is the index carried by the tip block, not the length of
+        # the retained list: after pruning, self.chain holds only the most recent N
+        # blocks but each block keeps its original index, so the height (and every
+        # derived quantity — next block index, halving schedule) must come from the
+        # tip's index. For an unpruned chain chain[-1].index == len(chain) - 1, so
+        # this is identical to the old behaviour.
+        if not self.chain:
+            return -1
+        return self.chain[-1].index
 
     def get_current_mining_reward(self) -> float:
-        halvings = len(self.chain) // self.halving_interval
+        # Halvings are driven by the total number of blocks ever mined, which is
+        # the tip's index + 1 — not the retained-list length, which shrinks on a
+        # prune. For an unpruned chain this equals len(self.chain), so the reward
+        # schedule is unchanged; for a pruned chain it stays on the correct
+        # schedule instead of resetting to the genesis reward.
+        total_blocks = self.get_block_height() + 1
+        halvings = total_blocks // self.halving_interval
         scheduled_reward = self.mining_reward / (2**halvings)
         remaining_supply = max(self.maximum_supply - self.get_total_issued(), 0.0)
         return min(scheduled_reward, remaining_supply)
@@ -941,7 +978,7 @@ class Blockchain:
                 if isinstance(summary, dict) and "total_issued" in summary:
                     return float(summary["total_issued"])
 
-        total = 0.0
+        total = self._pruned_issued_seed()
         for block in self.chain:
             for transaction in block.transactions:
                 if isinstance(transaction, dict):
@@ -967,7 +1004,10 @@ class Blockchain:
         if self._indexes is not None:
             return self.get_indexes().balance(address)
 
-        balance = 0.0
+        # Seed from the pruned-history snapshot so a pruned chain reports the same
+        # balance as a full one even on this fallback path (the index path already
+        # seeds via build()).
+        balance = float((self.prune_point or {}).get("balances", {}).get(address, 0.0)) if self.prune_point else 0.0
         transactions = []
 
         for block in self.chain:
@@ -1048,8 +1088,156 @@ class Blockchain:
                 return False
         return True
 
+    def _pruned_balance_seed(self) -> dict[str, float]:
+        """Confirmed balances carried over from pruned history (empty if the full
+        chain is present). Every balance/ledger computation seeds from this so a
+        pruned chain reproduces exactly the same balances as the full chain."""
+        if self.prune_point:
+            balances = self.prune_point.get("balances") or {}
+            return {address: float(value) for address, value in balances.items()}
+        return {}
+
+    def _pruned_issued_seed(self) -> float:
+        if self.prune_point:
+            return float(self.prune_point.get("total_issued") or 0.0)
+        return 0.0
+
+    @staticmethod
+    def compute_prune_commitment(height: int, block_hash: str, total_issued: float, balances: dict[str, float]) -> str:
+        """Deterministic cryptographic commitment to the pruned history's end
+        state: the prune-point height and block hash, the total issued supply, and
+        the full confirmed-balance snapshot. Any node can recompute this from the
+        retained snapshot and check it against the value stored in the
+        genesis-equivalent record, so pruned history cannot be silently altered."""
+        payload = json.dumps(
+            {
+                "height": int(height),
+                "block_hash": str(block_hash),
+                "total_issued": round(float(total_issued), 8),
+                "balances": {str(a): round(float(b), 8) for a, b in sorted(balances.items())},
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    def prune_commitment_is_valid(self) -> bool:
+        """Verify the retained prune-point snapshot matches its stored commitment
+        and that the first retained block links back to the prune-point hash."""
+        if not self.prune_point:
+            return True
+        expected = self.compute_prune_commitment(
+            self.prune_point.get("height", -1),
+            self.prune_point.get("block_hash", ""),
+            self.prune_point.get("total_issued", 0.0),
+            self.prune_point.get("balances") or {},
+        )
+        if expected != self.prune_point.get("commitment"):
+            return False
+        # The first retained block must link back to the prune point, binding the
+        # retained chain to the committed pruned history.
+        if self.chain and self.chain[0].previous_hash != self.prune_point.get("block_hash"):
+            return False
+        return True
+
+    def prune_chain(self, keep_blocks: int) -> dict[str, Any]:
+        """Drop all but the most recent ``keep_blocks`` blocks, replacing the
+        pruned history with a cryptographic, balance-bearing commitment.
+
+        The retained chain stays fully verifiable: the first kept block links back
+        to the prune-point hash recorded in the commitment, and every balance and
+        supply computation seeds from the UTXO snapshot, so the pruned chain
+        produces byte-for-byte the same balances as the full chain would. This is
+        balance-bearing — the snapshot is computed with exactly the index's
+        confirmed-balance convention (SYSTEM mints add to supply and are not
+        debited; every other sender is debited) so the seed and the retained
+        blocks compose to the same totals as a full rebuild."""
+        if keep_blocks < 1:
+            raise ValueError("keep_blocks must be at least 1")
+        with self._append_lock:
+            total = len(self.chain)
+            if total <= keep_blocks:
+                return {
+                    "pruned": False,
+                    "reason": "chain already at or below the keep target",
+                    "height": self.get_block_height(),
+                    "retained_blocks": total,
+                    "prune_point": self._public_prune_point(),
+                }
+
+            prune_index = total - keep_blocks  # number of front blocks to drop
+            prune_point_block = self.chain[prune_index - 1]
+
+            balances = self._pruned_balance_seed()
+            total_issued = self._pruned_issued_seed()
+            for block in self.chain[:prune_index]:
+                for transaction in block.transactions:
+                    tx = transaction if isinstance(transaction, Transaction) else Transaction.from_dict(transaction)
+                    sender = tx.sender_address
+                    receiver = tx.receiver_address
+                    amount = float(tx.amount)
+                    if sender == SYSTEM_ADDRESS:
+                        total_issued += amount
+                    else:
+                        balances[sender] = balances.get(sender, 0.0) - amount
+                    balances[receiver] = balances.get(receiver, 0.0) + amount
+
+            # Drop zero balances so the snapshot (and its commitment) is canonical.
+            balances = {address: value for address, value in balances.items() if abs(value) > 1e-12}
+            commitment = self.compute_prune_commitment(
+                prune_point_block.index, prune_point_block.hash, total_issued, balances
+            )
+            self.prune_point = {
+                "height": prune_point_block.index,
+                "block_hash": prune_point_block.hash,
+                "balances": balances,
+                "total_issued": total_issued,
+                "commitment": commitment,
+                "pruned_at": time.time(),
+            }
+            dropped = prune_index
+            self.chain = self.chain[prune_index:]
+            # The derived caches must rebuild from the new prune baseline. Reset the
+            # validity memo, then rebuild the index immediately so every balance
+            # read goes through the prune-seeded index path rather than the
+            # unseeded fallback.
+            self._valid_cache = None
+            self._valid_cache_height = -1
+            self._valid_cache_tip = None
+            self._indexes = None
+            self.rebuild_indexes()
+            vorliq_logger.warning(
+                "Pruned chain: dropped %s blocks up to height %s (prune-point hash %s); retaining %s blocks from height %s to %s",
+                dropped,
+                prune_point_block.index,
+                prune_point_block.hash,
+                len(self.chain),
+                self.chain[0].index,
+                self.chain[-1].index,
+            )
+            return {
+                "pruned": True,
+                "dropped_blocks": dropped,
+                "retained_blocks": len(self.chain),
+                "height": self.get_block_height(),
+                "prune_point": self._public_prune_point(),
+            }
+
+    def _public_prune_point(self) -> dict[str, Any] | None:
+        """Prune-point metadata safe to expose over the API (no full balance map)."""
+        if not self.prune_point:
+            return None
+        return {
+            "height": self.prune_point.get("height"),
+            "block_hash": self.prune_point.get("block_hash"),
+            "commitment": self.prune_point.get("commitment"),
+            "total_issued": self.prune_point.get("total_issued"),
+            "snapshot_addresses": len(self.prune_point.get("balances") or {}),
+            "pruned_at": self.prune_point.get("pruned_at"),
+        }
+
     def _chain_transactions_are_valid(self, chain: list[Block]) -> bool:
-        balances: dict[str, float] = {}
+        balances: dict[str, float] = self._pruned_balance_seed()
 
         for block in chain:
             if not self._apply_transactions_to_balances(block.transactions, balances):
@@ -1117,7 +1305,7 @@ class Blockchain:
                 if confirmed is not None:
                     return dict(confirmed)
 
-        balances: dict[str, float] = {}
+        balances: dict[str, float] = self._pruned_balance_seed()
         for block in self.chain:
             if not self._apply_transactions_to_balances(block.transactions, balances):
                 raise ValueError("current chain contains invalid balances")
