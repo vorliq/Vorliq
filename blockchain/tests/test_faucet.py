@@ -80,23 +80,21 @@ class FaucetTests(unittest.TestCase):
         self.assertEqual(repeat["status"], "rate_limited")
         self.assertIn("24 hours", repeat["reason"])
 
-    def test_fingerprint_cooldown_blocks_excessive_claims(self):
+    def test_fingerprint_cooldown_blocks_second_device_claim(self):
+        # A device fingerprint may claim at most once per cooldown window
+        # (FINGERPRINT_LIMIT == 1). The first claim succeeds; a second claim from
+        # the SAME device but a DIFFERENT wallet is rejected with the same message
+        # as the per-wallet cooldown, so it never reveals fingerprinting is used.
         blockchain = make_chain()
         fund_treasury(blockchain, amount=100)
         faucet = Faucet()
 
-        for index in range(3):
-            claim = faucet.request_claim(
-                [VALID_WALLET, OTHER_VALID_WALLET, THIRD_VALID_WALLET][index],
-                blockchain.get_treasury_balance(),
-                blockchain,
-                "samehash",
-            )
-            self.assertEqual(claim["status"], "pending")
+        first = faucet.request_claim(VALID_WALLET, blockchain.get_treasury_balance(), blockchain, "samehash")
+        self.assertEqual(first["status"], "pending")
 
-        blocked = faucet.request_claim(FOURTH_VALID_WALLET, blockchain.get_treasury_balance(), blockchain, "samehash")
-
+        blocked = faucet.request_claim(OTHER_VALID_WALLET, blockchain.get_treasury_balance(), blockchain, "samehash")
         self.assertEqual(blocked["status"], "rate_limited")
+        self.assertEqual(blocked["reason"], Faucet.COOLDOWN_MESSAGE)
 
     def test_system_addresses_rejected(self):
         blockchain = make_chain()
