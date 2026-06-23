@@ -1,4 +1,5 @@
 const rateLimit = require("express-rate-limit");
+const { ipKeyGenerator } = require("express-rate-limit");
 const slowDown = require("express-slow-down");
 const crypto = require("crypto");
 const { logError } = require("../logger");
@@ -36,7 +37,9 @@ function walletKey(req) {
     body.repayer_address || body.repayerAddress ||
     body.proposer_address || body.proposerAddress ||
     body.wallet_address || body.walletAddress;
-  return wallet ? `w:${String(wallet).slice(0, 160)}` : `ip:${req.ip}`;
+  // Fall back to the IP via ipKeyGenerator, which normalises IPv6 into a /64
+  // prefix so IPv6 clients cannot trivially rotate addresses to dodge the limit.
+  return wallet ? `w:${String(wallet).slice(0, 160)}` : `ip:${ipKeyGenerator(req.ip)}`;
 }
 
 // End-to-end runs drive the real write paths hard (many wallets, mines, claims)

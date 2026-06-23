@@ -49,6 +49,7 @@ const adminAuth = require("./middleware/adminAuth");
 const { sendError } = require("./utils/apiResponse");
 const { pruneAnalytics } = require("./analytics");
 const { startMonitors } = require("./monitors");
+const { startDiagnosticsCache } = require("./diagnosticsCache");
 const chatStore = require("./chatStore");
 const { logError, logInfo } = require("./logger");
 const { sendWeeklyReport } = require("./reports");
@@ -532,6 +533,10 @@ if (require.main === module) {
   // Server-side production monitoring (chain health, Flask reachability, disk
   // headroom). Runs as in-process timers so there is no separate service.
   startMonitors();
+
+  // Background-refresh the diagnostics cache so the network-status panel is served
+  // instantly and never blocks on a slow chain validation.
+  startDiagnosticsCache();
 
   server.listen(port, host, () => {
     console.log(`Vorliq backend API running on ${host}:${port}`);

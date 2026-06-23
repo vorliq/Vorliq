@@ -84,6 +84,9 @@ function NetworkStatusPanel({ onHeight }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
+  // How old the server's cached diagnostics are (from the Node background cache),
+  // so users know whether the numbers are live or a few seconds stale.
+  const [cacheAge, setCacheAge] = useState(null);
 
   const load = useCallback(async (signal) => {
     // Update each value the moment its source responds, rather than waiting for
@@ -122,6 +125,7 @@ function NetworkStatusPanel({ onHeight }) {
         merge({ uptime: diag.uptime_seconds });
         setData((prev) => ({ ...(prev || {}), height: prev?.height ?? diag.block_height }));
         if (diag.block_height != null && onHeight) onHeight(diag.block_height);
+        if (diag._cache && diag._cache.age_seconds != null) setCacheAge(diag._cache.age_seconds);
       });
 
     const settled = await Promise.allSettled([summaryTask, blockTask, diagTask]);
@@ -161,9 +165,21 @@ function NetworkStatusPanel({ onHeight }) {
     { label: "Node uptime", value: cell(data?.uptime, (v) => formatUptime(v) || "Unavailable") },
   ];
 
+  const freshness =
+    cacheAge == null
+      ? null
+      : cacheAge <= 35
+        ? "Live"
+        : `Updated ${cacheAge < 90 ? `${cacheAge}s` : `${Math.round(cacheAge / 60)}m`} ago`;
+
   return (
     <Card>
-      <h2 className="vn-panel-title">Network status</h2>
+      <div className="vn-netstat__head">
+        <h2 className="vn-panel-title" style={{ margin: 0 }}>Network status</h2>
+        {freshness && (
+          <span className={`vn-netstat__freshness ${cacheAge > 90 ? "is-stale" : ""}`}>{freshness}</span>
+        )}
+      </div>
       {error ? (
         <InlineError message={error} onRetry={() => load()} />
       ) : (

@@ -1686,6 +1686,22 @@ html[data-theme="light"] .vnext .vn-dt__row--clickable:hover td {
 }
 
 /* Compact network status panel */
+.vnext .vn-netstat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.vnext .vn-netstat__freshness {
+  font-size: var(--vn-fs-label);
+  font-weight: 600;
+  color: var(--vn-green-text);
+  white-space: nowrap;
+}
+.vnext .vn-netstat__freshness.is-stale {
+  color: var(--vn-text-3, #7a8aa0);
+}
 .vnext .vn-netstat {
   display: grid;
   gap: 12px;

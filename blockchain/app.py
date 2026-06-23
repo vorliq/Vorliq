@@ -133,7 +133,6 @@ PARALLEL_READ_ENDPOINTS = frozenset(
     {
         "health",
         "storage_health",
-        "indexes_health",
         "get_chain",
         "get_chain_blocks",
         "get_chain_summary",
@@ -141,12 +140,56 @@ PARALLEL_READ_ENDPOINTS = frozenset(
         "get_chain_block_detail",
         "get_pending_transactions",
         "get_pending_transaction_records",
+        "get_transaction_detail",
         "get_balance",
         "get_leaderboard",
         # Read-only product-usage aggregation: it only iterates the chain and the
         # community stores, so it runs under the shared read lock instead of
         # blocking every reader behind the write lock.
         "get_analytics_usage",
+        # Diagnostics validates the whole chain on every call. It is hit constantly
+        # by the network-status panel and the deployment readiness gate, and it is
+        # strictly read-only, so it MUST run under the read lock — under the write
+        # lock it serialised behind (and blocked) every other reader, which is what
+        # made chain reads hang under load.
+        "get_diagnostics",
+        # The remaining endpoints below are all read-only data fetches (no chain
+        # mutation, no lazy persist on the request thread). Lazy-sync GETs that may
+        # write (faucet/mining/governance/treasury sync, index rebuilds) are
+        # deliberately NOT here and stay serialised as writers.
+        "get_community_stats",
+        "get_audit_chain",
+        "get_audit_treasury",
+        "get_audit_lending",
+        "get_audit_exchange",
+        "get_audit_registry",
+        "get_treasury_balance",
+        "get_treasury_summary",
+        "get_treasury_proposals",
+        "get_all_treasury_proposals",
+        "get_treasury_proposal",
+        "get_treasury_ledger",
+        "get_wallet_achievements",
+        "get_profile",
+        "get_profiles",
+        "search_profiles",
+        "get_registry_nodes",
+        "get_registry_all_nodes",
+        "get_registry_node",
+        "get_registry_summary",
+        "get_lending_loans",
+        "get_lending_loan",
+        "get_my_lending_loans",
+        "get_exchange_offers",
+        "get_exchange_offer",
+        "get_exchange_all_offers",
+        "get_exchange_my_offers",
+        "get_forum_posts",
+        "get_featured_forum_posts",
+        "search_forum_posts",
+        "get_governance_settings",
+        "get_governance_rule_changes",
+        "get_governance_settings_history",
     }
 )
 

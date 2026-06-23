@@ -1,6 +1,7 @@
 const express = require("express");
 const axios = require("axios");
 const { sendCachedJson } = require("../cache");
+const { getDiagnostics } = require("../diagnosticsCache");
 const { handleRouteError } = require("./routeError");
 const { paginationParams } = require("../pagination");
 
@@ -124,10 +125,15 @@ router.get("/api/chain/block/:index_or_hash", async (req, res) => {
 
 router.get("/api/diagnostics", async (req, res, next) => {
   try {
-    return sendCachedJson(req, res, "diagnostics", 15_000, async () => {
-      const response = await axios.get(`${flaskUrl}/diagnostics`);
-      return { status: response.status, data: response.data };
-    });
+    // Served from the Node background cache (refreshed every 30s with a 5s
+    // timeout): the frontend gets an immediate response and, if a refresh failed,
+    // the last good value marked stale instead of "Unavailable".
+    const { data, cache } = await getDiagnostics();
+    if (!data) {
+      return res.status(503).json({ success: false, message: "Node diagnostics are warming up. Please retry shortly." });
+    }
+    res.setHeader("Cache-Control", "public, max-age=15");
+    return res.json({ ...data, _cache: cache });
   } catch (error) {
     return handleRouteError(res, error, "GET /api/diagnostics", "Unable to load node diagnostics.");
   }
