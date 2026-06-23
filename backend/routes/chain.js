@@ -50,7 +50,7 @@ router.get("/api/chain/blocks", async (req, res) => {
     // short cache per (limit, offset) collapses concurrent reads into one
     // upstream call without the list ever looking stale to a human.
     return sendCachedJson(req, res, "chain-blocks", 5000, async () => {
-      const response = await axios.get(`${flaskUrl}/chain/blocks`, { params });
+      const response = await axios.get(`${flaskUrl}/chain/blocks`, { params, timeout: 5000 });
       return { status: response.status, data: response.data };
     });
   } catch (error) {
@@ -64,7 +64,7 @@ router.get("/api/chain/blocks", async (req, res) => {
 router.get("/api/chain/summary", async (req, res) => {
   try {
     return sendCachedJson(req, res, "chain-summary", 15_000, async () => {
-      const response = await axios.get(`${flaskUrl}/chain/summary`);
+      const response = await axios.get(`${flaskUrl}/chain/summary`, { timeout: 5000 });
       return { status: response.status, data: response.data };
     });
   } catch (error) {
@@ -74,12 +74,15 @@ router.get("/api/chain/summary", async (req, res) => {
 
 router.get("/api/community/stats", async (req, res) => {
   try {
-    // Computed fresh from the FULL chain history on every request (no cached
-    // subset), so the figures always match the block explorer. Flask now serves
-    // /community/stats under the read lock, so concurrent requests do not
-    // serialise and this stays cheap even without a Node cache.
-    const response = await axios.get(`${flaskUrl}/community/stats`, { timeout: 8000 });
-    return res.status(response.status).json(response.data);
+    // Flask computes these from the FULL chain (under the read lock), so the
+    // figures match the block explorer. A short 10s cache with serve-stale-on-
+    // error keeps the community page responsive during the brief windows when the
+    // core is busy persisting a freshly mined block — the numbers stay full-chain
+    // accurate (at most ~10s old) and the page never hangs.
+    return sendCachedJson(req, res, "community-stats", 10_000, async () => {
+      const response = await axios.get(`${flaskUrl}/community/stats`, { timeout: 5000 });
+      return { status: response.status, data: response.data };
+    });
   } catch (error) {
     return handleRouteError(res, error, "GET /api/community/stats", "Unable to load community statistics.");
   }
