@@ -12,7 +12,13 @@ from wallet import validate_address
 class Faucet:
     STARTER_AMOUNT = 1.0
     WALLET_COOLDOWN_SECONDS = 24 * 60 * 60
-    FINGERPRINT_LIMIT = 3
+    # A device fingerprint may claim at most once per cooldown window, no matter
+    # which wallet address it uses. Stops casual multi-wallet abuse from one phone
+    # or computer. Stacks on top of the per-wallet cooldown, never replaces it.
+    FINGERPRINT_LIMIT = 1
+    # The fingerprint rejection is deliberately worded exactly like the per-wallet
+    # cooldown so it does not reveal that device fingerprinting is in play.
+    COOLDOWN_MESSAGE = "wallet already claimed starter VLQ in the last 24 hours"
     MAX_TREASURY_PERCENT = 0.10
     SYSTEM_RECEIVERS = {SYSTEM_ADDRESS, TREASURY_ADDRESS, LENDING_POOL_ADDRESS}
 
@@ -142,7 +148,7 @@ class Faucet:
             and now - float(claim.get("requested_at") or 0) < self.WALLET_COOLDOWN_SECONDS
         ]
         if recent_wallet_claims:
-            return "rate_limited", "wallet already claimed starter VLQ in the last 24 hours"
+            return "rate_limited", self.COOLDOWN_MESSAGE
 
         if fingerprint_hash:
             recent_fingerprint_claims = [
@@ -152,8 +158,11 @@ class Faucet:
                 and claim.get("status") in {"pending", "confirmed"}
                 and now - float(claim.get("requested_at") or 0) < self.WALLET_COOLDOWN_SECONDS
             ]
+            # Same message as the per-wallet cooldown, regardless of which wallet
+            # this device tried — a different wallet from the same device is still
+            # the same person inside the cooldown window.
             if len(recent_fingerprint_claims) >= self.FINGERPRINT_LIMIT:
-                return "rate_limited", "too many faucet claims from this request fingerprint in the last 24 hours"
+                return "rate_limited", self.COOLDOWN_MESSAGE
 
         return None, None
 

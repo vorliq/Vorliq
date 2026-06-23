@@ -12,6 +12,16 @@ const { listReports, reportCountForTarget, updateReport } = require("../communit
 const { createIncident, listActiveIncidents, listIncidents, resolveIncident } = require("../incidents");
 const { getRecentAlerts } = require("../monitors");
 const { topPages } = require("../analytics");
+const {
+  topIpsByClaims24h,
+  topWalletsByClaims,
+  ipsAtMultiWalletLimit,
+  listBans,
+  banIp,
+  banWallet,
+  unbanIp,
+  unbanWallet,
+} = require("../faucetAbuse");
 const { logError } = require("../logger");
 
 const router = express.Router();
@@ -543,6 +553,48 @@ router.get("/api/admin/usage", async (req, res) => {
   } catch (error) {
     logError(`GET /api/admin/usage failed: ${error.message}`);
     return res.status(500).json({ success: false, message: "Unable to load usage summary." });
+  }
+});
+
+// Faucet abuse monitoring: top IPs by claim count in the last 24h, top wallets by
+// claims ever, and any IP currently at the multi-wallet limit. Plus the current
+// permanent bans.
+router.get("/api/admin/faucet-abuse", (req, res) => {
+  try {
+    return res.json({
+      success: true,
+      top_ips_24h: topIpsByClaims24h(10),
+      top_wallets: topWalletsByClaims(10),
+      ips_at_limit: ipsAtMultiWalletLimit(),
+      bans: listBans(),
+    });
+  } catch (error) {
+    logError(`GET /api/admin/faucet-abuse failed: ${error.message}`);
+    return res.status(500).json({ success: false, message: "Unable to load faucet abuse data." });
+  }
+});
+
+// Permanently ban (or lift a ban on) an IP or wallet from the faucet.
+router.post("/api/admin/faucet-ban", (req, res) => {
+  try {
+    const type = String(req.body?.type || "").trim().toLowerCase();
+    const value = String(req.body?.value || "").trim();
+    const action = String(req.body?.action || "ban").trim().toLowerCase();
+    const reason = String(req.body?.reason || "manual admin ban").slice(0, 240);
+    if (!["ip", "wallet"].includes(type) || !value) {
+      return res.status(400).json({ success: false, message: "Provide type (ip|wallet) and value." });
+    }
+    if (action === "unban") {
+      if (type === "ip") unbanIp(value);
+      else unbanWallet(value);
+    } else {
+      if (type === "ip") banIp(value, reason);
+      else banWallet(value, reason);
+    }
+    return res.json({ success: true, type, value, action });
+  } catch (error) {
+    logError(`POST /api/admin/faucet-ban failed: ${error.message}`);
+    return res.status(500).json({ success: false, message: "Unable to update faucet ban." });
   }
 });
 

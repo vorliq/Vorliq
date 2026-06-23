@@ -2,13 +2,33 @@ const express = require("express");
 const axios = require("axios");
 const { handleRouteError } = require("./routeError");
 const { sendCachedJson } = require("../cache");
+const { walletCreateDecision, recordWalletCreation } = require("../faucetAbuse");
+const { logError } = require("../logger");
 
 const router = express.Router();
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
 
 router.post("/api/wallet/create", async (req, res, next) => {
   try {
+    // Upstream abuse fix: an IP that creates more than three wallets within an
+    // hour is blocked from creating more for 24 hours. This is where multi-wallet
+    // faucet abuse starts, so it is stopped here before it reaches the faucet.
+    const ip = req.ip;
+    const decision = walletCreateDecision(ip);
+    if (!decision.allowed) {
+      res.set("Retry-After", String(decision.retryAfterSeconds));
+      logError(`Wallet creation blocked (${decision.reason}) for ip=${ip}`);
+      return res.status(429).json({
+        success: false,
+        message:
+          "Too many wallets have been created from this connection. Wallet creation is paused here for 24 hours.",
+      });
+    }
     const response = await axios.post(`${flaskUrl}/wallet`);
+    // Record the new wallet's creation time + IP for the velocity window and the
+    // faucet min-age gate.
+    const address = response.data?.address;
+    if (address) recordWalletCreation(address, ip);
     res.status(response.status).json(response.data);
   } catch (error) {
     return handleRouteError(res, error, "POST /api/wallet/create", "Unable to create a wallet.");

@@ -18,6 +18,7 @@ import { Button, Card, InlineError } from "../../components/vnext/primitives";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../helpers/api";
 import { apiErrorMessage } from "../../helpers/errors";
+import { deviceFingerprint } from "../../helpers/deviceFingerprint";
 import { formatHash, formatVlq } from "../../helpers/publicApi";
 import { useSharedWalletBalance } from "../../context/WalletBalanceContext";
 
@@ -103,7 +104,8 @@ export default function Faucet() {
     setError("");
     setClaimResult(null);
     try {
-      const res = await api.post("/faucet/claim", { wallet_address: address });
+      const fingerprint = await deviceFingerprint();
+      const res = await api.post("/faucet/claim", { wallet_address: address, device_fingerprint: fingerprint });
       const claim = res.data?.claim;
       setClaimResult(claim || null);
       setNextAvailable((Math.floor(Date.now() / 1000) + COOLDOWN_SECONDS) * 1000);

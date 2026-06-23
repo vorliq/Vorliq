@@ -64,10 +64,16 @@ describe("faucet routes", () => {
       .send({ wallet_address: validWallet });
 
     expect(response.status).toBe(201);
-    expect(axios.post).toHaveBeenCalledWith("http://localhost:5001/faucet/claim", {
-      wallet_address: validWallet,
-      fingerprint_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
-    });
+    expect(axios.post).toHaveBeenCalledWith(
+      "http://localhost:5001/faucet/claim",
+      {
+        wallet_address: validWallet,
+        fingerprint_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      },
+      // The route forwards with validateStatus so it can pass Flask's 4xx/429
+      // bodies straight through and only record genuine 2xx successes.
+      expect.objectContaining({ validateStatus: expect.any(Function) })
+    );
     const body = JSON.stringify(response.body);
     expect(body).not.toMatch(/jest-faucet-agent/i);
     expect(body).not.toMatch(/127\.0\.0\.1|::ffff/i);

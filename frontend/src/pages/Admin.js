@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../helpers/api";
 
 const ADMIN_TOKEN_KEY = "vorliq_admin_token";
-const tabs = ["Overview", "Usage", "Wallets", "Treasury", "Readiness", "Network Monitor", "Registry Lifecycle", "Analytics", "Storage", "Indexes", "Migration", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
+const tabs = ["Overview", "Usage", "Abuse", "Wallets", "Treasury", "Readiness", "Network Monitor", "Registry Lifecycle", "Analytics", "Storage", "Indexes", "Migration", "Security", "Backups", "Incidents", "Reports", "Forum Moderation", "Chat Moderation", "Profiles"];
 
 function authHeader(token) {
   return { Authorization: `Bearer ${token}` };
@@ -50,6 +50,7 @@ function Admin() {
   const [security, setSecurity] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [usage, setUsage] = useState(null);
+  const [abuse, setAbuse] = useState(null);
   const [storage, setStorage] = useState(null);
   const [indexes, setIndexes] = useState(null);
   const [migration, setMigration] = useState(null);
@@ -119,6 +120,22 @@ function Admin() {
     ]);
     setUsage({ ...usageRes.data, alerts: alertsRes.data?.alerts || [] });
   }, [headers]);
+
+  const loadAbuse = useCallback(async () => {
+    const response = await api.get("/admin/faucet-abuse", { headers });
+    setAbuse(response.data);
+  }, [headers]);
+
+  const banFaucet = useCallback(async (type, value) => {
+    if (!value) return;
+    await api.post("/admin/faucet-ban", { type, value, action: "ban" }, { headers });
+    await loadAbuse();
+  }, [headers, loadAbuse]);
+
+  const unbanFaucet = useCallback(async (type, value) => {
+    await api.post("/admin/faucet-ban", { type, value, action: "unban" }, { headers });
+    await loadAbuse();
+  }, [headers, loadAbuse]);
 
   const loadBackups = useCallback(async () => {
     const response = await api.get("/admin/backups", { headers });
@@ -210,6 +227,7 @@ function Admin() {
     try {
       if (tab === "Overview") await loadOverview();
       if (tab === "Usage") await loadUsage();
+      if (tab === "Abuse") await loadAbuse();
       if (tab === "Wallets") await loadWallets();
       if (tab === "Treasury") await loadTreasury();
       if (tab === "Readiness") await loadReadiness();
@@ -228,7 +246,7 @@ function Admin() {
     } catch (requestError) {
       setError(requestError.response?.status === 401 ? "Unauthorized" : "Unable to load admin data.");
     }
-  }, [activeTab, headers, loadAnalytics, loadUsage, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadMigration, loadNodeMonitor, loadOverview, loadReadiness, loadRegistryLifecycle, loadReports, loadSecurity, loadStorage, loadWallets, loadTreasury]);
+  }, [activeTab, headers, loadAnalytics, loadUsage, loadAbuse, loadBackups, loadChatModeration, loadForumModeration, loadIncidents, loadIndexes, loadMigration, loadNodeMonitor, loadOverview, loadReadiness, loadRegistryLifecycle, loadReports, loadSecurity, loadStorage, loadWallets, loadTreasury]);
 
   useEffect(() => {
     if (adminToken) {
@@ -262,6 +280,7 @@ function Admin() {
     setSecurity(null);
     setAnalytics(null);
     setUsage(null);
+    setAbuse(null);
     setStorage(null);
     setIndexes(null);
     setMigration(null);
@@ -477,6 +496,7 @@ function Admin() {
         />
       )}
       {activeTab === "Usage" && <UsageTab usage={usage} onLoad={loadUsage} />}
+      {activeTab === "Abuse" && <AbuseTab abuse={abuse} onLoad={loadAbuse} onBan={banFaucet} onUnban={unbanFaucet} />}
       {activeTab === "Analytics" && <AnalyticsTab analytics={analytics} onLoad={loadAnalytics} />}
       {activeTab === "Storage" && <StorageTab storage={storage} onLoad={loadStorage} />}
       {activeTab === "Indexes" && <IndexesTab indexes={indexes} onLoad={loadIndexes} onRebuild={rebuildIndexes} />}
@@ -767,6 +787,111 @@ function MigrationTab({ migration, onLoad }) {
           </div>
         </>
       )}
+    </section>
+  );
+}
+
+function AbuseTab({ abuse, onLoad, onBan, onUnban }) {
+  useEffect(() => { if (!abuse) onLoad(); }, [abuse, onLoad]);
+  const [banType, setBanType] = useState("ip");
+  const [banValue, setBanValue] = useState("");
+  if (!abuse) return <div className="empty-state">Loading faucet abuse data...</div>;
+
+  return (
+    <section className="glass-section card-pad">
+      <h2>Faucet Abuse Monitoring</h2>
+
+      <form
+        className="admin-inline-form"
+        onSubmit={(e) => { e.preventDefault(); onBan(banType, banValue.trim()); setBanValue(""); }}
+        style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}
+      >
+        <select value={banType} onChange={(e) => setBanType(e.target.value)} className="admin-input">
+          <option value="ip">IP</option>
+          <option value="wallet">Wallet</option>
+        </select>
+        <input
+          className="admin-input"
+          placeholder={banType === "ip" ? "IP address to ban" : "Wallet address to ban"}
+          value={banValue}
+          onChange={(e) => setBanValue(e.target.value)}
+          style={{ minWidth: 240 }}
+        />
+        <button type="submit" className="btn btn-danger" disabled={!banValue.trim()}>Ban from faucet</button>
+      </form>
+
+      <h3>Top IPs by Faucet Claims (24h)</h3>
+      <div className="table-wrap">
+        <table className="stats-table">
+          <thead><tr><th>IP</th><th>Claims</th><th>Distinct wallets</th><th></th></tr></thead>
+          <tbody>
+            {(abuse.top_ips_24h || []).length === 0 ? (
+              <tr><td colSpan="4">No faucet claims in the last 24 hours.</td></tr>
+            ) : (
+              (abuse.top_ips_24h || []).map((row) => (
+                <tr key={row.ip}>
+                  <td>{row.ip}</td><td>{row.claims}</td><td>{row.distinct_wallets}</td>
+                  <td><button className="btn btn-small" onClick={() => onBan("ip", row.ip)}>Ban IP</button></td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Top Wallets by Faucet Claims (ever)</h3>
+      <div className="table-wrap">
+        <table className="stats-table">
+          <thead><tr><th>Wallet</th><th>Claims</th><th></th></tr></thead>
+          <tbody>
+            {(abuse.top_wallets || []).length === 0 ? (
+              <tr><td colSpan="3">No faucet claims recorded yet.</td></tr>
+            ) : (
+              (abuse.top_wallets || []).map((row) => (
+                <tr key={row.wallet}>
+                  <td className="mono">{row.wallet}</td><td>{row.claims}</td>
+                  <td><button className="btn btn-small" onClick={() => onBan("wallet", row.wallet)}>Ban wallet</button></td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <h3>IPs at the Multi-Wallet Limit (2+ wallets / 24h)</h3>
+      <div className="admin-list">
+        {(abuse.ips_at_limit || []).length === 0 ? (
+          <div className="admin-row"><span>No IPs currently at the limit.</span></div>
+        ) : (
+          (abuse.ips_at_limit || []).map((row) => (
+            <div className="admin-row" key={row.ip}>
+              <strong>{row.ip}</strong><span>{row.distinct_wallets} wallets</span>
+            </div>
+          ))
+        )}
+      </div>
+
+      <h3>Current Faucet Bans</h3>
+      <div className="admin-list">
+        {((abuse.bans?.ips || []).length + (abuse.bans?.wallets || []).length) === 0 ? (
+          <div className="admin-row"><span>No bans in place.</span></div>
+        ) : (
+          <>
+            {(abuse.bans?.ips || []).map((b) => (
+              <div className="admin-row" key={`ip-${b.ip}`}>
+                <strong>IP {b.ip}</strong>
+                <span>{b.reason} <button className="btn btn-small" onClick={() => onUnban("ip", b.ip)}>Unban</button></span>
+              </div>
+            ))}
+            {(abuse.bans?.wallets || []).map((b) => (
+              <div className="admin-row" key={`w-${b.wallet}`}>
+                <strong className="mono">Wallet {b.wallet}</strong>
+                <span>{b.reason} <button className="btn btn-small" onClick={() => onUnban("wallet", b.wallet)}>Unban</button></span>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
     </section>
   );
 }
