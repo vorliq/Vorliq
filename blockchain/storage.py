@@ -711,8 +711,27 @@ class Storage:
         while descriptor is None:
             try:
                 descriptor = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                # Record the holder's pid (and fsync it) immediately so a
+                # competing process can tell, almost instantly, whether the lock
+                # belongs to a live holder or to one that has since died.
                 os.write(descriptor, str(os.getpid()).encode("ascii"))
+                os.fsync(descriptor)
             except FileExistsError:
+                # A lock left behind by a process that was killed between
+                # creating the lock and releasing it (a hard kill, an OOM, or a
+                # crash mid-write) would otherwise wedge ALL persistence forever:
+                # every future acquisition sees the orphaned file and times out.
+                # That is exactly what stalled production mining and lost blocks
+                # that were only ever held in memory. Break a provably stale lock
+                # (its recorded pid is dead, or it is an empty file that has sat
+                # untouched past a grace period) and retry instead of timing out.
+                if self._lock_is_stale(lock_path):
+                    vorliq_logger.warning("Breaking stale storage lock %s", lock_path.name)
+                    try:
+                        os.unlink(str(lock_path))
+                    except FileNotFoundError:
+                        pass
+                    continue
                 if time.monotonic() - start >= timeout:
                     raise TimeoutError(f"Timed out waiting for storage lock {lock_path.name}")
                 time.sleep(0.05)
@@ -726,6 +745,57 @@ class Storage:
                 lock_path.unlink()
             except FileNotFoundError:
                 pass
+
+    def _lock_is_stale(self, lock_path: Path) -> bool:
+        """Decide whether an existing lock file is an orphan that can be broken.
+
+        Conservative on purpose: a lock is only treated as stale when we have
+        positive evidence the holder is gone — its recorded pid no longer maps to
+        a live process, or the file is empty/garbage and has sat untouched past a
+        short grace period (covering a holder that died in the microsecond window
+        between creating the lock and writing its pid). Any uncertainty returns
+        False so a live holder is never preempted."""
+        try:
+            content = lock_path.read_text(encoding="ascii").strip()
+        except (FileNotFoundError, OSError):
+            return False
+
+        if content.isdigit():
+            pid = int(content)
+            if pid == os.getpid():
+                return False
+            if not self._pid_is_alive(pid):
+                return True
+            return False
+
+        # Empty or non-numeric lock file: only break it once it has clearly been
+        # abandoned, so we never race a lock that was just created.
+        try:
+            age = time.time() - lock_path.stat().st_mtime
+        except OSError:
+            return False
+        return age > 30.0
+
+    @staticmethod
+    def _pid_is_alive(pid: int) -> bool:
+        if pid <= 0:
+            return False
+        try:
+            if os.name == "posix":
+                os.kill(pid, 0)
+                return True
+            # Best-effort liveness on non-posix (local dev/tests): if we cannot
+            # positively determine death, assume alive and do not break the lock.
+            os.kill(pid, 0)
+            return True
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            # The process exists but is owned by another user.
+            return True
+        except OSError:
+            # Unknown/unsupported on this platform — err on the side of "alive".
+            return True
 
     def _fsync_directory(self, directory: Path) -> None:
         if os.name != "posix":

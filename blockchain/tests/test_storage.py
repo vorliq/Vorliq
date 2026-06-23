@@ -1,6 +1,8 @@
 import json
+import os
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -331,6 +333,64 @@ class StorageTests(unittest.TestCase):
             governance = storage.load_governance()
 
             self.assertIn("p1", governance.proposals)
+
+
+class FileLockStaleBreakTests(unittest.TestCase):
+    """A lock left by a hard-killed holder must not wedge persistence forever.
+
+    This is the durability bug that stalled production mining: an orphaned
+    *.lock file made every subsequent acquisition time out, so the node mined in
+    memory but could never persist, and a restart lost the unpersisted blocks.
+    The lock now breaks a provably-stale orphan and proceeds.
+    """
+
+    def _lock_path(self, storage, name="chain.json"):
+        return (storage.data_dir / name).with_suffix(".json.lock")
+
+    def test_stale_lock_with_dead_holder_is_broken(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+            target = storage.data_dir / "chain.json"
+            lock_path = self._lock_path(storage)
+            lock_path.write_text("424242", encoding="ascii")  # a dead pid
+
+            # With the holder reported dead, the lock is broken and acquired
+            # quickly rather than timing out.
+            with patch.object(Storage, "_pid_is_alive", staticmethod(lambda pid: False)):
+                start = time.monotonic()
+                with storage._file_lock(target, timeout=5.0):
+                    elapsed = time.monotonic() - start
+                    self.assertTrue(lock_path.exists())  # our own lock is held
+            self.assertLess(elapsed, 2.0)
+            self.assertFalse(lock_path.exists())  # released cleanly
+
+    def test_live_lock_is_not_broken(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+            target = storage.data_dir / "chain.json"
+            lock_path = self._lock_path(storage)
+            lock_path.write_text("424242", encoding="ascii")
+
+            # With the holder reported alive, the lock is respected and the wait
+            # times out instead of preempting a live writer.
+            with patch.object(Storage, "_pid_is_alive", staticmethod(lambda pid: True)):
+                with self.assertRaises(TimeoutError):
+                    with storage._file_lock(target, timeout=0.3):
+                        pass
+            self.assertTrue(lock_path.exists())  # the other holder's lock survives
+
+    def test_empty_orphan_lock_is_broken_after_grace_period(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(temp_dir)
+            target = storage.data_dir / "chain.json"
+            lock_path = self._lock_path(storage)
+            lock_path.write_text("", encoding="ascii")  # empty: died before pid write
+            old = time.time() - 120
+            os.utime(lock_path, (old, old))  # sat untouched well past the grace period
+
+            with storage._file_lock(target, timeout=5.0):
+                self.assertTrue(lock_path.exists())
+            self.assertFalse(lock_path.exists())
 
 
 if __name__ == "__main__":
