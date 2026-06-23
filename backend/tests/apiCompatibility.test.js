@@ -102,7 +102,7 @@ test("/api/v1 aliases reuse stable public read routes", async () => {
   const chain = await request(app).get("/api/v1/chain/summary");
   expect(chain.status).toBe(200);
   expect(chain.body.summary.height).toBe(12);
-  expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/chain/summary");
+  expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/chain/summary", { timeout: 5000 });
 
   const faucet = await request(app).get("/api/v1/faucet/summary");
   expect(faucet.status).toBe(200);
