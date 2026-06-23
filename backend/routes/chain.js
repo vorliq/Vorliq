@@ -50,7 +50,7 @@ router.get("/api/chain/blocks", async (req, res) => {
     // short cache per (limit, offset) collapses concurrent reads into one
     // upstream call without the list ever looking stale to a human.
     return sendCachedJson(req, res, "chain-blocks", 5000, async () => {
-      const response = await axios.get(`${flaskUrl}/chain/blocks`, { params, timeout: 5000 });
+      const response = await axios.get(`${flaskUrl}/chain/blocks`, { params, timeout: 12000 });
       return { status: response.status, data: response.data };
     });
   } catch (error) {
@@ -64,7 +64,7 @@ router.get("/api/chain/blocks", async (req, res) => {
 router.get("/api/chain/summary", async (req, res) => {
   try {
     return sendCachedJson(req, res, "chain-summary", 15_000, async () => {
-      const response = await axios.get(`${flaskUrl}/chain/summary`, { timeout: 5000 });
+      const response = await axios.get(`${flaskUrl}/chain/summary`, { timeout: 12000 });
       return { status: response.status, data: response.data };
     });
   } catch (error) {
@@ -80,7 +80,7 @@ router.get("/api/community/stats", async (req, res) => {
     // core is busy persisting a freshly mined block — the numbers stay full-chain
     // accurate (at most ~10s old) and the page never hangs.
     return sendCachedJson(req, res, "community-stats", 10_000, async () => {
-      const response = await axios.get(`${flaskUrl}/community/stats`, { timeout: 5000 });
+      const response = await axios.get(`${flaskUrl}/community/stats`, { timeout: 12000 });
       return { status: response.status, data: response.data };
     });
   } catch (error) {

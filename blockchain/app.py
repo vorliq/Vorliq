@@ -1342,7 +1342,7 @@ def get_diagnostics():
             "success": True,
             "node_url": LOCAL_NODE_URL,
             "block_height": node.blockchain.get_block_height(),
-            "chain_valid": node.blockchain.is_chain_valid(enforce_block_spacing=False),
+            "chain_valid": node.blockchain.chain_valid_fast(),
             "pending_transactions": len(node.blockchain.pending_transactions),
             "known_peers": len(network.peers),
             "active_registry_nodes": len(node_registry.get_active_nodes()),

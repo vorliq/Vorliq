@@ -56,7 +56,7 @@ describe("scalable chain routes", () => {
     expect(response.status).toBe(200);
     expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/chain/blocks", {
       params: { limit: 200, offset: 0 },
-      timeout: 5000,
+      timeout: 12000,
     });
   });
 
@@ -70,7 +70,7 @@ describe("scalable chain routes", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.summary.block_height).toBe(3);
-    expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/chain/summary", { timeout: 5000 });
+    expect(axios.get).toHaveBeenCalledWith("http://localhost:5001/chain/summary", { timeout: 12000 });
   });
 
   test("returns index health through the public safe endpoint", async () => {

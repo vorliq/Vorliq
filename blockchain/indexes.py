@@ -136,7 +136,9 @@ class BlockchainIndexes:
             "last_block_timestamp": latest_block.timestamp if latest_block else None,
             # Integrity-only: this summarises our own chain, where historical
             # block spacing is grandfathered (enforced at admission, not reload).
-            "chain_valid": blockchain.is_chain_valid(enforce_block_spacing=False),
+            # Memoised per tip so rebuilding the index does not re-run the O(n)
+            # full validation on top of the O(n) index build every block.
+            "chain_valid": blockchain.chain_valid_fast(),
         }
 
         indexes = {

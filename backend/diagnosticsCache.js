@@ -12,7 +12,10 @@ const { logError } = require("./logger");
 
 const flaskUrl = process.env.FLASK_URL || "http://localhost:5001";
 const REFRESH_MS = 30 * 1000;
-const FETCH_TIMEOUT_MS = 5 * 1000;
+// Generous enough that a busy core (rebuilding indexes for a freshly mined block)
+// still completes the refresh and repopulates the cache, rather than timing out
+// and serving an ever-older stale value.
+const FETCH_TIMEOUT_MS = 12 * 1000;
 const STALE_AFTER_SECONDS = 60;
 
 let cachedData = null; // last successful diagnostics payload

@@ -52,6 +52,13 @@ class Blockchain:
         self.chain: list[Block] = [self.create_genesis_block()]
         self.pending_transactions: list[Transaction] = []
         self._indexes = None
+        # Memoised structural-validity result for the hot read paths, keyed by the
+        # chain tip. Full is_chain_valid is O(n) (it recomputes every block hash);
+        # recomputing it on every diagnostics/summary read does not scale, so those
+        # paths use chain_valid_fast() which recomputes at most once per new tip.
+        self._valid_cache = None
+        self._valid_cache_height = -1
+        self._valid_cache_tip = None
         # Serializes tip validation and append so concurrent miners cannot
         # both extend the same tip (two blocks claiming the same index).
         self._append_lock = threading.Lock()
@@ -183,6 +190,21 @@ class Blockchain:
 
         vorliq_logger.info("Chain validation passed for %s blocks", len(self.chain))
         return True
+
+    def chain_valid_fast(self) -> bool:
+        """Structural validity for hot, frequently-polled read paths (diagnostics,
+        the index chain summary). Memoised by chain tip so the O(n) recompute runs
+        at most once per new block, not once per request. Authoritative, fresh
+        validation (save, startup, peer adoption) still calls is_chain_valid."""
+        tip = self.chain[-1].hash if self.chain else None
+        height = self.get_block_height()
+        if self._valid_cache is not None and self._valid_cache_height == height and self._valid_cache_tip == tip:
+            return self._valid_cache
+        result = self.is_chain_valid(enforce_block_spacing=False)
+        self._valid_cache = result
+        self._valid_cache_height = height
+        self._valid_cache_tip = tip
+        return result
 
     def add_pending_transaction(self, transaction: Transaction) -> bool:
         if not isinstance(transaction, Transaction):
