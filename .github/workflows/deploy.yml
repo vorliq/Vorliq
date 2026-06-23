@@ -57,6 +57,13 @@ jobs:
               # Always keep at least the most recent few snapshots, drop the rest.
               ls -1t /home/vorliq/app/backend/data/snapshots/* 2>/dev/null | tail -n +6 | xargs -r rm -f || true
             fi
+            # The frontend is built in CI and shipped as an artifact, so the
+            # server never needs frontend/node_modules — it is the single largest
+            # piece of dead weight on the box. Safe to delete; it is never rebuilt
+            # here. (Backend node_modules and the Python venv ARE needed and kept.)
+            rm -rf /home/vorliq/app/frontend/node_modules 2>/dev/null || true
+            # Compact the git repo's loose objects.
+            sudo -u vorliq -H git -C /home/vorliq/app gc --prune=now --quiet 2>/dev/null || true
             # Systemd journal and package/npm caches — safe, regenerated as needed.
             journalctl --vacuum-size=80M >/dev/null 2>&1 || true
             apt-get clean >/dev/null 2>&1 || true
