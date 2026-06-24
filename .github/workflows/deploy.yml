@@ -473,11 +473,15 @@ jobs:
         # Writes the email provider credentials into the server's backend env file
         # (read by both the Node backend and the chain) so the weekly digest,
         # member event notifications, governance outcome emails, and operator
-        # monitoring alerts actually send instead of logging. The key and from
-        # address come from repository secrets so they never appear in the repo.
-        # If no key secret is set, this is a clean no-op and email stays in
-        # log-only mode. Values are base64-encoded on the runner and decoded on the
-        # server so an address like "Vorliq <x@y.z>" can never break the shell.
+        # monitoring alerts actually send instead of logging. The API key comes
+        # from a repository secret so it never appears in the repo. The From
+        # address is the verified sending domain (mail.vorliq.org, DKIM+SPF
+        # verified in Resend) — set here in plain sight because a sender address
+        # is public (it is in every email header) and pinning it to the verified
+        # domain is what gives inbox placement and lets us deliver to members'
+        # addresses, not just the Resend account owner. Values are base64-encoded
+        # on the runner and decoded on the server so "Vorliq <x@y.z>" can never
+        # break the shell.
         env:
           EMAIL_API_KEY: ${{ secrets.VORLIQ_EMAIL_API_KEY }}
           EMAIL_FROM: ${{ secrets.VORLIQ_EMAIL_FROM }}
@@ -489,7 +493,15 @@ jobs:
             exit 0
           fi
           K="$(printf '%s' "${EMAIL_API_KEY}" | base64 -w0)"
-          F="$(printf '%s' "${EMAIL_FROM:-Vorliq <onboarding@resend.dev>}" | base64 -w0)"
+          # Send from the verified mail.vorliq.org domain. EMAIL_FROM (repo secret)
+          # is honoured if it is set to a @mail.vorliq.org / @vorliq.org address;
+          # otherwise we pin the verified default rather than fall back to the
+          # resend.dev sandbox (which only reaches the account owner and spam-foldered).
+          case "${EMAIL_FROM}" in
+            *@mail.vorliq.org* | *@vorliq.org* ) FROM_ADDR="${EMAIL_FROM}" ;;
+            * ) FROM_ADDR="Vorliq <notifications@mail.vorliq.org>" ;;
+          esac
+          F="$(printf '%s' "${FROM_ADDR}" | base64 -w0)"
           A="$(printf '%s' "${EMAIL_ALERT:-vorliq@gmail.com}" | base64 -w0)"
           U="$(printf '%s' "${EMAIL_API_URL:-https://api.resend.com/emails}" | base64 -w0)"
           ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes \
