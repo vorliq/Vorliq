@@ -2895,3 +2895,39 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
 .vn-contact-suggestion:hover, .vn-contact-suggestion:focus { background: var(--vn-surface-2, #1c2840); }
 .vn-contact-suggestion__label { font-weight: 600; color: var(--vn-text, #e6eefb); }
 .vn-contact-suggestion__addr { font-size: 0.8rem; color: var(--vn-text-2, #93a4bd); word-break: break-all; font-family: monospace; }
+
+/* Governance status legend — plain-language meaning of each proposal status */
+.vnext .vn-gov-legend { display: grid; gap: 8px; margin: 12px 0 0; }
+.vnext .vn-gov-legend > div { display: grid; grid-template-columns: 200px 1fr; gap: 12px; align-items: start; }
+.vnext .vn-gov-legend dt { margin: 0; }
+.vnext .vn-gov-legend dd { margin: 0; color: var(--vn-text-2, #93a4bd); font-size: 0.9rem; }
+@media (max-width: 640px) {
+  .vnext .vn-gov-legend > div { grid-template-columns: 1fr; gap: 4px; }
+}
+
+/* Landing live-activity strip — subtle social proof above the CTA. Real on-chain
+   events from the public activity feed; muted so it never competes with the CTA. */
+.vnext .vn-activity-strip { padding: 18px 0; }
+.vnext .vn-activity-strip .vn-container { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.vnext .vn-activity-strip__label {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--vn-green, #36d399);
+}
+.vnext .vn-activity-strip__list {
+  display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0; padding: 0; list-style: none; flex: 1;
+}
+.vnext .vn-activity-strip__item {
+  font-size: 0.84rem;
+  border: 1px solid var(--vn-border, #243049);
+  background: var(--vn-surface-2, #141d31);
+  border-radius: 999px; padding: 4px 12px;
+}
+.vnext .vn-activity-strip__link { display: inline-flex; align-items: baseline; gap: 8px; color: inherit; text-decoration: none; }
+.vnext .vn-activity-strip__link:hover { border-color: var(--vn-accent, #5b8cff); }
+.vnext .vn-activity-strip__title { color: var(--vn-text, #e6eefb); }
+.vnext .vn-activity-strip__age { color: var(--vn-text-2, #93a4bd); font-size: 0.76rem; }
+@media (max-width: 720px) {
+  .vnext .vn-activity-strip__list { gap: 6px; }
+  .vnext .vn-activity-strip__item { font-size: 0.8rem; }
+}

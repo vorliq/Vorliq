@@ -254,6 +254,63 @@ function LiveFeed() {
   );
 }
 
+/* --------------------------------------------------- Activity strip ------- */
+// A subtle, live strip of the last five REAL on-chain events (blocks, transfers,
+// loans) pulled from the public activity feed. It is social proof a visitor can
+// see before signing up: the network is alive and people are using it. Nothing
+// here is synthetic — every line is an event the chain actually recorded. Polls
+// quietly so a visitor watching the page sees it stay current; renders nothing
+// if the feed is unavailable so it can never show a broken or empty box.
+function ActivityStrip() {
+  const [events, setEvents] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      try {
+        const res = await api.get("/activity", { params: { limit: 5 } });
+        if (mounted) setEvents((res.data?.events || []).slice(0, 5));
+      } catch {
+        if (mounted && events == null) setEvents([]);
+      }
+    }
+    load();
+    const timer = setInterval(load, 30000);
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!events || events.length === 0) return null;
+
+  return (
+    <section className="vn-activity-strip" aria-label="Recent live network activity">
+      <div className="vn-container">
+        <span className="vn-activity-strip__label">
+          <Activity size={14} aria-hidden="true" /> Live on the network
+        </span>
+        <ul className="vn-activity-strip__list">
+          {events.map((e, i) => {
+            const line = (
+              <>
+                <span className="vn-activity-strip__title">{e.title}</span>
+                <span className="vn-activity-strip__age">{formatRelativeTime(e.timestamp)}</span>
+              </>
+            );
+            return (
+              <li className="vn-activity-strip__item" key={`${e.title}-${e.timestamp}-${i}`}>
+                {e.link ? <Link className="vn-activity-strip__link" to={e.link}>{line}</Link> : line}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 /* ----------------------------------------------------------- Page --------- */
 export default function Landing() {
   const [snapshot, setSnapshot] = useState(null);
@@ -633,6 +690,9 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* ------------------------------------------- Live activity strip ----- */}
+      <ActivityStrip />
 
       {/* --------------------------------------------------------- CTA ----- */}
       <section className="vn-cta">

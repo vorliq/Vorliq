@@ -394,6 +394,25 @@ export default function Governance() {
       )}
 
       <Card style={{ marginTop: 20 }}>
+        <h2 className="vn-panel-title">How governance works</h2>
+        <p className="vn-prop__desc" style={{ marginTop: 0 }}>
+          Anyone holding VLQ can propose a change to a network rule — like the mining reward or block
+          difficulty. Members vote, weighted by the VLQ they hold. To pass, a proposal needs at least{" "}
+          <b>500 VLQ</b> of total votes (quorum) with <b>60% or more voting yes</b> before its deadline.
+          When a proposal passes, its rule change is applied to the live chain automatically — there is
+          no extra step, and you can see the change reflected in the network settings.
+        </p>
+        <dl className="vn-gov-legend">
+          <div><dt><span className="vn-badge vn-badge--muted">active</span></dt><dd>Open for voting right now.</dd></div>
+          <div><dt><span className="vn-badge vn-badge--muted">passed pending execution</span></dt><dd>Passed the vote; the rule change is queued and applies on the next governance sync.</dd></div>
+          <div><dt><span className="vn-badge vn-badge--accent">executed</span></dt><dd>Passed and the rule change is now live on the chain.</dd></div>
+          <div><dt><span className="vn-badge vn-badge--muted">rejected</span></dt><dd>The community voted it down — not enough yes-weight to pass.</dd></div>
+          <div><dt><span className="vn-badge vn-badge--muted">expired</span></dt><dd>Voting ended without reaching the 500 VLQ quorum, so nothing changed.</dd></div>
+          <div><dt><span className="vn-badge vn-badge--muted">cancelled</span></dt><dd>The proposer withdrew it before any votes were cast.</dd></div>
+        </dl>
+      </Card>
+
+      <Card style={{ marginTop: 20 }}>
         <h2 className="vn-panel-title">Active proposals</h2>
         {loading ? (
           <div className="vn-card-grid">
