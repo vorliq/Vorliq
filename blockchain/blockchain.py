@@ -391,6 +391,63 @@ class Blockchain:
                     balance += transaction.amount
         return balance
 
+    def get_treasury_transparency(self, max_points: int = 90, recent: int = 15) -> dict[str, Any]:
+        """Public, sign-in-free view of the community treasury: the current
+        balance, every inflow (the 5% of each block's mining reward routed to the
+        treasury) and outflow (faucet starter grants and approved payouts), and a
+        downsampled balance-over-time series for a chart. Built from the
+        treasury address's own confirmed transactions in the read index, so it is
+        verifiable against the block explorer."""
+        records = self.get_indexes().transactions_for_address(self.TREASURY_ADDRESS)
+        confirmed = [r for r in records if r.get("status") == "confirmed"]
+        confirmed.sort(key=lambda r: (int(r.get("block_index") or 0), float(r.get("timestamp") or 0)))
+
+        inflows: list[dict[str, Any]] = []
+        outflows: list[dict[str, Any]] = []
+        series: list[dict[str, Any]] = []
+        balance = total_inflow = total_outflow = faucet_out = payout_out = 0.0
+        for record in confirmed:
+            amount = float(record.get("amount") or 0)
+            timestamp = float(record.get("timestamp") or 0)
+            block_index = record.get("block_index")
+            if record.get("receiver_address") == self.TREASURY_ADDRESS:
+                balance += amount
+                total_inflow += amount
+                inflows.append({"amount": amount, "timestamp": timestamp, "block_index": block_index, "source": "mining_reward"})
+            elif record.get("sender_address") == self.TREASURY_ADDRESS:
+                balance -= amount
+                total_outflow += amount
+                category = str(record.get("category") or record.get("type") or "").lower()
+                if "faucet" in category:
+                    kind = "faucet"
+                    faucet_out += amount
+                elif "loan" in category or "lending" in category:
+                    kind = "loan"
+                    payout_out += amount
+                else:
+                    kind = "payout"
+                    payout_out += amount
+                outflows.append({"amount": amount, "timestamp": timestamp, "block_index": block_index, "to_address": record.get("receiver_address"), "kind": kind})
+            series.append({"timestamp": timestamp, "block_index": block_index, "balance": round(balance, 8)})
+
+        if len(series) > max_points and max_points > 1:
+            step = (len(series) - 1) / (max_points - 1)
+            series = [series[round(i * step)] for i in range(max_points)]
+
+        return {
+            "treasury_address": self.TREASURY_ADDRESS,
+            "balance": round(balance, 8),
+            "total_inflow": round(total_inflow, 8),
+            "total_outflow": round(total_outflow, 8),
+            "inflow_count": len(inflows),
+            "outflow_count": len(outflows),
+            "faucet_outflow_total": round(faucet_out, 8),
+            "payout_outflow_total": round(payout_out, 8),
+            "recent_inflows": inflows[-recent:][::-1],
+            "recent_outflows": outflows[-recent:][::-1],
+            "balance_series": series,
+        }
+
     def adjust_difficulty(self) -> None:
         # The e2e suite mines with no minimum block spacing, which would make the
         # retarget keep raising difficulty until proof-of-work is unusably slow.

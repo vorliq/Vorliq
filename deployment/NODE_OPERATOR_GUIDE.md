@@ -39,6 +39,23 @@ up the chain keeps producing blocks.
   `node2.example.org → 203.0.113.10`). Other nodes reach you at `https://` + this
   domain, so it must resolve publicly before you finish.
 
+**Exact steps on DigitalOcean** (any other provider works the same way — you just
+need an Ubuntu server with a public IP and SSH access):
+
+1. Create a DigitalOcean account and click **Create → Droplets**.
+2. Choose **Ubuntu 24.04 (LTS)**, the **Basic** plan, the cheapest **Regular**
+   option (1 GB RAM / 1 vCPU / 25 GB disk is enough — about \$6/month), and a
+   region near you.
+3. Under **Authentication** choose **SSH Key** and add your public key (more
+   secure than a password). Give the droplet a hostname like `vorliq-node-2` and
+   click **Create Droplet**.
+4. When it finishes, copy the droplet's **public IPv4 address**.
+5. Point your domain at it: in your DNS provider add an **A record**,
+   `node2.yourdomain.com → <that IP>`. Wait until `ping node2.yourdomain.com`
+   shows the right IP (can take a few minutes).
+6. SSH in as root: `ssh root@<that IP>` (or `ssh root@node2.yourdomain.com` once
+   DNS resolves). Everything below runs on the droplet.
+
 ### 2.2 Install the basics
 
 ```bash

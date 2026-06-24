@@ -1677,6 +1677,13 @@ def get_treasury_summary():
     return jsonify({"success": True, "summary": treasury.get_treasury_summary(node.blockchain)})
 
 
+@app.get("/treasury/transparency")
+def get_treasury_transparency():
+    # Public (no auth): the community treasury's balance, inflows, outflows, and a
+    # balance-over-time series for the transparency page.
+    return jsonify({"success": True, "treasury": node.blockchain.get_treasury_transparency()})
+
+
 @app.get("/treasury/proposals")
 def get_treasury_proposals():
     _sync_treasury(save=True)

@@ -78,6 +78,17 @@ router.get("/api/treasury/summary", async (req, res) => {
   }
 });
 
+// Public treasury transparency data (balance, inflows, outflows, balance series)
+// for the sign-in-free transparency page.
+router.get("/api/treasury/transparency", async (req, res) => {
+  try {
+    const response = await axios.get(`${flaskUrl}/treasury/transparency`);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    return handleRouteError(res, error, "GET /api/treasury/transparency", "Unable to load treasury transparency.");
+  }
+});
+
 router.get("/api/treasury/proposals", async (req, res) => {
   try {
     const response = await axios.get(`${flaskUrl}/treasury/proposals`, { params: treasuryListParams(req) });

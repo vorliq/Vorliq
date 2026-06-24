@@ -11,6 +11,8 @@ const { publicBackupStatus } = require("./backup");
 const { listReports, reportCountForTarget, updateReport } = require("../communityReports");
 const { createIncident, listActiveIncidents, listIncidents, resolveIncident } = require("../incidents");
 const { getRecentAlerts, recordAlert, deliverAlert } = require("../monitors");
+const { sendEmail, emailConfigured } = require("../mailer");
+const { runWeeklyDigest, buildMemberDigest, topForumPosts, renderDigest } = require("../weeklyDigest");
 const { topPages } = require("../analytics");
 const {
   topIpsByClaims24h,
@@ -549,6 +551,77 @@ router.post("/api/admin/alerts", async (req, res) => {
   } catch (error) {
     logError(`POST /api/admin/alerts failed: ${error.message}`);
     return res.status(500).json({ success: false, message: "Unable to record alert." });
+  }
+});
+
+// Send a test email through the configured transactional provider, so an operator
+// can confirm their VORLIQ_EMAIL_* setup works end to end. Reports whether a
+// provider is configured and which delivery channel was used ("emailed" means it
+// reached the provider; "logged" means no provider is set and it was written to
+// the email log instead). Admin-gated.
+router.post("/api/admin/test-email", async (req, res) => {
+  try {
+    const to = String((req.body && req.body.to) || process.env.VORLIQ_ALERT_EMAIL || "").trim();
+    if (!to) {
+      return res.status(400).json({ success: false, message: "Provide a recipient in 'to' or set VORLIQ_ALERT_EMAIL." });
+    }
+    const channel = await sendEmail({
+      to,
+      subject: "Vorliq email test",
+      text: "This is a Vorliq test email. If you received it, your transactional email provider is configured correctly.",
+      html: "<p>This is a <strong>Vorliq</strong> test email. If you received it, your transactional email provider is configured correctly.</p>",
+    });
+    return res.json({ success: true, channel, provider_configured: emailConfigured(), to });
+  } catch (error) {
+    logError(`POST /api/admin/test-email failed: ${error.message}`);
+    return res.status(500).json({ success: false, message: "Unable to send test email." });
+  }
+});
+
+// Manually trigger the weekly digest run (normally fired by the Monday 08:00 UTC
+// cron). Returns how many opted-in members were emailed vs skipped for no
+// activity. Admin-gated.
+router.post("/api/admin/run-digest", async (req, res) => {
+  try {
+    const result = await runWeeklyDigest();
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    logError(`POST /api/admin/run-digest failed: ${error.message}`);
+    return res.status(500).json({ success: false, message: "Unable to run the weekly digest." });
+  }
+});
+
+// Build (but do not send) the weekly digest for one wallet, so an admin can
+// confirm the digest generates correct content for a real member who has had
+// activity this week. Admin-gated.
+router.post("/api/admin/digest-preview", async (req, res) => {
+  try {
+    const address = String((req.body && req.body.address) || "").trim();
+    if (!address) {
+      return res.status(400).json({ success: false, message: "A wallet 'address' is required." });
+    }
+    const nowSec = Math.floor(Date.now() / 1000);
+    const topPosts = await topForumPosts(nowSec - 7 * 24 * 60 * 60);
+    const digest = await buildMemberDigest(address, nowSec, topPosts);
+    const email = renderDigest(digest);
+    return res.json({
+      success: true,
+      address,
+      has_activity: digest.hasActivity,
+      would_send: digest.hasActivity,
+      digest: {
+        balance: digest.balance,
+        received_count: digest.received.length,
+        received_total: digest.received.reduce((sum, r) => sum + r.amount, 0),
+        proposals: digest.proposals,
+        loans: digest.loans,
+        top_posts: digest.topPosts,
+      },
+      email,
+    });
+  } catch (error) {
+    logError(`POST /api/admin/digest-preview failed: ${error.message}`);
+    return res.status(500).json({ success: false, message: "Unable to build the digest preview." });
   }
 });
 

@@ -21,6 +21,7 @@ import { WalletBalanceProvider } from "./context/WalletBalanceContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Features from "./pages/Features";
+import CommunityTreasury from "./pages/CommunityTreasury";
 import NotFound from "./pages/NotFound";
 const Account = lazy(() => import("./pages/Account"));
 const Achievements = lazy(() => import("./pages/Achievements"));
@@ -212,6 +213,7 @@ function AppShell() {
           <Route path="/exchange" element={<Exchange />} />
           <Route path="/governance" element={<VnextGovernance />} />
           <Route path="/treasury" element={<Treasury />} />
+          <Route path="/community-treasury" element={<CommunityTreasury />} />
           <Route path="/faucet" element={<VnextFaucet />} />
           <Route path="/price" element={<Price />} />
           <Route path="/forum" element={<Forum />} />

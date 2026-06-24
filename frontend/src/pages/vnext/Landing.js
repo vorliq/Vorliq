@@ -612,6 +612,22 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ----------------------------------------------- Treasury band ----- */}
+      <section className="vn-section" id="treasury">
+        <div className="vn-container">
+          <SectionHead
+            overline="Public & verifiable"
+            title="The community treasury is public and verifiable"
+            subtitle="Vorliq's treasury is funded by 5% of every block's mining reward and spends only on faucet grants and community-approved payouts. Watch the real VLQ move — balance, inflows, outflows, and a live chart — before you ever create a wallet."
+          />
+          <div className="vn-btn-row">
+            <Button variant="primary" size="lg" to="/community-treasury">
+              See the community treasury
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* --------------------------------------------------------- CTA ----- */}
       <section className="vn-cta">
         <span className="vn-cta__glow" aria-hidden="true" />

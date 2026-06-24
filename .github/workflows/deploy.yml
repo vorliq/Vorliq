@@ -469,6 +469,48 @@ jobs:
             sudo -u vorliq -H bash -lc 'cd /home/vorliq/app && node tools/verify_snapshot_archive.js https://vorliq.org --require-signature'
           EOF
 
+      - name: Configure transactional email provider
+        # Writes the email provider credentials into the server's backend env file
+        # (read by both the Node backend and the chain) so the weekly digest,
+        # member event notifications, governance outcome emails, and operator
+        # monitoring alerts actually send instead of logging. The key and from
+        # address come from repository secrets so they never appear in the repo.
+        # If no key secret is set, this is a clean no-op and email stays in
+        # log-only mode. Values are base64-encoded on the runner and decoded on the
+        # server so an address like "Vorliq <x@y.z>" can never break the shell.
+        env:
+          EMAIL_API_KEY: ${{ secrets.VORLIQ_EMAIL_API_KEY }}
+          EMAIL_FROM: ${{ secrets.VORLIQ_EMAIL_FROM }}
+          EMAIL_ALERT: ${{ secrets.VORLIQ_ALERT_EMAIL }}
+          EMAIL_API_URL: ${{ secrets.VORLIQ_EMAIL_API_URL }}
+        run: |
+          if [ -z "${EMAIL_API_KEY}" ]; then
+            echo "VORLIQ_EMAIL_API_KEY secret is not set; leaving email in log-only mode."
+            exit 0
+          fi
+          K="$(printf '%s' "${EMAIL_API_KEY}" | base64 -w0)"
+          F="$(printf '%s' "${EMAIL_FROM:-Vorliq <onboarding@resend.dev>}" | base64 -w0)"
+          A="$(printf '%s' "${EMAIL_ALERT:-vorliq@gmail.com}" | base64 -w0)"
+          U="$(printf '%s' "${EMAIL_API_URL:-https://api.resend.com/emails}" | base64 -w0)"
+          ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes \
+            root@159.65.24.177 "K='${K}' F='${F}' A='${A}' U='${U}' bash -s" <<'EOF'
+            set -euo pipefail
+            ENVF=/etc/vorliq/backend.env
+            touch "${ENVF}"; chmod 600 "${ENVF}"
+            TMP="$(mktemp)"
+            grep -vE '^(VORLIQ_EMAIL_API_URL|VORLIQ_EMAIL_API_KEY|VORLIQ_EMAIL_FROM|VORLIQ_ALERT_EMAIL)=' "${ENVF}" > "${TMP}" || true
+            {
+              printf 'VORLIQ_EMAIL_API_URL=%s\n' "$(printf '%s' "${U}" | base64 -d)"
+              printf 'VORLIQ_EMAIL_API_KEY=%s\n' "$(printf '%s' "${K}" | base64 -d)"
+              printf 'VORLIQ_EMAIL_FROM=%s\n' "$(printf '%s' "${F}" | base64 -d)"
+              printf 'VORLIQ_ALERT_EMAIL=%s\n' "$(printf '%s' "${A}" | base64 -d)"
+            } >> "${TMP}"
+            install -o root -g root -m 600 "${TMP}" "${ENVF}"
+            rm -f "${TMP}"
+            systemctl restart vorliq-backend vorliq-blockchain
+            echo "Email provider configured; backend and chain restarted."
+          EOF
+
       - name: Correct nginx Permissions-Policy header
         run: |
           # nginx was emitting its own Permissions-Policy header (with a camera=(self)
