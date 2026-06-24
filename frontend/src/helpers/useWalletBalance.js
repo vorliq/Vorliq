@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import api from "./api";
+import { useRealtime } from "../context/RealtimeContext";
 
 const EMPTY = { balance: null, total: null, available: null, pendingIncoming: 0, pendingOutgoing: 0 };
 
@@ -88,6 +89,20 @@ export default function useWalletBalance(address) {
     load(controller.signal);
     return () => controller.abort();
   }, [load]);
+
+  // A wallet's balance only changes when a block confirms. The realtime socket
+  // bumps latestBlockHeight on every new block (now including Flask
+  // background-mined blocks, via the server-side block bridge), so re-fetch then
+  // — this is what makes the balance update within one mining cycle after a
+  // transaction confirms, with no page reload. useRealtime has a safe default,
+  // so this is inert if the hook is ever used outside the realtime provider.
+  const { latestBlockHeight } = useRealtime();
+  useEffect(() => {
+    if (latestBlockHeight == null) return undefined;
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [latestBlockHeight, load]);
 
   return { ...state, reload: () => load() };
 }

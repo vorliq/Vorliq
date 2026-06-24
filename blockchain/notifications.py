@@ -32,12 +32,19 @@ from typing import Any
 
 from logger import vorliq_logger
 
-EVENT_TYPES = ("vlq_received", "loan_funded", "loan_repaid", "governance_concluded")
+# Per-event triggers fire an email the moment the event happens to the member.
+# "weekly_digest" is different in kind — it is a once-a-week summary sent by the
+# Node service's Monday cron, never enqueued here — but it lives in the same
+# preferences map so it appears as one more opt-in toggle alongside the event
+# toggles in Settings. The event dispatcher never enqueues it, so listing it here
+# only makes it a saved, surfaced boolean.
+EVENT_TYPES = ("vlq_received", "loan_funded", "loan_repaid", "governance_concluded", "weekly_digest")
 EVENT_LABELS = {
     "vlq_received": "VLQ received",
     "loan_funded": "Loan funded",
     "loan_repaid": "Loan repaid",
     "governance_concluded": "Governance proposal concluded",
+    "weekly_digest": "Weekly digest (Monday summary)",
 }
 MAX_EMAIL_LENGTH = 254
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -158,6 +165,17 @@ class Notifications:
         entry["events"] = {event: bool((events or {}).get(event, False)) for event in EVENT_TYPES}
         entry["updated_at"] = time.time()
         return self.get_preferences(wallet_address)
+
+    def digest_recipients(self) -> list[dict[str, str]]:
+        """Members opted into the weekly digest with a saved email. Returns the
+        full (unmasked) address so the digest job can send to it — exposed only
+        through the admin-gated endpoint the Node digest cron calls."""
+        recipients: list[dict[str, str]] = []
+        for wallet_address, entry in self.preferences.items():
+            email = entry.get("email")
+            if email and entry.get("events", {}).get("weekly_digest", False):
+                recipients.append({"wallet_address": wallet_address, "email": email})
+        return recipients
 
     # --- queueing ---------------------------------------------------------
     def enqueue(self, *, wallet_address: str, event: str, data: dict[str, Any] | None = None) -> dict[str, Any]:

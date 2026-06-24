@@ -310,6 +310,26 @@ function Exchange() {
       <RiskNotice />
       <AuthorityWriteNotice />
 
+      <section className="card card-pad stack elev-2 feature-intro">
+        <span className="eyebrow">New here?</span>
+        <h2>What an exchange is — and how it differs from just sending VLQ</h2>
+        <p className="feature-intro-lead">
+          A plain <Link to="/send">Send</Link> moves VLQ one way, with nothing expected back — a gift or a
+          payment. An exchange is a two-sided deal: you post what you'll give and what you want in return,
+          and another member takes you up on it.
+        </p>
+        <ul className="feature-intro-points">
+          <li><strong>How is it different from Send?</strong> Send has no strings attached. An exchange is an agreement between two people, where you each do your part.</li>
+          <li><strong>What can I trade?</strong> VLQ for goods, services, community help, or any terms you both agree on — you describe the deal in your own words.</li>
+          <li><strong>How does it actually work?</strong> You post a request, another member accepts it, you coordinate, and you both confirm when it's done. The VLQ settles on-chain like any transfer.</li>
+          <li><strong>Why use it?</strong> To put VLQ to work — trade it for things you want, or offer something and earn VLQ — instead of only holding or sending it.</li>
+        </ul>
+        <div className="button-row">
+          <button className="button" type="button" onClick={() => setActiveTab("post")}>Post a request</button>
+          <Link className="button secondary small-button" to="/send">Just send VLQ instead</Link>
+        </div>
+      </section>
+
       <section className="card card-pad stack exchange-explainer" aria-label="How the community exchange works">
         <div className="section-title">
           <div>
@@ -502,7 +522,13 @@ function Exchange() {
 
 function OfferGrid({ acceptPasswords, actionId, offers, onAccept, setAcceptPasswords, myAddress = "" }) {
   if (offers.length === 0) {
-    return <div className="empty-state">No open community requests are available yet.</div>;
+    return (
+      <div className="empty-state">
+        No open requests right now — this is a chance to set the terms. Post the first one from the{" "}
+        <strong>Post Request</strong> tab above: offer some VLQ for something you want, or offer a skill in
+        return for VLQ, and describe the deal in your own words.
+      </div>
+    );
   }
 
   return (

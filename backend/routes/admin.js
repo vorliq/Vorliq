@@ -10,7 +10,7 @@ const adminAuth = require("../middleware/adminAuth");
 const { publicBackupStatus } = require("./backup");
 const { listReports, reportCountForTarget, updateReport } = require("../communityReports");
 const { createIncident, listActiveIncidents, listIncidents, resolveIncident } = require("../incidents");
-const { getRecentAlerts } = require("../monitors");
+const { getRecentAlerts, recordAlert, deliverAlert } = require("../monitors");
 const { topPages } = require("../analytics");
 const {
   topIpsByClaims24h,
@@ -526,6 +526,29 @@ router.get("/api/admin/alerts", (req, res) => {
   } catch (error) {
     logError(`GET /api/admin/alerts failed: ${error.message}`);
     return res.status(500).json({ success: false, message: "Unable to load alerts." });
+  }
+});
+
+// Record an alert from an external source — used by the scheduled production
+// end-to-end check to post a failure into the same alerts log (and email, if a
+// provider is configured) that the in-process monitors use, so a production
+// regression surfaces in the admin Alerts tab automatically. Admin-gated like the
+// rest of /api/admin.
+router.post("/api/admin/alerts", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const message = String(body.message || "").slice(0, 500).trim();
+    if (!message) {
+      return res.status(400).json({ success: false, message: "message is required" });
+    }
+    const monitor = String(body.monitor || "external").slice(0, 64);
+    const severity = String(body.severity || "critical").slice(0, 32);
+    const alert = recordAlert({ monitor, severity, status: "firing", message, detail: body.detail || null });
+    await deliverAlert(`[${monitor}] ${message}`, body.detail ? String(body.detail).slice(0, 1000) : message);
+    return res.status(201).json({ success: true, alert });
+  } catch (error) {
+    logError(`POST /api/admin/alerts failed: ${error.message}`);
+    return res.status(500).json({ success: false, message: "Unable to record alert." });
   }
 });
 

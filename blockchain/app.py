@@ -3425,6 +3425,17 @@ def set_notification_preferences():
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
+@app.get("/notifications/digest-recipients")
+def get_digest_recipients():
+    # Admin-gated: returns full (unmasked) member emails, so it must never be
+    # reachable without the admin token. The Node weekly-digest cron calls this to
+    # learn who opted in, then composes and sends each member's summary.
+    unauthorized = _require_admin_request()
+    if unauthorized:
+        return unauthorized
+    return jsonify({"success": True, "recipients": notifications.digest_recipients()})
+
+
 @app.get("/governance/settings")
 def get_governance_settings():
     return jsonify({"success": True, "settings": _current_governance_settings()})

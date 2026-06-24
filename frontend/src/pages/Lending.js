@@ -335,6 +335,31 @@ function Lending() {
         </p>
       </section>
 
+      <section className="card card-pad stack elev-2 feature-intro">
+        <span className="eyebrow">New here?</span>
+        <h2>What a community loan is — and why you'd want one</h2>
+        <p className="feature-intro-lead">
+          A community loan lets you borrow VLQ from a shared pool that members fund together, and pay it
+          back over time. There is no bank and no credit check — the community itself votes on each request.
+        </p>
+        <ul className="feature-intro-points">
+          <li><strong>Who can request one?</strong> Any member with a wallet. You ask for an amount and give a short reason.</li>
+          <li><strong>What happens when you request?</strong> Members vote, weighted by the VLQ they hold. If your request passes, the pool sends the VLQ straight to your wallet.</li>
+          <li><strong>How do I pay it back?</strong> You repay from your wallet when you're able. Repaying on time builds your standing in the community.</li>
+          <li><strong>Why would I want one?</strong> To get VLQ to take part now — vote, tip, trade, or build — without having to buy or earn it first.</li>
+        </ul>
+        <div className="button-row">
+          {isLoggedIn ? (
+            <button className="button" type="button" onClick={() => { setActiveTab("request"); }}>
+              Request a loan
+            </button>
+          ) : (
+            <Link className="button" to="/login">Sign in to request a loan</Link>
+          )}
+          <Link className="button secondary small-button" to="/vlq">How repayment works</Link>
+        </div>
+      </section>
+
       <ErrorMessage message={errorMessage} />
       <AuthorityWriteNotice />
       <RiskNotice />
@@ -485,7 +510,7 @@ function Lending() {
       {activeTab === "votes" && (
         <LoanSection
           title="Active Votes"
-          empty="No loans are open for voting right now."
+          empty="No loans are open for voting right now — the pool is all caught up. If you need VLQ to get started, you can be the first to request one from the Request a Loan tab above."
           loans={buckets.activeVotes}
           loading={loadingLoans}
           renderActions={(loan) => (

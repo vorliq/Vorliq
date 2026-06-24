@@ -1,0 +1,77 @@
+name: Vorliq Production Authenticated E2E
+
+# Runs the authenticated production journeys against the live site every six
+# hours, so a regression in a signed-in flow is caught automatically instead of
+# by a user reporting it. Unlike the local journey suite, this signs in with a
+# pre-seeded wallet (no wallet creation, no faucet claim — those have real-world
+# cooldowns) and only exercises journeys that are safe to repeat against
+# production. On failure it posts an alert to the production alerts log (the same
+# log the admin Alerts tab reads).
+#
+# Required repository secrets:
+#   E2E_PROD_PRIVATE_KEY  - PEM private key of a pre-seeded production test wallet
+#                           that already holds a small balance. Store it with the
+#                           newlines escaped as \n (the spec restores them).
+#   E2E_PROD_PASSWORD     - any browser password the test uses to encrypt the
+#                           imported wallet locally for the session.
+#   VORLIQ_ADMIN_TOKEN    - the production ADMIN_TOKEN, used only to POST a failure
+#                           alert to /api/admin/alerts.
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  production-authenticated-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: Install Chromium browser
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Run production authenticated journeys
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: https://vorliq.org
+          E2E_WORKERS: "1"
+          E2E_PROD_PRIVATE_KEY: ${{ secrets.E2E_PROD_PRIVATE_KEY }}
+          E2E_PROD_PASSWORD: ${{ secrets.E2E_PROD_PASSWORD }}
+        run: npx playwright test tests/production-authenticated.spec.js
+
+      - name: Post failure to the production alerts log
+        if: failure()
+        env:
+          ADMIN_TOKEN: ${{ secrets.VORLIQ_ADMIN_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "${ADMIN_TOKEN}" ]; then
+            echo "::warning::VORLIQ_ADMIN_TOKEN not set; cannot post the failure to the alerts log."
+            exit 0
+          fi
+          curl -fsS -X POST "https://vorliq.org/api/admin/alerts" \
+            -H "Authorization: Bearer ${ADMIN_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data "{\"monitor\":\"e2e-production\",\"severity\":\"critical\",\"message\":\"Production authenticated E2E journeys failed\",\"detail\":\"${RUN_URL}\"}" \
+            || echo "::warning::Could not reach /api/admin/alerts to record the failure."
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-authenticated-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/

@@ -20,6 +20,7 @@ const NOTIFICATION_EVENTS = [
   ["loan_funded", "When my loan request is funded"],
   ["loan_repaid", "When a loan I helped fund is repaid"],
   ["governance_concluded", "When a proposal I voted on concludes"],
+  ["weekly_digest", "A weekly digest every Monday (your balance, what you received, votes, loans, top posts)"],
 ];
 
 function Account() {
@@ -823,6 +824,7 @@ function EmailNotificationSettings({ address }) {
     loan_funded: false,
     loan_repaid: false,
     governance_concluded: false,
+    weekly_digest: false,
   });
   const [password, setPassword] = useState("");
   const [loadingPrefs, setLoadingPrefs] = useState(true);
@@ -902,11 +904,11 @@ function EmailNotificationSettings({ address }) {
       await postSignedAuthority({
         action: "notifications.preferences",
         walletPassword: password,
-        body: { email: "", events: { vlq_received: false, loan_funded: false, loan_repaid: false, governance_concluded: false } },
+        body: { email: "", events: { vlq_received: false, loan_funded: false, loan_repaid: false, governance_concluded: false, weekly_digest: false } },
       });
       setConfigured(false);
       setMaskedEmail("");
-      setEvents({ vlq_received: false, loan_funded: false, loan_repaid: false, governance_concluded: false });
+      setEvents({ vlq_received: false, loan_funded: false, loan_repaid: false, governance_concluded: false, weekly_digest: false });
       setEmail("");
       setPassword("");
       toast.success("Email notifications turned off and your address was removed.");

@@ -4467,3 +4467,11 @@ html[data-theme="light"] .mobile-drawer button {
 }
 .admin-confirm__title { margin: 0 0 8px; font-size: 1.2rem; }
 .admin-confirm__message { margin: 0 0 18px; color: var(--vn-text-2, #a9bdd6); line-height: 1.5; }
+
+/* First-time-user feature intros (lending, forum, exchange): a prominent,
+   plain-language "what is this and why should I care" card with one clear CTA. */
+.feature-intro { border-left: 3px solid var(--vn-accent, #4f8cff); }
+.feature-intro-lead { font-size: 1.05rem; line-height: 1.6; color: var(--vn-text, #e6eefb); margin: 4px 0 10px; }
+.feature-intro-points { list-style: none; padding: 0; margin: 0 0 6px; display: grid; gap: 10px; }
+.feature-intro-points li { line-height: 1.55; color: var(--vn-text-2, #a9bdd6); }
+.feature-intro-points li strong { color: var(--vn-text, #e6eefb); display: block; margin-bottom: 2px; }

@@ -27,8 +27,26 @@ function emit(event, payload) {
 // Derive and emit the per-wallet and network events implied by a freshly mined
 // block: a new-block event always, a wallet credit for every address the block
 // pays, and loan funded/repaid events for issuance/repayment transactions.
+// Highest block index already fanned out as "block:new". The block bridge reads
+// this to avoid re-emitting a block that the manual /api/mining route already
+// announced, and updates it after a background-mined block. Shared so there is
+// exactly one source of truth for "which blocks have been broadcast".
+let lastEmittedBlockHeight = -1;
+
+function getLastEmittedBlockHeight() {
+  return lastEmittedBlockHeight;
+}
+
+function noteEmittedBlockHeight(height) {
+  const value = Number(height);
+  if (Number.isFinite(value) && value > lastEmittedBlockHeight) {
+    lastEmittedBlockHeight = value;
+  }
+}
+
 function emitMinedBlock(block) {
   if (!block || typeof block !== "object") return;
+  noteEmittedBlockHeight(block.index);
   emit("block:new", {
     index: block.index,
     height: block.index, // get_block_height() == latest block index
@@ -71,4 +89,11 @@ function emitProposalOutcome(proposal) {
   }
 }
 
-module.exports = { setIo, emit, emitMinedBlock, emitProposalOutcome };
+module.exports = {
+  setIo,
+  emit,
+  emitMinedBlock,
+  emitProposalOutcome,
+  getLastEmittedBlockHeight,
+  noteEmittedBlockHeight,
+};

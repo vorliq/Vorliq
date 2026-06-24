@@ -104,6 +104,62 @@ step 5.
 
 You never set the chain into existence — joining downloads and validates it.
 
+### 3.1 Email notifications (optional, but needed for emails to actually send)
+
+Vorliq can email members when something happens to them (VLQ received, a loan
+funded or repaid, a governance proposal they voted on concluded), send a weekly
+digest to members who opt in, and email the operator when a monitor detects a
+problem (a stuck chain, an unreachable backend, low disk). **All of this is
+turned on in the code already — but no email is actually sent until you give the
+server an email provider to send through.** Until then, every email the system
+*would* send is written to a log file instead (`backend/data/alerts.log` for
+operator alerts, and the application log for member emails), so nothing breaks and
+nothing is lost — it simply is not delivered to an inbox.
+
+You enable real delivery by setting four environment variables (same place as the
+ones above, plus `/etc/vorliq/backend.env` which both the Node backend and the
+chain read). Email sending is **off** if any of the first three are blank.
+
+| Variable | Required for email | Example | What it is, in plain words |
+| --- | --- | --- | --- |
+| `VORLIQ_EMAIL_API_URL` | Yes | `https://api.resend.com/emails` | The web address of the email company that actually delivers the mail. The one above is for Resend; if you use a different company, use the address from their "send an email" API documentation. |
+| `VORLIQ_EMAIL_API_KEY` | Yes | `re_xxxxxxxxxxxxxxxx` | Your secret password/key from that email company. It proves the mail is coming from you. Keep it private — anyone with it can send mail as you. |
+| `VORLIQ_EMAIL_FROM` | Yes | `Vorliq <notifications@yourdomain.com>` | The "from" address members see. It must be an address on a domain you have verified with the email company (they will not let you send from an address you do not own). |
+| `VORLIQ_ALERT_EMAIL` | Only for operator alerts | `you@yourdomain.com` | Where the *operator* alerts (stuck chain, low disk, etc.) are sent. This is your own inbox, not a member's. |
+
+**Step by step, using Resend (free tier is plenty to start):**
+
+1. Go to `https://resend.com`, create an account, and verify the domain you want
+   to send from (Resend walks you through adding a couple of DNS records at your
+   domain registrar — this is what stops the mail going to spam).
+2. In Resend, create an **API key** and copy it. It starts with `re_`.
+3. On the server, open the environment file: `sudo nano /etc/vorliq/backend.env`.
+4. Add these four lines (using your own key, domain, and inbox):
+
+   ```bash
+   VORLIQ_EMAIL_API_URL=https://api.resend.com/emails
+   VORLIQ_EMAIL_API_KEY=re_your_real_key_here
+   VORLIQ_EMAIL_FROM=Vorliq <notifications@yourdomain.com>
+   VORLIQ_ALERT_EMAIL=you@yourdomain.com
+   ```
+
+5. Save the file, then restart both services so they pick up the new settings:
+
+   ```bash
+   sudo systemctl restart vorliq-backend vorliq-blockchain
+   ```
+
+6. **Check it works.** From a signed-in account, go to **Settings → Email
+   notifications**, save an email address, and turn on an event (for example
+   "VLQ received"). Then send that wallet a small amount from another wallet. When
+   the next block confirms, you should get an email. If you don't, look in the
+   application log for a line that says the email was *logged* instead of sent —
+   that means one of the three `VORLIQ_EMAIL_*` values is still blank or wrong.
+
+Any email company whose "send" API takes a JSON body of `from`, `to`, `subject`,
+`text` and an `Authorization: Bearer <key>` header will work (Resend is the
+simplest match); only the URL, key, and from-address change.
+
 ---
 
 ## 4. Make your node reachable (nginx + TLS + firewall)

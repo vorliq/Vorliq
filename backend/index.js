@@ -56,6 +56,8 @@ const adminAuth = require("./middleware/adminAuth");
 const { sendError } = require("./utils/apiResponse");
 const { pruneAnalytics } = require("./analytics");
 const { startMonitors } = require("./monitors");
+const { startBlockBridge } = require("./blockBridge");
+const { runWeeklyDigest } = require("./weeklyDigest");
 const { startDiagnosticsCache } = require("./diagnosticsCache");
 const chatStore = require("./chatStore");
 const { logError, logInfo } = require("./logger");
@@ -537,9 +539,28 @@ if (require.main === module) {
   );
   logInfo("Weekly community report scheduled for Monday 09:00 Europe/London");
 
+  // Per-member weekly digest: Monday 08:00 UTC, a 7-day personal summary to every
+  // member who opted in and had activity that week (no activity, no email).
+  cron.schedule(
+    "0 8 * * 1",
+    () => {
+      runWeeklyDigest().catch((error) => {
+        logError(`Scheduled weekly digest failed: ${error.message}`);
+      });
+    },
+    { timezone: "Etc/UTC" }
+  );
+  logInfo("Weekly member digest scheduled for Monday 08:00 UTC");
+
   // Server-side production monitoring (chain health, Flask reachability, disk
   // headroom). Runs as in-process timers so there is no separate service.
   startMonitors();
+
+  // Fan out Flask background-mined blocks to the realtime socket so the
+  // notification bell, live activity feed, and no-reload balance refresh work
+  // for the steady stream of production blocks (not just blocks mined through
+  // the Node /api/mining route).
+  startBlockBridge();
 
   // Background-refresh the diagnostics cache so the network-status panel is served
   // instantly and never blocks on a slow chain validation.
