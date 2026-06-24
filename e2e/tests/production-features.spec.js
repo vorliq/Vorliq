@@ -35,14 +35,16 @@ for (const vp of VIEWPORTS) {
       await importWalletViaUI(page, PRIVATE_KEY, PASSWORD);
     });
 
-    test("lending feature loads with its full request-and-repay flow visible", async ({ page }) => {
+    test("lending feature loads with its summary and request/vote/repay flow visible", async ({ page }) => {
       await page.goto("/lending", { waitUntil: "domcontentloaded" });
       await expect(page.locator("main#main-content")).toBeVisible({ timeout: 20_000 });
-      // The plain-language intro and the call to action exist.
-      await expect(page.getByText(/what a community loan is/i).first()).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByRole("button", { name: /request a loan/i }).first()).toBeVisible({ timeout: 20_000 });
-      // The lifecycle (request -> vote -> issue -> repay) is presented somewhere.
-      await expect(page.getByText(/repay|repayment|vote|issuance/i).first()).toBeVisible({ timeout: 20_000 });
+      // The page header and its plain-language description of the lifecycle.
+      await expect(page.getByRole("heading", { name: /^Lending$/i }).first()).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText(/VLQ-weighted votes/i).first()).toBeVisible({ timeout: 20_000 });
+      // The approval-threshold summary card (the bar that gates approval) renders.
+      await expect(page.getByText(/approval threshold/i).first()).toBeVisible({ timeout: 20_000 });
+      // The lifecycle surfaces (loan requests / active loans panels are always rendered).
+      await expect(page.getByText(/loan requests|active loans/i).first()).toBeVisible({ timeout: 20_000 });
       await expectNoCrashText(page);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow, `/lending overflows by ${overflow}px at ${vp.width}px`).toBeLessThanOrEqual(2);

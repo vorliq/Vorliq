@@ -408,7 +408,6 @@ function Lending() {
             <SummaryStat label="Repaid" value={summaryValue(summary, "repaid_count")} />
             <SummaryStat label="VLQ Active" value={summaryValue(summary, "total_vlq_active", " VLQ")} />
             <SummaryStat label="VLQ Repaid" value={summaryValue(summary, "total_vlq_repaid", " VLQ")} />
-            <SummaryStat label="Approval Threshold" value={summaryValue(summary, "voting_threshold", " VLQ")} />
           </div>
         </section>
       ) : !loadingLoans ? (

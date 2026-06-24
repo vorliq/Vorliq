@@ -314,6 +314,11 @@ export default function Lending() {
       icon: Landmark,
       trend: mine ? { direction: "flat", label: `${myVotedCount} votes cast` } : null,
     },
+    {
+      label: "Approval threshold",
+      value: summary && summary.voting_threshold != null ? formatVlq(summary.voting_threshold) : null,
+      icon: VoteIcon,
+    },
   ];
 
   async function castVote(loan, vote, password) {
@@ -362,7 +367,7 @@ export default function Lending() {
       {error ? (
         <InlineError message={error} onRetry={reload} />
       ) : (
-        <div className="vn-summary-grid vn-summary-grid--3">
+        <div className="vn-summary-grid">
           {cards.map((c) => (
             <SummaryCard key={c.label} label={c.label} value={c.value} icon={c.icon} trend={c.trend} loading={loading} />
           ))}
