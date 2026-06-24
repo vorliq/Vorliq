@@ -300,6 +300,28 @@ function Forum() {
     }
   }
 
+  async function upvoteReply(replyId) {
+    if (!selectedPostId || !replyId) return;
+    const voter = (address || upvoteAddress).trim();
+    if (!voter) {
+      toast.error("Sign in or enter your wallet address before upvoting.");
+      return;
+    }
+    try {
+      await api.post("/forum/reply/upvote", {
+        post_id: selectedPostId,
+        reply_id: replyId,
+        address: voter,
+      });
+      toast.success("Reply upvoted.");
+      await loadPost(selectedPostId);
+    } catch (error) {
+      const message = apiErrorMessage(error, "Unable to upvote this reply.");
+      setErrorMessage(message);
+      toast.error(message);
+    }
+  }
+
   async function featurePost(postId) {
     if (!postId) return;
     if (!isLoggedIn || !address) {
@@ -718,7 +740,16 @@ function Forum() {
                       <span>
                         <AddressIdentity address={reply.author_address} compact /> - {reply.vote_count} votes - {formatTime(reply.timestamp)}
                       </span>
-                      <ReportButton targetType="forum_reply" targetId={reply.reply_id} />
+                      <div className="button-row">
+                        <button
+                          className="button secondary small-button"
+                          type="button"
+                          onClick={() => upvoteReply(reply.reply_id)}
+                        >
+                          Upvote reply ({reply.vote_count || 0})
+                        </button>
+                        <ReportButton targetType="forum_reply" targetId={reply.reply_id} />
+                      </div>
                     </article>
                   ))
                 ) : (

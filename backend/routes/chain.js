@@ -41,6 +41,17 @@ router.get("/api/economics", async (req, res, next) => {
   }
 });
 
+// The complete supply picture for the public Economics page (single source of
+// truth): live chain figures plus the deterministic halving schedule and curve.
+router.get("/api/economics/overview", async (req, res, next) => {
+  try {
+    const response = await axios.get(`${flaskUrl}/economics/overview`);
+    res.json(response.data);
+  } catch (error) {
+    return handleRouteError(res, error, "GET /api/economics/overview", "Unable to load economics overview.");
+  }
+});
+
 router.get("/api/chain/blocks", async (req, res) => {
   try {
     const params = paginationParams(req);

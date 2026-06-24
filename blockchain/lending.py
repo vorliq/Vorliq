@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from hashlib import sha256
+import os
 import time
 from typing import Any
 
@@ -9,9 +10,22 @@ from logger import vorliq_logger
 from transaction import LENDING_POOL_ADDRESS, Transaction
 
 
+def _vote_threshold_default() -> float:
+    # The total VLQ-weighted votes a loan must gather before it is decided. A fixed
+    # high value makes lending unusable on a young network where wallets hold tiny
+    # balances (no loan can ever reach the threshold, so none is ever approved —
+    # which is exactly why production saw zero lending activity). Making it
+    # configurable lets an operator tune it to the network's stage without a code
+    # change; the default stays at the original 100 VLQ.
+    try:
+        return max(0.0, float(os.environ.get("VORLIQ_LENDING_VOTE_THRESHOLD", "100")))
+    except (TypeError, ValueError):
+        return 100.0
+
+
 class LendingPool:
     maximum_loan_amount = 10_000.0
-    voting_threshold = 100.0
+    voting_threshold = _vote_threshold_default()
     repayment_interest_rate = 0.10
     repayment_blocks = 1_000
     lifecycle_statuses = {

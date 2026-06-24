@@ -81,7 +81,8 @@ export default function CommunityTreasury() {
           The Vorliq treasury is funded automatically — 5% of every block&apos;s mining reward flows in — and
           it spends only on faucet starter VLQ for new members and community-approved grants. Every number on
           this page comes straight from the chain, with nothing to sign in for. Check any of it yourself in the{" "}
-          <Link to="/blockchain">block explorer</Link>.
+          <Link to="/blockchain">block explorer</Link>, or see the full{" "}
+          <Link to="/economics">VLQ supply &amp; reward schedule</Link>.
         </p>
       </section>
 

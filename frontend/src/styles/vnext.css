@@ -2879,3 +2879,19 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
 @media (max-width: 480px) {
   .vnext .vn-op-step__body { padding-left: 0; }
 }
+
+/* Send recipient contact suggestions (address book). */
+.vn-field--recipient { position: relative; }
+.vn-contact-suggestions {
+  list-style: none; margin: 4px 0 0; padding: 4px;
+  position: absolute; left: 0; right: 0; top: 100%; z-index: 30;
+  background: var(--vn-surface, #131c2e); border: 1px solid var(--vn-border, #243650);
+  border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); max-height: 240px; overflow-y: auto;
+}
+.vn-contact-suggestion {
+  display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left;
+  background: none; border: 0; padding: 8px 10px; border-radius: 8px; cursor: pointer; color: inherit;
+}
+.vn-contact-suggestion:hover, .vn-contact-suggestion:focus { background: var(--vn-surface-2, #1c2840); }
+.vn-contact-suggestion__label { font-weight: 600; color: var(--vn-text, #e6eefb); }
+.vn-contact-suggestion__addr { font-size: 0.8rem; color: var(--vn-text-2, #93a4bd); word-break: break-all; font-family: monospace; }

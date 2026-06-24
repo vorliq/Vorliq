@@ -4,6 +4,7 @@ import api from "../helpers/api";
 import { markWalletCreated } from "../helpers/onboarding";
 import { recordReferralForNewWallet } from "../helpers/referral";
 import { clearWallet, loadStoredWalletPublicInfo, loadWallet, persistEncryptedWallet, saveWallet } from "../helpers/storage";
+import { loadAddressBook } from "../helpers/addressBook";
 
 export const AuthContext = createContext(null);
 const WALLET_SESSION_LOCKED_KEY = "vorliq_wallet_session_locked";
@@ -26,6 +27,10 @@ function unlockStoredWalletSession() {
 
 export function AuthProvider({ children }) {
   const [wallet, setWallet] = useState(() => (walletSessionLocked() ? null : loadStoredWalletPublicInfo()));
+  // Decrypted contacts for this session (the address book at rest stays encrypted
+  // with the wallet password). Populated when the wallet is unlocked so the Send
+  // page can search labels as the user types, without re-entering the password.
+  const [addressBook, setAddressBook] = useState([]);
 
   async function login(password) {
     const loadedWallet = await loadWallet(password);
@@ -34,12 +39,30 @@ export function AuthProvider({ children }) {
       address: loadedWallet.address,
       public_key: loadedWallet.public_key,
     });
+    try {
+      setAddressBook(await loadAddressBook(password));
+    } catch (error) {
+      setAddressBook([]); // wrong password for the book, or none saved — non-fatal
+    }
     return loadedWallet;
+  }
+
+  // Re-load contacts after they're edited in Settings (caller passes the password
+  // it just used to re-encrypt them).
+  async function refreshAddressBook(password) {
+    try {
+      const entries = await loadAddressBook(password);
+      setAddressBook(entries);
+      return entries;
+    } catch (error) {
+      return addressBook;
+    }
   }
 
   function logout() {
     lockStoredWalletSession();
     setWallet(null);
+    setAddressBook([]);
   }
 
   function clearLocalWallet() {
@@ -59,6 +82,7 @@ export function AuthProvider({ children }) {
       address: newWallet.address,
       public_key: newWallet.public_key,
     });
+    setAddressBook([]); // a brand-new wallet starts with no contacts
     // If this browser followed an invite link, record the referral against the
     // new member. Best-effort and non-blocking — wallet creation never waits on
     // it and never fails because of it.
@@ -83,6 +107,8 @@ export function AuthProvider({ children }) {
     clearLocalWallet,
     createAndSaveWallet,
     adoptImportedWallet,
+    addressBook,
+    refreshAddressBook,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

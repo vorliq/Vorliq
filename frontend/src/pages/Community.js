@@ -111,7 +111,9 @@ function Community() {
           and come straight from the blockchain, so anyone can verify the network is real and active.
         </p>
         <p className="help-text">
-          <Link to="/blockchain">Open the block explorer</Link> to inspect any block or transaction.
+          <Link to="/blockchain">Open the block explorer</Link> to inspect any block or transaction, or see the{" "}
+          <Link to="/economics">full VLQ supply &amp; reward schedule</Link> and the{" "}
+          <Link to="/leaderboard">community leaderboard</Link>.
         </p>
       </section>
 

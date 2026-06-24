@@ -9,15 +9,18 @@ import api from "../helpers/api";
 import { apiErrorMessage } from "../helpers/errors";
 
 const tabs = [
-  { id: "holders", label: "Top Holders" },
+  { id: "active", label: "Most Active" },
   { id: "miners", label: "Top Miners" },
   { id: "lenders", label: "Top Lenders" },
+  { id: "holders", label: "Top Holders" },
   { id: "reputation", label: "Top Reputation" },
 ];
 
+const POLL_MS = 5 * 60 * 1000; // refresh every five minutes
+
 function Leaderboard() {
-  const [activeTab, setActiveTab] = useState("holders");
-  const [leaderboard, setLeaderboard] = useState({ holders: [], miners: [], lenders: [], reputation: [] });
+  const [activeTab, setActiveTab] = useState("active");
+  const [leaderboard, setLeaderboard] = useState({ active: [], holders: [], miners: [], lenders: [], reputation: [] });
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -27,12 +30,13 @@ function Leaderboard() {
     async function loadLeaderboard() {
       try {
         const [leaderboardResponse, reputationResponse] = await Promise.all([
-          api.get("/leaderboard", { params: { limit: 20 } }),
-          api.get("/profiles/top", { params: { limit: 20 } }),
+          api.get("/leaderboard", { params: { limit: 10 } }),
+          api.get("/profiles/top", { params: { limit: 10 } }),
         ]);
 
         if (mounted) {
           setLeaderboard({
+            active: leaderboardResponse.data.active || [],
             holders: leaderboardResponse.data.holders || [],
             miners: leaderboardResponse.data.miners || [],
             lenders: leaderboardResponse.data.lenders || [],
@@ -52,9 +56,13 @@ function Leaderboard() {
     }
 
     loadLeaderboard();
+    // Public leaderboard refreshes itself every five minutes (existing polling
+    // pattern) so a visitor watching it sees the network stay alive.
+    const timer = setInterval(loadLeaderboard, POLL_MS);
 
     return () => {
       mounted = false;
+      clearInterval(timer);
     };
   }, []);
 
@@ -72,8 +80,9 @@ function Leaderboard() {
         <span className="eyebrow">Community Leaders</span>
         <h1>Leaderboard</h1>
         <p className="subtitle">
-          See the leading VLQ holders, miners, and members who have repaid community loans.
-          Reputation ranks public profile activity across achievements, forum, exchange, governance, treasury, and mining.
+          Real addresses doing real things on Vorliq — the most active wallets by transaction count, the top
+          miners by blocks mined, and the top lenders by VLQ lent to the community. No account needed; this
+          page refreshes every five minutes.
         </p>
       </section>
 
@@ -93,6 +102,13 @@ function Leaderboard() {
       </div>
 
       <section className="card card-pad">
+        {activeTab === "active" && (
+          <LeaderboardTable
+            title="Most Active Wallets"
+            rows={leaderboard.active}
+            valueLabel="Transactions"
+          />
+        )}
         {activeTab === "holders" && (
           <LeaderboardTable
             title="Top Holders"
@@ -112,7 +128,8 @@ function Leaderboard() {
           <LeaderboardTable
             title="Top Lenders"
             rows={leaderboard.lenders}
-            valueLabel="Loans Repaid"
+            valueLabel="VLQ Lent"
+            valueSuffix="VLQ"
           />
         )}
         {activeTab === "reputation" && (

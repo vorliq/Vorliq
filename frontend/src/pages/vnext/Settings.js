@@ -19,6 +19,7 @@ import "../../styles/vnext.css";
 import AppShell from "../../components/vnext/AppShell";
 import Modal from "../../components/vnext/Modal";
 import ProfileAvatar from "../../components/ProfileAvatar";
+import AddressBookManager from "../../components/AddressBookManager";
 import { Button, Card, CopyButton, InlineError } from "../../components/vnext/primitives";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationContext";
@@ -946,6 +947,13 @@ export default function Settings() {
 
         {/* Invite members */}
         {isLoggedIn && address && <InviteSection address={address} />}
+
+        {/* Address book (local contacts for the Send page) */}
+        {isLoggedIn && address && (
+          <section className="vn-settings__section">
+            <AddressBookManager />
+          </section>
+        )}
 
         {/* Notifications */}
         <section className="vn-settings__section">

@@ -1412,6 +1412,82 @@ def get_economics():
     return jsonify(node.get_token_economics())
 
 
+@app.get("/economics/overview")
+def get_economics_overview():
+    # The single source of truth for the public Economics page: the live chain
+    # figures (height, total issued, current reward) plus the deterministic supply
+    # schedule derived from the protocol constants. Every figure here is the same
+    # one the block explorer reports, so the two can never disagree.
+    bc = node.blockchain
+    max_supply = float(bc.maximum_supply)
+    initial_reward = float(bc.initial_mining_reward)
+    halving_interval = int(bc.halving_interval)
+    treasury_pct = float(getattr(bc, "TREASURY_PERCENTAGE", 0.05))
+    height = bc.get_block_height()
+    total_issued = bc.get_total_issued()
+    current_reward = bc.get_current_mining_reward()
+
+    current_epoch = height // halving_interval if halving_interval else 0
+    next_halving_block = (current_epoch + 1) * halving_interval
+    blocks_until_halving = max(next_halving_block - height, 0)
+
+    # Estimate the real recent block rate from the last blocks we hold, falling
+    # back to the protocol target if there isn't enough history.
+    recent = bc.chain[-min(60, len(bc.chain)) :] if bc.chain else []
+    seconds_per_block = float(bc.BLOCK_TIME_TARGET)
+    if len(recent) >= 2:
+        span = float(recent[-1].timestamp) - float(recent[0].timestamp)
+        if span > 0:
+            seconds_per_block = span / (len(recent) - 1)
+    estimated_next_halving_at = time.time() + blocks_until_halving * seconds_per_block
+
+    # Deterministic supply schedule + curve (cumulative supply at each halving
+    # boundary, asymptotically approaching the cap).
+    schedule = []
+    curve = [{"block": 0, "supply": 0.0}]
+    cumulative = 0.0
+    epoch = 0
+    while cumulative < max_supply - 0.5 and epoch < 64:
+        reward = initial_reward / (2 ** epoch)
+        if reward <= 0:
+            break
+        start_block = epoch * halving_interval
+        cumulative = min(cumulative + halving_interval * reward, max_supply)
+        schedule.append({
+            "epoch": epoch,
+            "start_block": start_block,
+            "reward": round(reward, 8),
+            "cumulative_supply_at_end": round(cumulative, 4),
+        })
+        curve.append({"block": (epoch + 1) * halving_interval, "supply": round(cumulative, 4)})
+        epoch += 1
+
+    return jsonify({
+        "success": True,
+        "economics": {
+            "maximum_supply": max_supply,
+            "total_issued": total_issued,
+            "percent_issued": round((total_issued / max_supply * 100) if max_supply else 0, 4),
+            "remaining_to_issue": round(max(max_supply - total_issued, 0), 4),
+            "current_mining_reward": current_reward,
+            "initial_mining_reward": initial_reward,
+            "current_block_height": height,
+            "halving_interval": halving_interval,
+            "current_epoch": current_epoch,
+            "next_halving_block": next_halving_block,
+            "blocks_until_halving": blocks_until_halving,
+            "seconds_per_block_estimate": round(seconds_per_block, 2),
+            "estimated_next_halving_at": estimated_next_halving_at,
+            "treasury_percentage": treasury_pct,
+            "miner_reward_per_block": round(current_reward * (1 - treasury_pct), 8),
+            "treasury_reward_per_block": round(current_reward * treasury_pct, 8),
+            "supply_schedule": schedule,
+            "supply_curve": curve,
+            "current_point": {"block": height, "supply": total_issued},
+        },
+    })
+
+
 def _expire_governance_if_needed():
     if governance.expire_proposals(time.time()):
         storage.save_governance(governance)
@@ -3130,6 +3206,27 @@ def upvote_forum_post():
         return jsonify({"success": False, "error": str(exc)}), 400
 
 
+@app.post("/forum/reply/upvote")
+def upvote_forum_reply():
+    # Upvote a specific reply. The model (Forum.upvote_reply) and the per-reply
+    # vote_count already existed, but no endpoint exposed it, so replies could
+    # never actually be upvoted. Returns the whole post so the client refreshes
+    # the reply's count in place.
+    try:
+        data = _json_body()
+        post_id = _require_text(data.get("post_id") or data.get("postId"), "post ID", 128)
+        forum.upvote_reply(
+            post_id=post_id,
+            reply_id=_require_text(data.get("reply_id") or data.get("replyId"), "reply ID", 128),
+            address=_require_text(data.get("address"), "wallet address", 160),
+        )
+        storage.save_forum(forum)
+        return jsonify({"success": True, "post": forum.get_post(post_id)})
+    except Exception as exc:
+        vorliq_logger.error("Forum reply upvote endpoint failed: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
 @app.post("/forum/feature")
 def feature_forum_post():
     try:
@@ -3653,12 +3750,23 @@ def get_leaderboard():
             address: int(stats.get("blocks_mined", 0))
             for address, stats in index_payload.get("miner_stats", {}).items()
         }
-        lenders: dict[str, int] = {}
-
+        # Most active wallets by confirmed transaction count (sent or received),
+        # excluding the system addresses.
+        active: dict[str, int] = {}
+        for address, records in index_payload.get("transactions_by_address", {}).items():
+            if address and address not in excluded_addresses and isinstance(records, list):
+                active[address] = len([r for r in records if r.get("status") == "confirmed"])
+        # Top lenders by total VLQ lent: each member who voted to fund a loan
+        # (a "yes" vote) is credited with that loan's amount, across every loan
+        # that was actually funded.
+        funded_statuses = {"approved_pending_issue", "active", "overdue", "repayment_pending", "repaid"}
+        lenders: dict[str, float] = {}
         for loan in lending_pool.get_all_loans():
-            if loan.get("status") == "repaid" and loan.get("requester_address"):
-                address = loan["requester_address"]
-                lenders[address] = lenders.get(address, 0) + 1
+            if loan.get("status") in funded_statuses:
+                amount = float(loan.get("amount", 0) or 0)
+                for voter, choice in (loan.get("votes") or {}).items():
+                    if choice == "yes" and voter:
+                        lenders[voter] = lenders.get(voter, 0.0) + amount
 
         def ranked(mapping: dict[str, float | int], positive_only: bool = False) -> tuple[list[dict], int, bool]:
             rows = [
@@ -3672,22 +3780,26 @@ def get_leaderboard():
 
         holders, holders_total, holders_more = ranked(balances, positive_only=True)
         top_miners, miners_total, miners_more = ranked(miners)
-        top_lenders, lenders_total, lenders_more = ranked(lenders)
+        top_lenders, lenders_total, lenders_more = ranked(lenders, positive_only=True)
+        top_active, active_total, active_more = ranked(active, positive_only=True)
 
         return jsonify(
             {
                 "success": True,
                 "limit": limit,
                 "offset": offset,
+                "active": top_active,
                 "holders": holders,
                 "miners": top_miners,
                 "lenders": top_lenders,
                 "totals": {
+                    "active": active_total,
                     "holders": holders_total,
                     "miners": miners_total,
                     "lenders": lenders_total,
                 },
                 "has_more": {
+                    "active": active_more,
                     "holders": holders_more,
                     "miners": miners_more,
                     "lenders": lenders_more,

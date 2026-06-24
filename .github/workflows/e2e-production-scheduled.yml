@@ -42,14 +42,14 @@ jobs:
         working-directory: e2e
         run: npx playwright install --with-deps chromium
 
-      - name: Run production authenticated journeys
+      - name: Run production authenticated + feature journeys
         working-directory: e2e
         env:
           E2E_BASE_URL: https://vorliq.org
           E2E_WORKERS: "1"
           E2E_PROD_PRIVATE_KEY: ${{ secrets.E2E_PROD_PRIVATE_KEY }}
           E2E_PROD_PASSWORD: ${{ secrets.E2E_PROD_PASSWORD }}
-        run: npx playwright test tests/production-authenticated.spec.js
+        run: npx playwright test tests/production-authenticated.spec.js tests/production-features.spec.js
 
       - name: Post failure to the production alerts log
         if: failure()

@@ -91,6 +91,15 @@ router.post("/api/forum/upvote", async (req, res) => {
   }
 });
 
+router.post("/api/forum/reply/upvote", async (req, res) => {
+  try {
+    const response = await axios.post(`${flaskUrl}/forum/reply/upvote`, req.body);
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    return handleRouteError(res, error, "POST /api/forum/reply/upvote", "Unable to upvote forum reply.");
+  }
+});
+
 router.post("/api/forum/feature", async (req, res) => {
   try {
     // The voter is already proven to control this address by the signed-authority

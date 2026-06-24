@@ -10,6 +10,7 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
 import api from "../../helpers/api";
+import { searchAddressBook } from "../../helpers/addressBook";
 import { validateAddress, validateTransactionReview } from "../../helpers/address";
 import { apiErrorMessage } from "../../helpers/errors";
 import { signTransaction } from "../../helpers/signer";
@@ -22,7 +23,7 @@ const POLL_MS = 5000;
 const POLL_LIMIT = 60; // ~5 minutes of polling, then stop quietly
 
 export default function SendForm() {
-  const { isLoggedIn, wallet } = useAuth();
+  const { isLoggedIn, wallet, addressBook } = useAuth();
   const address = wallet?.address;
   // `available` is the spendable figure the core will actually accept (total
   // minus unconfirmed incoming); `pendingIncoming` is shown so a user with VLQ
@@ -31,6 +32,11 @@ export default function SendForm() {
 
   const [recipient, setRecipient] = useState("");
   const [recipientTouched, setRecipientTouched] = useState(false);
+  const [recipientFocused, setRecipientFocused] = useState(false);
+  // Contacts matching what's typed in the recipient field, so a user can type a
+  // short label instead of a long address. Empty unless the user has saved
+  // contacts (Settings) and unlocked the wallet this session.
+  const contactMatches = recipientFocused ? searchAddressBook(addressBook, recipient).slice(0, 6) : [];
   const [amount, setAmount] = useState("");
   const [memo, setMemo] = useState("");
   const [password, setPassword] = useState("");
@@ -160,8 +166,8 @@ export default function SendForm() {
     <form className="vn-send-form" onSubmit={handleSubmit}>
       {formError && <InlineError message={formError} />}
 
-      <div className="vn-field">
-        <label htmlFor="vn-recipient">Recipient Address</label>
+      <div className="vn-field vn-field--recipient">
+        <label htmlFor="vn-recipient">Recipient — address or a saved contact</label>
         <input
           id="vn-recipient"
           className="vn-input"
@@ -169,9 +175,35 @@ export default function SendForm() {
           autoComplete="off"
           value={recipient}
           onChange={(e) => setRecipient(e.target.value)}
-          onBlur={() => setRecipientTouched(true)}
-          placeholder="Vorliq wallet address"
+          onFocus={() => setRecipientFocused(true)}
+          onBlur={() => {
+            setRecipientTouched(true);
+            // Delay so a click on a suggestion registers before the list hides.
+            setTimeout(() => setRecipientFocused(false), 150);
+          }}
+          placeholder="Paste a wallet address, or type a contact's name"
         />
+        {contactMatches.length > 0 && (
+          <ul className="vn-contact-suggestions" role="listbox">
+            {contactMatches.map((contact) => (
+              <li key={contact.address}>
+                <button
+                  type="button"
+                  className="vn-contact-suggestion"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setRecipient(contact.address);
+                    setRecipientFocused(false);
+                    setRecipientTouched(true);
+                  }}
+                >
+                  <span className="vn-contact-suggestion__label">{contact.label}</span>
+                  <span className="vn-contact-suggestion__addr">{contact.address}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         {recipientCheck && recipient.trim() && (
           <p className={`vn-field__hint ${recipientCheck.valid ? "" : "vn-field__hint--error"}`}>
             {recipientCheck.valid

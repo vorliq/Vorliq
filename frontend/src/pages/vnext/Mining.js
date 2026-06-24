@@ -202,7 +202,10 @@ export default function Mining() {
     <AppShell active="mining">
       <div className="vn-page-head">
         <h1>Mining</h1>
-        <div className="vn-page-head__meta">Proof of work on Vorliq's chain</div>
+        <div className="vn-page-head__meta">
+          Proof of work on Vorliq's chain ·{" "}
+          <Link className="vn-block-link" to="/economics">See the full VLQ supply &amp; reward schedule</Link>
+        </div>
       </div>
 
       {/* Header stat cards */}
