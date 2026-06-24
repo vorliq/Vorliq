@@ -329,6 +329,8 @@ class LendingPool:
         counts = {status: len([loan for loan in loans if loan["status"] == status]) for status in self.lifecycle_statuses}
         return {
             "total_loans": len(loans),
+            "voting_threshold": self.voting_threshold,
+            "repayment_interest_rate": self.repayment_interest_rate,
             "pending_vote_count": counts["pending_vote"],
             "approved_pending_issue_count": counts["approved_pending_issue"],
             "active_count": counts["active"],

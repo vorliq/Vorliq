@@ -511,6 +511,31 @@ jobs:
             echo "Email provider configured; backend and chain restarted."
           EOF
 
+      - name: Configure community lending vote threshold
+        # The total yes-vote weight (in VLQ) required to approve a community loan.
+        # The default in code is 100, which is hard for ordinary members to reach
+        # on a young network, so lending saw no usage. 25 lets a small quorum of
+        # genuine holders approve a loan while keeping a single dust wallet from
+        # approving alone. Not a secret (it is a published economic parameter), so
+        # it lives here in plain sight rather than in a repository secret. Written
+        # into the chain service's env file and applied on restart.
+        env:
+          LENDING_VOTE_THRESHOLD: "25"
+        run: |
+          ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes \
+            root@159.65.24.177 "T='${LENDING_VOTE_THRESHOLD}' bash -s" <<'EOF'
+            set -euo pipefail
+            ENVF=/etc/vorliq/backend.env
+            touch "${ENVF}"; chmod 600 "${ENVF}"
+            TMP="$(mktemp)"
+            grep -vE '^VORLIQ_LENDING_VOTE_THRESHOLD=' "${ENVF}" > "${TMP}" || true
+            printf 'VORLIQ_LENDING_VOTE_THRESHOLD=%s\n' "${T}" >> "${TMP}"
+            install -o root -g root -m 600 "${TMP}" "${ENVF}"
+            rm -f "${TMP}"
+            systemctl restart vorliq-blockchain
+            echo "Lending vote threshold set to ${T} VLQ; chain restarted."
+          EOF
+
       - name: Correct nginx Permissions-Policy header
         run: |
           # nginx was emitting its own Permissions-Policy header (with a camera=(self)
