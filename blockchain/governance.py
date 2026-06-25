@@ -9,6 +9,16 @@ from blockchain import Blockchain
 from logger import vorliq_logger
 
 
+def _governance_quorum_default() -> float:
+    """Total VLQ vote weight a proposal needs to be decided. Configurable so an
+    operator can match it to the network stage (the same pattern the lending vote
+    threshold uses); defaults to 500 if unset or invalid."""
+    try:
+        return max(0.0, float(os.environ.get("VORLIQ_GOVERNANCE_QUORUM", "500")))
+    except (TypeError, ValueError):
+        return 500.0
+
+
 class Governance:
     valid_categories = {
         "mining_reward",
@@ -26,7 +36,7 @@ class Governance:
         "expired",
         "cancelled",
     }
-    quorum = 500.0
+    quorum = _governance_quorum_default()
     approval_threshold = 0.60
     # Voting window. Configurable so the e2e suite can let a proposal reach its
     # outcome without waiting days; production defaults to the 7-day rule.
@@ -340,6 +350,8 @@ class Governance:
             "cancelled_count": status_counts["cancelled"],
             "total_proposals": len(proposals),
             "total_votes": total_votes,
+            "quorum": self.quorum,
+            "approval_threshold": self.approval_threshold,
             "latest_executed_rule_change": latest_rule_change[0] if latest_rule_change else None,
             "current_governable_settings": self.get_governance_settings(),
         }

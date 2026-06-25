@@ -54,6 +54,14 @@ function Account() {
   useEffect(() => {
     let mounted = true;
 
+    // The balance is one fast read; show it the moment it returns rather than
+    // gating it behind the nine other account fetches below. This is what a member
+    // looks for first after signing in, so it must not wait for the slowest call.
+    api
+      .get("/wallet/balance", { params: { address: wallet.address } })
+      .then((r) => { if (mounted) setBalance(r.data.balance); })
+      .catch(() => {});
+
     async function loadAccount() {
       try {
         const profileRequest = api

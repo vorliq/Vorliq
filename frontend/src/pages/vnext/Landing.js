@@ -283,7 +283,12 @@ function ActivityStrip() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!events || events.length === 0) return null;
+  // events === null  -> still loading: show a skeleton so the strip space is
+  //   reserved and never flashes blank while the first fetch is in flight.
+  // events === []     -> loaded but the feed had nothing (or failed): render
+  //   nothing rather than an empty box.
+  if (events !== null && events.length === 0) return null;
+  const loading = events === null;
 
   return (
     <section className="vn-activity-strip" aria-label="Recent live network activity">
@@ -291,6 +296,15 @@ function ActivityStrip() {
         <span className="vn-activity-strip__label">
           <Activity size={14} aria-hidden="true" /> Live on the network
         </span>
+        {loading ? (
+          <ul className="vn-activity-strip__list" aria-hidden="true">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <li className="vn-activity-strip__item vn-activity-strip__item--skeleton" key={i}>
+                <span className="vn-activity-strip__skeleton" style={{ width: `${90 + ((i * 37) % 70)}px` }} />
+              </li>
+            ))}
+          </ul>
+        ) : (
         <ul className="vn-activity-strip__list">
           {events.map((e, i) => {
             const line = (
@@ -306,6 +320,7 @@ function ActivityStrip() {
             );
           })}
         </ul>
+        )}
       </div>
     </section>
   );

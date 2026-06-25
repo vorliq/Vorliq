@@ -2981,3 +2981,14 @@ html[data-theme="light"] .vnext .vn-activity-strip__label { color: var(--vn-teal
   border: 1px solid color-mix(in srgb, var(--vn-teal) 30%, transparent);
 }
 html:not([data-theme="light"]) .vnext .vn-tx-tag { color: var(--vn-teal); }
+
+/* Activity-strip loading skeleton — reserves the strip space so it never flashes
+   blank while the first /activity fetch is in flight. */
+.vnext .vn-activity-strip__item--skeleton { border-color: var(--vn-border); }
+.vnext .vn-activity-strip__skeleton {
+  display: inline-block; height: 0.8rem; border-radius: 999px;
+  background: linear-gradient(90deg, var(--vn-card-2) 25%, var(--vn-border) 37%, var(--vn-card-2) 63%);
+  background-size: 400% 100%; animation: vn-strip-shimmer 1.4s ease infinite;
+}
+@keyframes vn-strip-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .vnext .vn-activity-strip__skeleton { animation: none; } }

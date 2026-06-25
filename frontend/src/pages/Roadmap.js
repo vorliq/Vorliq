@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import ErrorMessage from "../components/ErrorMessage";
 import Spinner from "../components/Spinner";
@@ -140,6 +141,19 @@ function Roadmap() {
               </div>
             </section>
           ))}
+
+          <section className="card card-pad">
+            <h2>Propose what comes next</h2>
+            <p>
+              This roadmap is what the maintainers are building. The network&apos;s own rules — the
+              mining reward, block difficulty, lending limits — are not fixed by us: any member
+              holding VLQ can propose a change, and the community decides by a VLQ-weighted vote.
+              If you want something on this list, that is where it starts.
+            </p>
+            <div className="button-row">
+              <Link className="button" to="/governance">Open governance</Link>
+            </div>
+          </section>
 
           <section className="card card-pad">
             <h2>Roadmap Disclaimer</h2>

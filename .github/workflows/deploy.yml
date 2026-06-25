@@ -548,6 +548,30 @@ jobs:
             echo "Lending vote threshold set to ${T} VLQ; chain restarted."
           EOF
 
+      - name: Configure governance quorum
+        # Total VLQ vote weight needed to decide a proposal. The code default is
+        # 500, which is out of reach for ordinary members on a 19-wallet network
+        # (the largest community holders outside the miner hold ~4000 VLQ each), so
+        # only large wallets could ever carry a vote. 100 lets a small coalition of
+        # genuine community holders decide a proposal. A published economic
+        # parameter, set in plain sight here. Applied on chain restart.
+        env:
+          GOVERNANCE_QUORUM: "100"
+        run: |
+          ssh -i ~/.ssh/vorliq_deploy_key -o BatchMode=yes -o IdentitiesOnly=yes \
+            root@159.65.24.177 "Q='${GOVERNANCE_QUORUM}' bash -s" <<'EOF'
+            set -euo pipefail
+            ENVF=/etc/vorliq/backend.env
+            touch "${ENVF}"; chmod 600 "${ENVF}"
+            TMP="$(mktemp)"
+            grep -vE '^VORLIQ_GOVERNANCE_QUORUM=' "${ENVF}" > "${TMP}" || true
+            printf 'VORLIQ_GOVERNANCE_QUORUM=%s\n' "${Q}" >> "${TMP}"
+            install -o root -g root -m 600 "${TMP}" "${ENVF}"
+            rm -f "${TMP}"
+            systemctl restart vorliq-blockchain
+            echo "Governance quorum set to ${Q} VLQ; chain restarted."
+          EOF
+
       - name: Correct nginx Permissions-Policy header
         run: |
           # nginx was emitting its own Permissions-Policy header (with a camera=(self)

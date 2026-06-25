@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 function Whitepaper() {
   const communityLinks = [
     { label: "Discord", href: "https://discord.gg/qpX5sHD4pC" },
@@ -15,6 +17,10 @@ function Whitepaper() {
           giving communities transparent wallets, signed transactions, community requests, and
           governance using VLQ.
         </p>
+        <div className="button-row">
+          <Link className="button" to="/blockchain">Open the block explorer</Link>
+          <Link className="button secondary small-button" to="/economics">See the live economics</Link>
+        </div>
       </section>
 
       <article className="whitepaper card card-pad">
@@ -66,6 +72,24 @@ function Whitepaper() {
             contains a list of signed transactions and links to the previous block by hash.
             Each node validates the full chain by checking block hashes, previous hash links,
             proof of work, and transaction signatures.
+          </p>
+        </section>
+
+        <section>
+          <h2>The Wallet Model</h2>
+          <p>
+            A Vorliq wallet is a SECP256K1 key pair. When you create a wallet, the private key is
+            generated and encrypted on your own device with your password and is never sent to a
+            server — Vorliq stores no custody of your funds and cannot move them for you. Your
+            public address is derived from the key, and every transaction you make is signed
+            locally with your private key before it is broadcast, so the network can verify it came
+            from you without ever seeing your secret. If you lose your key and password, no one can
+            recover the wallet for you; this is the trade-off of holding your own keys.
+          </p>
+          <p>
+            Sensitive actions beyond a plain transfer — opening a loan, voting, posting — are
+            wrapped in a signed authorization envelope, so the chain can confirm the action was
+            authorized by the wallet that owns the address, not merely submitted in its name.
           </p>
         </section>
 
