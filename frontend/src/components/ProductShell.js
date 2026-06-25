@@ -31,6 +31,7 @@ const footerGroups = [
     title: "Network",
     links: [
       { label: "Blockchain", to: "/blockchain" },
+      { label: "Network Health", to: "/network-health" },
       { label: "Community Stats", to: "/community" },
       { label: "Network", to: "/network" },
       { label: "Status", to: "/status" },

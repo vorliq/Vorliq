@@ -58,6 +58,49 @@ function recordReferral(newMember, referrer) {
   return { recorded: true, referrer: ref };
 }
 
+// The one-time on-chain reward (in VLQ) paid to a referrer from the treasury when
+// a member they invited makes their first faucet claim.
+const REFERRAL_BONUS = 5;
+
+// Mark that the referral bonus has been paid for `member` (the referred wallet),
+// recording the on-chain tx so it can be shown and so the bonus fires exactly
+// once. Returns { paid:true, referrer } the first time, { paid:false, reason } if
+// the member has no referrer, is its own referrer, or was already paid.
+function markBonusPaid(member, txId) {
+  const key = String(member || "").trim();
+  if (!key) return { paid: false, reason: "missing_address" };
+  const store = readStore();
+  const entry = store.referrals[key];
+  if (!entry || !entry.referrer) return { paid: false, reason: "no_referrer" };
+  if (entry.referrer === key) return { paid: false, reason: "self_referral" };
+  if (entry.bonus_paid_at) return { paid: false, reason: "already_paid", referrer: entry.referrer };
+  entry.bonus_paid_at = new Date().toISOString();
+  entry.bonus_tx_id = String(txId || "") || null;
+  writeStore(store);
+  return { paid: true, referrer: entry.referrer };
+}
+
+// Has the referral bonus already been paid for this referred member?
+function isBonusPaid(member) {
+  const entry = readStore().referrals[String(member || "").trim()];
+  return Boolean(entry && entry.bonus_paid_at);
+}
+
+// Total referral reward earned by `address`: REFERRAL_BONUS for each member they
+// invited whose bonus has been paid, plus the paid/pending counts.
+function referralEarnings(address) {
+  const key = String(address || "").trim();
+  const { referrals } = readStore();
+  let paidCount = 0;
+  let pendingCount = 0;
+  for (const entry of Object.values(referrals)) {
+    if (!entry || entry.referrer !== key) continue;
+    if (entry.bonus_paid_at) paidCount += 1;
+    else pendingCount += 1;
+  }
+  return { total_vlq: paidCount * REFERRAL_BONUS, paid_count: paidCount, pending_count: pendingCount, bonus_per_referral: REFERRAL_BONUS };
+}
+
 // Every member invited by `address`, newest first.
 function invitedBy(address) {
   const key = String(address || "").trim();
@@ -74,4 +117,8 @@ module.exports = {
   getReferrer,
   recordReferral,
   invitedBy,
+  markBonusPaid,
+  isBonusPaid,
+  referralEarnings,
+  REFERRAL_BONUS,
 };

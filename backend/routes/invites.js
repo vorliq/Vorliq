@@ -2,7 +2,7 @@ const express = require("express");
 const axios = require("axios");
 
 const { handleRouteError } = require("./routeError");
-const { getReferrer, recordReferral, invitedBy } = require("../referralStore");
+const { getReferrer, recordReferral, invitedBy, referralEarnings } = require("../referralStore");
 const { logInfo } = require("../logger");
 
 const router = express.Router();
@@ -96,6 +96,7 @@ router.get("/api/invites/summary", (req, res) => {
       referrer: getReferrer(address),
       invited_count: invited.length,
       invited,
+      earnings: referralEarnings(address),
     });
   } catch (error) {
     return handleRouteError(res, error, "GET /api/invites/summary", "Unable to load invite summary.");

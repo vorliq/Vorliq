@@ -65,6 +65,16 @@ export function useTransactions(address) {
   return { rows, error, reload: () => load() };
 }
 
+const TX_TYPE_LABELS = {
+  referral_bonus: "Referral reward",
+  referral: "Referral reward",
+  faucet_starter: "Faucet grant",
+  faucet: "Faucet grant",
+  loan_issuance: "Loan issued",
+  loan_repayment: "Loan repaid",
+  lending: "Lending",
+};
+
 function txColumns(address) {
   return [
     {
@@ -72,10 +82,14 @@ function txColumns(address) {
       header: "Type",
       render: (tx) => {
         const received = tx.receiver_address === address;
+        const special = TX_TYPE_LABELS[tx.type] || TX_TYPE_LABELS[tx.category];
         return (
-          <span className={`vn-tx-type ${received ? "vn-tx-type--in" : "vn-tx-type--out"}`}>
-            {received ? <ArrowDownLeft size={16} aria-hidden="true" /> : <ArrowUpRight size={16} aria-hidden="true" />}
-            {received ? "Received" : "Sent"}
+          <span className="vn-tx-type-cell">
+            <span className={`vn-tx-type ${received ? "vn-tx-type--in" : "vn-tx-type--out"}`}>
+              {received ? <ArrowDownLeft size={16} aria-hidden="true" /> : <ArrowUpRight size={16} aria-hidden="true" />}
+              {received ? "Received" : "Sent"}
+            </span>
+            {special && <span className="vn-tx-tag">{special}</span>}
           </span>
         );
       },

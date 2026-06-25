@@ -311,6 +311,101 @@ function ActivityStrip() {
   );
 }
 
+/* ------------------------------------------------ Dashboard preview ------- */
+// Shows a visitor what they get after signing up: the real member dashboard
+// shell with the actual live network numbers, so "create a wallet" is no longer
+// a leap of faith. Numbers are the same public figures the dashboard itself
+// shows; the balance row is illustrated as "yours, once you claim" rather than
+// faked with a number.
+function DashboardPreview({ summary, econ, snapshot, loading }) {
+  const tiles = [
+    { label: "Block height", value: num(summary.block_height), fmt: (n) => `#${formatNumber(n)}` },
+    { label: "VLQ in circulation", value: num(econ.total_issued ?? summary.total_issued), fmt: formatNumber },
+    { label: "Transactions", value: num(summary.total_transactions), fmt: formatNumber },
+    { label: "Wallet holders", value: num(snapshot?.holderTotal), fmt: formatNumber },
+  ];
+  return (
+    <section className="vn-section" id="preview">
+      <div className="vn-container">
+        <SectionHead
+          overline="See inside first"
+          title="What you'll see the moment you sign in"
+          subtitle="Your dashboard shows your balance and history alongside the live network — the same public numbers you can see right now, below."
+        />
+        <Card className="vn-preview" pad>
+          <div className="vn-preview__chrome" aria-hidden="true">
+            <span /><span /><span />
+            <em>vorliq.org/dashboard</em>
+          </div>
+          <div className="vn-preview__balance">
+            <span className="vn-overline">Your balance</span>
+            <strong>— VLQ <small>after you claim your starter grant</small></strong>
+          </div>
+          <div className="vn-preview__tiles">
+            {tiles.map((t) => (
+              <div className="vn-preview__tile" key={t.label}>
+                <span className="vn-preview__tile-label">{t.label}</span>
+                <span className="vn-preview__tile-value">
+                  {loading || t.value == null ? "—" : t.fmt(t.value)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="vn-preview__note">
+            Plus your own transaction history, a balance-over-time chart, and a live activity feed that
+            updates as each block is mined.
+          </p>
+        </Card>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------- FAQ -------- */
+const FAQS = [
+  {
+    q: "What is VLQ?",
+    a: "VLQ is the coin of the Vorliq network — a small community blockchain. It has a fixed cap of 21,000,000, is created only by mining on a fixed schedule, and is used inside the community to send value, vote on rules, request and back loans, and tip. It is community software and community credit, not a regulated security or an investment product.",
+  },
+  {
+    q: "Is my money safe?",
+    a: "Your wallet's private key is generated and encrypted on your own device with your password and is never sent to a server — you, and only you, can move your VLQ. Because Vorliq is community money on an open ledger, VLQ has no guaranteed monetary value and is not bank-insured, so treat it as community credit rather than savings you can't afford to lose.",
+  },
+  {
+    q: "How do I get started?",
+    a: "Create a wallet — it takes a few seconds and needs no email. Save your recovery details, then claim your starter VLQ from the faucet. From there you can send, receive, vote, and post, all from the dashboard.",
+  },
+  {
+    q: "What can I actually do here?",
+    a: "Send and receive VLQ, mine blocks, request community loans and vote on others', propose and vote on changes to the network's own rules through governance, post and reply in the forum, and trade peer-to-peer on the exchange — all on the same public chain.",
+  },
+  {
+    q: "Who else is using this?",
+    a: "Real people on a live chain, not a demo. You can see the exact numbers without an account: the live block feed and network stats are on this page, and the public leaderboard shows the most active wallets, top miners, and top lenders by name.",
+  },
+];
+
+function FaqSection() {
+  return (
+    <section className="vn-section" id="faq">
+      <div className="vn-container">
+        <SectionHead overline="Questions, answered" title="The honest FAQ" />
+        <div className="vn-faq">
+          {FAQS.map((f) => (
+            <details className="vn-faq__item" key={f.q}>
+              <summary className="vn-faq__q">{f.q}</summary>
+              <p className="vn-faq__a">{f.a}</p>
+            </details>
+          ))}
+        </div>
+        <div className="vn-btn-row" style={{ marginTop: 18 }}>
+          <Button variant="secondary" to="/leaderboard">See who's using Vorliq</Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ----------------------------------------------------------- Page --------- */
 export default function Landing() {
   const [snapshot, setSnapshot] = useState(null);
@@ -567,6 +662,9 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ------------------------------------------------ Dashboard preview --- */}
+      <DashboardPreview summary={summary} econ={econ} snapshot={snapshot} loading={loading} />
+
       {/* ----------------------------------------------------- Live feed --- */}
       <section className="vn-feed-section vn-section">
         <div className="vn-container">
@@ -690,6 +788,27 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* ------------------------------------------- Governance explainer ----- */}
+      <section className="vn-section" id="governance-intro">
+        <div className="vn-container">
+          <Card className="vn-gov-band" pad>
+            <span className="vn-overline">You set the rules</span>
+            <h3 className="vn-gov-band__title">Members vote on how Vorliq works</h3>
+            <p className="vn-gov-band__text">
+              The network's own rules — the mining reward, the block difficulty, lending limits — aren't
+              fixed by us; any member holding VLQ can propose a change, and the community decides by a
+              VLQ-weighted vote. When a proposal passes, the rule is applied to the live chain automatically.
+            </p>
+            <Link className="vn-link" to="/governance">
+              See governance and open proposals <ArrowRight size={16} aria-hidden="true" />
+            </Link>
+          </Card>
+        </div>
+      </section>
+
+      {/* ----------------------------------------------------------- FAQ ----- */}
+      <FaqSection />
 
       {/* ------------------------------------------- Live activity strip ----- */}
       <ActivityStrip />

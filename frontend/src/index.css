@@ -4446,9 +4446,9 @@ html[data-theme="light"] .mobile-drawer button {
   white-space: nowrap;
 }
 .admin-table td.mono { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
-.admin-table thead th { color: var(--vn-text-2, #a9bdd6); font-weight: 700; }
+.admin-table thead th { color: var(--muted); font-weight: 700; }
 .admin-stat { display: flex; align-items: baseline; gap: 12px; margin: 0 0 18px; flex-wrap: wrap; }
-.admin-stat__label { color: var(--vn-text-2, #a9bdd6); }
+.admin-stat__label { color: var(--muted); }
 .admin-stat__value { font-size: 1.5rem; font-weight: 900; }
 
 .admin-confirm-backdrop {
@@ -4466,12 +4466,16 @@ html[data-theme="light"] .mobile-drawer button {
   max-width: 100%;
 }
 .admin-confirm__title { margin: 0 0 8px; font-size: 1.2rem; }
-.admin-confirm__message { margin: 0 0 18px; color: var(--vn-text-2, #a9bdd6); line-height: 1.5; }
+.admin-confirm__message { margin: 0 0 18px; color: var(--muted); line-height: 1.5; }
 
 /* First-time-user feature intros (lending, forum, exchange): a prominent,
    plain-language "what is this and why should I care" card with one clear CTA. */
-.feature-intro { border-left: 3px solid var(--vn-accent, #4f8cff); }
-.feature-intro-lead { font-size: 1.05rem; line-height: 1.6; color: var(--vn-text, #e6eefb); margin: 4px 0 10px; }
+/* These intro boxes render on legacy pages (forum, lending) that are NOT inside
+   the .vnext scope, so the --vn-* tokens are undefined and the hardcoded LIGHT
+   fallbacks (#e6eefb) showed light text on the white light-theme card. Use the
+   legacy --text tokens, which adapt correctly in both legacy themes. */
+.feature-intro { border-left: 3px solid var(--primary); }
+.feature-intro-lead { font-size: 1.05rem; line-height: 1.6; color: var(--text); margin: 4px 0 10px; }
 .feature-intro-points { list-style: none; padding: 0; margin: 0 0 6px; display: grid; gap: 10px; }
-.feature-intro-points li { line-height: 1.55; color: var(--vn-text-2, #a9bdd6); }
-.feature-intro-points li strong { color: var(--vn-text, #e6eefb); display: block; margin-bottom: 2px; }
+.feature-intro-points li { line-height: 1.55; color: var(--text-secondary); }
+.feature-intro-points li strong { color: var(--text); display: block; margin-bottom: 2px; }

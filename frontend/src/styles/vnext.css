@@ -2880,21 +2880,23 @@ html[data-theme="light"] .vnext .vn-vote-bar__no {
   .vnext .vn-op-step__body { padding-left: 0; }
 }
 
-/* Send recipient contact suggestions (address book). */
-.vn-field--recipient { position: relative; }
-.vn-contact-suggestions {
+/* Send recipient contact suggestions (address book). Theme tokens so the popover
+   is a white card with dark text on the light theme and a lifted navy card with
+   light text on dark — not a hardcoded dark popover that hides its text on light. */
+.vnext .vn-field--recipient { position: relative; }
+.vnext .vn-contact-suggestions {
   list-style: none; margin: 4px 0 0; padding: 4px;
   position: absolute; left: 0; right: 0; top: 100%; z-index: 30;
-  background: var(--vn-surface, #131c2e); border: 1px solid var(--vn-border, #243650);
-  border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); max-height: 240px; overflow-y: auto;
+  background: var(--vn-card); border: 1px solid var(--vn-border);
+  border-radius: 10px; box-shadow: var(--vn-shadow-soft); max-height: 240px; overflow-y: auto;
 }
-.vn-contact-suggestion {
+.vnext .vn-contact-suggestion {
   display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left;
   background: none; border: 0; padding: 8px 10px; border-radius: 8px; cursor: pointer; color: inherit;
 }
-.vn-contact-suggestion:hover, .vn-contact-suggestion:focus { background: var(--vn-surface-2, #1c2840); }
-.vn-contact-suggestion__label { font-weight: 600; color: var(--vn-text, #e6eefb); }
-.vn-contact-suggestion__addr { font-size: 0.8rem; color: var(--vn-text-2, #93a4bd); word-break: break-all; font-family: monospace; }
+.vnext .vn-contact-suggestion:hover, .vnext .vn-contact-suggestion:focus { background: var(--vn-card-2); }
+.vnext .vn-contact-suggestion__label { font-weight: 600; color: var(--vn-text); }
+.vnext .vn-contact-suggestion__addr { font-size: 0.8rem; color: var(--vn-text-2); word-break: break-all; font-family: monospace; }
 
 /* Governance status legend — plain-language meaning of each proposal status */
 .vnext .vn-gov-legend { display: grid; gap: 8px; margin: 12px 0 0; }
@@ -2939,3 +2941,43 @@ html[data-theme="light"] .vnext .vn-activity-strip__label { color: var(--vn-teal
   .vnext .vn-activity-strip__list { gap: 6px; }
   .vnext .vn-activity-strip__item { font-size: 0.8rem; }
 }
+
+/* Landing: dashboard preview, FAQ, governance band. All driven by theme tokens
+   (--vn-card / --vn-card-2 / --vn-text / --vn-text-2 / --vn-border) so they read
+   correctly in both light and dark. */
+.vnext .vn-preview { display: grid; gap: 16px; }
+.vnext .vn-preview__chrome { display: flex; align-items: center; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--vn-border); }
+.vnext .vn-preview__chrome span { width: 10px; height: 10px; border-radius: 999px; background: var(--vn-border-strong); }
+.vnext .vn-preview__chrome em { margin-left: 10px; font-style: normal; font-size: 0.8rem; color: var(--vn-text-3); font-family: monospace; }
+.vnext .vn-preview__balance { display: flex; flex-direction: column; gap: 4px; }
+.vnext .vn-preview__balance strong { font-size: 1.5rem; font-weight: 800; color: var(--vn-text); }
+.vnext .vn-preview__balance small { font-size: 0.78rem; font-weight: 500; color: var(--vn-text-2); margin-left: 6px; }
+.vnext .vn-preview__tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.vnext .vn-preview__tile { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: var(--vn-r-sm); background: var(--vn-card-2); border: 1px solid var(--vn-border); }
+.vnext .vn-preview__tile-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--vn-text-2); }
+.vnext .vn-preview__tile-value { font-size: 1.15rem; font-weight: 800; color: var(--vn-text); }
+.vnext .vn-preview__note { margin: 0; color: var(--vn-text-2); font-size: 0.9rem; }
+@media (max-width: 720px) { .vnext .vn-preview__tiles { grid-template-columns: repeat(2, 1fr); } }
+
+.vnext .vn-faq { display: grid; gap: 10px; }
+.vnext .vn-faq__item { border: 1px solid var(--vn-border); border-radius: var(--vn-r-sm); background: var(--vn-card); padding: 14px 16px; }
+.vnext .vn-faq__q { cursor: pointer; font-weight: 700; color: var(--vn-text); list-style: none; display: flex; justify-content: space-between; align-items: center; }
+.vnext .vn-faq__q::after { content: "+"; color: var(--vn-teal); font-weight: 700; margin-left: 12px; }
+.vnext .vn-faq__item[open] .vn-faq__q::after { content: "\2013"; }
+.vnext .vn-faq__q::-webkit-details-marker { display: none; }
+.vnext .vn-faq__a { margin: 10px 0 0; color: var(--vn-text-2); font-size: 0.92rem; line-height: 1.55; }
+
+.vnext .vn-gov-band { display: grid; gap: 8px; border-left: 3px solid var(--vn-teal); }
+.vnext .vn-gov-band__title { margin: 0; color: var(--vn-text); }
+.vnext .vn-gov-band__text { margin: 0; color: var(--vn-text-2); line-height: 1.55; }
+
+/* Transaction history: special-type tag (referral reward, faucet grant, loan). */
+.vnext .vn-tx-type-cell { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.vnext .vn-tx-tag {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.02em;
+  padding: 2px 8px; border-radius: 999px;
+  color: var(--vn-teal-text, #00736a);
+  background: color-mix(in srgb, var(--vn-teal) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--vn-teal) 30%, transparent);
+}
+html:not([data-theme="light"]) .vnext .vn-tx-tag { color: var(--vn-teal); }

@@ -1975,6 +1975,33 @@ def claim_faucet():
         return jsonify({"success": False, "message": str(exc)}), 400
 
 
+@app.post("/faucet/referral-bonus")
+def pay_referral_bonus():
+    try:
+        data = _json_body()
+        referrer_address = _require_public_wallet_address(
+            data.get("referrer_address") or data.get("referrerAddress"), "referrer address"
+        )
+        referred_address = _require_public_wallet_address(
+            data.get("referred_address") or data.get("referredAddress"), "referred address"
+        )
+        result = faucet.referral_bonus(
+            referrer_address=referrer_address,
+            referred_address=referred_address,
+            treasury_balance=treasury.get_treasury_balance(node.blockchain),
+            blockchain=node.blockchain,
+        )
+        storage.save_pending(node.blockchain.pending_transactions)
+        _rebuild_indexes(save=True)
+        return jsonify({"success": True, **result, "message": "Referral bonus submitted as a pending treasury transaction."}), 201
+    except ValueError as exc:
+        vorliq_logger.warning("Referral bonus rejected: %s", exc)
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception as exc:
+        vorliq_logger.error("Referral bonus endpoint failed: %s", exc)
+        return jsonify({"success": False, "message": str(exc)}), 400
+
+
 @app.get("/faucet/claims")
 def get_faucet_claims():
     try:

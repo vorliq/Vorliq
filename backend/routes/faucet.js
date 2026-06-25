@@ -5,6 +5,7 @@ const { handleRouteError } = require("./routeError");
 const { paginationParams } = require("../pagination");
 const { logError } = require("../logger");
 const { validateAddress } = require("../address");
+const { getReferrer, isBonusPaid, markBonusPaid } = require("../referralStore");
 const {
   isIpBanned,
   isWalletBanned,
@@ -75,6 +76,32 @@ router.get("/api/faucet/summary", async (req, res) => {
   }
 });
 
+// Pay the referrer their one-time treasury bonus when a referred wallet makes its
+// first faucet claim. Checks the invite relationship (a wallet only has a
+// referrer if it was recorded through a real invite link), that it is not a
+// self-referral, and that the bonus has not already been paid, then asks Flask to
+// mint the treasury -> referrer transfer and records that it was paid so it can
+// never fire twice. Never throws: the faucet claim has already succeeded and must
+// not be undone by a referral-bonus hiccup.
+async function payReferralBonusIfDue(referredAddress) {
+  try {
+    const referrer = getReferrer(referredAddress);
+    if (!referrer || referrer === referredAddress || isBonusPaid(referredAddress)) return;
+    const resp = await axios.post(
+      `${flaskUrl}/faucet/referral-bonus`,
+      { referrer_address: referrer, referred_address: referredAddress },
+      { validateStatus: () => true }
+    );
+    if (resp.status >= 200 && resp.status < 300 && resp.data?.success === true) {
+      markBonusPaid(referredAddress, resp.data?.tx_id);
+    } else {
+      logError(`Referral bonus not paid for ${referredAddress}: ${resp.data?.message || resp.status}`);
+    }
+  } catch (error) {
+    logError(`Referral bonus error for ${referredAddress}: ${error.message}`);
+  }
+}
+
 router.post("/api/faucet/claim", async (req, res) => {
   try {
     const walletAddress = cleanAddress(req.body?.wallet_address || req.body?.walletAddress);
@@ -123,6 +150,12 @@ router.post("/api/faucet/claim", async (req, res) => {
     // Count only a real disbursement toward the IP distinct-wallet tally.
     if (response.status >= 200 && response.status < 300 && response.data?.success === true) {
       recordFaucetClaim(ip, walletAddress, deviceFp);
+      // Referral reward: if this wallet was invited through a real invite link
+      // (so it has a recorded referrer), pay the referrer a one-time treasury
+      // bonus on this, the referred wallet's first faucet claim. Guarded to fire
+      // once, never for a self-referral, and never if no real referrer exists.
+      // Best-effort: a bonus failure must never fail or roll back the claim.
+      await payReferralBonusIfDue(walletAddress);
     } else if (response.status === 429) {
       // Wallet cooldown / device fingerprint: tell the client when to retry.
       if (!res.get("Retry-After")) res.set("Retry-After", "86400");

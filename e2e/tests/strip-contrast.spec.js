@@ -19,7 +19,12 @@ html[data-theme="light"] .vnext .vn-activity-strip__label { color: var(--vn-teal
 for (const theme of ["dark", "light"]) {
   test(`activity strip is readable in ${theme} mode`, async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await page.evaluate((t) => document.documentElement.setAttribute("data-theme", t), theme);
+    // Drive the theme the way the app persists it (localStorage), then reload so
+    // the app re-applies it on mount — a bare setAttribute is reverted by the
+    // app's own theme effect.
+    await page.evaluate((t) => window.localStorage.setItem("vorliq_theme", t), theme);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme, { timeout: 10_000 });
     if (INJECT) await page.addStyleTag({ content: FIX_CSS });
 
     await expect(page.locator(".vn-activity-strip__item").first()).toBeVisible({ timeout: 25_000 });

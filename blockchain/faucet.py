@@ -69,6 +69,51 @@ class Faucet:
         vorliq_logger.info("Faucet queued %s VLQ for %s with tx %s", amount, wallet_address, transaction.tx_id)
         return claim
 
+    # Referral reward: pay a fixed VLQ bonus from the community treasury to a
+    # referrer when a member they invited makes their first faucet claim. The
+    # caller (the Node backend, which owns the invite relationships) decides
+    # whether a bonus is due — that it is a real, recorded invite, that the
+    # referrer is not the referred wallet, and that it has not already been paid —
+    # so here we only enforce the chain-side invariants: a valid, non-system
+    # referrer that differs from the referred wallet, and a treasury that can
+    # cover it. Mirrors request_claim: an unsigned treasury -> referrer transfer.
+    REFERRAL_BONUS = 5.0
+
+    def referral_bonus(
+        self,
+        referrer_address: str,
+        referred_address: str,
+        treasury_balance: float,
+        blockchain: Any,
+    ) -> dict[str, Any]:
+        referrer_address = self._require_wallet(referrer_address)
+        referred_address = self._require_wallet(referred_address)
+        if referrer_address == referred_address:
+            raise ValueError("a wallet cannot earn a referral bonus for inviting itself")
+        if referrer_address in self.SYSTEM_RECEIVERS:
+            raise ValueError("system-controlled addresses cannot receive a referral bonus")
+        amount = self.REFERRAL_BONUS
+        if float(treasury_balance or 0) < amount:
+            raise ValueError("treasury balance is too low to pay the referral bonus")
+        transaction = Transaction(
+            sender_address=TREASURY_ADDRESS,
+            receiver_address=referrer_address,
+            amount=amount,
+            transaction_type="referral_bonus",
+            category="referral",
+            metadata={
+                "referral_bonus": True,
+                "referred_address": referred_address,
+                "message": f"Referral reward for inviting {referred_address}",
+            },
+        )
+        blockchain.add_pending_transaction(transaction)
+        vorliq_logger.info(
+            "Referral bonus of %s VLQ queued for %s (referred %s) with tx %s",
+            amount, referrer_address, referred_address, transaction.tx_id,
+        )
+        return {"tx_id": transaction.tx_id, "amount": amount, "referrer_address": referrer_address, "referred_address": referred_address}
+
     def sync_claim_statuses(self, blockchain: Any) -> bool:
         tx_lookup = self._confirmed_transaction_lookup(blockchain)
         changed = False

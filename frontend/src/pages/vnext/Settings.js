@@ -822,6 +822,7 @@ function InviteSection({ address }) {
   const link = inviteLinkFor(address);
   const [invited, setInvited] = useState([]);
   const [count, setCount] = useState(0);
+  const [earnings, setEarnings] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -832,6 +833,7 @@ function InviteSection({ address }) {
       .then((res) => {
         setInvited(res.data?.invited || []);
         setCount(res.data?.invited_count || 0);
+        setEarnings(res.data?.earnings || null);
         setError("");
       })
       .catch((err) => {
@@ -846,8 +848,20 @@ function InviteSection({ address }) {
       <h2>Invite members</h2>
       <p className="vn-settings__hint">
         Vorliq grows by word of mouth. Share your personal invite link — anyone who follows it and creates a
-        wallet is recorded as someone you invited. The link works on any device or app.
+        wallet is recorded as someone you invited. When someone you invited makes their first faucet claim, the
+        community treasury sends you a {earnings?.bonus_per_referral ?? 5} VLQ thank-you, on chain.
       </p>
+      {earnings && (
+        <div className="vn-field">
+          <label>Referral earnings</label>
+          <div className="vn-addr-field">
+            <span className="vn-addr-field__value">
+              <strong>{earnings.total_vlq} VLQ</strong> earned
+              {earnings.pending_count > 0 ? ` · ${earnings.pending_count} invited, not yet claimed` : ""}
+            </span>
+          </div>
+        </div>
+      )}
       <div className="vn-field">
         <label>Your invite link</label>
         <div className="vn-addr-field">
