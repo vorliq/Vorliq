@@ -365,7 +365,7 @@ function DashboardPreview({ summary, econ, snapshot, loading }) {
 const FAQS = [
   {
     q: "What is VLQ?",
-    a: "VLQ is the coin of the Vorliq network — a small community blockchain. It has a fixed cap of 21,000,000, is created only by mining on a fixed schedule, and is used inside the community to send value, vote on rules, request and back loans, and tip. It is community software and community credit, not a regulated security or an investment product.",
+    a: "VLQ is the coin of the Vorliq network — a small community blockchain. It has a fixed cap of 21,000,000, is created only by mining on a fixed schedule, and is used inside the community to send value, vote on rules, request and back loans, and tip. It is community software and community credit — not a financial security, and not something you buy to make a profit.",
   },
   {
     q: "Is my money safe?",
