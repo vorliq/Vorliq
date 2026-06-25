@@ -11,9 +11,39 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://vorliq.org/economics</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://vorliq.org/blockchain</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://vorliq.org/leaderboard</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://vorliq.org/community</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://vorliq.org/community-treasury</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://vorliq.org/network-health</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://vorliq.org/forum</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://vorliq.org/vlq</loc>
@@ -36,6 +66,20 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <!-- Public profile directory. Individual member profiles live at
+         /profile/<address> and are crawled from here and from the leaderboard,
+         which links every address; a static sitemap cannot enumerate the
+         unbounded, ever-growing set of member profile URLs. -->
+    <loc>https://vorliq.org/profiles</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://vorliq.org/register</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://vorliq.org/price</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -49,5 +93,15 @@
     <loc>https://vorliq.org/releases</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://vorliq.org/terms</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://vorliq.org/privacy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
 </urlset>

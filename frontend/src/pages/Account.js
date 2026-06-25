@@ -405,11 +405,23 @@ function Account() {
           </div>
           <div className="field">
             <label>Confirmed VLQ Balance</label>
-            <div className="value-box">{loading ? "Loading balance..." : `${addressHistory?.confirmed_balance ?? balance ?? 0} VLQ`}</div>
+            {/* Show the balance the instant the standalone /wallet/balance read
+                returns; do not gate it behind `loading` (the ten-call aggregate),
+                so the first thing a member looks for after signing in is not stuck
+                on "Loading" while nine unrelated reads finish. */}
+            <div className="value-box">
+              {addressHistory?.confirmed_balance != null
+                ? `${addressHistory.confirmed_balance} VLQ`
+                : balance != null
+                ? `${balance} VLQ`
+                : loading
+                ? "Loading balance..."
+                : "0 VLQ"}
+            </div>
           </div>
           <div className="field">
             <label>Current Balance With Pending Pool</label>
-            <div className="value-box">{loading ? "Loading..." : `${balance ?? 0} VLQ`}</div>
+            <div className="value-box">{balance != null ? `${balance} VLQ` : loading ? "Loading..." : "0 VLQ"}</div>
           </div>
           <div className="field">
             <label>Pending Incoming</label>

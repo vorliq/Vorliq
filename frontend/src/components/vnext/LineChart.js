@@ -118,10 +118,12 @@ export default function LineChart({
   const hoverDatum = hover != null ? data[hover] : null;
 
   return (
-    <div className="vn-chart" ref={wrapRef} style={{ height }}>
+    <div className="vn-chart" ref={wrapRef} style={{ height, maxWidth: "100%" }}>
       <svg
-        width={w}
+        width="100%"
         height={height}
+        viewBox={`0 0 ${w} ${height}`}
+        preserveAspectRatio="none"
         role="img"
         aria-label={ariaLabel}
         onMouseMove={handleMove}
