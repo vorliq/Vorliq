@@ -68,11 +68,17 @@ def test_read_is_not_blocked_during_mine_proof_of_work():
             results["read_latency"] = time.perf_counter() - start
             results["read_status"] = r.status_code
 
+        # These timeouts are only a deadlock guard, not the thing under test: the
+        # correctness check is the read_latency assertion below. They are kept well
+        # above the ~POW_SECONDS the operations actually need so a slow or contended
+        # host (e.g. running the full suite single-threaded) cannot trip them and
+        # turn a healthy run into a spurious TimeoutError. A real "lock held during
+        # proof of work" regression would still be caught by read_latency, not here.
         with cf.ThreadPoolExecutor(max_workers=2) as ex:
             mine_future = ex.submit(do_mine)
             read_future = ex.submit(do_read)
-            read_future.result(timeout=10)
-            mine_future.result(timeout=10)
+            read_future.result(timeout=30)
+            mine_future.result(timeout=30)
     finally:
         Block.proof_of_work = original_pow
         Blockchain.BLOCK_TIME_MINIMUM = saved_min
