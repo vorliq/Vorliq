@@ -121,6 +121,14 @@ def test_lone_miner_can_mine_again_after_the_anti_monopoly_gap() -> None:
     to one active miner halts forever and strands every pending transaction (the
     stuck-transaction incident)."""
     blockchain = _fast_chain()  # BLOCK_TIME_MINIMUM = 0
+    # The anti-monopoly gap is measured from the tip block's *construction*
+    # timestamp, which is stamped before proof of work runs. Mine at the lowest
+    # difficulty so proof of work is effectively instant: otherwise, on a slow
+    # host, mining the first block can itself take longer than the few-second
+    # window, pushing the immediate re-mine past the gap and making the rejection
+    # spuriously not fire. A small window keeps the second half (which rewinds the
+    # tip by just over the gap) safely after the ~30s-old genesis block.
+    blockchain.difficulty = 1
     blockchain.SAME_MINER_MIN_GAP = 5
     miner = Wallet().address
 
