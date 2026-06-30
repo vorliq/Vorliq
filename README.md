@@ -125,6 +125,8 @@ See the full guide at https://vorliq.github.io/Vorliq/testing.html.
 
 ## Safety And Operations
 
+See [OPERATIONS.md](OPERATIONS.md) for the production runbook: service management, deployment, health checks, backups, secrets rotation, monitoring, and incident response.
+
 - Do not manually edit chain data, production JSON state, signed snapshots, audit exports, or registry state to hide problems.
 - Do not weaken proof of work, signature validation, signed snapshot verification, peer propagation safety, storage integrity, or wallet safety.
 - Do not commit secrets, private keys, passwords, SSH keys, raw logs, environment dumps, raw IPs, raw user agents, or private operational details.

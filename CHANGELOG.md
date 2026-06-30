@@ -1,6 +1,38 @@
 Vorliq Changelog
 ================
 
+The entries below the "Maintenance" section are the narrative release history
+(0.1.0 through 1.0.0). Post-1.0.0 maintenance is tracked in Keep a Changelog
+style (https://keepachangelog.com).
+
+Maintenance (post-1.0.0)
+------------------------
+
+### Security
+- Resolved 7 transitive backend npm advisories, including high-severity
+  `ws` / `engine.io` / `socket.io-adapter` issues in the production Socket.IO
+  stack (memory disclosure, DoS), plus `qs`, `form-data`, `js-yaml`,
+  `@babel/core`. `npm audit` now reports 0 vulnerabilities. (064409c)
+- Resolved 3 blockchain Python advisories via patch bumps: `cryptography`
+  48.0.0→48.0.1, `idna` 3.14→3.15, `pytest` 9.0.2→9.0.3. `pip-audit` now
+  reports no known vulnerabilities. (4e7ccef)
+- Added `payment=()` to the backend Permissions-Policy response header so the
+  unused Payment Request API is explicitly disabled. (c70b609)
+
+### Fixed
+- Stabilized the anti-monopoly mining test on slow hosts by pinning the test
+  chain to difficulty 1 (deterministic, instant proof of work). Test-only;
+  no consensus change. (cc95b62)
+- Raised the mine-lock concurrency test's deadlock-guard timeouts from 10s to
+  30s so a slow/contended host no longer trips a spurious TimeoutError; the
+  read-latency correctness assertion is unchanged. (2199ba4)
+
+### Documentation
+- Added `OPERATIONS.md`: production runbook covering architecture, service
+  management, deployment/rollback, health checks, env vars, secrets rotation,
+  monitoring, backup/recovery, common operations, and incident response.
+- Linked `OPERATIONS.md` from the README and added this maintenance changelog.
+
 Version 0.1.0: Initial Project Structure
 ----------------------------------------
 
