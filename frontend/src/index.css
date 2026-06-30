@@ -2966,8 +2966,13 @@ html[data-theme="light"] {
   --text-muted: #566373;
   --border: rgba(0, 168, 150, 0.26);
   --border-strong: rgba(0, 168, 150, 0.52);
-  --accent-green: #00a896;
-  --accent-cyan: #00a896;
+  /* Teal accent is darkened from the brand #00a896 for the light theme only:
+     #00a896 text on white is 2.98:1 (fails WCAG AA); #00796b is 5.32:1 (passes).
+     The dark theme keeps #00a896 (6.59:1 on its dark background). The rgba()
+     border/glow tokens below stay at the lighter brand teal — they are subtle
+     surfaces, not text. */
+  --accent-green: #00796b;
+  --accent-cyan: #00796b;
   --accent-blue: #1e6fd9;
   --green: var(--accent-green);
   /* Success fill stays the reserved #56C870 (with dark text). The *-ink text
@@ -2979,7 +2984,7 @@ html[data-theme="light"] {
   --danger: #c82d42;
   --danger-ink: #c82d42;
   --red: #c82d42;
-  --primary: #00a896;
+  --primary: #00796b;
   --primary-soft: rgba(0, 168, 150, 0.12);
   --shadow: 0 18px 54px rgba(36, 75, 110, 0.16);
   --shadow-soft: 0 12px 38px rgba(36, 75, 110, 0.12);
