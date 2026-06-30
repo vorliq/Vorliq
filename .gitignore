@@ -50,3 +50,4 @@ stress_test/results.txt
 Thumbs.db
 .vscode/
 .idea/
+.coverage
