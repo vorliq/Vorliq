@@ -575,3 +575,9 @@ if (require.main === module) {
 }
 
 module.exports = app;
+// Expose the HTTP server and Socket.IO instance for integration tests without
+// changing the default export (supertest consumers keep using the app directly).
+// The server only listens when run as the main module (see the require.main guard
+// above), so attaching these here has no effect on production startup.
+module.exports.server = server;
+module.exports.io = io;
