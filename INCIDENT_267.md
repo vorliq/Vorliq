@@ -177,3 +177,78 @@ healthy and advancing (height rose 7968 → 7986 during this work).
 Item 1 (widened gate) are committed and pushed (`e126ba0`); both are correct and
 remain in place. The remaining work needs an explicit decision (see options in the
 report).**
+
+---
+
+## Update 2026-06-30 (later) — Items 1 & A shipped & correct; root constraint is Item 3
+
+Deploy run `28463630182` (commit `5bdf575`, conditional-restart fix) again failed,
+this time INSIDE "Deploy to production server" at the registry/heartbeat smoke
+tests — `Heartbeat failed: timeout of 8000ms exceeded`, registry endpoints
+returning `UPSTREAM_ERROR`. The widened chain gate passed (node came up:
+`chain_valid:true`, height 7987, uptime 77.6s). The conditional-restart change
+never ran (failure is before the config steps).
+
+These same registry/heartbeat smoke tests PASSED on the prior run (`e126ba0`) and
+FAILED on this one — the failures are INTERMITTENT, moving between time-sensitive
+checks run-to-run.
+
+Decisive observation: at steady state the live node is FAST — `api/diagnostics`
+0.12s, `api/mining/status` 0.30s, `api/registry/summary` 0.08s (all HTTP 200).
+The timeouts occur only in the ~77s+ RESTART-RECOVERY window: after a restart the
+node reloads/validates the full ~8000-block chain and is briefly overloaded, and
+the deploy runs many time-sensitive smoke tests (heartbeat has its own 8s timeout)
+immediately after the cheap `/diagnostics` gate passes — before the node has fully
+stabilised for heavier endpoints.
+
+Conclusion: the two deploy-infra fixes already shipped are correct and each removed
+a real failure mode, but the BINDING CONSTRAINT is now the deferred Item 3 — the
+node's restart-recovery performance on a large chain. Continuing to widen
+individual smoke-test timeouts would be whack-a-mole (and was cautioned against).
+Stopped pushing (each push restarts production and briefly degrades it). Awaiting
+a decision: a targeted deploy warmup (wait for a heavy endpoint, not just
+/diagnostics, before smoke tests) vs. escalating Item 3 (trusted fast-load /
+pruning-checkpointing) — the latter is consensus-adjacent and needs explicit
+sign-off.
+
+Shipped this session: f0cf671 (widen chain gate), e126ba0 (diagnostic gap fix),
+5bdf575 (conditional config-step restarts). All correct; none reverted.
+
+---
+
+## Update 2026-06-30 (later) — Warmup gate (A) works but is insufficient; constraint is Item 3 (Step 4.5 stop)
+
+Deploy run `28466374830` (commit `caf6cef`, the node-warmup gate). The warmup gate
+worked exactly as designed and verified locally:
+`Node warmup: ok 1/3 (200, 337ms) / 2/3 (200, 249ms) / 3/3 (200, 289ms) / ready`.
+It then proceeded to the smoke tests — which STILL failed.
+
+Root of the remaining failure (heartbeat/registry smoke tests):
+`vorliq-heartbeat-once.service` failed repeatedly with
+`Snapshot check skipped before heartbeat: timeout of 8000ms exceeded` and
+`Heartbeat failed: Blockchain service is currently unavailable`, plus a transient
+`Registry registration failed: connect ECONNREFUSED 127.0.0.1:5000`. Registration
+did eventually succeed (`Registered https://node.vorliq.org`), but a registry
+endpoint then returned `UPSTREAM_ERROR` and the active-node assertion failed.
+
+heartbeat.js (read-only inspection): before sending a heartbeat it calls
+`/api/snapshot/verify` (full-chain signed-snapshot verification) and POSTs to
+`/api/registry/register` and `/api/registry/heartbeat`, each with an 8s timeout.
+On the ~8000-block chain those FULL-CHAIN operations (snapshot verify; registry
+ops that touch chain/node state) exceed 8s during the deploy window. The warmup
+probe (`/api/mining/status`, a light node read) is genuinely fast and so cannot
+represent readiness for these heavier operations — exactly the Step 4.5 case
+("the warmup endpoint does not represent full readiness, or there is a different
+intermittent factor"; here, both — the snapshot/registry ops AND a transient
+backend ECONNREFUSED).
+
+Conclusion: the four deploy-infra fixes shipped this session (f0cf671 widen chain
+gate, e126ba0 diagnostic gap fix, 5bdf575 conditional restarts, caf6cef warmup
+gate) are each correct and each removed a real failure mode, but the BINDING
+CONSTRAINT is now squarely the deferred Item 3 — the node is too slow on
+full-chain operations (snapshot verification, registry) during the post-restart
+window on a ~8000-block chain, and the smoke tests' own 8s timeouts (which must
+NOT be widened per directive) cannot be satisfied without addressing that.
+The approved deploy-infra space (A) is EXHAUSTED. Per Step 4.5: STOPPED. No second
+warmup added, no timeout widened. NOT pushing further (each push triggers a deploy
+that restarts and briefly degrades production). Awaiting the Item 3 decision.
