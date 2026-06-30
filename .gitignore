@@ -16,6 +16,12 @@ build/
 dist/
 !sdk/dist/
 !sdk/dist/*.js
+
+# Test coverage output
+coverage/
+
+# Autonomous-loop operator scratchpad (not part of the product)
+/STATE.md
 e2e/playwright-report/
 e2e/playwright-report-local/
 e2e/test-results/
