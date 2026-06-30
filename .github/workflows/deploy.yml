@@ -400,6 +400,44 @@ jobs:
               sudo -u vorliq -H bash -lc 'cd /home/vorliq/app && python3 tools/diagnose_chain_startup.py'
               exit 1
             fi
+            # === Node warmup gate (a distinct phase after the chain-validity gate) ===
+            # The chain-validity gate above only proves the cheap, memoised
+            # /diagnostics endpoint answers. Heavier node-proxied endpoints (registry,
+            # heartbeat, mining status) stay slow through the rest of the ~77s
+            # post-restart recovery window while the node finishes warming up on the
+            # large chain, so the smoke tests below (heartbeat has its own 8s timeout;
+            # the registry active-node checks) intermittently failed when they ran in
+            # that window (see INCIDENT_267.md). Wait here until a representative HEAVY
+            # endpoint is genuinely ready before proceeding. We use mining-status (a
+            # node-proxied read that is heavier than the light registry endpoints, so
+            # once IT is fast the registry/heartbeat checks comfortably succeed) and
+            # require HTTP 200 AND sub-2s latency three times in a row — a 200 that is
+            # still slow during partial warmup does not count. Same ~240s ceiling as
+            # the chain gate (it covers the same recovery window). This changes NO
+            # smoke-test timeout; it only delays the smoke tests until the node is
+            # actually ready, so a later smoke-test failure becomes a real signal.
+            echo "Node warmup: waiting for a heavy endpoint to stabilise before smoke tests..."
+            WARMUP_OK=0; WARMUP_STREAK=0; WARMUP_CODE=000; WARMUP_MS=0
+            WARMUP_URL="http://localhost:5000/api/mining/status"
+            for attempt in $(seq 1 48); do
+              WARMUP_START="$(date +%s%3N)"
+              WARMUP_CODE="$(curl -s -o /dev/null -w '%{http_code}' -m 5 "${WARMUP_URL}" 2>/dev/null || true)"
+              WARMUP_CODE="${WARMUP_CODE:-000}"
+              WARMUP_MS=$(( $(date +%s%3N) - WARMUP_START ))
+              if [ "${WARMUP_CODE}" = "200" ] && [ "${WARMUP_MS}" -lt 2000 ]; then
+                WARMUP_STREAK=$((WARMUP_STREAK + 1))
+                echo "Node warmup: ok ${WARMUP_STREAK}/3 (code=${WARMUP_CODE}, ${WARMUP_MS}ms)"
+                if [ "${WARMUP_STREAK}" -ge 3 ]; then WARMUP_OK=1; break; fi
+              else
+                WARMUP_STREAK=0
+              fi
+              sleep 5
+            done
+            if [ "${WARMUP_OK}" != "1" ]; then
+              echo "::error::Node warmup gate: ${WARMUP_URL} did not stabilise (last code=${WARMUP_CODE}, ${WARMUP_MS}ms) within ~240s. The node is up and the chain is valid, but heavy endpoints are still slow — the restart-recovery performance constraint (deferred Item 3); see INCIDENT_267.md."
+              exit 1
+            fi
+            echo "Node warmup: ready (heavy endpoint responded under 2s three times); proceeding to smoke tests."
             # Chain-disk auto-prune: if chain data on disk exceeds 500MB, trigger a
             # prune to the configured depth so the disk cannot grow without bound.
             # Logged clearly (with ::warning:: annotations) so an operator can see
