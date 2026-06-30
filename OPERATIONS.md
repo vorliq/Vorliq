@@ -325,6 +325,27 @@ cd backend && npm audit
 cd blockchain && .venv/Scripts/python -m pip_audit -r requirements.txt
 ```
 
+### Browser accessibility / responsive audit
+
+Real-browser audit via Playwright (Chromium) over the served build. Bring up the
+full stack, serve the build, then run the audits:
+
+```bash
+# 1. node:5001, backend:5000 up; serve the SPA build on localhost:
+cd e2e && E2E_STATIC_PORT=4178 node static-server.js &
+
+# 2. Per-route viewport overflow (320/375/768/1024/1440px), touch targets, focus:
+cd e2e && AUDIT_BASE=http://127.0.0.1:4178 AUDIT_API=http://localhost:5000/api npm run audit:browser
+
+# 3. Error / empty-state degradation (API intercepted; backend not required):
+cd e2e && AUDIT_BASE=http://127.0.0.1:4178 node browser-state-audit.js
+```
+
+`audit:browser` writes `e2e/audit-results/summary.json` plus failure screenshots
+(gitignored). The app is pointed at the local backend via a `vorliq_node_url`
+localStorage override injected by the script. See `BROWSER_AUDIT_NEEDED.md` for
+the checklist these cover and what still needs a funded wallet.
+
 ---
 
 ## 13. Related documentation

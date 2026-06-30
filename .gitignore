@@ -28,6 +28,7 @@ e2e/test-results/
 e2e/test-results-local/
 e2e/.e2e-data/
 e2e/screenshots/
+e2e/audit-results/
 frontend/public/docs/
 frontend/public/pitch.html
 frontend/public/sdk/

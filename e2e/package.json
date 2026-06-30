@@ -11,6 +11,7 @@
     "e2e:postdeploy": "playwright test tests/ci-production.spec.js tests/post-deploy-readiness.spec.js",
     "e2e:headed": "playwright test --headed",
     "e2e:report": "playwright show-report",
+    "audit:browser": "node browser-audit.js",
     "test": "playwright test"
   },
   "devDependencies": {
