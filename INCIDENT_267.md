@@ -131,3 +131,49 @@ needs the deploy key, which is not available in this environment.
 
 **No remediation (1, 2, or 3) has been implemented. Awaiting explicit
 confirmation before any change.**
+
+---
+
+## Update 2026-06-30 — Item 1 fix result + NEW finding (Step 4.5 stop)
+
+**Item 1 (widened chain gate) worked.** Deploy run `28451038438` (commit
+`e126ba0`) got PAST the chain-readiness gate inside "Deploy to production server"
+(the original failure point) and progressed through every intermediate step to
+the very last one. The original symptom is fixed.
+
+**The failure moved to the final step "Run public production readiness gate"**
+(`tools/check_readiness.js https://vorliq.org`), which reported:
+`FAIL Blockchain/Chain valid, FAIL Network/Public node active, FAIL Mining status,
+FAIL Treasury summary, FAIL Faucet summary` (exit 2).
+
+**Why (refined root cause — same reload wall, a later gate):** after my widened
+gate passes, the deploy restarts `vorliq-blockchain` THREE more times — in
+"Configure transactional email provider" (deploy.yml:537), "Configure community
+lending vote threshold" (562) and "Configure governance quorum" (586). The public
+readiness gate (622) runs immediately after that last restart. Log timing: the
+governance restart finished 14:17:53; the readiness gate then ran until 14:27:45
+(~10 minutes) and still failed — the large-chain node was not fully serving its
+heavier endpoints in that window.
+
+**This is now broader than a deploy-gate timeout and ties to the deferred Item 3.**
+Evidence the node is operationally strained at this chain size (~7986 blocks):
+even now, post-deploy, `https://vorliq.org/api/diagnostics` returns
+`chain_valid:true` (memoised, cheap) while `https://vorliq.org/api/mining/status`
+returns `UPSTREAM_ERROR` ("Blockchain service is currently unavailable") — the
+heavier read endpoints time out through the backend proxy. The chain itself is
+healthy and advancing (height rose 7968 → 7986 during this work).
+
+**Two compounding problems identified, neither fixed (awaiting direction):**
+1. The deploy restarts `vorliq-blockchain` 4× per run (once in the deploy step,
+   then once each in the email/lending/governance config steps) — each forces a
+   full ~8000-block reload. These restarts re-apply env values that rarely change;
+   making them conditional (restart only if the value actually changed) would
+   remove 3 of the 4 reloads per deploy.
+2. The node is slow enough on a ~8000-block chain that heavier endpoints time out
+   even at steady state — this is the deferred Item 3 (startup/runtime performance,
+   pruning/checkpointing) surfacing operationally, arguably no longer safe to defer.
+
+**Per Step 4.5: STOPPED. No further changes made. Item 2 (diagnostic gap fix) and
+Item 1 (widened gate) are committed and pushed (`e126ba0`); both are correct and
+remain in place. The remaining work needs an explicit decision (see options in the
+report).**

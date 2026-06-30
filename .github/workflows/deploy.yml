@@ -524,18 +524,36 @@ jobs:
             set -euo pipefail
             ENVF=/etc/vorliq/backend.env
             touch "${ENVF}"; chmod 600 "${ENVF}"
+            NEW_URL="$(printf '%s' "${U}" | base64 -d)"
+            NEW_KEY="$(printf '%s' "${K}" | base64 -d)"
+            NEW_FROM="$(printf '%s' "${F}" | base64 -d)"
+            NEW_ALERT="$(printf '%s' "${A}" | base64 -d)"
+            OLD_URL="$(sed -n 's/^VORLIQ_EMAIL_API_URL=//p' "${ENVF}" | tail -n1)"
+            OLD_KEY="$(sed -n 's/^VORLIQ_EMAIL_API_KEY=//p' "${ENVF}" | tail -n1)"
+            OLD_FROM="$(sed -n 's/^VORLIQ_EMAIL_FROM=//p' "${ENVF}" | tail -n1)"
+            OLD_ALERT="$(sed -n 's/^VORLIQ_ALERT_EMAIL=//p' "${ENVF}" | tail -n1)"
             TMP="$(mktemp)"
             grep -vE '^(VORLIQ_EMAIL_API_URL|VORLIQ_EMAIL_API_KEY|VORLIQ_EMAIL_FROM|VORLIQ_ALERT_EMAIL)=' "${ENVF}" > "${TMP}" || true
             {
-              printf 'VORLIQ_EMAIL_API_URL=%s\n' "$(printf '%s' "${U}" | base64 -d)"
-              printf 'VORLIQ_EMAIL_API_KEY=%s\n' "$(printf '%s' "${K}" | base64 -d)"
-              printf 'VORLIQ_EMAIL_FROM=%s\n' "$(printf '%s' "${F}" | base64 -d)"
-              printf 'VORLIQ_ALERT_EMAIL=%s\n' "$(printf '%s' "${A}" | base64 -d)"
+              printf 'VORLIQ_EMAIL_API_URL=%s\n' "${NEW_URL}"
+              printf 'VORLIQ_EMAIL_API_KEY=%s\n' "${NEW_KEY}"
+              printf 'VORLIQ_EMAIL_FROM=%s\n' "${NEW_FROM}"
+              printf 'VORLIQ_ALERT_EMAIL=%s\n' "${NEW_ALERT}"
             } >> "${TMP}"
             install -o root -g root -m 600 "${TMP}" "${ENVF}"
             rm -f "${TMP}"
-            systemctl restart vorliq-backend vorliq-blockchain
-            echo "Email provider configured; backend and chain restarted."
+            # Restart only when a value actually changed. A chain restart reloads
+            # and fully re-validates the (large) chain on startup; doing that on
+            # every deploy when nothing changed compounds across the three config
+            # steps below and leaves the node thrashing through the final readiness
+            # gate (see INCIDENT_267.md). Value comparison (not file diff) so it is
+            # order-independent and skips correctly on the very first run.
+            if [ "${OLD_URL}" != "${NEW_URL}" ] || [ "${OLD_KEY}" != "${NEW_KEY}" ] || [ "${OLD_FROM}" != "${NEW_FROM}" ] || [ "${OLD_ALERT}" != "${NEW_ALERT}" ]; then
+              systemctl restart vorliq-backend vorliq-blockchain
+              echo "Email provider configuration changed; backend and chain restarted."
+            else
+              echo "Email provider configuration unchanged; no restart needed."
+            fi
           EOF
 
       - name: Configure community lending vote threshold
@@ -554,13 +572,20 @@ jobs:
             set -euo pipefail
             ENVF=/etc/vorliq/backend.env
             touch "${ENVF}"; chmod 600 "${ENVF}"
+            OLD="$(sed -n 's/^VORLIQ_LENDING_VOTE_THRESHOLD=//p' "${ENVF}" | tail -n1)"
             TMP="$(mktemp)"
             grep -vE '^VORLIQ_LENDING_VOTE_THRESHOLD=' "${ENVF}" > "${TMP}" || true
             printf 'VORLIQ_LENDING_VOTE_THRESHOLD=%s\n' "${T}" >> "${TMP}"
             install -o root -g root -m 600 "${TMP}" "${ENVF}"
             rm -f "${TMP}"
-            systemctl restart vorliq-blockchain
-            echo "Lending vote threshold set to ${T} VLQ; chain restarted."
+            # Restart only on an actual change — avoids a redundant full-chain
+            # reload every deploy (see INCIDENT_267.md).
+            if [ "${OLD}" != "${T}" ]; then
+              systemctl restart vorliq-blockchain
+              echo "Lending vote threshold changed to ${T} VLQ; chain restarted."
+            else
+              echo "Lending vote threshold unchanged (${T} VLQ); no restart needed."
+            fi
           EOF
 
       - name: Configure governance quorum
@@ -578,13 +603,20 @@ jobs:
             set -euo pipefail
             ENVF=/etc/vorliq/backend.env
             touch "${ENVF}"; chmod 600 "${ENVF}"
+            OLD="$(sed -n 's/^VORLIQ_GOVERNANCE_QUORUM=//p' "${ENVF}" | tail -n1)"
             TMP="$(mktemp)"
             grep -vE '^VORLIQ_GOVERNANCE_QUORUM=' "${ENVF}" > "${TMP}" || true
             printf 'VORLIQ_GOVERNANCE_QUORUM=%s\n' "${Q}" >> "${TMP}"
             install -o root -g root -m 600 "${TMP}" "${ENVF}"
             rm -f "${TMP}"
-            systemctl restart vorliq-blockchain
-            echo "Governance quorum set to ${Q} VLQ; chain restarted."
+            # Restart only on an actual change — avoids a redundant full-chain
+            # reload every deploy (see INCIDENT_267.md).
+            if [ "${OLD}" != "${Q}" ]; then
+              systemctl restart vorliq-blockchain
+              echo "Governance quorum changed to ${Q} VLQ; chain restarted."
+            else
+              echo "Governance quorum unchanged (${Q} VLQ); no restart needed."
+            fi
           EOF
 
       - name: Correct nginx Permissions-Policy header
