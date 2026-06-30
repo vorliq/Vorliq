@@ -373,12 +373,27 @@ jobs:
             done
             echo "${HEALTH_RESPONSE}"
             echo "${HEALTH_RESPONSE}" | grep -q '"success":true'
-            for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            # Chain-readiness gate. The blockchain node fully re-validates the
+            # entire chain on startup (O(n) crypto over every block), so after a
+            # service restart it does not answer /diagnostics until that finishes.
+            # The old window was 30s (10x3s). Once the chain reached ~8000 blocks
+            # that startup exceeded 30s, so the gate saw only EMPTY responses (not
+            # chain_valid:false) and false-failed every deploy from 2026-06-29
+            # (see INCIDENT_267.md). Widen to ~240s (48x5s, 8x the old window):
+            # enough headroom for a chain several times larger than today's, while
+            # still failing within ~4 minutes so a genuinely hung node surfaces
+            # quickly rather than hanging the deploy. Tightening the poll interval
+            # would not help — only the ceiling matters. An empty/refused response
+            # is treated as "not ready yet, keep polling"; diagnose_chain_startup.py
+            # runs only AFTER the full window is exhausted, never on a single empty
+            # poll. (Startup-cost reduction is tracked separately — see STATE.md.)
+            BLOCKCHAIN_RESPONSE=""
+            for attempt in $(seq 1 48); do
               BLOCKCHAIN_RESPONSE="$(curl -s http://localhost:5001/diagnostics || true)"
               if echo "${BLOCKCHAIN_RESPONSE}" | grep -q '"chain_valid":true'; then
                 break
               fi
-              sleep 3
+              sleep 5
             done
             echo "${BLOCKCHAIN_RESPONSE}"
             if ! echo "${BLOCKCHAIN_RESPONSE}" | grep -q '"chain_valid":true'; then
