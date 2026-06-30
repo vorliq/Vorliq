@@ -330,7 +330,7 @@ export default function Dashboard() {
           <h2 className="vn-panel-title" style={{ marginTop: 0 }}>Welcome to Vorliq</h2>
           <p style={{ color: "var(--vn-text-2)", margin: "0 0 16px" }}>
             Your wallet is ready but empty. Claim your first VLQ from the community Faucet to start
-            saving, sending, and voting — no mining required.
+            saving, sending, and voting. No mining required.
           </p>
           <Button variant="primary" to="/faucet">
             <Droplets size={18} aria-hidden="true" /> Get your first VLQ

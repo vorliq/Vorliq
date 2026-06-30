@@ -72,7 +72,7 @@ const FEATURES = [
     overline: "Verify everything",
     title: "A blockchain your community can read",
     body:
-      "Every block, balance, and transfer is recorded on Vorliq's own lightweight chain. Open the explorer and confirm activity for yourself at any time — nothing is hidden behind a dashboard.",
+      "Every block, balance, and transfer is recorded on Vorliq's own lightweight chain. Open the explorer and confirm activity for yourself at any time. Nothing is hidden behind a dashboard.",
     link: { label: "Open the explorer", to: "/blockchain" },
     visual: "uptime",
   },
@@ -345,7 +345,7 @@ function DashboardPreview({ summary, econ, snapshot, loading }) {
         <SectionHead
           overline="See inside first"
           title="What you'll see the moment you sign in"
-          subtitle="Your dashboard shows your balance and history alongside the live network — the same public numbers you can see right now, below."
+          subtitle="Your dashboard shows your balance and history alongside the live network, the same public numbers you can see right now, below."
         />
         <Card className="vn-preview" pad>
           <div className="vn-preview__chrome" aria-hidden="true">
@@ -380,19 +380,19 @@ function DashboardPreview({ summary, econ, snapshot, loading }) {
 const FAQS = [
   {
     q: "What is VLQ?",
-    a: "VLQ is the coin of the Vorliq network — a small community blockchain. It has a fixed cap of 21,000,000, is created only by mining on a fixed schedule, and is used inside the community to send value, vote on rules, request and back loans, and tip. It is community software and community credit — not a financial security, and not something you buy to make a profit.",
+    a: "VLQ is the coin of the Vorliq network, a small community blockchain. It has a fixed cap of 21,000,000, is created only by mining on a fixed schedule, and is used inside the community to send value, vote on rules, request and back loans, and tip. It is community software and community credit, not a financial security, and not something you buy to make a profit.",
   },
   {
     q: "Is my money safe?",
-    a: "Your wallet's private key is generated and encrypted on your own device with your password and is never sent to a server — you, and only you, can move your VLQ. Because Vorliq is community money on an open ledger, VLQ has no guaranteed monetary value and is not bank-insured, so treat it as community credit rather than savings you can't afford to lose.",
+    a: "Your wallet's private key is generated and encrypted on your own device with your password and is never sent to a server, so you, and only you, can move your VLQ. Because Vorliq is community money on an open ledger, VLQ has no guaranteed monetary value and is not bank-insured, so treat it as community credit rather than savings you can't afford to lose.",
   },
   {
     q: "How do I get started?",
-    a: "Create a wallet — it takes a few seconds and needs no email. Save your recovery details, then claim your starter VLQ from the faucet. From there you can send, receive, vote, and post, all from the dashboard.",
+    a: "Create a wallet. It takes a few seconds and needs no email. Save your recovery details, then claim your starter VLQ from the faucet. From there you can send, receive, vote, and post, all from the dashboard.",
   },
   {
     q: "What can I actually do here?",
-    a: "Send and receive VLQ, mine blocks, request community loans and vote on others', propose and vote on changes to the network's own rules through governance, post and reply in the forum, and trade peer-to-peer on the exchange — all on the same public chain.",
+    a: "Send and receive VLQ, mine blocks, request community loans and vote on others', propose and vote on changes to the network's own rules through governance, post and reply in the forum, and trade peer-to-peer on the exchange, all on the same public chain.",
   },
   {
     q: "Who else is using this?",
@@ -593,7 +593,7 @@ export default function Landing() {
       if (data.already_subscribed) {
         setNewsletter({ tone: "info", text: "You're already subscribed to Vorliq updates." });
       } else {
-        setNewsletter({ tone: "success", text: "Thanks — you're on the Vorliq list." });
+        setNewsletter({ tone: "success", text: "Thanks, you're on the Vorliq list." });
         setEmail("");
       }
     } catch (err) {
@@ -625,7 +625,7 @@ export default function Landing() {
             Your Rules.
           </h1>
           <p className="vn-hero__sub">
-            Vorliq is a community savings bank built on its own blockchain with the VLQ coin — open,
+            Vorliq is a community savings bank built on its own blockchain with the VLQ coin. It is open,
             verifiable, and owned by its members. It is community software, not a licensed banking service.
           </p>
           <div className="vn-btn-row" style={{ justifyContent: "center" }}>
@@ -659,7 +659,7 @@ export default function Landing() {
           <SectionHead
             overline="The platform"
             title="One community, one transparent system"
-            subtitle="Everything members need to save, move, and govern VLQ together — all verifiable on the same open chain."
+            subtitle="Everything members need to save, move, and govern VLQ together, all verifiable on the same open chain."
           />
           {FEATURES.map((f, i) => (
             <div className={`vn-feature ${i % 2 === 1 ? "vn-feature--reverse" : ""}`} key={f.title}>
@@ -788,7 +788,7 @@ export default function Landing() {
           <SectionHead
             overline="Public & verifiable"
             title="Everything about VLQ is public and verifiable"
-            subtitle="VLQ has a fixed 21,000,000 cap and is created only by mining, on a schedule no one can change. The treasury is funded by 5% of every block's reward and spends only on faucet grants and approved payouts. See the full supply picture, watch the treasury, and check the most active members — all before you ever create a wallet."
+            subtitle="VLQ has a fixed 21,000,000 cap and is created only by mining, on a schedule no one can change. The treasury is funded by 5% of every block's reward and spends only on faucet grants and approved payouts. See the full supply picture, watch the treasury, and check the most active members, all before you ever create a wallet."
           />
           <div className="vn-btn-row">
             <Button variant="primary" size="lg" to="/economics">
@@ -811,8 +811,8 @@ export default function Landing() {
             <span className="vn-overline">You set the rules</span>
             <h3 className="vn-gov-band__title">Members vote on how Vorliq works</h3>
             <p className="vn-gov-band__text">
-              The network's own rules — the mining reward, the block difficulty, lending limits — aren't
-              fixed by us; any member holding VLQ can propose a change, and the community decides by a
+              The network's own rules, like the mining reward, the block difficulty, and lending limits, aren't
+              fixed by us. Any member holding VLQ can propose a change, and the community decides by a
               VLQ-weighted vote. When a proposal passes, the rule is applied to the live chain automatically.
             </p>
             <Link className="vn-link" to="/governance">

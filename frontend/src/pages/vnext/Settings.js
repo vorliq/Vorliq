@@ -238,7 +238,7 @@ function ChangePasswordModal({ onClose }) {
           <p className="vn-settings__hint" style={{ margin: 0 }}>
             Your wallet is now re-encrypted under the new password on this device. The key itself is
             unchanged, so your address and balance stay the same. Any older backup files still use the old
-            password — create a fresh encrypted backup if the old password may be exposed.
+            password, so create a fresh encrypted backup if the old password may be exposed.
           </p>
           <div className="vn-btn-row">
             <Button variant="primary" onClick={onClose}>Done</Button>
@@ -249,7 +249,7 @@ function ChangePasswordModal({ onClose }) {
           <div className="vn-error" role="note" style={{ alignItems: "flex-start" }}>
             <span>
               This re-wraps your existing key under a new password, entirely on this device. Your private key
-              is never sent anywhere and does not change — only the password protecting it. A new password
+              is never sent anywhere and does not change. Only the password protecting it changes. A new password
               does not undo an already-exposed key; if the key itself may be compromised, create a new wallet
               instead.
             </span>
@@ -355,8 +355,8 @@ function NetworkSection() {
       </p>
       <p className="vn-settings__warn">
         Only point this at a node you run or fully trust. A node you connect to can show false balances and
-        transaction confirmations, and can see which addresses you look up. It cannot move your funds — every
-        transaction is still signed on your device — but it can mislead you. Nodes listed in the public registry
+        transaction confirmations, and can see which addresses you look up. It cannot move your funds, because every
+        transaction is still signed on your device, but it can mislead you. Nodes listed in the public registry
         are self-reported and not verified by Vorliq.
       </p>
 
@@ -636,7 +636,7 @@ function NodeOperatorFlow() {
       <h2>Run a node</h2>
       <p className="vn-settings__hint">
         Operate a Vorliq node to help secure and serve the network. Enter your node URL to detect what
-        is left to do — completed steps collapse so you only see what remains.
+        is left to do. Completed steps collapse so you only see what remains.
       </p>
 
       {!isLoggedIn ? (
@@ -789,7 +789,7 @@ function SessionsSection() {
       <h2>Sessions</h2>
       <p className="vn-settings__hint">
         This is the wallet session open in this browser. Vorliq has no server-side login, so there are
-        no other devices to sign out — but you can end this session now, and it will end automatically
+        no other devices to sign out, but you can end this session now, and it will end automatically
         after 30 minutes of inactivity.
       </p>
       <div className="vn-session-grid">
@@ -847,7 +847,7 @@ function InviteSection({ address }) {
     <section className="vn-settings__section">
       <h2>Invite members</h2>
       <p className="vn-settings__hint">
-        Vorliq grows by word of mouth. Share your personal invite link — anyone who follows it and creates a
+        Vorliq grows by word of mouth. Share your personal invite link, and anyone who follows it and creates a
         wallet is recorded as someone you invited. When someone you invited makes their first faucet claim, the
         community treasury sends you a {earnings?.bonus_per_referral ?? 5} VLQ thank-you, on chain.
       </p>
@@ -1000,7 +1000,7 @@ export default function Settings() {
       </Card>
 
       <p className="vn-field__hint" style={{ marginTop: 14, display: "flex", gap: 8, alignItems: "center" }}>
-        <ShieldAlert size={15} aria-hidden="true" /> Keep your password safe — Vorliq cannot reset it or
+        <ShieldAlert size={15} aria-hidden="true" /> Keep your password safe. Vorliq cannot reset it or
         recover your wallet without it.
       </p>
 

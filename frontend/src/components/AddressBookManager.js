@@ -46,12 +46,12 @@ export default function AddressBookManager() {
     setLabel("");
     setAddr("");
     setTone("");
-    setMessage("Added — click Save contacts to store it securely.");
+    setMessage("Added. Click Save contacts to store it securely.");
   }
 
   function removeEntry(address) {
     setEntries(entries.filter((e) => e.address !== address));
-    setMessage("Removed — click Save contacts to apply.");
+    setMessage("Removed. Click Save contacts to apply.");
     setTone("");
   }
 
@@ -91,7 +91,7 @@ export default function AddressBookManager() {
       <p className="help-text">
         Give the addresses you send to often a short name. On the Send page you can then type the name instead
         of pasting a long address. Your contacts are stored only on this device, encrypted with your wallet
-        password — they never leave your browser.
+        password, so they never leave your browser.
       </p>
 
       <div className="admin-list">

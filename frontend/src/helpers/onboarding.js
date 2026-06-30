@@ -27,7 +27,7 @@ export const TOUR_STEPS = [
   {
     id: "explorer",
     title: "See the chain for yourself",
-    body: "Every block and transfer is public. Open the block explorer to watch the chain update and verify your own activity — nothing is hidden behind a login.",
+    body: "Every block and transfer is public. Open the block explorer to watch the chain update and verify your own activity. Nothing is hidden behind a login.",
     cta: "Open the explorer",
     to: "/blockchain",
   },

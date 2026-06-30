@@ -167,7 +167,7 @@ export default function SendForm() {
       {formError && <InlineError message={formError} />}
 
       <div className="vn-field vn-field--recipient">
-        <label htmlFor="vn-recipient">Recipient — address or a saved contact</label>
+        <label htmlFor="vn-recipient">Recipient address or saved contact</label>
         <input
           id="vn-recipient"
           className="vn-input"
@@ -209,7 +209,7 @@ export default function SendForm() {
             {recipientCheck.valid
               ? recipientCheck.looksValid
                 ? "Recipient address looks valid."
-                : "Address is valid but unusual — verify it carefully."
+                : "This address is valid but unusual, so check it carefully."
               : recipientCheck.errors[0]}
           </p>
         )}
@@ -228,7 +228,7 @@ export default function SendForm() {
           placeholder="0.00"
         />
         <p className="vn-field__hint">
-          Estimated network fee: <strong>0 VLQ</strong> — Vorliq does not charge a separate network fee.
+          Estimated network fee: <strong>0 VLQ</strong>. Vorliq does not charge a separate network fee.
           {available != null && Number.isFinite(available) && (
             <> Available to send: {formatVlq(available)}.</>
           )}
@@ -252,7 +252,7 @@ export default function SendForm() {
           placeholder="A note for yourself"
           maxLength={140}
         />
-        <p className="vn-field__hint">Kept on your device only — memos are not recorded on the Vorliq chain.</p>
+        <p className="vn-field__hint">This stays on your device only. Memos are never recorded on the Vorliq chain.</p>
       </div>
 
       <div className="vn-field">
