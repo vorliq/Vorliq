@@ -3570,9 +3570,11 @@ a:focus-visible {
 }
 
 .brand-social-links.compact .social-brand-link {
-  width: 40px;
-  min-width: 40px;
-  min-height: 40px;
+  /* 44x44 keeps these icon-only links at the recommended mobile touch-target
+     size; the smaller glyph (18px) below preserves the compact look. */
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .brand-social-links .social-brand-link svg {
