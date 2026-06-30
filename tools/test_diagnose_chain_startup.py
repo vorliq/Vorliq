@@ -71,3 +71,35 @@ def test_reports_consecutive_miner_violation_by_safe_code_and_index():
     result = evaluate_chain_payload(payload(blockchain))
 
     assert result == {"status": "invalid", "code": "CONSECUTIVE_MINER_VIOLATION", "index": 2}
+
+
+def test_same_miner_after_the_gap_is_not_flagged():
+    # The same miner mining two consecutive blocks is ALLOWED once
+    # SAME_MINER_MIN_GAP seconds have elapsed (the liveness guarantee a lone
+    # miner relies on). The diagnostic must not flag this — it previously did,
+    # falsely failing every healthy single-miner production chain (INCIDENT_267).
+    blockchain = Blockchain()
+    genesis = blockchain.get_latest_block()
+    first = Block(
+        index=1,
+        transactions=[],
+        previous_hash=genesis.hash,
+        timestamp=time.time(),
+        miner_address="example-miner",
+    )
+    first.proof_of_work(blockchain.difficulty)
+    second = Block(
+        index=2,
+        transactions=[],
+        previous_hash=first.hash,
+        # A full gap window (plus one second) after the first: allowed.
+        timestamp=first.timestamp + blockchain.SAME_MINER_MIN_GAP + 1,
+        miner_address="example-miner",
+    )
+    second.proof_of_work(blockchain.difficulty)
+    blockchain.chain.extend([first, second])
+
+    result = evaluate_chain_payload(payload(blockchain))
+
+    assert result.get("code") != "CONSECUTIVE_MINER_VIOLATION"
+    assert result == {"status": "valid", "code": "CHAIN_VALID", "block_count": 3}

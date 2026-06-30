@@ -49,7 +49,19 @@ def evaluate_chain_payload(data: Any) -> dict[str, Any]:
         previous_miner = getattr(previous, "miner_address", None)
         if current_miner and current.timestamp - previous.timestamp < rules.BLOCK_TIME_MINIMUM:
             return {"status": "invalid", "code": "BLOCK_MINIMUM_TIME_VIOLATION", "index": index}
-        if current_miner and previous_miner and current_miner == previous_miner:
+        # The anti-monopoly rule only rejects the SAME miner mining two consecutive
+        # blocks WITHIN the gap window — once SAME_MINER_MIN_GAP seconds have
+        # elapsed the same miner may mine again (this is the liveness guarantee a
+        # lone miner relies on). Match the real rule in Blockchain.is_chain_valid
+        # exactly by reusing rules.SAME_MINER_MIN_GAP, so the two can never drift.
+        # Without this gap condition the diagnostic falsely flagged every healthy
+        # single-miner chain (see INCIDENT_267.md).
+        if (
+            current_miner
+            and previous_miner
+            and current_miner == previous_miner
+            and current.timestamp - previous.timestamp < rules.SAME_MINER_MIN_GAP
+        ):
             return {"status": "invalid", "code": "CONSECUTIVE_MINER_VIOLATION", "index": index}
 
     if not rules._chain_transactions_are_valid(chain):
