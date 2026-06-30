@@ -33,18 +33,18 @@ function statusLabel(status) {
 // node advertising a different wallet, must never read as verified.
 function operatorLabel(node) {
   if (node.operator_verified === true) return "Operator";
-  if (node.operator_probe_match === false) return "Operator (signed claim — probe mismatch, not verified)";
-  if (node.is_verified_operator === true) return "Operator (signed claim — awaiting probe confirmation)";
+  if (node.operator_probe_match === false) return "Operator (signed claim, probe mismatch, not verified)";
+  if (node.is_verified_operator === true) return "Operator (signed claim, awaiting probe confirmation)";
   return "Operator (self-claimed, unverified)";
 }
 
 // Plain-language status of a node's operator claim, for the Verify Operator panel.
 function operatorStatusText(node) {
-  if (!node.operator_wallet_address) return "No operator claim yet — this node can be claimed.";
-  if (node.operator_verified === true) return "Verified operator — signed claim confirmed by an independent probe of the node.";
-  if (node.operator_probe_match === false) return "Signed claim present, but the node advertises a different wallet — not verified.";
-  if (node.is_verified_operator === true) return "Signed claim recorded — awaiting a probe that confirms the node advertises this wallet.";
-  return "Self-reported only — no signed claim.";
+  if (!node.operator_wallet_address) return "No operator claim yet. This node can be claimed.";
+  if (node.operator_verified === true) return "Verified operator. The signed claim is confirmed by an independent probe of the node.";
+  if (node.operator_probe_match === false) return "Signed claim present, but the node advertises a different wallet, so it is not verified.";
+  if (node.is_verified_operator === true) return "Signed claim recorded, awaiting a probe that confirms the node advertises this wallet.";
+  return "Self-reported only, with no signed claim.";
 }
 
 function statusClass(status) {
@@ -178,7 +178,7 @@ function Registry() {
       return;
     }
     if (!isLoggedIn) {
-      setOperatorError("Log in to your wallet first — claims are signed locally by your connected wallet.");
+      setOperatorError("Log in to your wallet first. Claims are signed locally by your connected wallet.");
       return;
     }
     if (!operatorForm.password) {
@@ -322,7 +322,7 @@ function Registry() {
           Reliability, uptime, sync status, chain height, and the operator address are reported by each node
           itself and are not independently verified by Vorliq. Treat this list as unverified claims, not a trust
           ranking. Before pointing your wallet at any node in Settings, only use nodes you operate or fully
-          trust — a node you connect to can show false balances and confirmations and can see your activity.
+          trust. A node you connect to can show false balances and confirmations and can see your activity.
         </p>
       </div>
 
@@ -565,12 +565,12 @@ function Registry() {
         <section className="card card-pad stack">
           <div className="section-title">
             <h2>Verify Operator</h2>
-            <span className="eyebrow">Prove the wallet that runs a node — and earn the verified badge</span>
+            <span className="eyebrow">Prove the wallet that runs a node, and earn the verified badge</span>
           </div>
 
           <p className="meta-value">
             An operator claim is a signed statement that the wallet you control runs a specific node. You sign
-            it locally with your wallet password — your private key never leaves your device, only the signed
+            it locally with your wallet password. Your private key never leaves your device, only the signed
             statement is sent. The claim becomes a <strong>Verified operator</strong> badge only after the
             registry independently probes your node and confirms it advertises this same wallet. Once verified,
             only the holding wallet can release or change the claim.
@@ -580,7 +580,7 @@ function Registry() {
             <div>
               <span className="meta-label">Connected wallet</span>
               <span className="meta-value hash-text">
-                {isLoggedIn ? wallet.address : "Not connected — log in to sign a claim"}
+                {isLoggedIn ? wallet.address : "Not connected. Log in to sign a claim"}
               </span>
             </div>
           </div>

@@ -397,7 +397,7 @@ function RestoreWalletCard({ importMode, onModeChange, backupProps, privateKeyPr
         <h2>Import a wallet</h2>
         <p className="help-text">
           Restore an encrypted backup file, or sign in by pasting your private key. Both methods
-          run entirely in this browser — nothing is sent to Vorliq.
+          run entirely in this browser. Nothing is sent to Vorliq.
         </p>
       </div>
       <div className="button-row" role="tablist" aria-label="Import method">
@@ -485,7 +485,7 @@ function PrivateKeyImportForm({
           <p>
             <code>{pkNoRecord.address}</code> hasn&apos;t appeared on the Vorliq chain yet. That is
             normal if you are importing a wallet that predates this chain, or one you intend to use
-            to receive funds for the first time. You can sign in anyway — your balance will show
+            to receive funds for the first time. You can sign in anyway, and your balance will show
             once the wallet has activity.
           </p>
         </div>

@@ -80,14 +80,14 @@ function Whitepaper() {
           <p>
             A Vorliq wallet is a SECP256K1 key pair. When you create a wallet, the private key is
             generated and encrypted on your own device with your password and is never sent to a
-            server — Vorliq stores no custody of your funds and cannot move them for you. Your
+            server, so Vorliq holds no custody of your funds and cannot move them for you. Your
             public address is derived from the key, and every transaction you make is signed
             locally with your private key before it is broadcast, so the network can verify it came
             from you without ever seeing your secret. If you lose your key and password, no one can
             recover the wallet for you; this is the trade-off of holding your own keys.
           </p>
           <p>
-            Sensitive actions beyond a plain transfer — opening a loan, voting, posting — are
+            Sensitive actions beyond a plain transfer, like opening a loan, voting, or posting, are
             wrapped in a signed authorization envelope, so the chain can confirm the action was
             authorized by the wallet that owns the address, not merely submitted in its name.
           </p>

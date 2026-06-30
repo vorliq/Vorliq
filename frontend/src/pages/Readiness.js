@@ -229,7 +229,7 @@ function Readiness() {
             {nodeMonitor && (nodeMonitor.active_node_count ?? 0) <= 1 && (
               <p className="help-text">
                 Vorliq is running as a single public node right now, with no external peers
-                connected — a normal operating state for this phase, not a fault. "No external peer"
+                connected, which is a normal operating state for this phase, not a fault. "No external peer"
                 means no second public node is currently syncing.
               </p>
             )}

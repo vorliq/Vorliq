@@ -73,8 +73,8 @@ function Privacy() {
 
       <Section id="summary" eyebrow="In short" title="The short version">
         <p>
-          Vorliq is built on a public blockchain, so some of your activity — your wallet address and
-          the transactions, posts, and votes attached to it — is public and permanent by design. That
+          Vorliq is built on a public blockchain, so some of your activity, like your wallet address and
+          the transactions, posts, and votes attached to it, is public and permanent by design. That
           is what makes the chain transparent and verifiable. Everything that is not part of the public
           chain, such as your notification email address, is collected only when you choose to provide
           it, is used only to provide the feature you asked for, and is never sold or shared for

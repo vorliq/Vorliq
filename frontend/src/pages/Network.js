@@ -267,7 +267,7 @@ function Network() {
           <div className="empty-state">
             The public network view is not yet available. Vorliq could not reach the public node,
             registry, and snapshot services from here right now, so there is nothing verified to
-            show. This page never fills in placeholder network numbers — it stays empty until real
+            show. This page never fills in placeholder network numbers. It stays empty until real
             status data comes back, and it refreshes on its own every few seconds.
           </div>
           <div className="hero-actions">
@@ -288,7 +288,7 @@ function Network() {
         {runningSingleNode && (
           <p className="help-text">
             Vorliq is running as a single public node right now. It is active and serving a valid
-            chain, with no external peers currently connected — a normal operating state for this
+            chain, with no external peers currently connected, which is a normal operating state for this
             phase, not a fault. The counts below include this node itself.
             {hasInactiveRegisteredNode
               ? " One other node is registered but inactive and not currently syncing."

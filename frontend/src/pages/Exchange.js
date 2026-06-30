@@ -312,17 +312,17 @@ function Exchange() {
 
       <section className="card card-pad stack elev-2 feature-intro">
         <span className="eyebrow">New here?</span>
-        <h2>What an exchange is — and how it differs from just sending VLQ</h2>
+        <h2>What an exchange is, and how it differs from just sending VLQ</h2>
         <p className="feature-intro-lead">
-          A plain <Link to="/send">Send</Link> moves VLQ one way, with nothing expected back — a gift or a
+          A plain <Link to="/send">Send</Link> moves VLQ one way, with nothing expected back, like a gift or a
           payment. An exchange is a two-sided deal: you post what you'll give and what you want in return,
           and another member takes you up on it.
         </p>
         <ul className="feature-intro-points">
           <li><strong>How is it different from Send?</strong> Send has no strings attached. An exchange is an agreement between two people, where you each do your part.</li>
-          <li><strong>What can I trade?</strong> VLQ for goods, services, community help, or any terms you both agree on — you describe the deal in your own words.</li>
+          <li><strong>What can I trade?</strong> VLQ for goods, services, community help, or any terms you both agree on. You describe the deal in your own words.</li>
           <li><strong>How does it actually work?</strong> You post a request, another member accepts it, you coordinate, and you both confirm when it's done. The VLQ settles on-chain like any transfer.</li>
-          <li><strong>Why use it?</strong> To put VLQ to work — trade it for things you want, or offer something and earn VLQ — instead of only holding or sending it.</li>
+          <li><strong>Why use it?</strong> To put VLQ to work. Trade it for things you want, or offer something and earn VLQ, instead of only holding or sending it.</li>
         </ul>
         <div className="button-row">
           <button className="button" type="button" onClick={() => setActiveTab("post")}>Post a request</button>
@@ -341,14 +341,14 @@ function Exchange() {
         <ol className="exchange-steps">
           <li><strong>Post or accept a request.</strong> One member offers or requests VLQ in exchange for something agreed off-chain (goods, services, support). Another member accepts it.</li>
           <li><strong>Send the VLQ.</strong> Whoever is sending VLQ sends it from the Send page, then records the transaction ID here so both sides can track it.</li>
-          <li><strong>Wait for confirmation.</strong> The VLQ transaction confirms on the chain automatically — you do not need to refresh.</li>
+          <li><strong>Wait for confirmation.</strong> The VLQ transaction confirms on the chain automatically, so you do not need to refresh.</li>
           <li><strong>Both sides confirm completion.</strong> Once the off-chain part of the deal is done, each member confirms. If something goes wrong, either side can open a dispute or cancel an open request.</li>
         </ol>
         <div className="exchange-signing-note">
           <strong>Why Vorliq asks for your password at each step</strong>
           <p>
-            Every exchange action — posting, accepting, recording the VLQ transaction, confirming, or
-            disputing — is signed by your wallet so the network can prove it really came from you, and
+            Every exchange action, whether posting, accepting, recording the VLQ transaction, confirming, or
+            disputing, is signed by your wallet so the network can prove it really came from you, and
             nobody can act in your name. Your password unlocks your wallet in this browser just long
             enough to sign. It never leaves your device, and Vorliq never sees it or your private key.
           </p>
@@ -524,7 +524,7 @@ function OfferGrid({ acceptPasswords, actionId, offers, onAccept, setAcceptPassw
   if (offers.length === 0) {
     return (
       <div className="empty-state">
-        No open requests right now — this is a chance to set the terms. Post the first one from the{" "}
+        No open requests right now, so this is a chance to set the terms. Post the first one from the{" "}
         <strong>Post Request</strong> tab above: offer some VLQ for something you want, or offer a skill in
         return for VLQ, and describe the deal in your own words.
       </div>
@@ -773,20 +773,20 @@ function lifecycleGuidance(offer, role) {
       if (role === "creator") {
         return {
           tone: "wait",
-          headline: "Open — waiting for someone to accept",
+          headline: "Open, waiting for someone to accept",
           detail: "Your request is live for the community. You can cancel it any time while it is still open.",
         };
       }
       return {
         tone: "action",
-        headline: "Open — you can accept this",
+        headline: "Open, and you can accept this",
         detail: "Accepting commits you to coordinate with the creator. You sign with your wallet, then follow the steps to send or receive the VLQ.",
       };
     case "accepted":
       if (youSend) {
         return {
           tone: "action",
-          headline: "Your turn — send the VLQ",
+          headline: "Your turn to send the VLQ",
           detail: `Send ${formatNumber(offer.amount)} VLQ from the Send page to ${otherParty}, then paste the transaction ID below to record it.`,
         };
       }
@@ -798,13 +798,13 @@ function lifecycleGuidance(offer, role) {
     case "vlq_pending":
       return {
         tone: "wait",
-        headline: "VLQ sent — waiting to confirm",
+        headline: "VLQ sent, waiting to confirm",
         detail: "The VLQ transaction is recorded and confirming on the chain. It moves on automatically once it is included in a block.",
       };
     case "vlq_confirmed":
       return {
         tone: "action",
-        headline: "VLQ confirmed — finish your side, then confirm",
+        headline: "VLQ confirmed, finish your side, then confirm",
         detail: "The VLQ has arrived and is confirmed on-chain. Once you have completed the off-chain part of the deal, confirm completion. Both sides must confirm.",
       };
     case "completed":

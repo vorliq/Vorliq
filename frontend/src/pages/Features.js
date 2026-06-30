@@ -21,7 +21,7 @@ const pillars = [
   {
     title: "Community",
     body:
-      "Vorliq is built for real communities saving toward shared goals — transparent records, open governance, and lending decided together.",
+      "Vorliq is built for real communities saving toward shared goals, with transparent records, open governance, and lending decided together.",
   },
   {
     title: "Governance",

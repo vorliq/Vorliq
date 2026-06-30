@@ -61,7 +61,7 @@ export default function Economics() {
         <span className="eyebrow">Honest &amp; verifiable</span>
         <h1>VLQ economics</h1>
         <p className="subtitle">
-          VLQ is the community currency of Vorliq. It isn&apos;t pre-mined or sold — every coin is created by
+          VLQ is the community currency of Vorliq. It isn&apos;t pre-mined or sold. Every coin is created by
           mining a block, on a fixed and public schedule that can never be changed by anyone. Here is exactly
           how much exists, how it&apos;s made, and where it&apos;s headed. Check any figure in the{" "}
           <Link to="/blockchain">block explorer</Link>.
@@ -74,11 +74,11 @@ export default function Economics() {
         <>
           <section className="card card-pad stack">
             <div className="grid meta-grid">
-              <Stat label="Maximum supply (ever)" value={`${fmt(data.maximum_supply, 0)} VLQ`} sub="A hard cap — no more will ever exist." />
+              <Stat label="Maximum supply (ever)" value={`${fmt(data.maximum_supply, 0)} VLQ`} sub="A hard cap. No more will ever exist." />
               <Stat label="Issued so far" value={`${fmt(data.total_issued)} VLQ`} sub={`${fmt(data.percent_issued, 4)}% of the cap`} />
               <Stat label="Still to be issued" value={`${fmt(data.remaining_to_issue, 0)} VLQ`} sub="Released gradually through mining." />
               <Stat label="Current block reward" value={`${fmt(data.current_mining_reward)} VLQ`} sub={`${fmt(data.miner_reward_per_block)} to the miner, ${fmt(data.treasury_reward_per_block)} to the treasury`} />
-              <Stat label="Treasury cut" value={`${fmt(data.treasury_percentage * 100)}%`} sub={<>of every reward — see the <Link to="/community-treasury">community treasury</Link>.</>} />
+              <Stat label="Treasury cut" value={`${fmt(data.treasury_percentage * 100)}%`} sub={<>of every reward. See the <Link to="/community-treasury">community treasury</Link>.</>} />
               <Stat label="Next halving" value={`block #${fmt(data.next_halving_block, 0)}`} sub={`~${fmt(data.blocks_until_halving, 0)} blocks away · est. ${fmtDate(data.estimated_next_halving_at)}`} />
             </div>
             <p className="help-text">
@@ -91,7 +91,7 @@ export default function Economics() {
             <h2>Supply over time, projected to the cap</h2>
             <p className="help-text">
               Each &quot;halving&quot; cuts the block reward in half every {fmt(data.halving_interval, 0)} blocks, so new VLQ
-              slows down over time and the total approaches — but never exceeds — {fmt(data.maximum_supply, 0)} VLQ.
+              slows down over time and the total approaches, but never exceeds, {fmt(data.maximum_supply, 0)} VLQ.
               Today we are at the very start of the curve.
             </p>
             {chartData.length > 1 ? (
@@ -126,7 +126,7 @@ export default function Economics() {
               </table>
             </div>
             <p className="help-text">
-              These numbers come straight from the protocol — verify the issued total and reward yourself on the{" "}
+              These numbers come straight from the protocol. Verify the issued total and reward yourself on the{" "}
               <Link to="/blockchain">block explorer</Link>.
             </p>
           </section>

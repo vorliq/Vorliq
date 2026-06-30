@@ -70,7 +70,7 @@ function Chat() {
       setJoining(false);
       setJoinError("");
       setJoinPassword("");
-      toast.success("Wallet verified — you can chat now.");
+      toast.success("Wallet verified. You can chat now.");
     });
     socket.on("chat_error", (payload) => {
       // While not yet joined, a chat_error is a join failure; surface it inline.

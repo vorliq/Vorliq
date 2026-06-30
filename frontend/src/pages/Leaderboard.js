@@ -80,7 +80,7 @@ function Leaderboard() {
         <span className="eyebrow">Community Leaders</span>
         <h1>Leaderboard</h1>
         <p className="subtitle">
-          Real addresses doing real things on Vorliq — the most active wallets by transaction count, the top
+          Real addresses doing real things on Vorliq: the most active wallets by transaction count, the top
           miners by blocks mined, and the top lenders by VLQ lent to the community. No account needed; this
           page refreshes every five minutes.
         </p>

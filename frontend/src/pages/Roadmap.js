@@ -145,8 +145,8 @@ function Roadmap() {
           <section className="card card-pad">
             <h2>Propose what comes next</h2>
             <p>
-              This roadmap is what the maintainers are building. The network&apos;s own rules — the
-              mining reward, block difficulty, lending limits — are not fixed by us: any member
+              This roadmap is what the maintainers are building. The network&apos;s own rules, like the
+              mining reward, block difficulty, and lending limits, are not fixed by us. Any member
               holding VLQ can propose a change, and the community decides by a VLQ-weighted vote.
               If you want something on this list, that is where it starts.
             </p>

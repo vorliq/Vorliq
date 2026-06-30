@@ -78,7 +78,7 @@ export default function CommunityTreasury() {
         <span className="eyebrow">Public &amp; verifiable</span>
         <h1>The community treasury</h1>
         <p className="subtitle">
-          The Vorliq treasury is funded automatically — 5% of every block&apos;s mining reward flows in — and
+          The Vorliq treasury is funded automatically, with 5% of every block&apos;s mining reward flowing in, and
           it spends only on faucet starter VLQ for new members and community-approved grants. Every number on
           this page comes straight from the chain, with nothing to sign in for. Check any of it yourself in the{" "}
           <Link to="/blockchain">block explorer</Link>, or see the full{" "}
@@ -113,7 +113,7 @@ export default function CommunityTreasury() {
                 formatX={(value) => (value > 1e9 ? new Date(value * 1000).toLocaleDateString() : `#${value}`)}
               />
             ) : (
-              <div className="empty-state">Not enough history yet to chart — check back after a few more blocks.</div>
+              <div className="empty-state">Not enough history yet to chart. Check back after a few more blocks.</div>
             )}
           </section>
 
@@ -125,7 +125,7 @@ export default function CommunityTreasury() {
             </section>
             <section className="card card-pad stack">
               <h2>Recent outflows (grants &amp; faucet)</h2>
-              <p className="help-text">VLQ the community has spent — faucet starter grants and approved payouts.</p>
+              <p className="help-text">VLQ the community has spent on faucet starter grants and approved payouts.</p>
               <FlowList flows={data.recent_outflows} sign="−" fallbackKind="payout" />
             </section>
           </div>

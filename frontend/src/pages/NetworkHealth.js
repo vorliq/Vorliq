@@ -75,7 +75,7 @@ function NetworkHealth() {
         <span className="eyebrow">Network Status</span>
         <h1>Network Health</h1>
         <p className="subtitle">
-          A live, public view of the Vorliq network — no account needed. This page refreshes every 30 seconds.
+          A live, public view of the Vorliq network, no account needed. This page refreshes every 30 seconds.
           Uptime is measured from the operator monitoring log over the last 30 days.
         </p>
       </section>

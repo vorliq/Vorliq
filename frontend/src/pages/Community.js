@@ -107,7 +107,7 @@ function Community() {
         <span className="eyebrow">Community Statistics</span>
         <h1>The Vorliq network at a glance</h1>
         <p className="subtitle">
-          Live, public network activity — no account required. These figures refresh every 30 seconds
+          Live, public network activity, no account required. These figures refresh every 30 seconds
           and come straight from the blockchain, so anyone can verify the network is real and active.
         </p>
         <p className="help-text">

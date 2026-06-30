@@ -369,14 +369,14 @@ function Forum() {
         <span className="eyebrow">New here?</span>
         <h2>The forum is where the community thinks out loud</h2>
         <p className="feature-intro-lead">
-          This is Vorliq's public square — where members ask questions, share ideas, and shape where the
+          This is Vorliq's public square, where members ask questions, share ideas, and shape where the
           project goes. You don't need to be an expert, and you don't need a big announcement: a good first
           post is simply a question or a hello.
         </p>
         <ul className="feature-intro-points">
           <li><strong>Not sure what to say?</strong> Introduce yourself, ask how something works, suggest something you'd like built, or share what you're working on.</li>
           <li><strong>Who will see it?</strong> Every member. Helpful posts get upvoted, and the community can feature the best ones at the top.</li>
-          <li><strong>Why bother?</strong> This is how ideas turn into action — most governance proposals start life as a forum post, and posting is how people get to know you here.</li>
+          <li><strong>Why bother?</strong> This is how ideas turn into action. Most governance proposals start life as a forum post, and posting is how people get to know you here.</li>
         </ul>
         <div className="button-row">
           {isLoggedIn ? (
@@ -497,10 +497,10 @@ function Forum() {
           ) : displayedPosts.length === 0 ? (
             <div className="empty-state">
               {activeTab === "featured" ? (
-                "No featured posts yet — when the community upvotes a great post, it can be featured here."
+                "No featured posts yet. When the community upvotes a great post, it can be featured here."
               ) : (
                 <>
-                  No posts yet — this space is waiting for its first voice.{" "}
+                  No posts yet. This space is waiting for its first voice.{" "}
                   {isLoggedIn ? (
                     <a className="text-button" href="#create-post">Start the first discussion</a>
                   ) : (

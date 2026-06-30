@@ -1233,7 +1233,7 @@ function RegistryLifecycleTab({ lifecycle, form, setForm, onLoad, onAction }) {
       <h2>Registered nodes</h2>
       <p className="help-text">
         Operator <strong>Verified</strong> means a signed operator claim AND an independent probe that
-        confirmed the node advertises that same wallet — not just a self-reported claim. Reachability and
+        confirmed the node advertises that same wallet, not just a self-reported claim. Reachability and
         sync come from the latest independent probe.
       </p>
       <div className="table-wrap">
