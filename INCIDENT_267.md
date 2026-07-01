@@ -294,3 +294,18 @@ the stored git token was disallowed), so the restart-recovery window on each
 subsequent deploy is being used as the direct proxy for what the smoke tests gate on.
 Item 3 Part B (non-blocking startup) remains NOT started; if pruning alone makes the
 smoke tests pass, it closes without B.
+
+## Resolution confirmed — INCIDENT_267 CLOSED (2026-07-01)
+
+Three consecutive deploy CI runs passed the smoke-test job (confirmed by the human):
+
+- Run 1: **28451038438** — green
+- Run 2: **28463630182** — green
+- Run 3: **28466374830** — green
+
+Count-based pruning alone resolved the incident: the smoke tests now pass reliably
+because the node boots the pruned ~5000-block chain and serves heavy endpoints well
+inside their 8s timeouts. **Part B (non-blocking startup) is closed — pruning alone
+was sufficient; it was never started and needs no further work** unless a future
+regression reopens the startup-time symptom. The Item 3 runway concern is closed (see
+ITEM3_INVESTIGATION.md): pruning permanently bounds startup validation to O(5000).

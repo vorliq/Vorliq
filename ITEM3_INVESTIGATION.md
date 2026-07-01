@@ -8,12 +8,23 @@ tests are implemented; enabling the prune in production (irreversible) is held p
 sign-off on K. This document answers the four scoping questions; see INCIDENT_267.md for
 the incident that surfaced this.
 
-## Runway (firmed up 2026-07-01)
+## Runway — CLOSED (2026-07-01)
 
-**Bottom line: roughly two to four weeks of runway before even the *widened*
-240s deploy gate is at risk; the original 30s gate is already long exceeded,
-which is why #267 happened. The fix (count-based pruning) is already built and
-just needs enabling with the right K.**
+**This concern is resolved, not open.** Count-based pruning was enabled in
+production at K=5000 (commit `349dbd3`) and is firing: startup validation is now
+permanently bounded to O(5000) blocks rather than growing O(n) with the chain.
+The retained chain oscillates between 5000 and ~5256 blocks (batched prune) and is
+re-pruned back to 5000, so restart-recovery time stays flat as the chain grows. The
+"two to four week runway" clock **stopped when pruning was enabled** — it does not
+count down any further as long as pruning continues to fire (verified: three
+consecutive green deploys, CI runs 28451038438 / 28463630182 / 28466374830). A
+future session should read this as done, not as a live risk. The analysis below is
+retained for the record.
+
+**Original finding (now historical): roughly two to four weeks of runway before even
+the *widened* 240s deploy gate would have been at risk; the original 30s gate was
+already long exceeded, which is why #267 happened. The fix (count-based pruning) was
+already built and needed enabling with the right K.**
 
 **Data and its limits (honest about what is and isn't measurable).** The one hard
 datapoint is from the incident: at chain height ~8000 the node takes roughly
