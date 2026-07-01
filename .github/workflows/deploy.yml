@@ -152,6 +152,46 @@ jobs:
               sed -i '/^Environment=VORLIQ_DATA_DIR=/a Environment=VORLIQ_MINING_ENABLED=true' /etc/systemd/system/vorliq-blockchain.service
               systemctl daemon-reload
             fi
+            # === Count-based chain pruning (Item 3 / INCIDENT_267) ===
+            # Startup fully re-validates the chain (O(n) crypto), so restart-recovery
+            # time grows with block count and eventually exceeds the deploy gates.
+            # Pruning keeps the most recent K blocks behind a balance-bearing,
+            # cryptographically-committed prune point, bounding startup to O(K).
+            # Balances/supply/validity are preserved; individual pre-prune blocks are
+            # NOT (they return a clear 410). K=5000 targets <60s startup validation.
+            #
+            # Recovery path for this IRREVERSIBLE step: before pruning is ever enabled,
+            # snapshot the complete chain exactly once. Runs before the restart below
+            # while chain.json on disk is still whole. Guarded so a later, already-pruned
+            # chain can never overwrite the full backup. To undo pruning: stop the node,
+            # restore chain.json.preprune-backup, set VORLIQ_CHAIN_PRUNE_ENABLED=false.
+            BC_DATA_DIR="$(sed -n 's/^Environment=VORLIQ_DATA_DIR=//p' /etc/systemd/system/vorliq-blockchain.service | head -n1)"
+            if [ -n "${BC_DATA_DIR}" ] && [ -f "${BC_DATA_DIR}/chain.json" ] && [ ! -f "${BC_DATA_DIR}/chain.json.preprune-backup" ]; then
+              cp -p "${BC_DATA_DIR}/chain.json" "${BC_DATA_DIR}/chain.json.preprune-backup"
+              if [ -f "${BC_DATA_DIR}/blocks.log" ]; then
+                cp -p "${BC_DATA_DIR}/blocks.log" "${BC_DATA_DIR}/blocks.log.preprune-backup"
+              fi
+              chown vorliq:vorliq "${BC_DATA_DIR}/chain.json.preprune-backup" "${BC_DATA_DIR}/blocks.log.preprune-backup" 2>/dev/null || true
+              echo "Pre-prune full chain backed up to ${BC_DATA_DIR}/chain.json.preprune-backup"
+            fi
+            # Enable pruning and set K=5000, idempotently (flip an existing value or
+            # insert if missing). The unconditional restart below picks up the change.
+            if ! grep -q '^Environment=VORLIQ_CHAIN_PRUNE_ENABLED=true' /etc/systemd/system/vorliq-blockchain.service; then
+              if grep -q '^Environment=VORLIQ_CHAIN_PRUNE_ENABLED=' /etc/systemd/system/vorliq-blockchain.service; then
+                sed -i 's#^Environment=VORLIQ_CHAIN_PRUNE_ENABLED=.*#Environment=VORLIQ_CHAIN_PRUNE_ENABLED=true#' /etc/systemd/system/vorliq-blockchain.service
+              else
+                sed -i '/^Environment=VORLIQ_DATA_DIR=/a Environment=VORLIQ_CHAIN_PRUNE_ENABLED=true' /etc/systemd/system/vorliq-blockchain.service
+              fi
+              systemctl daemon-reload
+            fi
+            if ! grep -q '^Environment=VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS=5000' /etc/systemd/system/vorliq-blockchain.service; then
+              if grep -q '^Environment=VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS=' /etc/systemd/system/vorliq-blockchain.service; then
+                sed -i 's#^Environment=VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS=.*#Environment=VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS=5000#' /etc/systemd/system/vorliq-blockchain.service
+              else
+                sed -i '/^Environment=VORLIQ_DATA_DIR=/a Environment=VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS=5000' /etc/systemd/system/vorliq-blockchain.service
+              fi
+              systemctl daemon-reload
+            fi
             if ! grep -q '^Environment=HOST=127.0.0.1' /etc/systemd/system/vorliq-backend.service; then
               sed -i '/^Environment=PORT=5000/a Environment=HOST=127.0.0.1' /etc/systemd/system/vorliq-backend.service
               systemctl daemon-reload
