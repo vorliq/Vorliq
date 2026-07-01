@@ -1,27 +1,60 @@
 # Item 3 Investigation — Node Restart-Recovery Performance
 
-Read-only investigation, 2026-06-30. No code or config changed. No implementation.
-This document answers the four scoping questions and recommends an approach for
-sign-off. See INCIDENT_267.md for the incident that surfaced this.
+Investigation: 2026-06-30 (read-only). Updated 2026-07-01 with the firmed-up runway,
+two factual corrections found while reading the code (the auto-prune is already
+count-based, not disk-based; the snapshot archive is balance-only, not per-block), and
+the A.3 verification results. As of 2026-07-01 the safe read-path clarity fixes and
+tests are implemented; enabling the prune in production (irreversible) is held pending
+sign-off on K. This document answers the four scoping questions; see INCIDENT_267.md for
+the incident that surfaced this.
 
-## Runway (read this first)
+## Runway (firmed up 2026-07-01)
 
-One real data point: at chain height ~8000 the node takes roughly 77 seconds from
-restart until it serves `/diagnostics` with a valid chain, because it fully
-re-validates the chain on startup before it serves anything (see Q1c). The
-deploy's chain gate and warmup ceiling are both ~240s, and the smoke tests' own
-timeouts are 8s.
+**Bottom line: roughly two to four weeks of runway before even the *widened*
+240s deploy gate is at risk; the original 30s gate is already long exceeded,
+which is why #267 happened. The fix (count-based pruning) is already built and
+just needs enabling with the right K.**
 
-A precise runway needs two measurements not safely obtainable on live production:
-(a) the genesis timestamp, for the real block-production rate, and (b) a
-validation-time-vs-height curve. With what is available: block height is ~8033,
-block_time_target is 60s, block_time_min 30s. Deploys began failing (30s startup
-exceeded) around 2026-06-29 and last succeeded 2026-06-25, so the chain crosses
-roughly one of these thresholds on the order of days-to-weeks, not months. The
-240s ceilings buy time but are not a fix — they will be exceeded as the chain
-grows, and the relationship may be worse than linear if transaction-count
-dominates validation cost. **Treat this as weeks-to-a-few-months of runway, and
-confirm with a genesis-timestamp rate calculation before deprioritising.**
+**Data and its limits (honest about what is and isn't measurable).** The one hard
+datapoint is from the incident: at chain height ~8000 the node takes roughly
+**77 seconds** from restart to serving `/diagnostics` with a valid chain, because
+it fully re-validates the chain on startup before serving anything (Q1c). Current
+height is **8036** (`/diagnostics`, 2026-07-01). A genesis-anchored average block
+rate is **not obtainable** from here: the per-block read endpoints proxy through
+the backend and currently return `UPSTREAM_ERROR`, there is no local SSH key to
+the droplet, and the signed snapshot archive stores balances/supply, not the
+genesis block. `/diagnostics` is additionally cached and showed the tip frozen at
+height 8036 for 20+ minutes during these checks, so a clean live-rate sample was
+also unavailable. So the numbers below are anchored on the 77s@8000 datapoint and
+`block_time_target = 60s` (the fastest sustainable single-miner cadence,
+≈1,440 blocks/day), not on a genesis rate.
+
+**Per-block validation cost:** 77s / 8000 ≈ **0.0096 s/block**, treating
+restart-to-serve as ~proportional to block count (validation re-hashes every
+block and re-verifies every transaction). This is a first-order model and is more
+likely a *floor* than a ceiling: if transaction count per block grows, validation
+becomes super-linear.
+
+**Gate-crossing projections (linear model):**
+
+- 240s widened gate ≈ 240 / 0.0096 ≈ **25,000 blocks** → ~16,960 blocks from now.
+  - At the fastest cadence (1,440 blocks/day): ≈ **12 days** (worst-case-fast floor).
+  - At observed mixed/idle cadence (~600–1,000 blocks/day): ≈ **17–28 days**.
+- 30s original gate ≈ 3,125 blocks → **already exceeded** (root cause of #267).
+
+**Implication for K:** target validation well under 60s (so the smoke tests' 8s
+per-call timeouts are only ever hit in steady state, never during validation).
+60s / 0.0096 ≈ 6,250 blocks is the upper bound; with margin for super-linearity,
+**K = 5,000** (~48s estimated, ≈ 3.5–5 days of hot history at current cadence).
+No lower bound forces K higher: balances, supply, treasury, economics and
+leaderboard all seed from the prune commitment (verified post-prune), so only the
+per-block explorer/audit reads want more history, and the accepted product
+decision is that those pre-prune reads are unavailable (now a clear 410, see Q3).
+**Caveat for the K decision:** enabling K = 5,000 at the current height of 8,036
+immediately and irreversibly prunes blocks 0–~3,035 from this node's queryable
+history. If retaining more browsable history matters more than the <60s target
+(the 240s gate tolerates ~200s of validation), a larger K is viable; that is a
+product call.
 
 ## Q1 — What exactly is slow, and why
 
@@ -90,12 +123,17 @@ valid state.
 `prune_point` commitment (height, block hash, `total_issued`, `balances`, plus a
 snapshot hash and back-link). `is_chain_valid` verifies the prune commitment
 first, then the retained blocks normally, with balances **seeded from the prune
-snapshot** (lines 190, 1067, 1148-1186). A signed snapshot archives the pruned
-state. The deploy even has an auto-prune, but it triggers on **disk size (500MB)**,
-which the 133MB chain never reaches — so it never fires. The real constraint is
-validation **time**, which scales with **retained block count**, not disk. A
-count/height-based prune (keep the last K blocks) would bound startup validation
-to O(K) and directly fix the root cause.
+snapshot** (lines 190, 1067, 1148-1186). **Correction to the first draft (verified
+2026-07-01):** the auto-prune is **already count-based, not disk-based**.
+`app._auto_prune_if_enabled()` fires when `len(chain) >= KEEP_BLOCKS + BATCH` and
+calls `_prune_chain_to(KEEP_BLOCKS)` after every mined block. It does not fire today
+only because it is **disabled by default** (`VORLIQ_CHAIN_PRUNE_ENABLED=false`) and
+`VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS` defaults to **10,000** (above the current height, so
+even if enabled it would not yet trigger). There is no disk-size trigger; that was an
+error in the first draft. The real constraint is validation **time**, which scales
+with **retained block count**. So the remaining work is not to *write* a count-based
+trigger but to **choose K and enable it** (plus make the read paths honest about the
+prune boundary — done, see below).
 
 **Consumers of historical (pre-tip) chain data — what a prune would affect:**
 ~43 direct `self.chain` iterations in `blockchain/*.py`, and these endpoints scan
@@ -107,22 +145,28 @@ or read old blocks:
 - `/treasury/transparency` — full treasury inflow/outflow history.
 - `/economics`, `/economics/overview`, `/leaderboard` — derived from chain scans.
 
-What survives a prune: **balances** (seeded from the prune snapshot), the chain's
-**validity**, current tip and recent blocks, and the **signed snapshot archive** of
-the dropped state. What is lost from the hot chain: direct explorer/audit access to
-**individual pre-prune blocks and transactions**.
+What survives a prune: **balances**, **total supply**, treasury balance, and the
+chain's **validity**, all seeded from the prune-point commitment and cryptographically
+anchored. What is **permanently lost** from this node: the **individual pre-prune
+blocks and their transactions**. **Correction to the first draft:** the signed
+snapshot archive (`backend/snapshotArchive.js`) stores a *balance/supply* snapshot plus
+a signature — it does **not** store the dropped blocks. So pruned blocks cannot be
+"served from the archive"; there is no per-block cold store to read them back from.
+A request for a pruned block now returns a clear **HTTP 410** with the prune-point
+context (verified in the A.3 harness), not a generic 404 and not a 500.
 
-- **Archive/cold-storage pattern:** the signed snapshot archive is already a
-  cold-storage seed. A fuller version (keep last K hot, serve older blocks from a
-  compressed/indexed archive on demand) would preserve explorer/audit access while
-  keeping the hot chain small. This is more work than a plain rolling prune.
-- **Viable K:** no single finite K satisfies "every historical query, instantly,
-  from the hot chain" — the audit/explorer features inherently want full history.
-  So plain pruning requires a product decision: either accept that pre-prune blocks
-  are served from the archive (slower / via snapshot) rather than the hot chain, or
-  build the cold-storage query layer. Balances/governance/lending **current state**
-  do not need full history (they are seeded), so the user-facing money features are
-  fine; the affected features are the **transparency/explorer/audit** read paths.
+- **No cold-storage block query layer exists.** Building one (keep last K hot, serve
+  older blocks from a compressed/indexed archive on demand) would preserve full
+  explorer/audit access, but it is a separate, larger piece of work than enabling the
+  rolling prune. It is *not* what "enable pruning" does today.
+- **Viable K:** no finite K serves "every historical block query from the hot chain" —
+  the explorer/audit features inherently want full history. So enabling the prune is a
+  product decision: **accept that individual pre-prune blocks/transactions become
+  unretrievable** (balances/supply preserved and provable; per-block reads return 410),
+  or first build the cold-storage query layer. Balances/governance/lending **current
+  state** do not need history (they seed from the commitment), so the user-facing money
+  features are unaffected; the affected surfaces are the **explorer/audit/transparency
+  per-block** read paths.
 
 ## Recommendation (for sign-off — NOT implemented)
 
