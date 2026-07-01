@@ -252,3 +252,45 @@ NOT be widened per directive) cannot be satisfied without addressing that.
 The approved deploy-infra space (A) is EXHAUSTED. Per Step 4.5: STOPPED. No second
 warmup added, no timeout widened. NOT pushing further (each push triggers a deploy
 that restarts and briefly degrades production). Awaiting the Item 3 decision.
+
+## Resolution — count-based pruning enabled (2026-07-01)
+
+Root cause was the O(n) blocking startup validation growing with block count. Fix:
+enable the (already-built, consensus-safe) count-based prune with K=5000, bounding
+startup validation to O(K).
+
+Shipped as:
+
+- `5cf0e4e` feat: honest historical reads across the prune boundary (410 for pruned
+  blocks, no fake genesis_hash, prune boundary surfaced in summary/blocks/audit).
+- `d2c1385` test: count-based trigger + post-prune read coverage (full suite 331
+  passed / 6 skipped / 0 failed).
+- `36b6bfd` docs: firmed-up runway + corrected findings in ITEM3_INVESTIGATION.md.
+- `349dbd3` feat(deploy): enable pruning (K=5000) on the blockchain unit, with a
+  one-time pre-prune full-chain backup (chain.json.preprune-backup) as the recovery
+  path for this irreversible step.
+
+Production evidence after `349dbd3` deployed (verified 2026-07-01):
+- Prune fired on the first post-restart mined block. `/api/chain/blocks`:
+  `chain_height` 8046, `total_blocks` 5001 (retained), `prune_point.height` 3045.
+- `/api/chain/block/100` → HTTP 410 "Block 100 is below this node's prune point
+  (height 3045)…" (clear cold-history boundary, not a 500 or silent 404).
+- `/api/audit/chain` → `pruned:true`, `genesis_hash:null` (no longer misreports the
+  first retained block as genesis), `retained_from_index` 3046, `chain_valid:true`.
+- `/diagnostics` chain_valid true, circulation preserved (402,250), mining active
+  (height climbed 8036 → 8046 across the window), balances/supply intact.
+
+Effect on the deploy gates: the ENABLING deploy still booted the full ~8046-block
+chain (its restart window was still long, ~200s of unavailability observed), because
+the prune only fires AFTER a post-enable block. chain.json on disk is now the pruned
+~5000-block snapshot, so every SUBSEQUENT restart validates ~5000 blocks (~48s est.)
+instead of ~8046 (~77s+). The startup speedup and green smoke tests therefore appear
+on the next restart/deploy, not the enabling one.
+
+Confirmation status: pruning is confirmed live and correct on production. Full
+CI-side smoke-test confirmation over three consecutive deploys is the remaining bar;
+CI run status is not directly observable from this workstation (no `gh`, and reading
+the stored git token was disallowed), so the restart-recovery window on each
+subsequent deploy is being used as the direct proxy for what the smoke tests gate on.
+Item 3 Part B (non-blocking startup) remains NOT started; if pruning alone makes the
+smoke tests pass, it closes without B.
