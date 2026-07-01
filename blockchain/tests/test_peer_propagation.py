@@ -21,11 +21,22 @@ class PeerPropagationTests(unittest.TestCase):
     def setUp(self):
         app.config["TESTING"] = True
         self.client = app.test_client()
+        # Swap in a fresh chain for this test, but keep the original so tearDown
+        # can put it back: module-level ledgers (lending_pool, treasury) hold a
+        # reference to the import-time blockchain, and leaving a replacement in
+        # node.blockchain strands them on a chain nobody mines, which breaks any
+        # later test module that drives loan issuance or treasury flows.
+        self._original_blockchain = node.blockchain
+        self._original_peer_events_path = peer_events.path
         node.blockchain = Blockchain()
         node.blockchain.pending_transactions = []
         peer_events.path = storage.data_dir / "peer_events_test.json"
         if peer_events.path.exists():
             peer_events.path.unlink()
+
+    def tearDown(self):
+        node.blockchain = self._original_blockchain
+        peer_events.path = self._original_peer_events_path
 
     def fund_wallet(self, wallet, amount=100):
         node.blockchain.add_pending_transaction(Transaction(SYSTEM_ADDRESS, wallet.address, amount))
