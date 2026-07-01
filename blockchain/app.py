@@ -849,7 +849,12 @@ def get_chain_blocks():
             {
                 "success": True,
                 "blocks": blocks,
+                # total_blocks is the count of blocks browsable here. On a pruned
+                # node that is the retained window, not the full history; chain_height
+                # and prune_point let the caller render the boundary honestly.
                 "total_blocks": total,
+                "chain_height": node.blockchain.get_block_height(),
+                "prune_point": node.blockchain._public_prune_point(),
                 "limit": limit,
                 "offset": offset,
                 "has_more": has_more,
@@ -933,6 +938,28 @@ def get_chain_block_detail(index_or_hash):
     try:
         block = node.blockchain.get_block_detail(index_or_hash)
         if not block:
+            # Distinguish "this block was pruned away" from "this block never
+            # existed", so the explorer can show a clear cold-history boundary
+            # instead of a generic not-found that looks like data loss.
+            term = str(index_or_hash).strip()
+            if term.isdigit() and node.blockchain.is_pruned_block_index(int(term)):
+                prune_point = node.blockchain._public_prune_point()
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "pruned": True,
+                            "message": (
+                                f"Block {term} is below this node's prune point "
+                                f"(height {node.blockchain.prune_height()}). Pre-prune blocks "
+                                "are not retained here; their balances and the chain's validity "
+                                "are preserved by the prune-point commitment."
+                            ),
+                            "prune_point": prune_point,
+                        }
+                    ),
+                    410,
+                )
             return jsonify({"success": False, "message": "Block not found"}), 404
         return jsonify({"success": True, "block": block})
     except ValueError as exc:
@@ -1628,11 +1655,20 @@ def _audit_base(export_type: str) -> dict:
 def get_audit_chain():
     blocks = node.blockchain.get_chain_data()
     latest_block = node.blockchain.get_latest_block()
-    genesis_hash = blocks[0].get("hash") if blocks else None
+    prune_point = node.blockchain._public_prune_point()
+    # On a pruned node the first retained block is NOT the genesis block, so do not
+    # present it as one — that would silently misrepresent the chain's origin to an
+    # auditor. Report the real genesis hash only when the full history is retained;
+    # otherwise expose the prune-point commitment that anchors the retained history.
+    genesis_hash = blocks[0].get("hash") if (blocks and prune_point is None) else None
     return jsonify(
         {
             **_audit_base("chain"),
             "block_count": len(blocks),
+            "chain_height": node.blockchain.get_block_height(),
+            "pruned": prune_point is not None,
+            "prune_point": prune_point,
+            "retained_from_index": blocks[0].get("index") if blocks else None,
             "chain_valid": node.blockchain.is_chain_valid(enforce_block_spacing=False),
             "difficulty": node.blockchain.difficulty,
             "current_reward": node.blockchain.get_current_mining_reward(),

@@ -552,9 +552,9 @@ class Blockchain:
         if self._indexes is not None and getattr(self._indexes, "chain_height", None) == self.get_block_height():
             summary = dict(self._indexes.indexes.get("chain_summary", {}))
             if summary:
-                return summary
+                return self._with_prune_context(summary)
         last_block = self.get_latest_block()
-        return {
+        return self._with_prune_context({
             "block_height": self.get_block_height(),
             "total_blocks": len(self.chain),
             "total_transactions": sum(len(block.transactions or []) for block in self.chain),
@@ -565,7 +565,17 @@ class Blockchain:
             "last_block_timestamp": last_block.timestamp,
             # Integrity only (grandfathered spacing), memoised so it is O(1).
             "chain_valid": self.chain_valid_fast(),
-        }
+        })
+
+    def _with_prune_context(self, summary: dict[str, Any]) -> dict[str, Any]:
+        """Annotate a chain summary so consumers can tell, honestly, when the
+        reported block count is a *retained* count rather than the full history.
+        On an unpruned chain this adds nothing surprising (retained == total)."""
+        summary = dict(summary)
+        summary["retained_blocks"] = len(self.chain)
+        summary["pruned"] = self.prune_point is not None
+        summary["prune_point"] = self._public_prune_point()
+        return summary
 
     def get_mining_status(self) -> dict[str, Any]:
         last_block = self.get_latest_block()
@@ -1320,6 +1330,21 @@ class Blockchain:
                 "height": self.get_block_height(),
                 "prune_point": self._public_prune_point(),
             }
+
+    def prune_height(self) -> int | None:
+        """The height up to and including which blocks have been pruned, or None on
+        an unpruned chain. A block index <= this value is no longer retained on this
+        node (its balance contribution survives in the prune-point snapshot, but the
+        individual block and its transactions are not stored here)."""
+        if not self.prune_point:
+            return None
+        return int(self.prune_point.get("height", -1))
+
+    def is_pruned_block_index(self, index: int) -> bool:
+        """True iff `index` refers to a block that existed but has been pruned away,
+        as opposed to a block that simply never existed (index above the tip)."""
+        height = self.prune_height()
+        return height is not None and 0 <= index <= height
 
     def _public_prune_point(self) -> dict[str, Any] | None:
         """Prune-point metadata safe to expose over the API (no full balance map)."""
