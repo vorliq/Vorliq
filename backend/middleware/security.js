@@ -31,6 +31,15 @@ function corsMiddleware() {
 
 function helmetMiddleware() {
   return helmet({
+    // HSTS is owned by nginx, the TLS-terminating layer, which sets it on every
+    // response (including static assets and redirects that never reach Node). Helmet
+    // must stay silent so production does not serve a duplicate Strict-Transport-
+    // Security header. nginx intentionally uses max-age=15552000 without
+    // includeSubDomains/preload (see deployment/vorliq_nginx_ssl.conf) to stay
+    // reversible and avoid forcing HTTPS on the node./status. subdomains; do not
+    // re-enable HSTS here to "strengthen" it, as that reintroduces the duplicate and
+    // overrides that deliberate, documented policy.
+    hsts: false,
     // Deny framing entirely (X-Frame-Options: DENY), not the SAMEORIGIN default.
     frameguard: { action: "deny" },
     // Send a useful-but-private referrer policy rather than helmet's no-referrer.
