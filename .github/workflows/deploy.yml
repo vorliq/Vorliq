@@ -478,35 +478,24 @@ jobs:
               exit 1
             fi
             echo "Node warmup: ready (heavy endpoint responded under 2s three times); proceeding to smoke tests."
-            # nginx Permissions-Policy cleanup — run HERE, before the smoke tests,
-            # so header deduplication is not blocked when a smoke test later fails at
-            # the Item 3 full-chain-operation constraint (see INCIDENT_267.md). nginx
-            # config is independent of node state and nginx was already restarted
-            # above, so this is safe at this point. Removes any nginx-set
-            # Permissions-Policy directive (e.g. a stale camera=(self) exception) so
-            # the only one served is the Node app's strict
-            # camera=(),microphone=(),geolocation=(),payment=(). Guarded so a missing
-            # directive or grep miss never aborts the deploy under set -e.
-            NGINX_PP_CHANGED=0
-            NGINX_PP_FILES="$(grep -rliE 'Permissions-Policy' /etc/nginx/ 2>/dev/null || true)"
-            for nginx_pp_file in ${NGINX_PP_FILES}; do
-              if grep -qiE '(add_header|more_set_headers)[^;#]*Permissions-Policy' "${nginx_pp_file}"; then
-                cp -a "${nginx_pp_file}" "${nginx_pp_file}.vorliq.bak.$(date +%s)" 2>/dev/null || true
-                sed -i -E '/(add_header|more_set_headers)[^;#]*Permissions-Policy/Id' "${nginx_pp_file}"
-                echo "Removed nginx Permissions-Policy directive from ${nginx_pp_file}"
-                NGINX_PP_CHANGED=1
+            # Permissions-Policy ownership: nginx now serves the canonical strict
+            # value (camera=(),microphone=(),geolocation=(),payment=()) on EVERY
+            # response — static pages included — via the repo conf copied fresh
+            # above, and hides the backend's copy on /api with proxy_hide_header
+            # (the same single-owner pattern already used for CSP/X-Frame-Options).
+            # The old inline step here stripped ALL nginx Permissions-Policy
+            # directives, which deduplicated /api but left static responses with
+            # no header at all (verified live 2026-07-02). Now just verify exactly
+            # one header on a static and an API response; warn rather than fail so
+            # a transient curl blip cannot abort a deploy.
+            for pp_path in "/" "/api/health"; do
+              PP_COUNT="$(curl -skI "https://localhost${pp_path}" -H 'Host: vorliq.org' | grep -ciE '^Permissions-Policy:' || true)"
+              if [ "${PP_COUNT}" != "1" ]; then
+                echo "::warning::Expected exactly 1 Permissions-Policy header on ${pp_path}, saw ${PP_COUNT}."
+              else
+                echo "Permissions-Policy single-header check passed for ${pp_path}."
               fi
             done
-            if [ "${NGINX_PP_CHANGED}" = "1" ]; then
-              if nginx -t; then
-                systemctl reload nginx && echo "nginx reloaded with the Node app's Permissions-Policy as the only one."
-              else
-                echo "::error::nginx config test failed after editing Permissions-Policy; not reloading."
-                exit 1
-              fi
-            else
-              echo "No nginx-set Permissions-Policy directive found; nothing to change."
-            fi
             # Chain-disk auto-prune: if chain data on disk exceeds 500MB, trigger a
             # prune to the configured depth so the disk cannot grow without bound.
             # Logged clearly (with ::warning:: annotations) so an operator can see
