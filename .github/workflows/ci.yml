@@ -32,6 +32,16 @@ jobs:
         working-directory: blockchain
         run: .venv/bin/python -m pytest tests/ -v
 
+      # The operational tools (deploy-gate chain diagnostic, forensic
+      # reconciliation, chain bootstrap/backup selection) have their own tests
+      # in tools/, which `pytest tests/` above does not collect. INCIDENT_267's
+      # root-cause fix lives in diagnose_chain_startup.py — run these so that
+      # bug class is caught automatically instead of during a deploy.
+      - name: Run operational tool tests
+        env:
+          PYTHONPATH: blockchain:tools
+        run: blockchain/.venv/bin/python -m pytest tools/ -v
+
   backend-tests:
     runs-on: ubuntu-latest
 
