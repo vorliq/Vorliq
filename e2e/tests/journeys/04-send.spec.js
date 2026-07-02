@@ -2,6 +2,7 @@
 // and the recipient is notified in real time (the bell count becomes nonzero).
 const { test, expect } = require("./fixtures");
 const {
+  api,
   createWallet,
   fundWalletSpendable,
   importWalletViaUI,
@@ -16,12 +17,32 @@ test("user sends VLQ, it confirms with a block link, and the recipient is notifi
   const balance = await fundWalletSpendable(sender.address);
   expect(balance, "sender should hold spendable VLQ from the faucet").toBeGreaterThan(0);
 
-  // Sender: sign in and submit the send (leave it broadcasting / pending).
+  // Sender: sign in and fill the send form.
   await importWalletViaUI(page, sender.private_key, "e2e-send-pass-1");
   await page.goto("/send", { waitUntil: "domcontentloaded" });
   await assertNoHorizontalOverflow(page, "send");
   await page.getByLabel(/recipient address/i).fill(recipient.address);
   await page.getByLabel(/amount in VLQ/i).fill("0.5");
+
+  // Wallet flow 4 (reject): Vorliq's wallet is browser-native, so "rejecting in
+  // the wallet" is refusing to authorize the local signing. A wrong wallet
+  // password must fail decryption, show an error, and broadcast NOTHING.
+  await page.getByLabel(/wallet password/i).fill("not-the-right-password");
+  await page.getByRole("button", { name: /send VLQ/i }).click();
+  await expect(
+    page.locator('[role="alert"]').first(),
+    "a refused signing must surface an error to the user"
+  ).toBeVisible({ timeout: 20_000 });
+  const { data: mempoolAfterReject } = await api(
+    `/transactions/pending?address=${encodeURIComponent(sender.address)}`
+  );
+  expect(
+    (mempoolAfterReject.transactions || []).length,
+    "a refused signing must not broadcast anything"
+  ).toBe(0);
+
+  // Wallet flow 3 (send): authorize with the correct password; the key is
+  // decrypted locally to sign and the transaction broadcasts.
   await page.getByLabel(/wallet password/i).fill("e2e-send-pass-1");
   await page.getByRole("button", { name: /send VLQ/i }).click();
   await expect(

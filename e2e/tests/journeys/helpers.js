@@ -26,8 +26,15 @@ async function api(path, options = {}) {
 }
 
 async function createWallet() {
-  const { status, data } = await api("/wallet/create", { method: "POST" });
-  expect(status, "wallet create should succeed").toBeLessThan(300);
+  let { status, data } = await api("/wallet/create", { method: "POST" });
+  if (status >= 500) {
+    // The single-process Flask node occasionally times out under the suite's
+    // concurrent mining load; one retry after a beat covers that transient
+    // without masking real failures (a second 5xx still fails the test).
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    ({ status, data } = await api("/wallet/create", { method: "POST" }));
+  }
+  expect(status, `wallet create should succeed (${status}: ${JSON.stringify(data)})`).toBeLessThan(300);
   return data; // { address, public_key, private_key }
 }
 

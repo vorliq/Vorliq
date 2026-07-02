@@ -118,6 +118,14 @@ function unbanWallet(wallet) {
 // a 24h block when the per-hour velocity is exceeded. Returns
 // { allowed, retryAfterSeconds, reason }.
 function walletCreateDecision(ip, now = Date.now()) {
+  // Same escape hatch the rate limiters use (rateLimits.js, authLockout.js,
+  // adminAuth.js): the e2e harness legitimately creates many wallets from one
+  // IP, which would trip the velocity gate and persist a 24h block. Only the
+  // e2e harness sets this flag, never production. Unit tests do not set it,
+  // so the velocity-gate tests still exercise the real behaviour.
+  if (process.env.VORLIQ_DISABLE_RATE_LIMITS === "true") {
+    return { allowed: true };
+  }
   const store = readStore();
   ip = normIp(ip);
   const blockedUntil = Number(store.ipCreateBlockedUntil[ip] || 0);
@@ -168,6 +176,12 @@ function ipDistinctWallets(ip, now = Date.now()) {
 // allowed through (the per-wallet cooldown handles repeats); a NEW wallet beyond
 // the 2-per-24h distinct limit is blocked. Returns { allowed, reason }.
 function ipFaucetDecision(ip, wallet, now = Date.now()) {
+  // Same e2e-harness escape hatch as walletCreateDecision above: the journeys
+  // claim for many fresh wallets from one IP, which is exactly what this gate
+  // exists to stop in production. Unit tests do not set the flag.
+  if (process.env.VORLIQ_DISABLE_RATE_LIMITS === "true") {
+    return { allowed: true };
+  }
   const wallets = ipDistinctWallets(ip, now);
   if (wallets.has(String(wallet))) return { allowed: true };
   if (wallets.size >= FAUCET_IP_WALLET_LIMIT) {

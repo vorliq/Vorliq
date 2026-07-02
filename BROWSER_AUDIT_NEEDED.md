@@ -1,10 +1,10 @@
 # Browser-Dependent Audit — Remaining Checklist
 
-Status of the Ship-Phase frontend audit (Iteration 4). This file lists exactly
-what has been verified and what still requires a **running full app stack** and,
-for wallet flows, a **wallet extension with funds** — neither of which the
-autonomous environment can fully provide. Nothing below should be treated as
-"passing" until executed.
+Status of the Ship-Phase frontend audit (Iteration 4, updated 2026-07-02).
+This file lists exactly what has been verified and how. All five wallet flows
+are now resolved (verified or n/a); the remaining unchecked items are the
+deeper per-route passes listed under "Follow-ups still NOT done". Nothing below
+should be treated as "passing" until executed.
 
 ## Already verified (no browser, or partial real browser)
 
@@ -98,22 +98,29 @@ directive's MetaMask-shaped flows map to Vorliq as follows, verified via
 - n/a **Flow 2 — wrong network**: Vorliq is a single chain. There is no
   multi-network concept; Settings exposes a per-device node URL, but no
   "wrong network" detection/switch exists by design. Not applicable.
-- [ ] **Flow 3 — send transaction**: NOT verified. Needs VLQ. A fresh local
-  chain has **no premine** (treasury balance 0), so a test wallet has 0 balance
-  and the send form cannot complete a real transfer.
-- [ ] **Flow 4 — reject transaction**: NOT verified, and architecturally
-  different — Vorliq signs in-browser (no external signer popup to "reject"); the
-  cancel path is cancelling the in-app send form, which is only meaningful once
-  the wallet is funded (see Flow 3).
+- ✓ **Flow 3 — send transaction**: VERIFIED 2026-07-02 via
+  `e2e/tests/journeys/04-send.spec.js` (`npm run e2e:local`, real Chromium at
+  mobile/tablet/desktop against a self-booted isolated local stack). The stack
+  mines to fund the treasury, the faucet funds a fresh wallet with spendable
+  VLQ, and the journey verifies the full path: fill send form → local signing
+  with the wallet password → broadcast (transaction hash shown) → mined →
+  "confirmed in block" with a working block link → the recipient's notification
+  bell updates in realtime over the socket → the wallet history "Sent" filter
+  shows the outgoing row.
+- ✓ **Flow 4 — reject transaction**: VERIFIED 2026-07-02 in the same journey.
+  Vorliq signs in-browser (no external signer popup), so "rejecting in the
+  wallet" is refusing to authorize the local signing: a wrong wallet password
+  surfaces a visible error and the mempool is asserted to contain **nothing**
+  from the sender — no broadcast without authorization.
 
-## What would unblock Flows 3 & 4
+## How Flows 3 & 4 were unblocked (2026-07-02)
 
-The precise blocker is **test funds on the local chain**. Vorliq is proof-of-work
-with no premine, so funds must be **mined**: point a created test wallet at the
-local node and mine several blocks (each credits the miner the block reward and
-accrues 5% to the treasury; note the 30s minimum block time and the same-miner
-anti-monopoly gap). Once the wallet has a confirmed balance, drive
-`/send` via Playwright to verify: validation → pending → confirmed, balance
-update, and the cancel/retry path. This is mechanical but multi-step (mining
-delays); it was not completed this iteration. The wallet itself is fully
-in-browser, so no extension or external faucet is required — only mined VLQ.
+The blocker was test funds plus harness-level rate limiting. The local e2e
+stack (e2e/playwright.local.config.js) already mines with relaxed block spacing
+to fund the treasury; what actually blocked the journeys was backend abuse
+gating: the wallet-create velocity gate and the faucet per-IP distinct-wallet
+gate did not honor the harness's `VORLIQ_DISABLE_RATE_LIMITS` flag (the express
+rate limiters did), and the backend's abuse state persisted into
+`backend/data`, so one tripped 24h block broke every later run. Both gates now
+honor the flag (production behaviour unchanged — the flag is only set by the
+harness) and the harness isolates `VORLIQ_BACKEND_DATA_DIR` per run.

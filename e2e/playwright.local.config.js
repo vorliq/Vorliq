@@ -99,6 +99,11 @@ module.exports = defineConfig({
         // Relax per-IP rate limits: the suite drives the real write paths hard
         // from one IP. Never set in production.
         VORLIQ_DISABLE_RATE_LIMITS: "true",
+        // Isolate the backend's JSON stores (faucet-abuse, invites, reports)
+        // the same way the chain data dir is isolated above: without this, an
+        // e2e run persists abuse-velocity state into backend/data and a
+        // tripped 24h wallet-create block breaks every later run.
+        VORLIQ_BACKEND_DATA_DIR: path.join(dataDir, "backend"),
       },
     },
     {

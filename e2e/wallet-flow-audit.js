@@ -1,8 +1,9 @@
 // Real-browser verification of the Vorliq wallet flows that do NOT require funds.
 // Vorliq's wallet is browser-native (keys generated and encrypted in the browser
 // via elliptic — there is no external extension), so creation and lock/sign-out
-// are fully verifiable here. Send/receive need VLQ, which on a fresh local chain
-// only exists after mining (no premine) — see BROWSER_AUDIT_NEEDED.md.
+// are fully verifiable here. The funded flows (send + signing refusal) are
+// covered by tests/journeys/04-send.spec.js via `npm run e2e:local`, which
+// boots an isolated stack and mines to fund wallets — see BROWSER_AUDIT_NEEDED.md.
 const { chromium } = require("@playwright/test");
 
 const BASE = process.env.AUDIT_BASE || "http://127.0.0.1:4178";

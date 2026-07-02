@@ -16,8 +16,10 @@ test("new user: landing -> sign up -> create wallet -> faucet -> dashboard balan
   await expect(page.getByRole("heading", { name: /create your vorliq account/i })).toBeVisible();
   await assertNoHorizontalOverflow(page, "register");
 
-  // 3. Create the wallet.
+  // 3. Create the wallet. Both consent checkboxes (key-safety + terms) must be
+  //    ticked before the submit button enables.
   await page.getByLabel(/private key cannot be recovered/i).check();
+  await page.getByLabel(/terms of service/i).check();
   await page.getByLabel(/^password$/i).fill("e2e-strong-pass-1");
   await page.getByLabel(/confirm password/i).fill("e2e-strong-pass-1");
   await page.getByRole("button", { name: /create account/i }).click();
