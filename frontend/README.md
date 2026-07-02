@@ -1,4 +1,15 @@
-# Getting Started with Create React App
+# Vorliq Frontend
+
+The Vorliq web app (React, Create React App). It expects the Node backend on
+port 5000 and the blockchain node on port 5001 — see the root
+[README](../README.md) for full-stack setup and [OPERATIONS.md](../OPERATIONS.md)
+for the runbook. When `window.location.hostname` is `localhost`, the app talks
+to the local backend; otherwise it uses the production API.
+
+- `npm start` — dev server on port 3000 (needs the backend running for data)
+- `npm test -- --watchAll=false` — unit tests (357 tests)
+- `npm run test:coverage` — coverage report
+- `npm run build` — production build
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

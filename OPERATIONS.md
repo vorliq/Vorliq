@@ -29,7 +29,7 @@ how to operate them, and how to respond to incidents.
                          ┌─────────────────────────────┐
                          │  Backend API (Express)  :5000│
                          │  - REST + Socket.IO          │
-                         │  - JWT / wallet-signature auth│
+                         │  - admin-token / wallet-sig auth│
                          └───────────────┬──────────────┘
                                          │ http (loopback / docker net)
                                          ▼
@@ -163,7 +163,7 @@ templates are tracked.
 | Variable | Component | Required | Description | Example |
 |----------|-----------|----------|-------------|---------|
 | `FLASK_URL` | backend | yes | URL of the blockchain node | `http://localhost:5001` |
-| `JWT_SECRET` | backend | yes (rotate) | Signing secret for issued JWTs | _random 48-byte base64_ |
+| `ADMIN_TOKEN` | backend + blockchain | yes (rotate) | Bearer token gating all admin/maintenance endpoints | _random 48-byte base64_ |
 | `NODE_ENV` | backend | yes | Runtime mode | `production` |
 | `PORT` | backend | no | Backend listen port (default 5000) | `5000` |
 | `VORLIQ_HOST` | blockchain | no | Bind host | `0.0.0.0` |
@@ -171,11 +171,22 @@ templates are tracked.
 | `VORLIQ_DATA_DIR` | blockchain | yes | Chain/data persistence dir | `/home/vorliq/app/blockchain/data` |
 | `VORLIQ_MINING_ENABLED` | blockchain | no | Keep producing blocks | `true` |
 | `VORLIQ_SERVER_WALLET_ADDRESS` | blockchain | no | Fallback miner payout wallet | _wallet address_ |
-| `RESEND_API_KEY` | backend (mailer) | if email used | Resend transactional email key | _rotate; never commit_ |
+| `VORLIQ_EMAIL_API_URL` | backend + blockchain | if email used | Transactional email provider endpoint | `https://api.resend.com/emails` |
+| `VORLIQ_EMAIL_API_KEY` | backend + blockchain | if email used | Transactional email API key | _rotate; never commit_ |
+| `VORLIQ_EMAIL_FROM` | backend + blockchain | if email used | From address for outbound email | `noreply@vorliq.org` |
+| `VORLIQ_CHAIN_PRUNE_ENABLED` | blockchain | no | Count-based chain pruning (production: `true`) | `true` |
+| `VORLIQ_CHAIN_PRUNE_KEEP_BLOCKS` | blockchain | no | Blocks retained when pruning (code default 10000; production sets 5000 via `deploy.yml`) | `5000` |
+| `VORLIQ_CHAIN_PRUNE_BATCH` | blockchain | no | Prune re-fires only after this many blocks past the keep target (default 256) | `256` |
 
-See `backend/.env.example` and `database/.env.shadow.example` for the canonical
-templates. The blockchain node reads `VORLIQ_*` from the environment / systemd
-unit; see `docker-compose.yml` for the full set.
+This table is the operational core, not the exhaustive set. Advanced tuning
+variables also read from the environment include `VORLIQ_DIFFICULTY`,
+`VORLIQ_BLOCK_TIME_MINIMUM`, `VORLIQ_DISABLE_DIFFICULTY_ADJUSTMENT`,
+`VORLIQ_SNAPSHOT_BLOCK_INTERVAL`, `VORLIQ_SNAPSHOT_TIME_SECONDS`,
+`VORLIQ_BOOTSTRAP_PEERS`, `VORLIQ_NETWORK_SYNC_INTERVAL`,
+`VORLIQ_BACKGROUND_MINER_INTERVAL`, and the test-only
+`VORLIQ_DISABLE_RATE_LIMITS` / `VORLIQ_ENABLE_TEST_SEED` (never set these two in
+production). See `backend/.env.example` and `database/.env.shadow.example` for
+the canonical templates and `docker-compose.yml` for the full set.
 
 ---
 
@@ -183,12 +194,13 @@ unit; see `docker-compose.yml` for the full set.
 
 | Secret | Generate | Apply | Restart |
 |--------|----------|-------|---------|
-| `JWT_SECRET` | `openssl rand -base64 48` | `backend/.env` (and CI secret store) | `vorliq-backend.service` |
-| `RESEND_API_KEY` | Resend dashboard | `backend/.env` / CI secret store | `vorliq-backend.service` |
+| `ADMIN_TOKEN` | `openssl rand -base64 48` | `backend/.env` + blockchain unit env (and CI secret store) | `vorliq-backend.service`, `vorliq-blockchain.service` |
+| `VORLIQ_EMAIL_API_KEY` | email provider dashboard | `backend/.env` / CI secret store | `vorliq-backend.service` |
 
 After updating `backend/.env`, restart the backend:
-`sudo systemctl restart vorliq-backend.service`. Rotating `JWT_SECRET`
-invalidates all existing JWTs (users re-authenticate).
+`sudo systemctl restart vorliq-backend.service`. Rotating `ADMIN_TOKEN`
+immediately locks out anything still holding the old token (admin tooling,
+cron digests) — update those callers in the same change.
 
 ---
 
@@ -262,7 +274,17 @@ curl -fsS http://localhost:5001/transactions/pending
 
 # Peer count / registry
 curl -fsS http://localhost:5001/registry/summary
+
+# Chain pruning status (enabled? prune point? retained blocks?)
+curl -fsS http://localhost:5001/chain/prune-info
 ```
+
+Pruning note: production runs count-based pruning (`VORLIQ_CHAIN_PRUNE_ENABLED`,
+retention 5000 blocks). A lookup of a pruned-away block returns HTTP `410` with
+the prune point in the body — that is expected behaviour, not data corruption.
+Balances, supply, and chain validity are preserved across the prune boundary by
+the prune-point commitment; `/audit/chain` reports `genesis_hash: null` and
+`pruned: true` on a pruned chain. See `INCIDENT_267.md` for the full history.
 
 ---
 
@@ -282,7 +304,7 @@ curl -fsS http://localhost:5001/registry/summary
 1. `sudo systemctl status vorliq-backend.service`
 2. `sudo journalctl -u vorliq-backend.service -n 200 --no-pager`
 3. `sudo systemctl restart vorliq-backend.service`
-4. If it crashes on boot, check `backend/.env` (missing `JWT_SECRET`/`FLASK_URL`).
+4. If it crashes on boot, check `backend/.env` (missing `FLASK_URL`).
 
 **Blockchain node down** (`/api/health/ready` failing, `/health` on 5001 down):
 1. `sudo systemctl status vorliq-blockchain.service`
@@ -298,8 +320,9 @@ curl -fsS http://localhost:5001/registry/summary
 
 **Secret compromised** (e.g., a key was leaked):
 1. Rotate it immediately (§6).
-2. For `JWT_SECRET`, rotation forces re-authentication of all users.
-3. For `RESEND_API_KEY`, revoke the old key in the Resend dashboard.
+2. For `ADMIN_TOKEN`, update every legitimate caller (admin tooling, digest
+   cron) with the new value at the same time.
+3. For `VORLIQ_EMAIL_API_KEY`, revoke the old key in the provider dashboard.
 4. Audit access logs for misuse.
 
 ---
@@ -309,10 +332,10 @@ curl -fsS http://localhost:5001/registry/summary
 Before pushing to `main` (which deploys):
 
 ```bash
-# Blockchain — expect 290 passed, 6 skipped, 0 failed
+# Blockchain — expect 330 passed, 6 skipped, 0 failed
 cd blockchain && .venv/Scripts/python -m pytest tests/ -q
 
-# Backend — expect 370 passed, 0 failed
+# Backend — expect 495 passed, 0 failed
 cd backend && npm test
 
 # Frontend — expect a clean production build
