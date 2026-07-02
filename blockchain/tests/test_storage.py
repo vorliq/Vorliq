@@ -393,5 +393,159 @@ class FileLockStaleBreakTests(unittest.TestCase):
             self.assertFalse(lock_path.exists())
 
 
+class LedgerRoundTripTests(unittest.TestCase):
+    """Every ledger's save/load pair must round-trip real data from disk, and a
+    structurally wrong file must be refused with a clear error rather than
+    silently loading an empty or corrupted ledger."""
+
+    def setUp(self):
+        self._temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._temp.cleanup)
+        self.storage = Storage(self._temp.name)
+
+    def test_every_ledger_round_trips_saved_data(self):
+        from achievements import Achievements
+        from exchange import Exchange
+        from faucet import Faucet
+        from forum import Forum
+        from governance import Governance
+        from notifications import Notifications
+        from price import PriceDiscovery
+        from profiles import Profiles
+        from registry import NodeRegistry
+        from treasury import Treasury
+
+        exchange = Exchange()
+        exchange.offers = {"offer-1": {"creator_address": "VLQa", "status": "open", "amount": 5}}
+        forum = Forum()
+        forum.posts = {"post-1": {"title": "Hello", "replies": []}}
+        governance = Governance()
+        governance.proposals = {"prop-1": {"title": "Raise quorum", "status": "active"}}
+        governance.rule_changes = [{"rule_change_id": "rc-1"}]
+        treasury = Treasury()
+        treasury.proposals = {"tp-1": {"amount": 10, "status": "active"}}
+        faucet = Faucet()
+        faucet.claims = {"claim-1": {"wallet_address": "VLQa", "status": "pending"}}
+        price = PriceDiscovery()
+        profiles = Profiles()
+        profiles.profiles = {"VLQa": {"display_name": "Member A"}}
+        achievements = Achievements()
+        achievements.earned = {"VLQa": {"first_wallet": {"earned_at": 1.0}}}
+        registry = NodeRegistry()
+        registry.registered_nodes = {"https://node.example.org": {"display_name": "Node"}}
+        notifications = Notifications()
+        notifications.set_preferences("VLQa", email="member@example.org", events={"vlq_received": True})
+        notifications.queue = [{"id": "q1", "status": "queued", "email": "member@example.org"}]
+
+        cases = [
+            ("exchange", exchange, self.storage.save_exchange, self.storage.load_exchange, "offers"),
+            ("forum", forum, self.storage.save_forum, self.storage.load_forum, "posts"),
+            ("governance", governance, self.storage.save_governance, self.storage.load_governance, "proposals"),
+            ("treasury", treasury, self.storage.save_treasury, self.storage.load_treasury, "proposals"),
+            ("faucet", faucet, self.storage.save_faucet, self.storage.load_faucet, "claims"),
+            ("price", price, self.storage.save_price_discovery, self.storage.load_price_discovery, "signals"),
+            ("profiles", profiles, self.storage.save_profiles, self.storage.load_profiles, "profiles"),
+            ("achievements", achievements, self.storage.save_achievements, self.storage.load_achievements, "earned"),
+            ("registry", registry, self.storage.save_registry, self.storage.load_registry, "registered_nodes"),
+        ]
+        for name, ledger, save, load, attr in cases:
+            with self.subTest(ledger=name):
+                save(ledger)
+                loaded = load()
+                self.assertEqual(getattr(loaded, attr), getattr(ledger, attr))
+
+        # Notifications keep both halves and re-filter event toggles on load.
+        self.storage.save_notifications(notifications)
+        loaded = self.storage.load_notifications()
+        self.assertEqual(loaded.preferences["VLQa"]["email"], "member@example.org")
+        self.assertTrue(loaded.preferences["VLQa"]["events"]["vlq_received"])
+        self.assertEqual(loaded.queue[0]["id"], "q1")
+        # Governance rule changes ride along with proposals.
+        self.assertEqual(self.storage.load_governance().rule_changes, [{"rule_change_id": "rc-1"}])
+        # Peers round-trip as a set through a sorted list on disk.
+        self.storage.save_peers({"https://b.example.org", "https://a.example.org"})
+        self.assertEqual(self.storage.load_peers(), {"https://a.example.org", "https://b.example.org"})
+
+    def test_structurally_wrong_ledger_files_are_refused(self):
+        cases = [
+            (self.storage.exchange_file, {"offers": []}, self.storage.load_exchange),
+            (self.storage.forum_file, {"posts": []}, self.storage.load_forum),
+            (self.storage.governance_file, {"proposals": []}, self.storage.load_governance),
+            (self.storage.treasury_file, {"proposals": []}, self.storage.load_treasury),
+            (self.storage.faucet_file, {"claims": []}, self.storage.load_faucet),
+            (self.storage.price_file, {"signals": []}, self.storage.load_price_discovery),
+            (self.storage.profiles_file, {"profiles": []}, self.storage.load_profiles),
+            (self.storage.achievements_file, {"earned": []}, self.storage.load_achievements),
+            (self.storage.registry_file, {"registered_nodes": []}, self.storage.load_registry),
+            (self.storage.peers_file, {"not": "a list"}, self.storage.load_peers),
+        ]
+        for path, wrong_payload, load in cases:
+            with self.subTest(file=path.name):
+                path.write_text(json.dumps(wrong_payload), encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    load()
+
+
+class AuthorityNonceTests(unittest.TestCase):
+    def setUp(self):
+        self._temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._temp.cleanup)
+        self.storage = Storage(self._temp.name)
+
+    def test_a_nonce_is_consumed_once_and_replay_is_refused(self):
+        self.assertTrue(self.storage.consume_authority_nonce("n1", expires_at=1_000, now=100))
+        self.assertFalse(self.storage.consume_authority_nonce("n1", expires_at=1_000, now=200))
+
+    def test_expired_nonces_are_pruned_and_reusable(self):
+        self.assertTrue(self.storage.consume_authority_nonce("n1", expires_at=150, now=100))
+        # Past its expiry the old entry is dropped, so the same key is fresh again.
+        self.assertTrue(self.storage.consume_authority_nonce("n1", expires_at=400, now=200))
+
+    def test_a_corrupt_nonce_registry_refuses_authority_writes(self):
+        self.storage.authority_nonces_file.write_text("not json", encoding="utf-8")
+        with self.assertRaises(StorageCorruptionError):
+            self.storage.consume_authority_nonce("n1", expires_at=1_000, now=100)
+        self.storage.authority_nonces_file.write_text(json.dumps(["a", "list"]), encoding="utf-8")
+        with self.assertRaises(StorageCorruptionError):
+            self.storage.consume_authority_nonce("n1", expires_at=1_000, now=100)
+
+
+class LockStalenessTests(unittest.TestCase):
+    def setUp(self):
+        self._temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._temp.cleanup)
+        self.storage = Storage(self._temp.name)
+        self.lock_path = Path(self._temp.name) / "some.json.lock"
+
+    def test_our_own_lock_is_never_stale(self):
+        self.lock_path.write_text(str(os.getpid()), encoding="ascii")
+        self.assertFalse(self.storage._lock_is_stale(self.lock_path))
+
+    def test_a_dead_holders_lock_is_stale(self):
+        self.lock_path.write_text("12345", encoding="ascii")
+        with patch.object(Storage, "_pid_is_alive", return_value=False):
+            self.assertTrue(self.storage._lock_is_stale(self.lock_path))
+
+    def test_a_live_holders_lock_is_respected(self):
+        self.lock_path.write_text("12345", encoding="ascii")
+        with patch.object(Storage, "_pid_is_alive", return_value=True):
+            self.assertFalse(self.storage._lock_is_stale(self.lock_path))
+
+    def test_a_garbage_lock_is_only_broken_after_the_grace_period(self):
+        self.lock_path.write_text("not-a-pid", encoding="ascii")
+        self.assertFalse(self.storage._lock_is_stale(self.lock_path))  # fresh: respected
+        old = time.time() - 60
+        os.utime(self.lock_path, (old, old))
+        self.assertTrue(self.storage._lock_is_stale(self.lock_path))  # abandoned: broken
+
+    def test_a_missing_lock_file_is_not_stale(self):
+        self.assertFalse(self.storage._lock_is_stale(self.lock_path))
+
+    def test_pid_liveness_basics(self):
+        self.assertTrue(Storage._pid_is_alive(os.getpid()))
+        self.assertFalse(Storage._pid_is_alive(0))
+        self.assertFalse(Storage._pid_is_alive(-5))
+
+
 if __name__ == "__main__":
     unittest.main()
