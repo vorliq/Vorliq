@@ -180,7 +180,14 @@ function ProposalCard({ proposal, address, isLoggedIn, closed, onVote, onCancel,
             isLoggedIn={isLoggedIn}
             busy={busyId === proposal.proposal_id}
             submitLabel={`Sign and submit ${pending} vote`}
-            onSubmit={(password) => onVote(proposal, pending, password).then(() => setPending(null))}
+            onSubmit={(password) =>
+              onVote(proposal, pending, password)
+                .then(() => setPending(null))
+                // A failed vote re-throws so the form stays open; the error is
+                // already rendered via the per-proposal feedback, so end the
+                // chain here instead of leaking an unhandled rejection.
+                .catch(() => {})
+            }
           />
         ))}
 
@@ -198,7 +205,11 @@ function ProposalCard({ proposal, address, isLoggedIn, closed, onVote, onCancel,
             busy={busyId === proposal.proposal_id}
             submitLabel="Sign and submit cancellation"
             note="Cancelling is signed locally. It is only possible before any votes are cast."
-            onSubmit={(password) => onCancel(proposal, password).then(() => setCancelOpen(false))}
+            onSubmit={(password) =>
+              onCancel(proposal, password)
+                .then(() => setCancelOpen(false))
+                .catch(() => {})
+            }
           />
         ))}
 

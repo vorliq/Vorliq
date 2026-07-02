@@ -58,3 +58,38 @@ test("renders the signed-in mining experience", async () => {
   expect(await screen.findByRole("heading", { name: /^mining$/i })).toBeInTheDocument();
   expect(api.get).toHaveBeenCalledWith("/wallet/balance", expect.anything());
 });
+
+// Ported from the legacy Mine page suite: the header figures come from the real
+// /mining/status split — the displayed block reward is the miner share plus the
+// treasury share, alongside the real difficulty and block-time target.
+test("header cards compute the block reward from the miner and treasury shares", async () => {
+  api.get.mockImplementation((path) => {
+    if (path === "/mining/status") {
+      return Promise.resolve({
+        data: {
+          status: {
+            enabled: true,
+            current_block_height: 12,
+            current_difficulty: 3,
+            miner_reward_after_treasury: 47.5,
+            treasury_reward_per_block: 2.5,
+            block_time_target: 60,
+          },
+        },
+      });
+    }
+    if (path === "/mining/history") return Promise.resolve({ data: { history: [] } });
+    if (path === "/wallet/balance") return Promise.resolve({ data: { balance: 200 } });
+    if (path === "/transactions/pending") return Promise.resolve({ data: { transactions: [] } });
+    return Promise.resolve({ data: {} });
+  });
+  renderPage();
+
+  expect(await screen.findByText(/current block reward/i)).toBeInTheDocument();
+  // 47.5 VLQ to the miner + 2.5 VLQ to the treasury = 50 VLQ per block.
+  expect(await screen.findByText("50 VLQ")).toBeInTheDocument();
+  expect(screen.getByText(/network difficulty/i)).toBeInTheDocument();
+  expect(screen.getByText("3")).toBeInTheDocument();
+  expect(screen.getByText(/block time target/i)).toBeInTheDocument();
+  expect(screen.getByText("60s")).toBeInTheDocument();
+});

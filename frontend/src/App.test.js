@@ -12,22 +12,16 @@ import { authorityErrorMessage, postSignedAuthority } from "./helpers/signedAuth
 import Account from "./pages/Account";
 import AddressIdentity from "./components/AddressIdentity";
 import Login from "./pages/Login";
-import Lending from "./pages/Lending";
 import Exchange from "./pages/Exchange";
-import Governance from "./pages/Governance";
 import Treasury from "./pages/Treasury";
-import Faucet from "./pages/Faucet";
-import Mine from "./pages/Mine";
 import VLQ from "./pages/VLQ";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Dashboard from "./pages/Dashboard";
+import VnextDashboard from "./pages/vnext/Dashboard";
 import Forum from "./pages/Forum";
 import Status from "./pages/Status";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
-import Send from "./pages/Send";
 import Transparency from "./pages/Transparency";
-import Wallet from "./pages/Wallet";
 import Admin from "./pages/Admin";
 import TransactionDetail from "./pages/TransactionDetail";
 import BlockDetail from "./pages/BlockDetail";
@@ -58,10 +52,6 @@ jest.mock("./helpers/signedAuthority", () => ({
   postSignedAuthority: jest.fn(),
 }));
 
-jest.mock("./components/QRPayment", () => function MockQRPayment() {
-  return <div data-testid="qr-payment" />;
-});
-
 // Stub the realtime socket so RealtimeProvider/Chat never open a real connection
 // (which would leave reconnect timers running and flake the suite under load).
 jest.mock("socket.io-client", () => ({
@@ -76,12 +66,6 @@ jest.mock("react-toastify", () => ({
     info: jest.fn(),
   },
 }));
-
-const walletResponse = {
-  address: "VLQ_TEST_ADDRESS_123456",
-  public_key: "TEST_PUBLIC_KEY",
-  private_key: "REDACTED_TEST_SIGNING_MATERIAL",
-};
 
 function defaultApiGet(path) {
   if (path === "/health") {
@@ -1468,101 +1452,49 @@ test("Homepage has responsible product wording and no external wallet integratio
   expect(screen.queryByText(/guaranteed return/i)).not.toBeInTheDocument();
 });
 
-test("Dashboard shows a first-user Get Started section with core actions", async () => {
-  renderWithProviders(<Dashboard />);
+test("Dashboard points a logged-in empty wallet at the faucet", async () => {
+  api.get.mockImplementation((path, options) => {
+    if (path === "/wallet/balance") {
+      return Promise.resolve({ data: { success: true, address: "VLQ_NEW_MEMBER", balance: 0, coin: "VLQ" } });
+    }
+    return defaultApiGet(path, options);
+  });
 
-  expect(screen.queryByRole("img", { name: /vorliq logo/i })).not.toBeInTheDocument();
-  expect(await screen.findByRole("heading", { name: /get started with vorliq/i })).toBeInTheDocument();
-  const getStarted = screen.getByRole("heading", { name: /get started with vorliq/i }).closest("section");
+  renderWithAuth(
+    <VnextDashboard />,
+    { wallet: { address: "VLQ_NEW_MEMBER", public_key: "PUBLIC_ONLY" }, isLoggedIn: true },
+    "/dashboard"
+  );
 
-  expect(within(getStarted).getByText(/read the safety notice/i)).toBeInTheDocument();
-  expect(within(getStarted).getByRole("link", { name: /read transparency/i })).toHaveAttribute("href", "/transparency");
-  expect(within(getStarted).getByRole("link", { name: /get starter vlq/i })).toHaveAttribute("href", "/faucet");
-  expect(within(getStarted).getByRole("link", { name: /mine vlq/i })).toHaveAttribute("href", "/mine");
-  expect(within(getStarted).getByRole("link", { name: /governance/i })).toHaveAttribute("href", "/governance");
-  expect(await screen.findByText(/block production/i)).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /^blockchain inspect blocks and transactions$/i })).toHaveAttribute("href", "/blockchain");
-  expect(screen.getByRole("link", { name: /^network view public node and decentralization status$/i })).toHaveAttribute("href", "/network");
-  expect(screen.getByRole("link", { name: /^community requests coordinate peer requests$/i })).toHaveAttribute("href", "/exchange");
-  expect(screen.getByText(/treasury per block/i)).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: /welcome to vorliq/i })).toBeInTheDocument();
+  expect(screen.getByText(/claim your first vlq from the community faucet/i)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /get your first vlq/i })).toHaveAttribute("href", "/faucet");
 });
 
-test("Dashboard shows account-aware wallet data and actions when a wallet is unlocked", async () => {
+test("Dashboard shows the connected wallet's available balance and lifetime figures", async () => {
   api.get.mockImplementation((path, options) => {
     if (path === "/wallet/balance") {
       expect(options.params.address).toBe("VLQ_TEST_ADDRESS_123456");
       return Promise.resolve({ data: { success: true, address: "VLQ_TEST_ADDRESS_123456", balance: 42, coin: "VLQ" } });
     }
-
-    if (path === "/chain/address") {
-      return Promise.resolve({
-        data: {
-          success: true,
-          transactions: [
-            {
-              tx_id: "wallet-activity-tx",
-              status: "confirmed",
-              sender_address: "VLQ_TEST_ADDRESS_123456",
-              receiver_address: "VLQ_RECEIVER_ADDRESS",
-              amount: 3,
-              block_index: 4,
-            },
-          ],
-        },
-      });
+    if (path === "/wallet/history") {
+      return Promise.resolve({ data: { success: true, total_sent: 3, total_received: 45, balance_history: [] } });
     }
-
-    return defaultApiGet(path);
+    return defaultApiGet(path, options);
   });
 
-  const auth = {
-    wallet: { address: "VLQ_TEST_ADDRESS_123456", public_key: "TEST_PUBLIC_KEY" },
-    isLoggedIn: true,
-    logout: jest.fn(),
-    clearLocalWallet: jest.fn(),
-  };
+  renderWithAuth(
+    <VnextDashboard />,
+    { wallet: { address: "VLQ_TEST_ADDRESS_123456", public_key: "TEST_PUBLIC_KEY" }, isLoggedIn: true },
+    "/dashboard"
+  );
 
-  renderWithAuth(<Dashboard />, auth, "/dashboard");
-
-  expect(await screen.findByRole("heading", { name: /your wallet dashboard/i })).toBeInTheDocument();
-  const walletDashboard = screen.getByRole("heading", { name: /your wallet dashboard/i }).closest("section");
-  expect(await screen.findByText(/42 VLQ/i)).toBeInTheDocument();
-  expect(screen.getByText(/loaded from the existing public balance endpoint/i)).toBeInTheDocument();
-  expect(within(walletDashboard).getByRole("link", { name: /get starter vlq/i })).toHaveAttribute("href", "/faucet?address=VLQ_TEST_ADDRESS_123456");
-  expect(within(walletDashboard).getByRole("link", { name: /send vlq/i })).toHaveAttribute("href", "/send");
-  expect(within(walletDashboard).getByRole("link", { name: /explorer/i })).toHaveAttribute("href", "/blockchain");
-  expect(within(walletDashboard).getByRole("link", { name: /vlq overview/i })).toHaveAttribute("href", "/vlq");
-  expect(walletDashboard.querySelector('a[href="/tx/wallet-activity-tx"]')).toBeInTheDocument();
-});
-
-test("Dashboard can clear the encrypted local wallet only after explicit confirmation", async () => {
-  const clearLocalWallet = jest.fn();
-  const auth = {
-    wallet: { address: "VLQ_TEST_ADDRESS_123456", public_key: "TEST_PUBLIC_KEY" },
-    isLoggedIn: true,
-    logout: jest.fn(),
-    clearLocalWallet,
-  };
-
-  renderWithAuth(<Dashboard />, auth, "/dashboard");
-
-  await screen.findByRole("heading", { name: /your wallet dashboard/i });
-  const clearButton = screen.getByRole("button", { name: /clear local wallet/i });
-  expect(clearButton).toBeDisabled();
-
-  await userEvent.click(screen.getByLabelText(/removes the encrypted wallet backup from this browser/i));
-  expect(clearButton).toBeEnabled();
-
-  await userEvent.click(clearButton);
-  expect(clearLocalWallet).toHaveBeenCalledTimes(1);
-});
-
-test("Dashboard renders no in-page social links", async () => {
-  const { container } = renderWithProviders(<Dashboard />);
-
-  expect(await screen.findByRole("heading", { name: /get started with vorliq/i })).toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: /join the conversation/i })).not.toBeInTheDocument();
-  expect(container.querySelector(".social-links")).toBeNull();
+  expect(await screen.findByText(/available balance/i)).toBeInTheDocument();
+  expect((await screen.findAllByText("42 VLQ")).length).toBeGreaterThan(0);
+  expect(screen.getByText(/total sent/i)).toBeInTheDocument();
+  expect((await screen.findAllByText("3 VLQ")).length).toBeGreaterThan(0);
+  expect(screen.getByText(/total received/i)).toBeInTheDocument();
+  expect((await screen.findAllByText("45 VLQ")).length).toBeGreaterThan(0);
 });
 
 test("mobile hamburger announces expanded state when opened", async () => {
@@ -1768,21 +1700,29 @@ test("Profiles route aliases the public profile page", async () => {
   expect(screen.getByRole("heading", { name: /how profiles work/i })).toBeInTheDocument();
 });
 
-test("Dashboard keeps core live data visible when an optional summary is unavailable", async () => {
-  api.get.mockImplementation((path) => {
-    if (path === "/exchange/summary") {
-      return Promise.reject({ response: { data: { message: "Exchange summary unavailable" } } });
+test("Dashboard network status keeps loaded fields when one data source is unavailable", async () => {
+  api.get.mockImplementation((path, options) => {
+    if (path === "/diagnostics") {
+      return Promise.reject({ response: { status: 503, data: { message: "Diagnostics unavailable" } } });
     }
-
-    return defaultApiGet(path);
+    if (path === "/chain/summary") {
+      return Promise.resolve({
+        data: { success: true, summary: { block_height: 12, total_transactions: 34, current_difficulty: 3 } },
+      });
+    }
+    return defaultApiGet(path, options);
   });
 
-  renderWithProviders(<Dashboard />, "/dashboard");
+  renderWithProviders(<VnextDashboard />, "/dashboard");
 
-  expect(await screen.findByText(/block production/i)).toBeInTheDocument();
-  expect(screen.getByText(/some dashboard data is unavailable right now/i)).toBeInTheDocument();
-  expect(screen.getByText(/community request summary/i)).toBeInTheDocument();
-  expect(screen.getByText(/open community requests/i).parentElement).toHaveTextContent(/Unavailable/i);
+  // Fields that did load stay visible… ("#12" also appears in the page head's
+  // live block counter, so allow more than one match.)
+  expect((await screen.findAllByText("#12")).length).toBeGreaterThan(0);
+  expect(screen.getByText(/block height/i)).toBeInTheDocument();
+  expect(screen.getByText("34")).toBeInTheDocument();
+  // …while the field whose source failed is honestly marked unavailable.
+  const uptimeRow = screen.getByText(/node uptime/i).closest(".vn-netstat__row");
+  await waitFor(() => expect(uptimeRow).toHaveTextContent(/unavailable/i));
 });
 
 test("Login page shows wallet creation when no wallet is stored", () => {
@@ -1827,32 +1767,22 @@ test("Login page makes saved wallet unlock the primary path and gates clear save
   expect(screen.getByRole("button", { name: /create wallet and set password/i })).toBeInTheDocument();
 });
 
-test("wallet safety confirmation blocks wallet creation until checked", async () => {
-  api.post.mockResolvedValueOnce({ data: walletResponse });
-  renderWithProviders(<Wallet />, "/wallet");
+test("Login wallet creation stays blocked until the self-custody confirmation is checked", async () => {
+  const createAndSaveWallet = jest.fn().mockResolvedValue({ address: "VLQ_NEW_WALLET" });
 
-  expect(screen.getByLabelText(/risk notice/i)).toHaveTextContent(/vlq has no guaranteed market value/i);
+  renderWithAuth(<Login />, { createAndSaveWallet }, "/login");
 
-  const createButton = screen.getByRole("button", { name: /create new wallet/i });
+  fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "REDACTED_TEST_WALLET_SECRET" } });
+  fireEvent.change(screen.getByLabelText(/^confirm password$/i), { target: { value: "REDACTED_TEST_WALLET_SECRET" } });
+
+  const createButton = screen.getByRole("button", { name: /create wallet and set password/i });
   expect(createButton).toBeDisabled();
-
-  await userEvent.click(createButton);
-  expect(api.post).not.toHaveBeenCalled();
 
   await userEvent.click(screen.getByLabelText(/private key cannot be recovered by vorliq/i));
   expect(createButton).toBeEnabled();
 
   await userEvent.click(createButton);
-
-  await waitFor(() => {
-    expect(api.post).toHaveBeenCalledWith("/wallet/create");
-  });
-
-  expect(await screen.findByText(/private key hidden/i)).toBeInTheDocument();
-  const revealButton = screen.getByRole("button", { name: /reveal private key/i });
-  expect(revealButton).toBeDisabled();
-  await userEvent.click(screen.getByLabelText(/anyone with this key can spend this wallet's VLQ/i));
-  expect(revealButton).toBeEnabled();
+  await waitFor(() => expect(createAndSaveWallet).toHaveBeenCalledWith("REDACTED_TEST_WALLET_SECRET"));
 });
 
 test("Footer exposes public Terms, Privacy, and Risk Notice links", async () => {
@@ -2044,161 +1974,6 @@ test("Leaderboard includes a Top Reputation tab", async () => {
   expect(await screen.findByText(/top member/i)).toBeInTheDocument();
 });
 
-test("Lending page renders lifecycle tabs and active vote cards", async () => {
-  renderWithProviders(<Lending />, "/lending");
-
-  expect(await screen.findByLabelText(/authority write status/i)).toHaveTextContent(/signed wallet authorization/i);
-  expect(screen.getByRole("button", { name: /submit loan request/i })).toBeDisabled();
-  expect(await screen.findByRole("button", { name: /active votes/i })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /active loans/i })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /my loans/i })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: /lending lifecycle/i })).toBeInTheDocument();
-  expect(screen.getByText(/no lending pool vlq has moved yet/i)).toBeInTheDocument();
-  expect(screen.getByText(/pending vs confirmed lending movement/i)).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /open explorer/i })).toHaveAttribute("href", "/blockchain");
-
-  await userEvent.click(screen.getByRole("button", { name: /active votes/i }));
-
-  expect(await screen.findByText(/build a community tool/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/pending vote/i).length).toBeGreaterThan(0);
-  expect(screen.getByRole("button", { name: /vote yes/i })).toBeDisabled();
-});
-
-test("Lending request and vote actions use local signed authority submission", async () => {
-  postSignedAuthority
-    .mockResolvedValueOnce({ data: { success: true, loan_id: "loan-signed-1" } })
-    .mockResolvedValueOnce({ data: { success: true, issuance_tx_id: null } });
-
-  renderWithAuth(<Lending />, { wallet: { address: "VLQ_ME", public_key: "PUBLIC_ONLY" }, isLoggedIn: true }, "/lending");
-
-  expect(await screen.findByLabelText(/requester wallet address/i)).toHaveValue("VLQ_ME");
-  expect(screen.getByLabelText(/requester wallet address/i)).toHaveAttribute("readonly");
-  fireEvent.change(screen.getByLabelText(/vlq amount/i), { target: { value: "25" } });
-  fireEvent.change(screen.getByLabelText(/^reason$/i), { target: { value: "Build shared community tools" } });
-  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "local-password" } });
-  await userEvent.click(screen.getByRole("button", { name: /submit loan request/i }));
-
-  await waitFor(() => {
-    expect(postSignedAuthority).toHaveBeenCalledWith({
-      action: "lending.request",
-      walletPassword: "local-password",
-      body: { amount: 25, reason: "Build shared community tools" },
-    });
-  });
-
-  await userEvent.click(await screen.findByRole("button", { name: /vote yes/i }));
-  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "vote-password" } });
-  await userEvent.click(screen.getByRole("button", { name: /sign and submit yes vote/i }));
-
-  await waitFor(() => {
-    expect(postSignedAuthority).toHaveBeenCalledWith({
-      action: "lending.vote",
-      walletPassword: "vote-password",
-      body: { loan_id: "loan-test-1", vote: "yes" },
-    });
-  });
-});
-
-test("Lending page signs active repayments through the guarded lending route", async () => {
-  api.get.mockImplementation((path) => {
-    if (path === "/lending/summary") {
-      return Promise.resolve({
-        data: {
-          success: true,
-          summary: {
-            total_loans: 1,
-            pending_vote_count: 0,
-            approved_pending_issue_count: 0,
-            active_count: 1,
-            repayment_pending_count: 0,
-            repaid_count: 0,
-            overdue_count: 0,
-            rejected_count: 0,
-            total_vlq_active: 25,
-            total_vlq_repaid: 0,
-          },
-        },
-      });
-    }
-    if (path === "/lending/loans") {
-      return Promise.resolve({
-        data: {
-          success: true,
-          loans: [
-            {
-              loan_id: "loan-active-send-review-1",
-              requester_address: "VLQ_ME",
-              amount: 25,
-              repayment_amount: 27.5,
-              reason: "Repair shared tools",
-              status: "active",
-              created_at: 1715791000,
-              due_block: 1005,
-              blocks_until_due: 99,
-              issuance_tx_id: "issue-tx-1",
-              yes_vote_weight: 50,
-              no_vote_weight: 0,
-              votes: {},
-            },
-          ],
-          total: 1,
-        },
-      });
-    }
-    return defaultApiGet(path);
-  });
-
-  renderWithAuth(<Lending />, { wallet: { address: "VLQ_ME", public_key: "PUBLIC_ONLY" }, isLoggedIn: true }, "/lending");
-
-  await userEvent.click(await screen.findByRole("button", { name: /active loans/i }));
-
-  expect(await screen.findByText(/repair shared tools/i)).toBeInTheDocument();
-  expect(screen.getByText(/issuance confirmed; repayment is outstanding/i)).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /issuance tx/i })).toHaveAttribute("href", "/tx/issue-tx-1");
-  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "local-password" } });
-  await userEvent.click(screen.getByRole("button", { name: /sign and submit repayment/i }));
-
-  await waitFor(() => {
-    expect(postSignedAuthority).toHaveBeenCalledWith({
-      action: "lending.repay",
-      walletPassword: "local-password",
-      body: { loan_id: "loan-active-send-review-1" },
-    });
-  });
-  expect(api.post).not.toHaveBeenCalledWith("/lending/repay", expect.anything());
-});
-
-test("Lending page marks missing summary fields unavailable instead of fake zeroes", async () => {
-  api.get.mockImplementation((path) => {
-    if (path === "/lending/summary") {
-      return Promise.resolve({ data: { success: true, summary: { pending_vote_count: 1 } } });
-    }
-    if (path === "/lending/loans") {
-      return Promise.resolve({ data: { success: true, loans: [], total: 0 } });
-    }
-    return defaultApiGet(path);
-  });
-
-  renderWithProviders(<Lending />, "/lending");
-
-  expect(await screen.findByText(/pending votes/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/unavailable/i).length).toBeGreaterThan(0);
-  expect(screen.getByText(/lending records come from the existing public lending apis/i)).toBeInTheDocument();
-});
-
-test("Lending My Loans can use an entered wallet address", async () => {
-  renderWithProviders(<Lending />, "/lending");
-
-  await userEvent.click(await screen.findByRole("button", { name: /my loans/i }));
-  fireEvent.change(screen.getByLabelText(/wallet address/i), { target: { value: "VLQ_ME" } });
-  await userEvent.click(screen.getByRole("button", { name: /^load$/i }));
-
-  await waitFor(() => {
-    expect(api.get).toHaveBeenCalledWith("/lending/my", { params: { address: "VLQ_ME" } });
-  });
-  expect(await screen.findByText(/no borrowed or voted loans/i)).toBeInTheDocument();
-});
-
 test("Account loan section handles active lifecycle statuses", async () => {
   api.get.mockImplementation((path) => {
     if (path === "/lending/my") {
@@ -2356,211 +2131,6 @@ test("Exchange My Requests state renders record tx form for active coordination"
   expect(await screen.findByText(/active coordination record/i)).toBeInTheDocument();
   expect(await screen.findByRole("button", { name: /record vlq transaction/i })).toBeInTheDocument();
   expect(screen.getByLabelText(/vlq transaction id/i)).toBeInTheDocument();
-});
-
-test("Governance lifecycle tabs render active proposal cards", async () => {
-  renderWithProviders(<Governance />, "/governance");
-
-  expect(await screen.findByLabelText(/authority write status/i)).toHaveTextContent(/signed wallet authorization/i);
-  expect(await screen.findByRole("button", { name: /active proposals/i })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /propose change/i })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /my governance/i })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /rule changes/i })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /all history/i })).toBeInTheDocument();
-  expect(await screen.findByRole("heading", { name: /how governance works/i })).toBeInTheDocument();
-  expect(screen.getByText(/passed pending execution/i)).toBeInTheDocument();
-  expect(screen.getByText(/community request limit/i)).toBeInTheDocument();
-  expect(await screen.findByText(/adjust mining reward/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/active/i).length).toBeGreaterThan(0);
-  expect(screen.getByRole("button", { name: /vote yes/i })).toBeDisabled();
-});
-
-test("Governance rule changes timeline renders", async () => {
-  renderWithProviders(<Governance />, "/governance");
-
-  await userEvent.click(await screen.findByRole("button", { name: /rule changes/i }));
-
-  expect(await screen.findByRole("heading", { name: /executed settings timeline/i })).toBeInTheDocument();
-  expect(await screen.findByText(/50 to 25/i)).toBeInTheDocument();
-  expect(screen.getByText(/proposal-rule-1/i)).toBeInTheDocument();
-});
-
-test("Governance propose form shows validation guidance", async () => {
-  renderWithProviders(<Governance />, "/governance");
-
-  await userEvent.click(await screen.findByRole("button", { name: /propose change/i }));
-
-  expect(screen.getByRole("button", { name: /submit proposal/i })).toBeDisabled();
-  expect(await screen.findByText(/mining reward must be greater than 0/i)).toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText(/category/i), { target: { value: "exchange_limit" } });
-  expect(await screen.findByText(/community request limit must be between 1 and 1000/i)).toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText(/category/i), { target: { value: "general" } });
-  expect(await screen.findByText(/general proposals are advisory/i)).toBeInTheDocument();
-});
-
-test("Governance propose and vote actions use local signed authority submission", async () => {
-  postSignedAuthority
-    .mockResolvedValueOnce({ data: { success: true } })
-    .mockResolvedValueOnce({ data: { success: true, proposal_id: "proposal-signed-1" } });
-
-  renderWithAuth(<Governance />, { wallet: { address: "VLQ_ME", public_key: "PUBLIC_ONLY" }, isLoggedIn: true }, "/governance");
-
-  await userEvent.click(await screen.findByRole("button", { name: /vote yes/i }));
-  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "vote-password" } });
-  await userEvent.click(screen.getByRole("button", { name: /submit yes/i }));
-
-  await waitFor(() => {
-    expect(postSignedAuthority).toHaveBeenCalledWith({
-      action: "governance.vote",
-      walletPassword: "vote-password",
-      body: { proposal_id: "proposal-active-1", vote: "yes" },
-    });
-  });
-
-  await userEvent.click(screen.getByRole("button", { name: /propose change/i }));
-  expect(screen.getByLabelText(/proposer wallet address/i)).toHaveValue("VLQ_ME");
-  expect(screen.getByLabelText(/proposer wallet address/i)).toHaveAttribute("readonly");
-  fireEvent.change(screen.getByLabelText(/^title$/i), { target: { value: "Signed governance proposal" } });
-  fireEvent.change(screen.getByLabelText(/proposed value/i), { target: { value: "40" } });
-  fireEvent.change(screen.getByLabelText(/^description$/i), {
-    target: { value: "A sufficiently detailed signed governance proposal for focused local testing." },
-  });
-  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "proposal-password" } });
-  await userEvent.click(screen.getByRole("button", { name: /submit proposal/i }));
-
-  await waitFor(() => {
-    expect(postSignedAuthority).toHaveBeenCalledWith({
-      action: "governance.propose",
-      walletPassword: "proposal-password",
-      body: {
-        title: "Signed governance proposal",
-        description: "A sufficiently detailed signed governance proposal for focused local testing.",
-        category: "mining_reward",
-        parameter: "40",
-      },
-    });
-  });
-});
-
-test("Governance does not show success when signed authorization is rejected", async () => {
-  postSignedAuthority.mockRejectedValueOnce(new Error("internal signing detail"));
-  authorityErrorMessage.mockReturnValueOnce("Signed wallet authorization was rejected.");
-
-  renderWithAuth(<Governance />, { wallet: { address: "VLQ_ME", public_key: "PUBLIC_ONLY" }, isLoggedIn: true }, "/governance");
-  await userEvent.click(await screen.findByRole("button", { name: /vote yes/i }));
-  fireEvent.change(screen.getByLabelText(/wallet password/i), { target: { value: "wrong-password" } });
-  await userEvent.click(screen.getByRole("button", { name: /submit yes/i }));
-
-  expect(await screen.findByText("Signed wallet authorization was rejected.")).toBeInTheDocument();
-  expect(toast.success).not.toHaveBeenCalled();
-});
-
-test("Governance cancellation is shown only for the unlocked proposal owner and is signed locally", async () => {
-  api.get.mockImplementation((path, options) => {
-    if (path === "/governance/my") {
-      return Promise.resolve({
-        data: {
-          success: true,
-          created: [],
-          voted: [],
-          proposals: [{
-            proposal_id: "proposal-owned-1",
-            proposer_address: "VLQ_ME",
-            title: "Owned proposal",
-            description: "An active owned proposal with no votes.",
-            category: "general",
-            parameter: "advisory",
-            status: "active",
-            votes: {},
-            yes_vote_weight: 0,
-            no_vote_weight: 0,
-            quorum: 10,
-          }],
-        },
-      });
-    }
-    return defaultApiGet(path, options);
-  });
-
-  renderWithAuth(<Governance />, { wallet: { address: "VLQ_ME", public_key: "PUBLIC_ONLY" }, isLoggedIn: true }, "/governance");
-  await userEvent.click(await screen.findByRole("button", { name: /my governance/i }));
-  fireEvent.change(await screen.findByLabelText(/wallet password/i), { target: { value: "cancel-password" } });
-  await userEvent.click(screen.getByRole("button", { name: /cancel proposal/i }));
-
-  await waitFor(() => {
-    expect(postSignedAuthority).toHaveBeenCalledWith({
-      action: "governance.cancel",
-      walletPassword: "cancel-password",
-      body: { proposal_id: "proposal-owned-1" },
-    });
-  });
-});
-
-test("Governance My Governance state renders", async () => {
-  api.get.mockImplementation((path) => {
-    if (path === "/governance/my") {
-      return Promise.resolve({
-        data: {
-          success: true,
-          created: [],
-          voted: [
-            {
-              proposal_id: "proposal-my-1",
-              proposer_address: "VLQ_OTHER",
-              title: "My voted proposal",
-              description: "A proposal this wallet voted on.",
-              category: "general",
-              parameter: "Advisory",
-              current_value: "advisory",
-              status: "executed",
-              created_at: 1715791000,
-              voting_deadline: 2715791000,
-              votes: { VLQ_ME: { vote: "yes", weight: 20 } },
-              yes_vote_weight: 20,
-              no_vote_weight: 0,
-              quorum: 500,
-              status_history: [{ status: "executed", timestamp: 1715791000, note: "Recorded." }],
-            },
-          ],
-          proposals: [
-            {
-              proposal_id: "proposal-my-1",
-              proposer_address: "VLQ_OTHER",
-              title: "My voted proposal",
-              description: "A proposal this wallet voted on.",
-              category: "general",
-              parameter: "Advisory",
-              current_value: "advisory",
-              status: "executed",
-              created_at: 1715791000,
-              voting_deadline: 2715791000,
-              votes: { VLQ_ME: { vote: "yes", weight: 20 } },
-              yes_vote_weight: 20,
-              no_vote_weight: 0,
-              quorum: 500,
-              status_history: [{ status: "executed", timestamp: 1715791000, note: "Recorded." }],
-            },
-          ],
-        },
-      });
-    }
-    return defaultApiGet(path);
-  });
-
-  render(
-      <NotificationProvider>
-        <AuthContext.Provider value={{ wallet: { address: "VLQ_ME" }, isLoggedIn: true }}>
-          <MemoryRouter initialEntries={["/governance"]}>
-            <Governance />
-          </MemoryRouter>
-        </AuthContext.Provider>
-      </NotificationProvider>
-  );
-
-  await userEvent.click(await screen.findByRole("button", { name: /my governance/i }));
-
-  expect(await screen.findByText(/my voted proposal/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/executed/i).length).toBeGreaterThan(0);
 });
 
 test("Treasury tabs render overview and active proposal card", async () => {
@@ -2737,104 +2307,6 @@ test("Treasury history links paid proposals to explorer records", async () => {
   expect(screen.getAllByRole("link", { name: /^explorer$/i })[0]).toHaveAttribute("href", "/blockchain");
 });
 
-test("Faucet page renders and success state shows tx link", async () => {
-  api.post.mockResolvedValueOnce({
-    data: {
-      success: true,
-      claim: {
-        claim_id: "claim-success",
-        wallet_address: "VLQ_TEST_ADDRESS_123456",
-        amount: 1,
-        status: "pending",
-        tx_id: "faucet-tx-success",
-        reason: "Starter VLQ transaction submitted from the community treasury.",
-      },
-    },
-  });
-
-  renderWithProviders(<Faucet />, "/faucet");
-
-  expect(await screen.findByRole("heading", { name: /starter vlq faucet/i })).toBeInTheDocument();
-  expect(await screen.findByText(/250 VLQ/i)).toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText(/wallet address/i), { target: { value: "VLQ_TEST_ADDRESS_123456" } });
-  await userEvent.click(screen.getByRole("button", { name: /claim starter vlq/i }));
-
-  expect(await screen.findByText(/faucet-tx-success/i)).toBeInTheDocument();
-  expect(screen.getByText(/faucet-tx-success/i).closest("a")).toHaveAttribute("href", "/tx/faucet-tx-success");
-});
-
-test("Faucet claim cards keep long badges and transaction states readable", async () => {
-  const longAddress = "VLQ_LONG_WALLET_ADDRESS_1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  api.get.mockImplementation((path, options) => {
-    if (path === "/faucet/summary") {
-      return Promise.resolve({ data: { success: true, summary: { starter_amount: 1, treasury_balance: 250, pending_claims: 2, confirmed_claims: 1 } } });
-    }
-    if (path === "/faucet/recent" || path === "/faucet/claims") {
-      return Promise.resolve({
-        data: {
-          success: true,
-          claims: [
-            { claim_id: `${path}-rate`, wallet_address: longAddress, amount: 1, status: "rate_limited", tx_id: null },
-            { claim_id: `${path}-pending`, wallet_address: `${longAddress}_PENDING`, amount: 1, status: "pending", tx_id: "pending-faucet-transaction-id-with-long-value" },
-            { claim_id: `${path}-confirmed`, wallet_address: `${longAddress}_CONFIRMED`, amount: 1, status: "confirmed", tx_id: "confirmed-faucet-transaction-id-with-long-value" },
-          ],
-        },
-      });
-    }
-    if (path === "/profiles/profile") {
-      return Promise.resolve({
-        data: {
-          success: true,
-          profile: {
-            wallet_address: options?.params?.address,
-            display_name: "Very Long Faucet Claimant Display Name",
-            trust_labels: ["Wallet Verified", "Active Contributor", "New Member"],
-          },
-        },
-      });
-    }
-    return defaultApiGet(path, options);
-  });
-
-  renderWithProviders(<Faucet />, `/faucet?address=${longAddress}`);
-
-  expect(await screen.findByRole("heading", { name: /my faucet claims/i })).toBeInTheDocument();
-  expect(await screen.findByRole("heading", { name: /recent public claims/i })).toBeInTheDocument();
-  expect(await screen.findAllByText(/wallet verified/i)).toHaveLength(6);
-  expect(screen.getAllByText(/active contributor/i)).toHaveLength(6);
-  expect(screen.getAllByText(/new member/i)).toHaveLength(6);
-  expect(screen.getAllByText(/rate limited/i).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(/no tx/i).length).toBeGreaterThan(0);
-  expect(screen.getAllByRole("link", { name: /view tx/i })[0]).toHaveAttribute("href", "/tx/pending-faucet-transaction-id-with-long-value");
-  expect(screen.getAllByText(/amount/i).length).toBeGreaterThan(0);
-  expect(document.querySelectorAll(".faucet-claim-row").length).toBe(6);
-});
-
-test("Faucet claim form validates wallet address", async () => {
-  renderWithProviders(<Faucet />, "/faucet");
-
-  await screen.findByRole("heading", { name: /starter vlq faucet/i });
-  fireEvent.change(screen.getByLabelText(/wallet address/i), { target: { value: "" } });
-  await userEvent.click(screen.getByRole("button", { name: /claim starter vlq/i }));
-
-  expect(api.post).not.toHaveBeenCalledWith("/faucet/claim", expect.anything());
-});
-
-test("Wallet page contains faucet callout after wallet creation", async () => {
-  api.post.mockResolvedValueOnce({ data: walletResponse });
-
-  renderWithProviders(<Wallet />, "/wallet");
-
-  await userEvent.click(screen.getByLabelText(/private key cannot be recovered/i));
-  await userEvent.click(screen.getByRole("button", { name: /create new wallet/i }));
-
-  expect(await screen.findByText(/need starter vlq/i)).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /open faucet/i })).toHaveAttribute(
-    "href",
-    `/faucet?address=${walletResponse.address}`
-  );
-});
-
 test("wallet backup import rejects invalid JSON", async () => {
   renderWithProviders(<Login />, "/login");
 
@@ -2897,83 +2369,6 @@ test("Account protected route redirects to login behavior when no wallet is load
 
   expect(await screen.findByRole("heading", { name: /import a wallet/i })).toBeInTheDocument();
   expect(screen.getAllByText(/create your vorliq wallet/i).length).toBeGreaterThan(0);
-});
-
-test("Send page logged-out manual mode is behind advanced disclosure", async () => {
-  renderWithProviders(<Send />, "/send");
-
-  expect(screen.getByText(/use saved-wallet signing/i)).toBeInTheDocument();
-  expect(screen.queryByLabelText(/sender private key/i)).not.toBeInTheDocument();
-
-  await userEvent.click(screen.getByRole("button", { name: /advanced manual signing/i }));
-
-  expect(screen.getByText(/saved-wallet signing is safer/i)).toBeInTheDocument();
-  expect(screen.getByLabelText(/sender private key/i)).toBeInTheDocument();
-});
-
-test("Mine page displays a cooldown message when the API returns a mining cooldown error", async () => {
-  api.post.mockRejectedValueOnce({
-    response: {
-      status: 429,
-      data: {
-        message: "Mining cooldown active.",
-        wait_seconds: 12,
-      },
-    },
-  });
-
-  render(
-    <NotificationProvider>
-      <MemoryRouter>
-        <Mine />
-      </MemoryRouter>
-    </NotificationProvider>
-  );
-
-  fireEvent.change(screen.getByLabelText(/miner address/i), {
-    target: { value: "VLQ_MINER_ADDRESS_123456" },
-  });
-  await userEvent.click(screen.getByRole("button", { name: /mine block/i }));
-
-  expect(await screen.findByText(/cooling down\. ready to mine in 12 seconds/i)).toBeInTheDocument();
-});
-
-test("Mine page renders Mining Status and reward split", async () => {
-  renderWithProviders(<Mine />, "/mine");
-
-  expect(await screen.findByRole("heading", { name: /mining status/i })).toBeInTheDocument();
-  expect(await screen.findByText(/miner receives/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/47\.5 VLQ/i).length).toBeGreaterThan(0);
-  expect(screen.getByText(/treasury receives/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/2\.5 VLQ/i).length).toBeGreaterThan(0);
-});
-
-test("Mine page renders cooldown reason from mining status", async () => {
-  api.get.mockImplementation((path) => {
-    if (path === "/mining/status") {
-      return Promise.resolve({
-        data: {
-          success: true,
-          status: {
-            chain_valid: true,
-            can_mine_now: false,
-            reason_if_not: "Next block is allowed in 20 seconds.",
-            seconds_until_next_allowed_block: 20,
-            current_block_height: 12,
-            current_difficulty: 3,
-            miner_reward_after_treasury: 47.5,
-            treasury_reward_per_block: 2.5,
-            pending_transaction_count: 0,
-          },
-        },
-      });
-    }
-    return defaultApiGet(path);
-  });
-
-  renderWithProviders(<Mine />, "/mine");
-
-  expect(await screen.findByText(/next block is allowed in 20 seconds/i)).toBeInTheDocument();
 });
 
 test("Transaction detail page renders status and block link", async () => {
